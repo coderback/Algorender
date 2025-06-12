@@ -1,0 +1,181 @@
+'use client';
+
+import { useState } from 'react';
+import Layout from '@/components/Layout';
+import InputControl from '@/components/InputControl';
+import Button from '@/components/Button';
+
+export default function BloomFilterVisualiser() {
+  const [filter, setFilter] = useState(Array(20).fill(0));
+  const [element, setElement] = useState('');
+  const [hashFunctions, setHashFunctions] = useState(3);
+  const [falsePositives, setFalsePositives] = useState(0);
+  const [totalChecks, setTotalChecks] = useState(0);
+
+  const hash1 = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return Math.abs(hash) % filter.length;
+  };
+
+  const hash2 = (str) => {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    }
+    return Math.abs(hash) % filter.length;
+  };
+
+  const hash3 = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 6) + (hash << 16) - hash);
+    }
+    return Math.abs(hash) % filter.length;
+  };
+
+  const getHashValues = (str) => {
+    const hashes = [hash1(str), hash2(str), hash3(str)];
+    return hashes.slice(0, hashFunctions);
+  };
+
+  const insert = () => {
+    if (!element) return;
+
+    const newFilter = [...filter];
+    const hashValues = getHashValues(element);
+
+    hashValues.forEach(index => {
+      newFilter[index] = 1;
+    });
+
+    setFilter(newFilter);
+    setElement('');
+  };
+
+  const check = () => {
+    if (!element) return;
+
+    const hashValues = getHashValues(element);
+    const mightExist = hashValues.every(index => filter[index] === 1);
+    
+    setTotalChecks(prev => prev + 1);
+    if (mightExist) {
+      setFalsePositives(prev => prev + 1);
+    }
+
+    return mightExist;
+  };
+
+  const reset = () => {
+    setFilter(Array(20).fill(0));
+    setFalsePositives(0);
+    setTotalChecks(0);
+  };
+
+  return (
+    <Layout
+      title="Bloom Filter Visualiser"
+      description="Visualise probabilistic data structure operations with false positive rate tracking."
+      timeComplexity={{ best: 'O(k)', average: 'O(k)', worst: 'O(k)' }}
+      spaceComplexity="O(m)"
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-gray-50 rounded-xl p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Bloom Filter</h2>
+          <div className="flex flex-wrap gap-2">
+            {filter.map((bit, index) => (
+              <div
+                key={index}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center font-semibold transition-colors ${
+                  bit ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-500 shadow-sm'
+                }`}
+              >
+                {bit}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">False Positive Rate</h3>
+              <p className="text-2xl font-semibold text-blue-600">
+                {totalChecks > 0 ? ((falsePositives / totalChecks) * 100).toFixed(2) : 0}%
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <h3 className="text-sm font-medium text-gray-700 mb-1">Total Checks</h3>
+                <p className="text-xl font-semibold text-gray-900">{totalChecks}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <h3 className="text-sm font-medium text-gray-700 mb-1">False Positives</h3>
+                <p className="text-xl font-semibold text-gray-900">{falsePositives}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
+            <div className="space-y-4">
+              <InputControl
+                label="Number of Hash Functions"
+                type="number"
+                value={hashFunctions}
+                onChange={(e) => setHashFunctions(Math.min(3, Math.max(1, parseInt(e.target.value) || 1)))}
+                min={1}
+                max={3}
+              />
+              <InputControl
+                label="Element"
+                value={element}
+                onChange={(e) => setElement(e.target.value)}
+                placeholder="Enter element"
+              />
+              <div className="grid grid-cols-3 gap-3">
+                <Button onClick={insert} variant="primary" fullWidth>
+                  Insert
+                </Button>
+                <Button onClick={check} variant="success" fullWidth>
+                  Check
+                </Button>
+                <Button onClick={reset} variant="danger" fullWidth>
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
+            <div className="space-y-3 text-gray-600">
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Insert: Adds an element to the filter by setting multiple bits</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Check: Tests if an element might be in the set</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-yellow-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>False positives are possible, but false negatives are not</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+} 
