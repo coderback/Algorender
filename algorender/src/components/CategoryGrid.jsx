@@ -5,37 +5,45 @@ const categories = {
   data: [
     {
       title: 'Linear Structures',
-      modules: ['Array', 'Stack', 'Queue'],
-    },
-    {
-      title: 'Linked Structures',
-      modules: ['Singly Linked List', 'Doubly Linked List'],
+      modules: ['Array', 'Linked List', 'Stack', 'Queue', 'Deque'],
     },
     {
       title: 'Hierarchical Structures',
-      modules: ['Binary Tree', 'Heap'],
+      modules: ['Binary Tree', 'AVL Tree', 'B-Tree', 'Heap', 'Trie'],
     },
     {
       title: 'Graph-Based Structures',
-      modules: ['Graph', 'Hash Table'],
+      modules: ['Graph', 'Adjacency List', 'Adjacency Matrix'],
+    },
+    {
+      title: 'Hash-Based Structures',
+      modules: ['Hash Table', 'Hash Set'],
     },
   ],
   algo: [
     {
-      title: 'Sorting Algorithms',
-      modules: ['Bubble Sort', 'Merge Sort', 'Quick Sort'],
+      title: 'Searching & Sorting',
+      modules: ['Linear Search', 'Binary Search', 'Bubble Sort', 'Insertion Sort', 'Selection Sort', 'Merge Sort', 'Quick Sort', 'Heap Sort'],
     },
     {
-      title: 'Searching Algorithms',
-      modules: ['Linear Search', 'Binary Search'],
+      title: 'Greedy Algorithms',
+      modules: ['Knapsack (Greedy)', 'Dijkstra\'s Algorithm', 'Prim\'s Algorithm', 'Activity Selection'],
+    },
+    {
+      title: 'Dynamic Programming',
+      modules: ['Fibonacci (Memoization)', '0/1 Knapsack', 'Longest Common Subsequence', 'Edit Distance'],
+    },
+    {
+      title: 'Backtracking & Branch-and-Bound',
+      modules: ['N-Queens Problem', 'Sudoku Solver'],
     },
     {
       title: 'Graph Algorithms',
-      modules: ['BFS', 'DFS', 'Dijkstra'],
+      modules: ['Depth-First Search (DFS)', 'Breadth-First Search (BFS)', 'Dijkstra\'s Algorithm', 'Prim\'s Algorithm'],
     },
     {
-      title: 'Recursion & Dynamic Programming',
-      modules: ['Fibonacci', 'Knapsack'],
+      title: 'String & Pattern-Matching',
+      modules: ['Rabin-Karp Algorithm', 'KMP Algorithm', 'Z-Algorithm', 'Trie (Prefix Matching)', 'Manacher\'s Algorithm'],
     },
   ],
 };
