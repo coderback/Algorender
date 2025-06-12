@@ -143,7 +143,7 @@ export default function Home() {
     {
       name: 'Bubble Sort',
       description: 'A simple sorting algorithm that repeatedly steps through the list.',
-      path: '/algorithms/bubble-sort',
+      path: '/visualisers/bubble-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(n)', average: 'O(n²)', worst: 'O(n²)' },
       spaceComplexity: 'O(1)'
@@ -151,7 +151,7 @@ export default function Home() {
     {
       name: 'Selection Sort',
       description: 'A sorting algorithm that divides the input into sorted and unsorted regions.',
-      path: '/algorithms/selection-sort',
+      path: '/visualisers/selection-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(n²)', average: 'O(n²)', worst: 'O(n²)' },
       spaceComplexity: 'O(1)'
@@ -159,7 +159,7 @@ export default function Home() {
     {
       name: 'Insertion Sort',
       description: 'A sorting algorithm that builds the final sorted array one item at a time.',
-      path: '/algorithms/insertion-sort',
+      path: '/visualisers/insertion-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(n)', average: 'O(n²)', worst: 'O(n²)' },
       spaceComplexity: 'O(1)'
@@ -167,7 +167,7 @@ export default function Home() {
     {
       name: 'Merge Sort',
       description: 'A divide-and-conquer algorithm that recursively breaks down the problem.',
-      path: '/algorithms/merge-sort',
+      path: '/visualisers/merge-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
       spaceComplexity: 'O(n)'
@@ -175,7 +175,7 @@ export default function Home() {
     {
       name: 'Quick Sort',
       description: 'A divide-and-conquer algorithm that picks an element as a pivot.',
-      path: '/algorithms/quick-sort',
+      path: '/visualisers/quick-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n²)' },
       spaceComplexity: 'O(log n)'
@@ -183,7 +183,7 @@ export default function Home() {
     {
       name: 'Heap Sort',
       description: 'A comparison-based sorting algorithm that uses a binary heap.',
-      path: '/algorithms/heap-sort',
+      path: '/visualisers/heap-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
       spaceComplexity: 'O(1)'
@@ -191,7 +191,7 @@ export default function Home() {
     {
       name: 'Counting Sort',
       description: 'A sorting algorithm that counts the occurrences of each element.',
-      path: '/algorithms/counting-sort',
+      path: '/visualisers/counting-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(n + k)', average: 'O(n + k)', worst: 'O(n + k)' },
       spaceComplexity: 'O(k)'
@@ -199,7 +199,7 @@ export default function Home() {
     {
       name: 'Radix Sort',
       description: 'A non-comparative sorting algorithm that sorts data with integer keys.',
-      path: '/algorithms/radix-sort',
+      path: '/visualisers/radix-sort',
       category: 'Sorting',
       timeComplexity: { best: 'O(nk)', average: 'O(nk)', worst: 'O(nk)' },
       spaceComplexity: 'O(n + k)'
@@ -207,7 +207,7 @@ export default function Home() {
     {
       name: 'Linear Search',
       description: 'A simple search algorithm that checks each element in sequence.',
-      path: '/algorithms/linear-search',
+      path: '/visualisers/linear-search',
       category: 'Searching',
       timeComplexity: { best: 'O(1)', average: 'O(n)', worst: 'O(n)' },
       spaceComplexity: 'O(1)'
@@ -215,7 +215,7 @@ export default function Home() {
     {
       name: 'Binary Search',
       description: 'A search algorithm that finds the position of a target value in a sorted array.',
-      path: '/algorithms/binary-search',
+      path: '/visualisers/binary-search',
       category: 'Searching',
       timeComplexity: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' },
       spaceComplexity: 'O(1)'
@@ -223,7 +223,7 @@ export default function Home() {
     {
       name: 'Jump Search',
       description: 'A search algorithm for sorted arrays that jumps ahead by fixed steps.',
-      path: '/algorithms/jump-search',
+      path: '/visualisers/jump-search',
       category: 'Searching',
       timeComplexity: { best: 'O(1)', average: 'O(√n)', worst: 'O(√n)' },
       spaceComplexity: 'O(1)'
@@ -231,7 +231,7 @@ export default function Home() {
     {
       name: 'Interpolation Search',
       description: 'A search algorithm that uses position formula for better performance.',
-      path: '/algorithms/interpolation-search',
+      path: '/visualisers/interpolation-search',
       category: 'Searching',
       timeComplexity: { best: 'O(1)', average: 'O(log log n)', worst: 'O(n)' },
       spaceComplexity: 'O(1)'
@@ -239,7 +239,7 @@ export default function Home() {
     {
       name: 'Exponential Search',
       description: 'A search algorithm that finds the range where element is present.',
-      path: '/algorithms/exponential-search',
+      path: '/visualisers/exponential-search',
       category: 'Searching',
       timeComplexity: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' },
       spaceComplexity: 'O(1)'
@@ -247,7 +247,7 @@ export default function Home() {
     {
       name: 'Fibonacci Search',
       description: 'A search algorithm that uses Fibonacci numbers to search in sorted arrays.',
-      path: '/algorithms/fibonacci-search',
+      path: '/visualisers/fibonacci-search',
       category: 'Searching',
       timeComplexity: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' },
       spaceComplexity: 'O(1)'
@@ -255,7 +255,7 @@ export default function Home() {
     {
       name: 'Breadth-First Search',
       description: 'A graph traversal algorithm that explores all vertices at the present depth.',
-      path: '/algorithms/breadth-first-search',
+      path: '/visualisers/breadth-first-search',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
       spaceComplexity: 'O(V)'
@@ -263,7 +263,7 @@ export default function Home() {
     {
       name: 'Depth-First Search',
       description: 'A graph traversal algorithm that explores as far as possible along each branch.',
-      path: '/algorithms/depth-first-search',
+      path: '/visualisers/depth-first-search',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
       spaceComplexity: 'O(V)'
@@ -271,7 +271,7 @@ export default function Home() {
     {
       name: 'Dijkstra\'s Algorithm',
       description: 'An algorithm for finding the shortest paths between nodes in a graph.',
-      path: '/algorithms/dijkstra',
+      path: '/visualisers/dijkstra',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O((V + E) log V)', worst: 'O((V + E) log V)' },
       spaceComplexity: 'O(V)'
@@ -279,7 +279,7 @@ export default function Home() {
     {
       name: 'Bellman-Ford Algorithm',
       description: 'An algorithm that computes shortest paths from a source vertex to all other vertices.',
-      path: '/algorithms/bellman-ford',
+      path: '/visualisers/bellman-ford',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(VE)', worst: 'O(VE)' },
       spaceComplexity: 'O(V)'
@@ -287,7 +287,7 @@ export default function Home() {
     {
       name: 'Floyd-Warshall Algorithm',
       description: 'An algorithm for finding shortest paths in a weighted graph with positive or negative edge weights.',
-      path: '/algorithms/floyd-warshall',
+      path: '/visualisers/floyd-warshall',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(V³)', worst: 'O(V³)' },
       spaceComplexity: 'O(V²)'
@@ -295,7 +295,7 @@ export default function Home() {
     {
       name: 'Prim\'s Algorithm',
       description: 'A greedy algorithm that finds a minimum spanning tree for a weighted undirected graph.',
-      path: '/algorithms/prims',
+      path: '/visualisers/prims',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(E log V)', worst: 'O(E log V)' },
       spaceComplexity: 'O(V)'
@@ -303,7 +303,7 @@ export default function Home() {
     {
       name: 'Kruskal\'s Algorithm',
       description: 'A minimum-spanning-tree algorithm that finds an edge of the least possible weight.',
-      path: '/algorithms/kruskals',
+      path: '/visualisers/kruskals',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(E log E)', worst: 'O(E log E)' },
       spaceComplexity: 'O(V)'
@@ -311,7 +311,7 @@ export default function Home() {
     {
       name: 'Topological Sort',
       description: 'A linear ordering of vertices such that for every directed edge uv, vertex u comes before v.',
-      path: '/algorithms/topological-sort',
+      path: '/visualisers/topological-sort',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
       spaceComplexity: 'O(V)'
@@ -319,7 +319,7 @@ export default function Home() {
     {
       name: 'Kosaraju\'s Algorithm',
       description: 'An algorithm for finding strongly connected components of a directed graph.',
-      path: '/algorithms/kosaraju',
+      path: '/visualisers/kosaraju',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
       spaceComplexity: 'O(V)'
@@ -327,7 +327,7 @@ export default function Home() {
     {
       name: 'Tarjan\'s Algorithm',
       description: 'An algorithm for finding strongly connected components of a directed graph.',
-      path: '/algorithms/tarjan',
+      path: '/visualisers/tarjan',
       category: 'Graph',
       timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
       spaceComplexity: 'O(V)'
@@ -335,7 +335,7 @@ export default function Home() {
     {
       name: 'Knapsack (Greedy)',
       description: 'A greedy approach to solve the fractional knapsack problem.',
-      path: '/algorithms/knapsack-greedy',
+      path: '/visualisers/knapsack-greedy',
       category: 'Greedy',
       timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
       spaceComplexity: 'O(1)'
@@ -343,7 +343,7 @@ export default function Home() {
     {
       name: 'Activity Selection',
       description: 'A greedy algorithm to select the maximum number of activities that can be performed.',
-      path: '/algorithms/activity-selection',
+      path: '/visualisers/activity-selection',
       category: 'Greedy',
       timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
       spaceComplexity: 'O(1)'
@@ -351,7 +351,7 @@ export default function Home() {
     {
       name: 'Fibonacci (Memoization)',
       description: 'An optimized approach to calculate Fibonacci numbers using memoization.',
-      path: '/algorithms/fibonacci-memoization',
+      path: '/visualisers/fibonacci-memoization',
       category: 'Dynamic Programming',
       timeComplexity: { best: 'O(1)', average: 'O(n)', worst: 'O(n)' },
       spaceComplexity: 'O(n)'
@@ -359,7 +359,7 @@ export default function Home() {
     {
       name: '0/1 Knapsack',
       description: 'A dynamic programming solution to the 0/1 knapsack problem.',
-      path: '/algorithms/knapsack-01',
+      path: '/visualisers/knapsack-01',
       category: 'Dynamic Programming',
       timeComplexity: { best: 'O(1)', average: 'O(nW)', worst: 'O(nW)' },
       spaceComplexity: 'O(nW)'
@@ -367,7 +367,7 @@ export default function Home() {
     {
       name: 'Longest Common Subsequence',
       description: 'Finds the longest subsequence present in both strings.',
-      path: '/algorithms/longest-common-subsequence',
+      path: '/visualisers/longest-common-subsequence',
       category: 'Dynamic Programming',
       timeComplexity: { best: 'O(1)', average: 'O(mn)', worst: 'O(mn)' },
       spaceComplexity: 'O(mn)'
@@ -375,7 +375,7 @@ export default function Home() {
     {
       name: 'Edit Distance',
       description: 'Calculates the minimum number of operations to convert one string to another.',
-      path: '/algorithms/edit-distance',
+      path: '/visualisers/edit-distance',
       category: 'Dynamic Programming',
       timeComplexity: { best: 'O(1)', average: 'O(mn)', worst: 'O(mn)' },
       spaceComplexity: 'O(mn)'
@@ -383,7 +383,7 @@ export default function Home() {
     {
       name: 'N-Queens Problem',
       description: 'A backtracking algorithm to place N queens on an N×N chessboard.',
-      path: '/algorithms/n-queens',
+      path: '/visualisers/n-queens',
       category: 'Backtracking',
       timeComplexity: { best: 'O(1)', average: 'O(N!)', worst: 'O(N!)' },
       spaceComplexity: 'O(N²)'
@@ -391,7 +391,7 @@ export default function Home() {
     {
       name: 'Sudoku Solver',
       description: 'A backtracking algorithm to solve a Sudoku puzzle.',
-      path: '/algorithms/sudoku-solver',
+      path: '/visualisers/sudoku-solver',
       category: 'Backtracking',
       timeComplexity: { best: 'O(1)', average: 'O(9^(n²))', worst: 'O(9^(n²))' },
       spaceComplexity: 'O(n²)'
@@ -399,7 +399,7 @@ export default function Home() {
     {
       name: 'Rabin-Karp Algorithm',
       description: 'A string searching algorithm that uses hashing to find patterns.',
-      path: '/algorithms/rabin-karp',
+      path: '/visualisers/rabin-karp',
       category: 'String Matching',
       timeComplexity: { best: 'O(n + m)', average: 'O(n + m)', worst: 'O(nm)' },
       spaceComplexity: 'O(1)'
@@ -407,7 +407,7 @@ export default function Home() {
     {
       name: 'KMP Algorithm',
       description: 'The Knuth-Morris-Pratt algorithm for efficient string matching.',
-      path: '/algorithms/kmp',
+      path: '/visualisers/kmp',
       category: 'String Matching',
       timeComplexity: { best: 'O(n + m)', average: 'O(n + m)', worst: 'O(n + m)' },
       spaceComplexity: 'O(m)'
@@ -415,7 +415,7 @@ export default function Home() {
     {
       name: 'Z-Algorithm',
       description: 'An algorithm for finding all occurrences of a pattern in a string.',
-      path: '/algorithms/z-algorithm',
+      path: '/visualisers/z-algorithm',
       category: 'String Matching',
       timeComplexity: { best: 'O(n + m)', average: 'O(n + m)', worst: 'O(n + m)' },
       spaceComplexity: 'O(n + m)'
@@ -423,7 +423,7 @@ export default function Home() {
     {
       name: 'Trie (Prefix Matching)',
       description: 'A tree data structure used for efficient prefix matching.',
-      path: '/algorithms/trie-matching',
+      path: '/visualisers/trie-matching',
       category: 'String Matching',
       timeComplexity: { best: 'O(1)', average: 'O(m)', worst: 'O(m)' },
       spaceComplexity: 'O(ALPHABET_SIZE * N * M)'
@@ -431,7 +431,7 @@ export default function Home() {
     {
       name: 'Manacher\'s Algorithm',
       description: 'An algorithm to find the longest palindromic substring in linear time.',
-      path: '/algorithms/manacher',
+      path: '/visualisers/manacher',
       category: 'String Matching',
       timeComplexity: { best: 'O(1)', average: 'O(n)', worst: 'O(n)' },
       spaceComplexity: 'O(n)'
