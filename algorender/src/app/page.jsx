@@ -1,16 +1,25 @@
-'use client';
-
-import { useState } from 'react';
+"use client";
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import StatsBar from '@/components/StatsBar';
 import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function Home() {
+// Wrapper component to ensure useSearchParams is rendered inside Suspense
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Home />
+    </Suspense>
+  );
+}
+
+function Home() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'algorithms' ? 'algorithms' : 'data-structures';
   const [activeTab, setActiveTab] = useState(initialTab);
+
 
   const dataStructures = [
     {
