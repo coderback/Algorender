@@ -85,10 +85,14 @@ const RabinKarpVisualizer = () => {
   };
 
   return (
-    <Layout timeComplexity={timeComplexity}>
+    <Layout 
+      title="Rabin-Karp Algorithm"
+      description="Visualize string pattern matching using rolling hash."
+      timeComplexity={{ best: 'O(n + m)', average: 'O(n + m)', worst: 'O(nm)' }}
+      spaceComplexity="O(1)"
+    >
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Rabin-Karp Algorithm</h1>
           <div className="flex items-center space-x-4">
             <InputControl
               label="Text"
@@ -123,15 +127,15 @@ const RabinKarpVisualizer = () => {
           timeComplexity={timeComplexity}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Text</h2>
-            <div className="p-4 border rounded-lg">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Text</h2>
+            <div className="p-4 border rounded-lg bg-white">
               {text.split('').map((char, index) => (
                 <span
                   key={index}
                   className={`inline-block p-1 ${
-                    matches.includes(index) ? 'bg-green-200' : ''
+                    matches.includes(index) ? 'bg-forest-100' : ''
                   }`}
                 >
                   {char}
@@ -140,19 +144,44 @@ const RabinKarpVisualizer = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">How it Works</h2>
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">How it Works</h2>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-4">
                 The Rabin-Karp algorithm uses hashing to find a pattern in a text:
               </p>
-              <ul className="list-disc list-inside text-gray-600">
-                <li>Calculate hash value of pattern and first window of text</li>
-                <li>Slide the pattern over text one by one</li>
-                <li>If hash values match, check characters one by one</li>
-                <li>If all characters match, pattern is found</li>
-                <li>Calculate hash value for next window of text</li>
-              </ul>
+              <div className="space-y-3 text-gray-600">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Calculate hash value of pattern and first window of text</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Slide the pattern over text one by one</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>If hash values match, check characters one by one</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>If all characters match, pattern is found</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Calculate hash value for next window of text</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

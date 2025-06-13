@@ -72,10 +72,14 @@ const ManacherVisualizer = () => {
   };
 
   return (
-    <Layout timeComplexity={timeComplexity}>
+    <Layout
+      title="Manacher's Algorithm"
+      description="Visualize finding all palindromic substrings in linear time."
+      timeComplexity={{ best: 'O(n)', average: 'O(n)', worst: 'O(n)' }}
+      spaceComplexity="O(n)"
+    >
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Manacher's Algorithm</h1>
           <div className="flex items-center space-x-4">
             <InputControl
               label="Text"
@@ -103,15 +107,15 @@ const ManacherVisualizer = () => {
           timeComplexity={timeComplexity}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Text</h2>
-            <div className="p-4 border rounded-lg">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Text</h2>
+            <div className="p-4 border rounded-lg bg-white">
               {text.split('').map((char, index) => (
                 <span
                   key={index}
                   className={`inline-block p-1 ${
-                    palindromes.some(p => index >= p.start && index < p.start + p.length) ? 'bg-green-200' : ''
+                    palindromes.some(p => index >= p.start && index < p.start + p.length) ? 'bg-forest-100' : ''
                   }`}
                 >
                   {char}
@@ -120,18 +124,38 @@ const ManacherVisualizer = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">How it Works</h2>
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">How it Works</h2>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-4">
                 Manacher's Algorithm finds all palindromes in a string:
               </p>
-              <ul className="list-disc list-inside text-gray-600">
-                <li>Transform the string to handle even-length palindromes</li>
-                <li>Use a center and right boundary to optimize palindrome checks</li>
-                <li>Expand around each center to find palindromes</li>
-                <li>Time complexity is O(n) where n is the length of the string</li>
-              </ul>
+              <div className="space-y-3 text-gray-600">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Transform the string to handle even-length palindromes</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Use a center and right boundary to optimize palindrome checks</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Expand around each center to find palindromes</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Time complexity is O(n) where n is the length of the string</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

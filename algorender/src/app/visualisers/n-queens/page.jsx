@@ -103,10 +103,14 @@ const NQueensVisualizer = () => {
   };
 
   return (
-    <Layout timeComplexity={timeComplexity}>
+    <Layout 
+      title="N-Queens Problem"
+      description="Visualize the N-Queens problem using backtracking."
+      timeComplexity={{ best: 'O(n!)', average: 'O(n!)', worst: 'O(n!)' }}
+      spaceComplexity="O(n)"
+    >
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">N-Queens Problem</h1>
           <div className="flex items-center space-x-4">
             <InputControl
               label="Board Size"
@@ -136,9 +140,9 @@ const NQueensVisualizer = () => {
           timeComplexity={timeComplexity}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Board</h2>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Board</h2>
             <div className="grid gap-1" style={{ 
               gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
               aspectRatio: '1/1'
@@ -153,7 +157,7 @@ const NQueensVisualizer = () => {
                     style={{ aspectRatio: '1/1' }}
                   >
                     {cell === 1 && (
-                      <div className="w-3/4 h-3/4 rounded-full bg-blue-500" />
+                      <div className="w-3/4 h-3/4 rounded-full bg-forest-500" />
                     )}
                   </div>
                 ))
@@ -161,8 +165,8 @@ const NQueensVisualizer = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Solutions</h2>
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Solutions</h2>
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {solutions.map((_, index) => (
@@ -177,16 +181,33 @@ const NQueensVisualizer = () => {
                 ))}
               </div>
               <div className="mt-4">
-                <h3 className="font-semibold mb-2">How it Works</h3>
-                <p className="text-gray-600">
-                  The N-Queens problem is solved using backtracking. The algorithm:
-                </p>
-                <ul className="list-disc list-inside text-gray-600 mt-2">
-                  <li>Places queens row by row</li>
-                  <li>Checks if each position is safe (no conflicts)</li>
-                  <li>Backtracks when no valid position is found</li>
-                  <li>Continues until all solutions are found</li>
-                </ul>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
+                <div className="space-y-3 text-gray-600">
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Places queens row by row</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Checks if each position is safe (no conflicts)</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Backtracks when no valid position is found</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Continues until all solutions are found</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -78,10 +78,14 @@ const ZAlgorithmVisualizer = () => {
   };
 
   return (
-    <Layout timeComplexity={timeComplexity}>
+    <Layout
+      title="Z-Algorithm"
+      description="Visualize pattern matching using Z-function."
+      timeComplexity={{ best: 'O(n + m)', average: 'O(n + m)', worst: 'O(n + m)' }}
+      spaceComplexity="O(n + m)"
+    >
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Z-Algorithm</h1>
           <div className="flex items-center space-x-4">
             <InputControl
               label="Text"
@@ -116,15 +120,15 @@ const ZAlgorithmVisualizer = () => {
           timeComplexity={timeComplexity}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Text</h2>
-            <div className="p-4 border rounded-lg">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Text</h2>
+            <div className="p-4 border rounded-lg bg-white">
               {text.split('').map((char, index) => (
                 <span
                   key={index}
                   className={`inline-block p-1 ${
-                    matches.includes(index) ? 'bg-green-200' : ''
+                    matches.includes(index) ? 'bg-forest-100' : ''
                   }`}
                 >
                   {char}
@@ -133,19 +137,44 @@ const ZAlgorithmVisualizer = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">How it Works</h2>
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">How it Works</h2>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-4">
                 The Z-Algorithm computes the Z-array for a string:
               </p>
-              <ul className="list-disc list-inside text-gray-600">
-                <li>Z[i] is the length of the longest substring starting at i that is also a prefix of the string</li>
-                <li>Use the Z-array to find all occurrences of a pattern in a text</li>
-                <li>Concatenate pattern and text with a special character</li>
-                <li>Compute Z-array for the concatenated string</li>
-                <li>Find positions where Z[i] equals the pattern length</li>
-              </ul>
+              <div className="space-y-3 text-gray-600">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Z[i] is the length of the longest substring starting at i that is also a prefix of the string</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Use the Z-array to find all occurrences of a pattern in a text</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Concatenate pattern and text with a special character</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Compute Z-array for the concatenated string</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Find positions where Z[i] equals the pattern length</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

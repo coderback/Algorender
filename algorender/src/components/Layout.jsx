@@ -2,15 +2,31 @@
 
 import Link from 'next/link';
 import Header from './Header';
+import { usePathname } from 'next/navigation';
 
 export default function Layout({ children, title, description, timeComplexity, spaceComplexity }) {
+  const pathname = usePathname();
+  const isAlgorithm = pathname.includes('-sort') || 
+                     pathname.includes('-search') || 
+                     pathname.includes('dijkstra') || 
+                     pathname.includes('prim') || 
+                     pathname.includes('kruskal') || 
+                     pathname.includes('knapsack') || 
+                     pathname.includes('n-queens') || 
+                     pathname.includes('sudoku') || 
+                     pathname.includes('rabin-karp') || 
+                     pathname.includes('kmp') || 
+                     pathname.includes('z-algorithm') || 
+                     pathname.includes('trie-matching') || 
+                     pathname.includes('manacher');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <Link href="/">
+          <Link href={`/?tab=${isAlgorithm ? 'algorithms' : 'data-structures'}`}>
             <span className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

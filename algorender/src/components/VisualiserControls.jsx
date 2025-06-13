@@ -1,4 +1,4 @@
-texport default function VisualiserControls({ array, setArray }) {
+export default function VisualiserControls({ array, setArray }) {
   const addRandomValue = () => {
     const randomVal = Math.floor(Math.random() * 100);
     setArray([...array, randomVal]);

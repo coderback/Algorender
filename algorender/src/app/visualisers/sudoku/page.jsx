@@ -146,14 +146,10 @@ const SudokuVisualizer = () => {
   };
 
   return (
-    <Layout 
-      title="Sudoku Solver"
-      description="Visualize how backtracking solves Sudoku puzzles."
-      timeComplexity={{ best: 'O(9^(n²))', average: 'O(9^(n²))', worst: 'O(9^(n²))' }}
-      spaceComplexity="O(n²)"
-    >
+    <Layout timeComplexity={timeComplexity}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Sudoku Solver</h1>
           <div className="flex items-center space-x-4">
             <select
               value={stats.difficulty}
@@ -192,9 +188,9 @@ const SudokuVisualizer = () => {
           spaceComplexity={timeComplexity.space}
         />
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Sudoku Board</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Sudoku Board</h2>
             <div className="grid grid-cols-9 gap-0.5 border-2 border-gray-800">
               {board.map((row, i) => 
                 row.map((cell, j) => (
@@ -225,75 +221,28 @@ const SudokuVisualizer = () => {
             </div>
           </div>
 
-                      <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">How it Works</h2>
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">How it Works</h2>
             <div className="space-y-4">
-              <div className="space-y-3 text-gray-600">
-                <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Finds an empty cell</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Tries numbers 1-9 in that cell</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Checks if the number is valid in that position</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>If valid, moves to the next cell</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>If no valid number is found, backtracks</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Continues until the puzzle is solved</span>
-                </div>
-              </div>
+              <p className="text-gray-600">
+                The Sudoku solver uses backtracking to find a solution:
+              </p>
+              <ul className="list-disc list-inside text-gray-600">
+                <li>Finds an empty cell</li>
+                <li>Tries numbers 1-9 in that cell</li>
+                <li>Checks if the number is valid in that position</li>
+                <li>If valid, moves to the next cell</li>
+                <li>If no valid number is found, backtracks</li>
+                <li>Continues until the puzzle is solved</li>
+              </ul>
               <div className="mt-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Rules</h3>
-                <div className="space-y-3 text-gray-600">
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Each row must contain numbers 1-9</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Each column must contain numbers 1-9</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Each 3x3 box must contain numbers 1-9</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>No number can be repeated in any row, column, or box</span>
-                  </div>
-                </div>
+                <h3 className="font-semibold mb-2">Rules</h3>
+                <ul className="list-disc list-inside text-gray-600">
+                  <li>Each row must contain numbers 1-9</li>
+                  <li>Each column must contain numbers 1-9</li>
+                  <li>Each 3x3 box must contain numbers 1-9</li>
+                  <li>No number can be repeated in any row, column, or box</li>
+                </ul>
               </div>
             </div>
           </div>

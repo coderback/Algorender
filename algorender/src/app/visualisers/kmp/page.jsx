@@ -83,73 +83,133 @@ const KMPVisualizer = () => {
   };
 
   return (
-    <Layout timeComplexity={timeComplexity}>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">KMP Algorithm</h1>
-          <div className="flex items-center space-x-4">
-            <InputControl
-              label="Text"
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={isSolving}
-            />
-            <InputControl
-              label="Pattern"
-              type="text"
-              value={pattern}
-              onChange={(e) => setPattern(e.target.value)}
-              disabled={isSolving}
-            />
-            <Button
-              onClick={kmp}
-              disabled={isSolving}
-              variant="primary"
-            >
-              {isSolving ? 'Solving...' : 'Find Matches'}
-            </Button>
-          </div>
-        </div>
-
-        <StatsBar
-          stats={[
-            { label: 'Comparisons', value: stats.comparisons },
-            { label: 'Matches', value: stats.matches },
-            { label: 'Time (ms)', value: stats.time }
-          ]}
-          timeComplexity={timeComplexity}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Text</h2>
-            <div className="p-4 border rounded-lg">
-              {text.split('').map((char, index) => (
-                <span
-                  key={index}
-                  className={`inline-block p-1 ${
-                    matches.includes(index) ? 'bg-green-200' : ''
-                  }`}
-                >
-                  {char}
-                </span>
-              ))}
+    <Layout
+      title="KMP Algorithm"
+      description="Visualize the Knuth-Morris-Pratt string matching algorithm in action."
+      timeComplexity={{ best: 'O(n + m)', average: 'O(n + m)', worst: 'O(n + m)' }}
+      spaceComplexity="O(m)"
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Input</h2>
+            <div className="space-y-4">
+              <InputControl
+                type="text"
+                label="Text"
+                value={text}
+                onChange={e => setText(e.target.value)}
+                placeholder="Enter text to search in"
+                disabled={isSolving}
+              />
+              <InputControl
+                type="text"
+                label="Pattern"
+                value={pattern}
+                onChange={e => setPattern(e.target.value)}
+                placeholder="Enter pattern to search for"
+                disabled={isSolving}
+              />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">How it Works</h2>
+                      <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Controls</h2>
+            <div className="flex flex-wrap gap-4">
+              <Button
+                onClick={kmp}
+                disabled={isSolving || !text || !pattern}
+                variant="primary"
+              >
+                {isSolving ? 'Running...' : 'Run Algorithm'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setText('');
+                  setPattern('');
+                  setMatches([]);
+                  setStats({ comparisons: 0, matches: 0, time: 0 });
+                }}
+                variant="secondary"
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+                      <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Visualization</h2>
+            <div className="relative">
+              <div className="font-mono text-lg mb-4 break-all">
+                {text.split('').map((char, i) => (
+                  <span
+                    key={i}
+                    className={`inline-block w-8 h-8 text-center leading-8 border ${
+                      matches.includes(i) ? 'bg-forest-100 border-forest-500' : 'border-gray-200'
+                    }`}
+                  >
+                    {char}
+                  </span>
+                ))}
+              </div>
+              {pattern && (
+                <div className="font-mono text-lg mb-4 break-all">
+                  {pattern.split('').map((char, i) => (
+                    <span
+                      key={i}
+                      className="inline-block w-8 h-8 text-center leading-8 border border-forest-200 bg-forest-50"
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <StatsBar
+            stats={[
+              { label: 'Comparisons', value: stats.comparisons },
+              { label: 'Matches', value: stats.matches },
+              { label: 'Time (ms)', value: stats.time }
+            ]}
+            timeComplexity={timeComplexity}
+          />
+
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">How it Works</h2>
             <div className="space-y-4">
-              <p className="text-gray-600">
-                The KMP algorithm uses a prefix function to avoid unnecessary comparisons:
+              <p className="text-gray-600 mb-4">
+                The KMP algorithm uses a failure function to avoid unnecessary comparisons:
               </p>
-              <ul className="list-disc list-inside text-gray-600">
-                <li>Compute the longest proper prefix which is also a suffix (LPS)</li>
-                <li>Use LPS to skip characters that are guaranteed to match</li>
-                <li>If a mismatch occurs, use LPS to determine the next position</li>
-                <li>Continue until the pattern is found or the text is exhausted</li>
-              </ul>
+              <div className="space-y-3 text-gray-600">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Preprocess pattern to create LPS (Longest Proper Prefix which is also Suffix) array</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Use LPS array to skip comparisons when a mismatch occurs</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>When a match is found, continue from the next position</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>When a mismatch occurs, use LPS to determine where to continue matching</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

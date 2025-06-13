@@ -4,9 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import StatsBar from '@/components/StatsBar';
+import { useSearchParams } from 'next/navigation';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('data-structures');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'algorithms' ? 'algorithms' : 'data-structures';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const dataStructures = [
     {
@@ -456,28 +460,34 @@ export default function Home() {
         </div>
 
         <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
-            <button
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'data-structures'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-              onClick={() => setActiveTab('data-structures')}
-            >
-              Data Structures
-            </button>
-            <button
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'algorithms'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-              onClick={() => setActiveTab('algorithms')}
-            >
-              Algorithms
-            </button>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-2xl">
+            <TabsList className="grid w-full grid-cols-2 h-14">
+              <TabsTrigger 
+                value="data-structures"
+                className="text-base font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11v4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14h6" />
+                  </svg>
+                  Data Structures
+                </span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="algorithms"
+                className="text-base font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  Algorithms
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         <div className="space-y-8">
