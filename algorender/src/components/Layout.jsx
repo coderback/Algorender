@@ -10,7 +10,7 @@ export default function Layout({ children, title, description, timeComplexity, s
                      pathname.includes('-search') || 
                      pathname.includes('dijkstra') || 
                      pathname.includes('prim') || 
-                     pathname.includes('kruskal') || 
+                     pathname.includes('kruskals') ||
                      pathname.includes('knapsack') || 
                      pathname.includes('n-queens') || 
                      pathname.includes('sudoku') || 

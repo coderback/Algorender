@@ -1,24 +1,20 @@
-"use client";
-import React, { Suspense, useState } from 'react';
-import Link from 'next/link';
-import Header from '@/components/Header';
-import StatsBar from '@/components/StatsBar';
+'use client';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Wrapper component to ensure useSearchParams is rendered inside Suspense
-export default function Page() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <Home />
-    </Suspense>
-  );
-}
-
-function Home() {
+export default function ClientContent() {
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') === 'algorithms' ? 'algorithms' : 'data-structures';
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState('data-structures');
+
+  // Sync tab state once after mount without blocking SSR
+  useEffect(() => {
+    const param = searchParams.get('tab');
+    if (param === 'algorithms' || param === 'data-structures') {
+      setActiveTab(param);
+    }
+  }, [searchParams]);
 
 
   const dataStructures = [
