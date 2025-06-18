@@ -521,7 +521,9 @@ export default function Page() {
     <div className="min-h-screen bg-gray-50">
       <Header dataStructures={dataStructures} algorithms={algorithms} />
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <Home />
+        <Suspense fallback={<div>Loading...</div>}>
+          <Home />
+        </Suspense>
       </main>
     </div>
   );
