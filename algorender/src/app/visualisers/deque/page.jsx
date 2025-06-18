@@ -71,28 +71,34 @@ export default function DequeVisualiser() {
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Deque</h2>
-            <div className="flex items-center gap-2">
-              {deque.map((item, i) => (
-                <div
-                  key={i}
-                  className={`w-16 h-16 rounded-lg flex items-center justify-center transition-all ${
-                    i === selectedIndex
-                      ? 'bg-blue-100 border-2 border-blue-500 scale-110'
-                      : 'bg-white border border-gray-200'
-                  }`}
-                >
-                  <span className="text-lg font-semibold text-gray-900">{item}</span>
-                </div>
-              ))}
-              {deque.length === 0 && (
-                <div className="w-16 h-16 rounded-lg flex items-center justify-center bg-gray-100 text-gray-400">
-                  Empty
-                </div>
-              )}
-            </div>
-            <div className="mt-4 flex justify-between text-sm text-gray-500">
-              <span>Front</span>
-              <span>Back</span>
+            <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600 font-semibold">Front</span>
+                <span className="text-blue-600">↔</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {deque.map((item, i) => (
+                  <div
+                    key={i}
+                    className={`w-16 h-16 rounded-lg flex items-center justify-center transition-all ${
+                      i === selectedIndex
+                        ? 'bg-blue-100 border-2 border-blue-500 scale-110'
+                        : 'bg-white border border-gray-200'
+                    }`}
+                  >
+                    <span className="text-lg font-semibold text-gray-900">{item}</span>
+                  </div>
+                ))}
+                {deque.length === 0 && (
+                  <div className="w-16 h-16 rounded-lg flex items-center justify-center bg-gray-100 text-gray-400">
+                    Empty
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">↔</span>
+                <span className="text-gray-500 font-semibold">Rear</span>
+              </div>
             </div>
           </div>
 

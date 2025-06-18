@@ -17,7 +17,7 @@ export default function Layout({ children, title, description, timeComplexity, s
                      pathname.includes('rabin-karp') || 
                      pathname.includes('kmp') || 
                      pathname.includes('z-algorithm') || 
-                     pathname.includes('trie-matching') || 
+                     pathname.includes('trie') ||
                      pathname.includes('manacher');
 
   return (

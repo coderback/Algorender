@@ -9,11 +9,7 @@ const categories = {
     },
     {
       title: 'Hierarchical Structures',
-      modules: ['Binary Tree', 'AVL Tree', 'B-Tree', 'Heap', 'Trie'],
-    },
-    {
-      title: 'Graph-Based Structures',
-      modules: ['Graph', 'Adjacency List', 'Adjacency Matrix'],
+      modules: ['Binary Tree', 'AVL Tree', 'B-Tree', 'Heap'],
     },
     {
       title: 'Hash-Based Structures',
@@ -43,7 +39,7 @@ const categories = {
     },
     {
       title: 'String & Pattern-Matching',
-      modules: ['Rabin-Karp Algorithm', 'KMP Algorithm', 'Z-Algorithm', 'Trie (Prefix Matching)', 'Manacher\'s Algorithm'],
+      modules: ['Rabin-Karp Algorithm', 'KMP Algorithm', 'Z-Algorithm', 'Manacher\'s Algorithm'],
     },
   ],
 };

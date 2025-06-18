@@ -8,42 +8,21 @@ import Button from '@/components/Button';
 export default function ArrayVisualiser() {
   const [array, setArray] = useState([1, 2, 3, 4, 5]);
   const [value, setValue] = useState('');
-  const [index, setIndex] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(null);
 
   const insert = () => {
-    if (value === '' || index === '') return;
-    const newIndex = parseInt(index);
-    if (newIndex < 0 || newIndex > array.length) return;
-
+    if (value === '') return;
     const newArray = [...array];
-    newArray.splice(newIndex, 0, parseInt(value));
+    newArray.push(parseInt(value));
     setArray(newArray);
     setValue('');
-    setIndex('');
   };
 
   const remove = () => {
-    if (index === '') return;
-    const newIndex = parseInt(index);
-    if (newIndex < 0 || newIndex >= array.length) return;
-
+    if (array.length === 0) return;
     const newArray = [...array];
-    newArray.splice(newIndex, 1);
+    newArray.pop();
     setArray(newArray);
-    setIndex('');
-  };
-
-  const update = () => {
-    if (value === '' || index === '') return;
-    const newIndex = parseInt(index);
-    if (newIndex < 0 || newIndex >= array.length) return;
-
-    const newArray = [...array];
-    newArray[newIndex] = parseInt(value);
-    setArray(newArray);
-    setValue('');
-    setIndex('');
   };
 
   const search = () => {
@@ -57,7 +36,6 @@ export default function ArrayVisualiser() {
   const reset = () => {
     setArray([1, 2, 3, 4, 5]);
     setValue('');
-    setIndex('');
     setSelectedIndex(null);
   };
 
@@ -125,13 +103,6 @@ export default function ArrayVisualiser() {
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="Enter value"
               />
-              <InputControl
-                label="Index"
-                type="number"
-                value={index}
-                onChange={(e) => setIndex(e.target.value)}
-                placeholder="Enter index"
-              />
               <div className="grid grid-cols-2 gap-3">
                 <Button onClick={insert} variant="primary" fullWidth>
                   Insert
@@ -139,16 +110,13 @@ export default function ArrayVisualiser() {
                 <Button onClick={remove} variant="danger" fullWidth>
                   Remove
                 </Button>
-                <Button onClick={update} variant="success" fullWidth>
-                  Update
-                </Button>
                 <Button onClick={search} variant="secondary" fullWidth>
                   Search
                 </Button>
+                <Button onClick={reset} variant="secondary" fullWidth>
+                  Reset
+                </Button>
               </div>
-              <Button onClick={reset} variant="secondary" fullWidth>
-                Reset
-              </Button>
             </div>
           </div>
 

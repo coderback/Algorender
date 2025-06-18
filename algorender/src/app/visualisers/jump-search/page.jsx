@@ -1,22 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 
 export default function JumpSearchVisualiser() {
-  const [array, setArray] = useState([11, 12, 22, 25, 34, 64, 90]);
+  const [array, setArray] = useState(Array.from({ length: 8 }, () => Math.floor(Math.random() * 100)).sort((a, b) => a - b));
   const [target, setTarget] = useState('');
   const [currentIndex, setCurrentIndex] = useState(null);
   const [jumpSize, setJumpSize] = useState(null);
   const [foundIndex, setFoundIndex] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [speed, setSpeed] = useState(500);
-  const [arraySize, setArraySize] = useState(7);
+  const isSearchingRef = useRef(false);
+  const isPausedRef = useRef(false);
 
-  const generateArray = (size) => {
-    const newArray = Array.from({ length: size }, () => Math.floor(Math.random() * 100))
+  // Keep refs in sync with state
+  const setIsSearchingSafe = (val) => {
+    isSearchingRef.current = val;
+    setIsSearching(val);
+  };
+  const setIsPausedSafe = (val) => {
+    isPausedRef.current = val;
+    setIsPaused(val);
+  };
+
+  const generateArray = () => {
+    const newArray = Array.from({ length: 8 }, () => Math.floor(Math.random() * 100))
       .sort((a, b) => a - b);
     setArray(newArray);
     setCurrentIndex(null);
@@ -27,7 +39,7 @@ export default function JumpSearchVisualiser() {
   const jumpSearch = async () => {
     if (!target) return;
     
-    setIsSearching(true);
+    setIsSearchingSafe(true);
     setCurrentIndex(0);
     setJumpSize(Math.floor(Math.sqrt(array.length)));
     setFoundIndex(null);
@@ -37,24 +49,38 @@ export default function JumpSearchVisualiser() {
     let prev = 0;
 
     while (array[Math.min(step, array.length) - 1] < targetValue) {
+      if (!isSearchingRef.current) break; // Stop if search is cancelled
+      
+      // Handle pause
+      while (isPausedRef.current && isSearchingRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       prev = step;
       step += Math.floor(Math.sqrt(array.length));
       setCurrentIndex(prev);
       await new Promise(resolve => setTimeout(resolve, speed));
 
       if (prev >= array.length) {
-        setIsSearching(false);
+        setIsSearchingSafe(false);
         return;
       }
     }
 
     while (array[prev] < targetValue) {
+      if (!isSearchingRef.current) break; // Stop if search is cancelled
+      
+      // Handle pause
+      while (isPausedRef.current && isSearchingRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       prev++;
       setCurrentIndex(prev);
       await new Promise(resolve => setTimeout(resolve, speed));
 
       if (prev === Math.min(step, array.length)) {
-        setIsSearching(false);
+        setIsSearchingSafe(false);
         return;
       }
     }
@@ -63,25 +89,25 @@ export default function JumpSearchVisualiser() {
       setFoundIndex(prev);
     }
 
-    setIsSearching(false);
+    setIsSearchingSafe(false);
   };
 
   const reset = () => {
-    generateArray(arraySize);
+    setIsSearchingSafe(false);
+    setIsPausedSafe(false);
+    generateArray();
     setTarget('');
     setCurrentIndex(null);
     setJumpSize(null);
     setFoundIndex(null);
   };
 
-  const handleArraySizeChange = (e) => {
-    const size = parseInt(e.target.value);
-    setArraySize(size);
-    generateArray(size);
-  };
-
   const handleSpeedChange = (e) => {
     setSpeed(1000 - e.target.value);
+  };
+
+  const togglePause = () => {
+    setIsPausedSafe(!isPausedRef.current);
   };
 
   return (
@@ -95,25 +121,21 @@ export default function JumpSearchVisualiser() {
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Array</h2>
-            <div className="flex justify-center items-end space-x-2 h-64">
+            <div className="flex justify-center items-center space-x-2 py-8">
               {array.map((value, index) => (
                 <div
                   key={index}
-                  className={`w-12 flex flex-col items-center transition-all duration-300 ${
+                  className={`w-14 h-14 flex items-center justify-center rounded-md border-2 text-lg font-semibold transition-all duration-300 ${
                     foundIndex === index
-                      ? 'bg-green-500'
+                      ? 'bg-green-500 text-white border-green-700'
                       : currentIndex === index
-                      ? 'bg-blue-500'
+                      ? 'bg-blue-500 text-white border-blue-700'
                       : jumpSize !== null && index % jumpSize === 0
-                      ? 'bg-yellow-100'
-                      : 'bg-gray-200'
+                      ? 'bg-yellow-100 border-yellow-400 text-gray-900'
+                      : 'bg-gray-100 border-gray-300 text-gray-800'
                   }`}
-                  style={{
-                    height: `${(value / 100) * 200}px`,
-                    transition: 'height 0.3s ease-in-out'
-                  }}
                 >
-                  <span className="text-sm font-medium text-gray-700 mt-2">{value}</span>
+                  {value}
                 </div>
               ))}
             </div>
@@ -162,19 +184,6 @@ export default function JumpSearchVisualiser() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Array Size
-                </label>
-                <InputControl
-                  type="range"
-                  min="5"
-                  max="20"
-                  value={arraySize}
-                  onChange={handleArraySizeChange}
-                  disabled={isSearching}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Speed
                 </label>
                 <InputControl
@@ -194,9 +203,18 @@ export default function JumpSearchVisualiser() {
                 >
                   {isSearching ? 'Searching...' : 'Start Search'}
                 </Button>
+                {isSearching && (
+                  <Button
+                    onClick={togglePause}
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                )}
                 <Button
                   onClick={reset}
-                  disabled={isSearching}
+                  disabled={isSearching && !isPaused}
                   variant="secondary"
                   className="flex-1"
                 >

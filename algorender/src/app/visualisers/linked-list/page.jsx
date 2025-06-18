@@ -14,48 +14,39 @@ export default function LinkedListVisualiser() {
     { value: 5, next: null }
   ]);
   const [value, setValue] = useState('');
-  const [index, setIndex] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(null);
 
-  const insert = () => {
-    if (value === '' || index === '') return;
-    const newIndex = parseInt(index);
-    if (newIndex < 0 || newIndex > list.length) return;
-
+  const insertAtEnd = () => {
+    if (value === '') return;
+    const newNode = { 
+      value: parseInt(value), 
+      next: null 
+    };
+    
     const newList = [...list];
-    const newNode = { value: parseInt(value), next: newIndex === list.length ? null : newIndex };
-    
-    if (newIndex > 0) {
-      newList[newIndex - 1].next = newIndex;
+    if (newList.length > 0) {
+      newList[newList.length - 1].next = newList.length;
     }
-    
-    newList.splice(newIndex, 0, newNode);
-    
-    // Update next pointers
-    for (let i = newIndex + 1; i < newList.length; i++) {
-      newList[i].next = i + 1 < newList.length ? i + 1 : null;
-    }
+    newList.push(newNode);
 
     setList(newList);
     setValue('');
-    setIndex('');
+    setSelectedIndex(newList.length - 1);
+    setTimeout(() => setSelectedIndex(null), 1000);
   };
 
-  const remove = () => {
-    if (index === '') return;
-    const newIndex = parseInt(index);
-    if (newIndex < 0 || newIndex >= list.length) return;
-
+  const removeFromEnd = () => {
+    if (list.length === 0) return;
+    
     const newList = [...list];
-    newList.splice(newIndex, 1);
-
-    // Update next pointers
-    for (let i = 0; i < newList.length; i++) {
-      newList[i].next = i + 1 < newList.length ? i + 1 : null;
+    newList.pop();
+    
+    if (newList.length > 0) {
+      newList[newList.length - 1].next = null;
     }
 
     setList(newList);
-    setIndex('');
+    setSelectedIndex(null);
   };
 
   const search = () => {
@@ -75,7 +66,6 @@ export default function LinkedListVisualiser() {
       { value: 5, next: null }
     ]);
     setValue('');
-    setIndex('');
     setSelectedIndex(null);
   };
 
@@ -101,7 +91,7 @@ export default function LinkedListVisualiser() {
                     }`}
                   >
                     <span className="text-lg font-semibold text-gray-900">{node.value}</span>
-                    <span className="text-xs text-gray-500">Index {i}</span>
+                    <span className="text-xs text-gray-500">Node {i + 1}</span>
                   </div>
                   {node.next !== null && (
                     <div className="w-8 h-0.5 bg-gray-300 relative">
@@ -110,6 +100,11 @@ export default function LinkedListVisualiser() {
                   )}
                 </div>
               ))}
+              {list.length === 0 && (
+                <div className="w-16 h-16 rounded-lg flex items-center justify-center bg-gray-100 text-gray-400">
+                  Empty
+                </div>
+              )}
             </div>
           </div>
 
@@ -120,13 +115,13 @@ export default function LinkedListVisualiser() {
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Insert: O(n) - Traverse to position and update pointers</span>
+                <span>Insert: O(1) - Add node at the end</span>
               </div>
               <div className="flex items-start space-x-2">
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Delete: O(n) - Traverse to position and update pointers</span>
+                <span>Delete: O(1) - Remove node from the end</span>
               </div>
               <div className="flex items-start space-x-2">
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,18 +144,11 @@ export default function LinkedListVisualiser() {
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="Enter value"
               />
-              <InputControl
-                label="Index"
-                type="number"
-                value={index}
-                onChange={(e) => setIndex(e.target.value)}
-                placeholder="Enter index"
-              />
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={insert} variant="primary" fullWidth>
+                <Button onClick={insertAtEnd} variant="primary" fullWidth>
                   Insert
                 </Button>
-                <Button onClick={remove} variant="danger" fullWidth>
+                <Button onClick={removeFromEnd} variant="danger" fullWidth>
                   Remove
                 </Button>
                 <Button onClick={search} variant="secondary" fullWidth>

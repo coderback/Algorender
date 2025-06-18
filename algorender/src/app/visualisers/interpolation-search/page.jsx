@@ -1,23 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 
 export default function InterpolationSearchVisualiser() {
-  const [array, setArray] = useState([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  const [array, setArray] = useState(Array.from({ length: 8 }, (_, i) => (i + 1) * 10));
   const [target, setTarget] = useState('');
   const [left, setLeft] = useState(null);
   const [right, setRight] = useState(null);
   const [pos, setPos] = useState(null);
   const [foundIndex, setFoundIndex] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [speed, setSpeed] = useState(500);
-  const [arraySize, setArraySize] = useState(10);
+  const isSearchingRef = useRef(false);
+  const isPausedRef = useRef(false);
 
-  const generateArray = (size) => {
-    const newArray = Array.from({ length: size }, (_, i) => (i + 1) * 10);
+  // Keep refs in sync with state
+  const setIsSearchingSafe = (val) => {
+    isSearchingRef.current = val;
+    setIsSearching(val);
+  };
+  const setIsPausedSafe = (val) => {
+    isPausedRef.current = val;
+    setIsPaused(val);
+  };
+
+  const generateArray = () => {
+    const newArray = Array.from({ length: 8 }, (_, i) => (i + 1) * 10);
     setArray(newArray);
     setLeft(null);
     setRight(null);
@@ -28,7 +40,7 @@ export default function InterpolationSearchVisualiser() {
   const interpolationSearch = async () => {
     if (!target) return;
     
-    setIsSearching(true);
+    setIsSearchingSafe(true);
     setLeft(0);
     setRight(array.length - 1);
     setPos(null);
@@ -39,6 +51,13 @@ export default function InterpolationSearchVisualiser() {
     const targetValue = parseInt(target);
 
     while (low <= high && targetValue >= array[low] && targetValue <= array[high]) {
+      if (!isSearchingRef.current) break; // Stop if search is cancelled
+      
+      // Handle pause
+      while (isPausedRef.current && isSearchingRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       if (low === high) {
         if (array[low] === targetValue) {
           setFoundIndex(low);
@@ -66,11 +85,13 @@ export default function InterpolationSearchVisualiser() {
       }
     }
 
-    setIsSearching(false);
+    setIsSearchingSafe(false);
   };
 
   const reset = () => {
-    generateArray(arraySize);
+    setIsSearchingSafe(false);
+    setIsPausedSafe(false);
+    generateArray();
     setTarget('');
     setLeft(null);
     setRight(null);
@@ -78,14 +99,12 @@ export default function InterpolationSearchVisualiser() {
     setFoundIndex(null);
   };
 
-  const handleArraySizeChange = (e) => {
-    const size = parseInt(e.target.value);
-    setArraySize(size);
-    generateArray(size);
-  };
-
   const handleSpeedChange = (e) => {
     setSpeed(1000 - e.target.value);
+  };
+
+  const togglePause = () => {
+    setIsPausedSafe(!isPausedRef.current);
   };
 
   return (
@@ -99,25 +118,21 @@ export default function InterpolationSearchVisualiser() {
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Array</h2>
-            <div className="flex justify-center items-end space-x-2 h-64">
+            <div className="flex justify-center items-center space-x-2 py-8">
               {array.map((value, index) => (
                 <div
                   key={index}
-                  className={`w-12 flex flex-col items-center transition-all duration-300 ${
+                  className={`w-14 h-14 flex items-center justify-center rounded-md border-2 text-lg font-semibold transition-all duration-300 ${
                     foundIndex === index
-                      ? 'bg-green-500'
+                      ? 'bg-green-500 text-white border-green-700'
                       : pos === index
-                      ? 'bg-blue-500'
+                      ? 'bg-blue-500 text-white border-blue-700'
                       : left !== null && right !== null && index >= left && index <= right
-                      ? 'bg-yellow-100'
-                      : 'bg-gray-200'
+                      ? 'bg-yellow-100 border-yellow-400 text-gray-900'
+                      : 'bg-gray-100 border-gray-300 text-gray-800'
                   }`}
-                  style={{
-                    height: `${(value / 100) * 200}px`,
-                    transition: 'height 0.3s ease-in-out'
-                  }}
                 >
-                  <span className="text-sm font-medium text-gray-700 mt-2">{value}</span>
+                  {value}
                 </div>
               ))}
             </div>
@@ -166,19 +181,6 @@ export default function InterpolationSearchVisualiser() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Array Size
-                </label>
-                <InputControl
-                  type="range"
-                  min="5"
-                  max="20"
-                  value={arraySize}
-                  onChange={handleArraySizeChange}
-                  disabled={isSearching}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Speed
                 </label>
                 <InputControl
@@ -198,9 +200,18 @@ export default function InterpolationSearchVisualiser() {
                 >
                   {isSearching ? 'Searching...' : 'Start Search'}
                 </Button>
+                {isSearching && (
+                  <Button
+                    onClick={togglePause}
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                )}
                 <Button
                   onClick={reset}
-                  disabled={isSearching}
+                  disabled={isSearching && !isPaused}
                   variant="secondary"
                   className="flex-1"
                 >

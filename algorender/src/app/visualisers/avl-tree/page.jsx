@@ -6,25 +6,11 @@ import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 
 export default function AVLTreeVisualiser() {
-  const [tree, setTree] = useState({
-    value: 10,
-    left: {
-      value: 5,
-      left: { value: 3, left: null, right: null, height: 1 },
-      right: { value: 7, left: null, right: null, height: 1 },
-      height: 2
-    },
-    right: {
-      value: 15,
-      left: { value: 12, left: null, right: null, height: 1 },
-      right: { value: 18, left: null, right: null, height: 1 },
-      height: 2
-    },
-    height: 3
-  });
+  const [tree, setTree] = useState(null);
   const [value, setValue] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
   const [rotationType, setRotationType] = useState(null);
+  const [error, setError] = useState('');
 
   const getHeight = (node) => {
     if (!node) return 0;
@@ -74,10 +60,20 @@ export default function AVLTreeVisualiser() {
   };
 
   const insert = (value) => {
-    if (value === '') return;
+    if (value === '') {
+      setError('Please enter a value');
+      return;
+    }
     const newValue = parseInt(value);
+    if (isNaN(newValue)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    setError('');
+    setSelectedNode(newValue);
     setTree(insertNode(tree, newValue));
     setValue('');
+    setTimeout(() => setSelectedNode(null), 1000);
   };
 
   const insertNode = (node, value) => {
@@ -90,7 +86,7 @@ export default function AVLTreeVisualiser() {
     } else if (value > node.value) {
       node.right = insertNode(node.right, value);
     } else {
-      return node;
+      return node; // Value already exists
     }
 
     updateHeight(node);
@@ -123,88 +119,103 @@ export default function AVLTreeVisualiser() {
   };
 
   const search = (value) => {
-    if (value === '') return;
+    if (value === '') {
+      setError('Please enter a value');
+      return;
+    }
     const searchValue = parseInt(value);
+    if (isNaN(searchValue)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    setError('');
     setSelectedNode(null);
-    const path = [];
-    const found = searchNode(tree, searchValue, path);
+    const found = searchNode(tree, searchValue);
     setValue('');
     if (!found) {
       setTimeout(() => setSelectedNode(null), 2000);
     }
   };
 
-  const searchNode = (node, value, path) => {
+  const searchNode = (node, value) => {
     if (!node) return false;
-    path.push(node.value);
     if (node.value === value) {
-      setSelectedNode(node.value);
+      setSelectedNode(value);
       return true;
     }
-    if (value < node.value) return searchNode(node.left, value, path);
-    return searchNode(node.right, value, path);
+    if (value < node.value) return searchNode(node.left, value);
+    return searchNode(node.right, value);
   };
 
   const reset = () => {
-    setTree({
-      value: 10,
-      left: {
-        value: 5,
-        left: { value: 3, left: null, right: null, height: 1 },
-        right: { value: 7, left: null, right: null, height: 1 },
-        height: 2
-      },
-      right: {
-        value: 15,
-        left: { value: 12, left: null, right: null, height: 1 },
-        right: { value: 18, left: null, right: null, height: 1 },
-        height: 2
-      },
-      height: 3
-    });
+    setTree(null);
     setValue('');
     setSelectedNode(null);
     setRotationType(null);
+    setError('');
   };
 
-  const renderNode = (node, level = 0) => {
+  const renderNode = (node, level = 0, isLeft = null) => {
     if (!node) return null;
     const isSelected = node.value === selectedNode;
     const isRotating = rotationType && (
       (rotationType === 'right' && node.left?.value === selectedNode) ||
       (rotationType === 'left' && node.right?.value === selectedNode)
     );
+    const balance = getBalance(node);
+    const balanceColor = 
+      Math.abs(balance) > 1 ? 'text-red-500' :
+      Math.abs(balance) === 1 ? 'text-yellow-500' : 
+      'text-green-500';
+    const balanceGradient = 
+      Math.abs(balance) > 1 ? 'from-red-500 to-red-600' :
+      Math.abs(balance) === 1 ? 'from-yellow-500 to-yellow-600' :
+      'from-green-500 to-green-600';
 
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center relative">
+        {level > 0 && (
+          <div 
+            className={`absolute w-24 h-12 -top-10 
+              ${isLeft ? '-translate-x-12 border-t-2 border-l-2' : 'translate-x-12 border-t-2 border-r-2'} 
+              border-gray-300/50 rounded-${isLeft ? 'tl' : 'tr'}`}
+          />
+        )}
         <div
-          className={`w-16 h-16 rounded-lg flex items-center justify-center transition-all ${
-            isSelected
-              ? 'bg-blue-100 border-2 border-blue-500 scale-110'
-              : isRotating
-              ? 'bg-yellow-100 border-2 border-yellow-500 scale-110'
-              : 'bg-white border border-gray-200'
-          }`}
+          className={`w-24 h-24 rounded-2xl flex flex-col items-center justify-center transition-all duration-300
+            relative group cursor-pointer backdrop-blur-sm
+            ${isSelected || isRotating
+              ? `bg-gradient-to-br ${balanceGradient} text-white shadow-lg shadow-${balanceColor}/20 scale-110 ring-4 ring-${balanceColor}/30`
+              : 'bg-gradient-to-br from-white to-gray-50 shadow-lg shadow-gray-200/50 hover:shadow-xl hover:scale-105'
+            }`}
         >
-          <div className="text-center">
-            <span className="text-lg font-semibold text-gray-900">{node.value}</span>
-            <div className="text-xs text-gray-500">h={node.height}</div>
+          <span className={`text-2xl font-bold ${isSelected || isRotating ? 'text-white' : 'text-gray-700'}`}>
+            {node.value}
+          </span>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`text-xs font-medium ${isSelected || isRotating ? 'text-white/80' : 'text-gray-500'}`}>
+              h={node.height}
+            </span>
+            <span className={`text-xs font-medium ${isSelected || isRotating ? 'text-white' : balanceColor}`}>
+              b={balance}
+            </span>
+          </div>
+          <div className="absolute -top-6 left-0 text-xs font-medium text-gray-400">
+            Level {level}
+          </div>
+          <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200
+            bg-gray-800 text-white text-xs font-medium px-2 py-1 rounded-md -bottom-8 whitespace-nowrap">
+            Value: {node.value} | Height: {node.height} | Balance: {balance}
           </div>
         </div>
         {(node.left || node.right) && (
-          <div className="flex justify-center mt-4 space-x-8">
-            {node.left && (
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-gray-300"></div>
-                {renderNode(node.left, level + 1)}
-              </div>
-            )}
-            {node.right && (
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-gray-300"></div>
-                {renderNode(node.right, level + 1)}
-              </div>
-            )}
+          <div className="flex justify-center mt-16 space-x-24">
+            <div className="flex flex-col items-center">
+              {renderNode(node.left, level + 1, true)}
+            </div>
+            <div className="flex flex-col items-center">
+              {renderNode(node.right, level + 1, false)}
+            </div>
           </div>
         )}
       </div>
@@ -220,10 +231,15 @@ export default function AVLTreeVisualiser() {
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 overflow-x-auto">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">AVL Tree</h2>
-            <div className="flex justify-center">
-              {renderNode(tree)}
+            <div className="flex justify-center min-w-[800px] p-8">
+              {tree ? renderNode(tree) : (
+                <div className="text-gray-500 text-center">
+                  <p>No nodes yet</p>
+                  <p className="text-sm mt-2">Insert values to build a self-balancing tree</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -260,8 +276,12 @@ export default function AVLTreeVisualiser() {
                 label="Value"
                 type="number"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  setError('');
+                }}
                 placeholder="Enter value"
+                error={error}
               />
               <div className="grid grid-cols-2 gap-3">
                 <Button onClick={() => insert(value)} variant="primary" fullWidth>
@@ -283,19 +303,13 @@ export default function AVLTreeVisualiser() {
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <h4 className="text-sm font-medium text-gray-700 mb-1">Tree Height</h4>
                 <p className="text-2xl font-semibold text-blue-600">
-                  {tree.height}
+                  {tree ? tree.height - 1 : 0}
                 </p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <h4 className="text-sm font-medium text-gray-700 mb-1">Balance Factor</h4>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {getBalance(tree)}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Rotation Type</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {rotationType ? rotationType : '-'}
+                  {tree ? getBalance(tree) : 0}
                 </p>
               </div>
             </div>

@@ -6,107 +6,125 @@ import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 
 export default function BinaryTreeVisualiser() {
-  const [tree, setTree] = useState({
-    value: 10,
-    left: {
-      value: 5,
-      left: { value: 3, left: null, right: null },
-      right: { value: 7, left: null, right: null }
-    },
-    right: {
-      value: 15,
-      left: { value: 12, left: null, right: null },
-      right: { value: 18, left: null, right: null }
-    }
-  });
+  const [tree, setTree] = useState(null);
   const [value, setValue] = useState('');
-  const [selectedNode, setSelectedNode] = useState(null);
   const [traversalPath, setTraversalPath] = useState([]);
+  const [error, setError] = useState('');
 
   const insert = (value) => {
-    if (value === '') return;
+    if (value === '') {
+      setError('Please enter a value');
+      return;
+    }
     const newValue = parseInt(value);
+    if (isNaN(newValue)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    setError('');
     setTree(insertNode(tree, newValue));
     setValue('');
+    // Highlight the path to the newly inserted node
+    const path = [];
+    findPath(tree, newValue, path);
+    setTraversalPath(path);
+    setTimeout(() => setTraversalPath([]), 1000);
   };
 
   const insertNode = (node, value) => {
     if (!node) return { value, left: null, right: null };
     if (value < node.value) {
       return { ...node, left: insertNode(node.left, value) };
-    } else {
+    } else if (value > node.value) {
       return { ...node, right: insertNode(node.right, value) };
     }
+    return node; // Value already exists
   };
 
-  const search = (value) => {
-    if (value === '') return;
-    const searchValue = parseInt(value);
-    setTraversalPath([]);
-    const path = [];
-    const found = searchNode(tree, searchValue, path);
-    setTraversalPath(path);
-    setValue('');
-    if (!found) {
-      setTimeout(() => setTraversalPath([]), 2000);
-    }
-  };
-
-  const searchNode = (node, value, path) => {
+  const findPath = (node, value, path) => {
     if (!node) return false;
     path.push(node.value);
     if (node.value === value) return true;
-    if (value < node.value) return searchNode(node.left, value, path);
-    return searchNode(node.right, value, path);
+    if (value < node.value) return findPath(node.left, value, path);
+    return findPath(node.right, value, path);
+  };
+
+  const search = (value) => {
+    if (value === '') {
+      setError('Please enter a value');
+      return;
+    }
+    const searchValue = parseInt(value);
+    if (isNaN(searchValue)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    setError('');
+    setTraversalPath([]);
+    const path = [];
+    findPath(tree, searchValue, path);
+    setTraversalPath(path);
+    setValue('');
+    setTimeout(() => setTraversalPath([]), 2000);
   };
 
   const reset = () => {
-    setTree({
-      value: 10,
-      left: {
-        value: 5,
-        left: { value: 3, left: null, right: null },
-        right: { value: 7, left: null, right: null }
-      },
-      right: {
-        value: 15,
-        left: { value: 12, left: null, right: null },
-        right: { value: 18, left: null, right: null }
-      }
-    });
+    setTree(null);
     setValue('');
-    setSelectedNode(null);
     setTraversalPath([]);
+    setError('');
   };
 
-  const renderNode = (node, level = 0) => {
+  const getTreeHeight = (node) => {
+    if (!node) return 0;
+    return 1 + Math.max(getTreeHeight(node.left), getTreeHeight(node.right));
+  };
+
+  const countNodes = (node) => {
+    if (!node) return 0;
+    return 1 + countNodes(node.left) + countNodes(node.right);
+  };
+
+  const renderNode = (node, level = 0, isLeft = null) => {
     if (!node) return null;
     const isSelected = traversalPath.includes(node.value);
+    
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center relative">
+        {level > 0 && (
+          <div 
+            className={`absolute w-24 h-12 -top-10 
+              ${isLeft ? '-translate-x-12 border-t-2 border-l-2' : 'translate-x-12 border-t-2 border-r-2'} 
+              border-gray-300/50 rounded-${isLeft ? 'tl' : 'tr'}`}
+          />
+        )}
         <div
-          className={`w-16 h-16 rounded-lg flex items-center justify-center transition-all ${
-            isSelected
-              ? 'bg-blue-100 border-2 border-blue-500 scale-110'
-              : 'bg-white border border-gray-200'
-          }`}
+          className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center transition-all duration-300
+            relative group cursor-pointer backdrop-blur-sm
+            ${isSelected
+              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 scale-110 ring-4 ring-blue-500/30'
+              : 'bg-gradient-to-br from-white to-gray-50 shadow-lg shadow-gray-200/50 hover:shadow-xl hover:scale-105'
+            }`}
         >
-          <span className="text-lg font-semibold text-gray-900">{node.value}</span>
+          <span className={`text-2xl font-bold ${isSelected ? 'text-white' : 'text-gray-700'}`}>
+            {node.value}
+          </span>
+          <div className="absolute -top-6 left-0 text-xs font-medium text-gray-400">
+            Level {level}
+          </div>
+          <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200
+            bg-gray-800 text-white text-xs font-medium px-2 py-1 rounded-md -bottom-8 whitespace-nowrap">
+            Value: {node.value}
+          </div>
         </div>
         {(node.left || node.right) && (
-          <div className="flex justify-center mt-4 space-x-8">
-            {node.left && (
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-gray-300"></div>
-                {renderNode(node.left, level + 1)}
-              </div>
-            )}
-            {node.right && (
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-gray-300"></div>
-                {renderNode(node.right, level + 1)}
-              </div>
-            )}
+          <div className="flex justify-center mt-16 space-x-24">
+            <div className="flex flex-col items-center">
+              {renderNode(node.left, level + 1, true)}
+            </div>
+            <div className="flex flex-col items-center">
+              {renderNode(node.right, level + 1, false)}
+            </div>
           </div>
         )}
       </div>
@@ -122,10 +140,15 @@ export default function BinaryTreeVisualiser() {
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 overflow-x-auto">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Binary Tree</h2>
-            <div className="flex justify-center">
-              {renderNode(tree)}
+            <div className="flex justify-center min-w-[800px] p-8">
+              {tree ? renderNode(tree) : (
+                <div className="text-gray-500 text-center">
+                  <p>No nodes yet</p>
+                  <p className="text-sm mt-2">Insert values to build the tree</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -162,8 +185,12 @@ export default function BinaryTreeVisualiser() {
                 label="Value"
                 type="number"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  setError('');
+                }}
                 placeholder="Enter value"
+                error={error}
               />
               <div className="grid grid-cols-2 gap-3">
                 <Button onClick={() => insert(value)} variant="primary" fullWidth>
@@ -185,7 +212,7 @@ export default function BinaryTreeVisualiser() {
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <h4 className="text-sm font-medium text-gray-700 mb-1">Tree Height</h4>
                 <p className="text-2xl font-semibold text-blue-600">
-                  {Math.floor(Math.log2(countNodes(tree)))}
+                  {getTreeHeight(tree) - 1}
                 </p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -200,9 +227,4 @@ export default function BinaryTreeVisualiser() {
       </div>
     </Layout>
   );
-}
-
-function countNodes(node) {
-  if (!node) return 0;
-  return 1 + countNodes(node.left) + countNodes(node.right);
 } 

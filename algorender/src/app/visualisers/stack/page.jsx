@@ -50,11 +50,19 @@ export default function StackVisualiser() {
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Stack</h2>
             <div className="flex flex-col items-center gap-2">
-              {stack.map((item, i) => (
+              {/* Top label */}
+              {stack.length > 0 && (
+                <div className="text-sm font-medium text-blue-600 mb-1">
+                  Top
+                </div>
+              )}
+              
+              {/* Stack items in reverse order */}
+              {[...stack].reverse().map((item, i) => (
                 <div
-                  key={i}
+                  key={stack.length - 1 - i}
                   className={`w-24 h-12 rounded-lg flex items-center justify-center transition-all ${
-                    i === selectedIndex
+                    stack.length - 1 - i === selectedIndex
                       ? 'bg-blue-100 border-2 border-blue-500 scale-110'
                       : 'bg-white border border-gray-200'
                   }`}
@@ -62,9 +70,14 @@ export default function StackVisualiser() {
                   <span className="text-lg font-semibold text-gray-900">{item}</span>
                 </div>
               ))}
-              {stack.length === 0 && (
+              
+              {stack.length === 0 ? (
                 <div className="w-24 h-12 rounded-lg flex items-center justify-center bg-gray-100 text-gray-400">
                   Empty
+                </div>
+              ) : (
+                <div className="text-sm font-medium text-gray-600 mt-1">
+                  Base
                 </div>
               )}
             </div>

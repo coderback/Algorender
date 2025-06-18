@@ -6,168 +6,226 @@ import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 
 export default function BTreeVisualiser() {
-  const [tree, setTree] = useState({
-    keys: [10, 20],
-    children: [
-      {
-        keys: [5, 7],
-        children: [],
-        isLeaf: true
-      },
-      {
-        keys: [15],
-        children: [],
-        isLeaf: true
-      },
-      {
-        keys: [25, 30],
-        children: [],
-        isLeaf: true
-      }
-    ],
-    isLeaf: false
-  });
+  const [tree, setTree] = useState(null);
   const [value, setValue] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchPath, setSearchPath] = useState([]);
+  const [error, setError] = useState('');
   const [order] = useState(3); // B-tree of order 3 (2-3 tree)
 
   const insert = (value) => {
-    if (value === '') return;
+    if (value === '') {
+      setError('Please enter a value');
+      return;
+    }
     const newValue = parseInt(value);
-    const newTree = { ...tree };
-    insertNode(newTree, newValue);
-    setTree(newTree);
+    if (isNaN(newValue)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    setError('');
+
+    if (!tree) {
+      setTree({
+        keys: [newValue],
+        children: [],
+        isLeaf: true
+      });
+    } else {
+      const newTree = { ...tree };
+      if (newTree.keys.length === 2 * order - 1) {
+        // Root is full, create new root
+        const newRoot = {
+          keys: [],
+          children: [newTree],
+          isLeaf: false
+        };
+        setTree(newRoot);
+        splitChild(newRoot, 0);
+        insertNonFull(newRoot, newValue);
+      } else {
+        insertNonFull(newTree, newValue);
+      }
+      setTree(newTree);
+    }
     setValue('');
+
+    // Highlight the path to the newly inserted node
+    const path = [];
+    findPath(tree, newValue, path);
+    setSearchPath(path);
+    setTimeout(() => setSearchPath([]), 1000);
   };
 
-  const insertNode = (node, value) => {
+  const splitChild = (parentNode, index) => {
+    const childNode = parentNode.children[index];
+    const newNode = {
+      keys: childNode.keys.slice(order),
+      children: childNode.isLeaf ? [] : childNode.children.slice(order),
+      isLeaf: childNode.isLeaf
+    };
+    
+    childNode.keys = childNode.keys.slice(0, order - 1);
+    if (!childNode.isLeaf) {
+      childNode.children = childNode.children.slice(0, order);
+    }
+    
+    parentNode.keys.splice(index, 0, childNode.keys[order - 1]);
+    parentNode.children.splice(index + 1, 0, newNode);
+  };
+
+  const insertNonFull = (node, key) => {
+    let i = node.keys.length - 1;
+
     if (node.isLeaf) {
       // Insert into leaf node
-      const index = node.keys.findIndex(k => k > value);
-      if (index === -1) {
-        node.keys.push(value);
-      } else {
-        node.keys.splice(index, 0, value);
+      while (i >= 0 && key < node.keys[i]) {
+        node.keys[i + 1] = node.keys[i];
+        i--;
       }
-
-      // Split if necessary
-      if (node.keys.length > order - 1) {
-        splitNode(node);
-      }
+      node.keys[i + 1] = key;
     } else {
       // Find child to insert into
-      let childIndex = node.keys.findIndex(k => k > value);
-      if (childIndex === -1) childIndex = node.keys.length;
-      insertNode(node.children[childIndex], value);
-    }
-  };
-
-  const splitNode = (node) => {
-    const mid = Math.floor(node.keys.length / 2);
-    const leftKeys = node.keys.slice(0, mid);
-    const rightKeys = node.keys.slice(mid + 1);
-    const midKey = node.keys[mid];
-
-    if (node.isLeaf) {
-      // Split leaf node
-      const leftNode = { keys: leftKeys, children: [], isLeaf: true };
-      const rightNode = { keys: rightKeys, children: [], isLeaf: true };
-      node.keys = [midKey];
-      node.children = [leftNode, rightNode];
-      node.isLeaf = false;
-    } else {
-      // Split internal node
-      const leftNode = { keys: leftKeys, children: node.children.slice(0, mid + 1), isLeaf: false };
-      const rightNode = { keys: rightKeys, children: node.children.slice(mid + 1), isLeaf: false };
-      node.keys = [midKey];
-      node.children = [leftNode, rightNode];
+      while (i >= 0 && key < node.keys[i]) {
+        i--;
+      }
+      i++;
+      
+      if (node.children[i].keys.length === 2 * order - 1) {
+        splitChild(node, i);
+        if (key > node.keys[i]) {
+          i++;
+        }
+      }
+      insertNonFull(node.children[i], key);
     }
   };
 
   const search = (value) => {
-    if (value === '') return;
+    if (value === '') {
+      setError('Please enter a value');
+      return;
+    }
     const searchValue = parseInt(value);
+    if (isNaN(searchValue)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    setError('');
     setSearchPath([]);
     const path = [];
-    const found = searchNode(tree, searchValue, path);
+    findPath(tree, searchValue, path);
+    setSearchPath(path);
     setValue('');
-    if (!found) {
-      setTimeout(() => setSearchPath([]), 2000);
-    }
+    setTimeout(() => setSearchPath([]), 2000);
   };
 
-  const searchNode = (node, value, path) => {
+  const findPath = (node, value, path) => {
+    if (!node) return false;
     path.push(node);
-    const index = node.keys.findIndex(k => k === value);
-    if (index !== -1) {
-      setSearchPath(path);
+    
+    let i = 0;
+    while (i < node.keys.length && value > node.keys[i]) {
+      i++;
+    }
+    
+    if (i < node.keys.length && value === node.keys[i]) {
       return true;
     }
-    if (node.isLeaf) return false;
-    const childIndex = node.keys.findIndex(k => k > value);
-    return searchNode(node.children[childIndex === -1 ? node.keys.length : childIndex], value, path);
+    
+    if (node.isLeaf) {
+      return false;
+    }
+    
+    return findPath(node.children[i], value, path);
   };
 
   const reset = () => {
-    setTree({
-      keys: [10, 20],
-      children: [
-        {
-          keys: [5, 7],
-          children: [],
-          isLeaf: true
-        },
-        {
-          keys: [15],
-          children: [],
-          isLeaf: true
-        },
-        {
-          keys: [25, 30],
-          children: [],
-          isLeaf: true
-        }
-      ],
-      isLeaf: false
-    });
+    setTree(null);
     setValue('');
     setSelectedNode(null);
     setSearchPath([]);
+    setError('');
   };
 
-  const renderNode = (node, level = 0) => {
+  const countKeys = (node) => {
+    if (!node) return 0;
+    let count = node.keys.length;
+    for (const child of node.children) {
+      count += countKeys(child);
+    }
+    return count;
+  };
+
+  const getHeight = (node) => {
+    if (!node) return 0;
+    if (node.isLeaf) return 1;
+    return 1 + getHeight(node.children[0]);
+  };
+
+  const renderNode = (node, level = 0, isLeftmost = true, isRightmost = true) => {
     const isInPath = searchPath.includes(node);
+    const nodeWidth = Math.max(node.keys.length * 80, 160);
+
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center relative">
+        {level > 0 && (
+          <div 
+            className={`absolute w-24 h-12 -top-10 
+              ${isLeftmost ? '-translate-x-12 border-t-2 border-l-2' : 
+                isRightmost ? 'translate-x-12 border-t-2 border-r-2' : 
+                'border-t-2'} 
+              border-gray-300/50 ${isLeftmost ? 'rounded-tl' : 
+                isRightmost ? 'rounded-tr' : ''}`}
+          />
+        )}
         <div
-          className={`min-w-[200px] rounded-lg p-4 transition-all ${
-            isInPath
-              ? 'bg-blue-100 border-2 border-blue-500 scale-105'
-              : 'bg-white border border-gray-200'
-          }`}
+          className={`min-w-[${nodeWidth}px] rounded-2xl p-4 transition-all duration-300
+            relative group cursor-pointer backdrop-blur-sm
+            ${isInPath
+              ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20 scale-110 ring-4 ring-blue-500/30'
+              : 'bg-gradient-to-br from-white to-gray-50 shadow-lg shadow-gray-200/50 hover:shadow-xl hover:scale-105'
+            }`}
         >
-          <div className="flex justify-center space-x-2">
+          <div className="absolute -top-6 left-0 text-xs font-medium text-gray-400">
+            Level {level} {node.isLeaf ? '(Leaf)' : '(Internal)'}
+          </div>
+          <div className="flex justify-center space-x-3">
             {node.keys.map((key, index) => (
               <div
                 key={index}
-                className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center"
+                className={`w-16 h-16 rounded-xl flex items-center justify-center transition-all
+                  ${isInPath
+                    ? 'bg-white/10 text-white'
+                    : 'bg-gray-50 text-gray-900 border border-gray-200'
+                  } hover:bg-opacity-90`}
               >
-                <span className="text-lg font-semibold text-gray-900">{key}</span>
+                <span className="text-xl font-bold">{key}</span>
               </div>
             ))}
           </div>
-          {!node.isLeaf && (
-            <div className="flex justify-center mt-4 space-x-4">
-              {node.children.map((child, index) => (
-                <div key={index} className="flex flex-col items-center">
-                  <div className="w-0.5 h-4 bg-gray-300"></div>
-                  {renderNode(child, level + 1)}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200
+            bg-gray-800 text-white text-xs font-medium px-2 py-1 rounded-md -bottom-8 whitespace-nowrap">
+            Keys: {node.keys.join(', ')} | {node.isLeaf ? 'Leaf Node' : 'Internal Node'}
+          </div>
         </div>
+        {!node.isLeaf && (
+          <div 
+            className={`flex justify-center mt-16 space-x-8`}
+            style={{ minWidth: `${nodeWidth + 100}px` }}
+          >
+            {node.children.map((child, index) => (
+              <div key={index} className="flex flex-col items-center">
+                {renderNode(
+                  child,
+                  level + 1,
+                  index === 0,
+                  index === node.children.length - 1
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -181,10 +239,15 @@ export default function BTreeVisualiser() {
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 overflow-x-auto">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">B-Tree</h2>
-            <div className="flex justify-center">
-              {renderNode(tree)}
+            <div className="flex justify-center min-w-[800px] p-8">
+              {tree ? renderNode(tree) : (
+                <div className="text-gray-500 text-center">
+                  <p>No nodes yet</p>
+                  <p className="text-sm mt-2">Insert values to build a B-tree of order {order}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -207,7 +270,7 @@ export default function BTreeVisualiser() {
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Order {order}: Each node has at most {order - 1} keys</span>
+                <span>Order {order}: Each node has at most {2 * order - 1} keys</span>
               </div>
             </div>
           </div>
@@ -221,8 +284,12 @@ export default function BTreeVisualiser() {
                 label="Value"
                 type="number"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  setError('');
+                }}
                 placeholder="Enter value"
+                error={error}
               />
               <div className="grid grid-cols-2 gap-3">
                 <Button onClick={() => insert(value)} variant="primary" fullWidth>
@@ -242,19 +309,15 @@ export default function BTreeVisualiser() {
             <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Tree Order</h4>
-                <p className="text-2xl font-semibold text-blue-600">{order}</p>
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Tree Height</h4>
+                <p className="text-2xl font-semibold text-blue-600">
+                  {getHeight(tree) - 1}
+                </p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <h4 className="text-sm font-medium text-gray-700 mb-1">Total Keys</h4>
                 <p className="text-2xl font-semibold text-gray-900">
                   {countKeys(tree)}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Tree Height</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {getHeight(tree)}
                 </p>
               </div>
             </div>
@@ -263,19 +326,4 @@ export default function BTreeVisualiser() {
       </div>
     </Layout>
   );
-}
-
-function countKeys(node) {
-  let count = node.keys.length;
-  if (!node.isLeaf) {
-    for (let child of node.children) {
-      count += countKeys(child);
-    }
-  }
-  return count;
-}
-
-function getHeight(node) {
-  if (node.isLeaf) return 1;
-  return 1 + getHeight(node.children[0]);
 } 

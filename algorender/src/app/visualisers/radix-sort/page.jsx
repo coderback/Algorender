@@ -1,70 +1,136 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Layout from '@/components/Layout';
-import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import SortingChart from '@/components/SortingChart';
 
-export default function RadixSortVisualiser() {
-  const [array, setArray] = useState([170, 45, 75, 90, 802, 24, 2, 66]);
-  const [currentDigit, setCurrentDigit] = useState(null);
-  const [buckets, setBuckets] = useState([]);
+// Function to generate random array of 8 numbers between 10 and 99
+const generateRandomArray = () => {
+  return Array.from({ length: 8 }, () => Math.floor(Math.random() * 90) + 10);
+};
+
+export default function RadixSort() {
+  const [array, setArray] = useState(generateRandomArray());
   const [isSorting, setIsSorting] = useState(false);
-  const [speed, setSpeed] = useState(500);
-  const [arraySize, setArraySize] = useState(8);
+  const [isPaused, setIsPaused] = useState(false);
+  const [operations, setOperations] = useState(0);
+  const [selectedIndices, setSelectedIndices] = useState([]);
+  const [sortedIndices, setSortedIndices] = useState([]);
+  const [currentDigit, setCurrentDigit] = useState(null);
+  const [speed, setSpeed] = useState(500); // Delay in milliseconds
+  
+  const pauseRef = useRef(false);
+  const sortingRef = useRef(false);
 
-  const generateArray = (size) => {
-    const newArray = Array.from({ length: size }, () => Math.floor(Math.random() * 1000));
-    setArray(newArray);
-    setCurrentDigit(null);
-    setBuckets([]);
+  const sleep = async (ms) => {
+    while (pauseRef.current) {
+      await new Promise(r => setTimeout(r, 100)); // Check every 100ms
+    }
+    return new Promise(resolve => setTimeout(resolve, ms));
   };
 
-  const getDigit = (num, place) => {
-    return Math.floor(Math.abs(num) / Math.pow(10, place)) % 10;
+  // Function to get digit at position exp
+  const getDigit = (num, exp) => {
+    return Math.floor(num / Math.pow(10, exp)) % 10;
   };
 
-  const getMaxDigits = (arr) => {
-    return Math.max(...arr).toString().length;
+  // Function to perform counting sort for a specific digit
+  const countingSortForDigit = async (arr, exp, newOperations) => {
+    const n = arr.length;
+    const output = new Array(n).fill(0);
+    const count = new Array(10).fill(0);
+    
+    // Store count of occurrences
+    for (let i = 0; i < n && sortingRef.current; i++) {
+      const digit = getDigit(arr[i], exp);
+      count[digit]++;
+      setSelectedIndices([i]);
+      newOperations.value++;
+      setOperations(newOperations.value);
+      await sleep(speed);
+    }
+    
+    // Change count[i] so that count[i] contains actual
+    // position of this digit in output[]
+    for (let i = 1; i < 10 && sortingRef.current; i++) {
+      count[i] += count[i - 1];
+      newOperations.value++;
+      setOperations(newOperations.value);
+    }
+    
+    // Build the output array
+    for (let i = n - 1; i >= 0 && sortingRef.current; i--) {
+      const digit = getDigit(arr[i], exp);
+      output[count[digit] - 1] = arr[i];
+      count[digit]--;
+      setSelectedIndices([i]);
+      newOperations.value++;
+      setOperations(newOperations.value);
+      await sleep(speed);
+    }
+    
+    // Copy the output array to arr[]
+    for (let i = 0; i < n && sortingRef.current; i++) {
+      arr[i] = output[i];
+      setArray([...arr]);
+      newOperations.value++;
+      setOperations(newOperations.value);
+      await sleep(speed);
+    }
   };
 
   const radixSort = async () => {
+    if (isSorting) return;
+    
     setIsSorting(true);
-    let arr = [...array];
-    const maxDigits = getMaxDigits(arr);
-
-    for (let i = 0; i < maxDigits; i++) {
-      setCurrentDigit(i);
-      const buckets = Array.from({ length: 10 }, () => []);
-      setBuckets(buckets);
-
-      // Distribute numbers into buckets
-      for (let j = 0; j < arr.length; j++) {
-        const digit = getDigit(arr[j], i);
-        buckets[digit].push(arr[j]);
-        setBuckets([...buckets]);
-        await new Promise(resolve => setTimeout(resolve, speed));
-      }
-
-      // Collect numbers from buckets
-      arr = buckets.flat();
-      setArray([...arr]);
-      await new Promise(resolve => setTimeout(resolve, speed));
-    }
-
+    sortingRef.current = true;
+    setOperations(0);
+    setSortedIndices([]);
     setCurrentDigit(null);
-    setBuckets([]);
-    setIsSorting(false);
+    pauseRef.current = false;
+    setIsPaused(false);
+    
+    const arr = [...array];
+    const newOperations = { value: 0 };
+    
+    try {
+      // Since we're working with numbers between 10-99, we only need 2 digits
+      // Do counting sort for ones (exp = 0) and tens (exp = 1)
+      for (let exp = 0; exp < 2 && sortingRef.current; exp++) {
+        setCurrentDigit(exp);
+        await countingSortForDigit(arr, exp, newOperations);
+        
+        // Mark all elements as sorted after processing tens digit
+        if (exp === 1) {
+          setSortedIndices(Array.from({ length: arr.length }, (_, i) => i));
+        }
+      }
+    } finally {
+      setSelectedIndices([]);
+      setCurrentDigit(null);
+      setIsSorting(false);
+      setIsPaused(false);
+      pauseRef.current = false;
+      sortingRef.current = false;
+    }
+  };
+
+  const handlePauseResume = () => {
+    setIsPaused(!isPaused);
+    pauseRef.current = !pauseRef.current;
   };
 
   const reset = () => {
-    generateArray(arraySize);
-  };
-
-  const handleArraySizeChange = (e) => {
-    const size = parseInt(e.target.value);
-    setArraySize(size);
-    generateArray(size);
+    sortingRef.current = false; // Stop any ongoing sorting
+    setArray(generateRandomArray());
+    setSelectedIndices([]);
+    setSortedIndices([]);
+    setOperations(0);
+    setCurrentDigit(null);
+    setIsSorting(false);
+    setIsPaused(false);
+    pauseRef.current = false;
   };
 
   const handleSpeedChange = (e) => {
@@ -74,54 +140,27 @@ export default function RadixSortVisualiser() {
   return (
     <Layout
       title="Radix Sort Visualiser"
-      description="Visualise the radix sort algorithm step by step."
-      timeComplexity={{ best: 'O(nk)', average: 'O(nk)', worst: 'O(nk)' }}
+      description="Visualise radix sort algorithm with step-by-step operations."
+      timeComplexity={{
+        best: 'O(nk)',
+        average: 'O(nk)',
+        worst: 'O(nk)'
+      }}
       spaceComplexity="O(n + k)"
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Array</h2>
-            <div className="flex justify-center items-end space-x-2 h-64">
-              {array.map((value, index) => (
-                <div
-                  key={index}
-                  className="w-12 flex flex-col items-center transition-all duration-300 bg-gray-200"
-                  style={{
-                    height: `${(value / 1000) * 200}px`,
-                    transition: 'height 0.3s ease-in-out'
-                  }}
-                >
-                  <span className="text-sm font-medium text-gray-700 mt-2">{value}</span>
-                </div>
-              ))}
-            </div>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Radix Sort {currentDigit !== null && `(Sorting ${currentDigit === 0 ? 'ones' : 'tens'} digit)`}
+            </h2>
+            <SortingChart
+              array={array}
+              selectedIndices={selectedIndices}
+              sortedIndices={sortedIndices}
+              showRemove={false}
+            />
           </div>
-
-          {buckets.length > 0 && (
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Buckets (Digit {currentDigit})
-              </h2>
-              <div className="grid grid-cols-5 gap-4">
-                {buckets.map((bucket, index) => (
-                  <div key={index} className="bg-white rounded-lg p-4 shadow-sm">
-                    <p className="text-sm font-medium text-gray-500 mb-2">Bucket {index}</p>
-                    <div className="space-y-1">
-                      {bucket.map((value, i) => (
-                        <div
-                          key={i}
-                          className="text-sm text-gray-700 bg-gray-50 p-1 rounded"
-                        >
-                          {value}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
@@ -130,19 +169,19 @@ export default function RadixSortVisualiser() {
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Sort numbers by each digit position</span>
+                <span>Sort numbers digit by digit, starting from least significant</span>
               </div>
               <div className="flex items-start space-x-2">
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Use counting sort for each digit</span>
+                <span>Use counting sort for each digit position</span>
               </div>
               <div className="flex items-start space-x-2">
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Start from least significant digit</span>
+                <span>Blue bars show current element, green bars show sorted elements</span>
               </div>
             </div>
           </div>
@@ -150,65 +189,70 @@ export default function RadixSortVisualiser() {
 
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Controls</h2>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Array Size
-                </label>
-                <InputControl
-                  type="range"
-                  min="5"
-                  max="20"
-                  value={arraySize}
-                  onChange={handleArraySizeChange}
-                  disabled={isSorting}
-                />
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  onClick={radixSort}
+                  disabled={isSorting && !isPaused}
+                  variant="primary"
+                >
+                  {isSorting && !isPaused ? 'Sorting...' : 'Sort'}
+                </Button>
+                {isSorting && (
+                  <Button
+                    onClick={handlePauseResume}
+                    variant="secondary"
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                )}
+                <Button
+                  onClick={reset}
+                  disabled={isSorting && !isPaused}
+                  variant="secondary"
+                >
+                  New Array
+                </Button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Speed
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Animation Speed
                 </label>
-                <InputControl
+                <input
                   type="range"
                   min="0"
                   max="900"
                   value={1000 - speed}
                   onChange={handleSpeedChange}
-                  disabled={isSorting}
+                  disabled={isSorting && !isPaused}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500 disabled:opacity-50"
                 />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={radixSort}
-                  disabled={isSorting}
-                  className="flex-1"
-                >
-                  {isSorting ? 'Sorting...' : 'Start Sorting'}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isSorting}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
               </div>
             </div>
           </div>
 
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Array Size</p>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Array Size</h4>
                 <p className="text-2xl font-semibold text-blue-600">{array.length}</p>
               </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Max Digits</p>
-                <p className="text-2xl font-semibold text-gray-600">
-                  {Math.max(...array).toString().length}
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Operations</h4>
+                <p className="text-2xl font-semibold text-gray-900">{operations}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Current Digit</h4>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {currentDigit === null ? '-' : currentDigit === 0 ? 'Ones' : 'Tens'}
+                </p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Status</h4>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {isSorting ? (isPaused ? 'Paused' : 'Sorting') : sortedIndices.length === array.length ? 'Sorted' : 'Unsorted'}
                 </p>
               </div>
             </div>
