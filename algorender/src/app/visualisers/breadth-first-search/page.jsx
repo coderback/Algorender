@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaNetworkWired, FaTachometerAlt, FaPlay, FaUndo, FaNodeJs } from 'react-icons/fa';
 
 const initialGraph = {
   nodes: [0, 1, 2, 3, 4, 5],
@@ -131,7 +134,8 @@ export default function BFSVisualiser() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <FaNodeJs className="text-blue-400" />
                   Start Node
                 </label>
                 <InputControl
@@ -144,32 +148,38 @@ export default function BFSVisualiser() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <FaTachometerAlt className="text-blue-400" />
                   Speed
+                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
                 </label>
-                <InputControl
+                <input
                   type="range"
                   min="0"
                   max="900"
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isRunning}
+                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  style={{ accentColor: '#2563eb' }}
                 />
               </div>
               <div className="flex space-x-4">
                 <Button
                   onClick={bfs}
                   disabled={isRunning}
-                  className="flex-1"
+                  className="flex-1 flex items-center justify-center gap-2"
                 >
+                  <FaNetworkWired className="text-sm" />
                   {isRunning ? 'Running...' : 'Start BFS'}
                 </Button>
                 <Button
                   onClick={reset}
                   disabled={isRunning}
                   variant="secondary"
-                  className="flex-1"
+                  className="flex-1 flex items-center justify-center gap-2"
                 >
+                  <FaUndo className="text-sm" />
                   Reset
                 </Button>
               </div>

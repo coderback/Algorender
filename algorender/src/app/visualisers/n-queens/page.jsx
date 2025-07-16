@@ -5,6 +5,9 @@ import Layout from '@/components/Layout';
 import Button from '@/components/Button';
 import InputControl from '@/components/InputControl';
 import StatsBar from '@/components/StatsBar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaChessQueen, FaTachometerAlt, FaPlay, FaUndo, FaGrid } from 'react-icons/fa';
 
 const NQueensVisualizer = () => {
   const [n, setN] = useState(8);
@@ -112,33 +115,29 @@ const NQueensVisualizer = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <InputControl
-              label="Board Size"
-              type="number"
-              value={n}
-              onChange={(e) => setN(Math.min(Math.max(4, parseInt(e.target.value) || 4), 12))}
-              min={4}
-              max={12}
-              disabled={isSolving}
-            />
+            <div className="flex items-center gap-2">
+              <FaGrid className="text-blue-400" />
+              <InputControl
+                label="Board Size"
+                type="number"
+                value={n}
+                onChange={(e) => setN(Math.min(Math.max(4, parseInt(e.target.value) || 4), 12))}
+                min={4}
+                max={12}
+                disabled={isSolving}
+              />
+            </div>
             <Button
               onClick={solveNQueens}
               disabled={isSolving}
               variant="primary"
+              className="flex items-center gap-2"
             >
+              <FaChessQueen className="text-sm" />
               {isSolving ? 'Solving...' : 'Solve'}
             </Button>
           </div>
         </div>
-
-        <StatsBar
-          stats={[
-            { label: 'Solutions', value: stats.solutions },
-            { label: 'Time (ms)', value: stats.time },
-            { label: 'Steps', value: stats.steps }
-          ]}
-          timeComplexity={timeComplexity}
-        />
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-gray-50 rounded-xl p-6">

@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaCalculator, FaDatabase, FaTachometerAlt, FaPlay, FaUndo } from 'react-icons/fa';
 
 export default function FibonacciMemoVisualiser() {
   const [n, setN] = useState(8);
@@ -51,10 +54,17 @@ export default function FibonacciMemoVisualiser() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Recursive Calls</h2>
-            <div className="flex flex-wrap gap-2 mb-2">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FaCalculator className="text-blue-500" />
+              Recursive Calls
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
               {calls.map((k, i) => (
-                <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">fib({k})</span>
+                <Card key={i} className="p-2 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white shadow-sm hover:shadow-md transition-all">
+                  <div className="text-center">
+                    <div className="text-blue-700 font-bold text-sm">fib({k})</div>
+                  </div>
+                </Card>
               ))}
             </div>
             <div className="mt-4">
@@ -93,36 +103,56 @@ export default function FibonacciMemoVisualiser() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Speed</label>
-                <InputControl
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <FaTachometerAlt className="text-blue-400" />
+                  Speed
+                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
+                </label>
+                <input
                   type="range"
                   min="0"
                   max="900"
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isRunning}
+                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  style={{ accentColor: '#2563eb' }}
                 />
               </div>
               <div className="flex space-x-4">
-                <Button onClick={runFib} disabled={isRunning} className="flex-1">
+                <Button onClick={runFib} disabled={isRunning} className="flex-1 flex items-center justify-center gap-2">
+                  <FaPlay className="text-sm" />
                   {isRunning ? "Running..." : "Start Fibonacci"}
                 </Button>
-                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1">
+                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1 flex items-center justify-center gap-2">
+                  <FaUndo className="text-sm" />
                   Reset
                 </Button>
               </div>
             </div>
           </div>
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Memo Table</h3>
-            <div className="flex flex-wrap gap-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <FaDatabase className="text-green-500" />
+              Memo Table
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
               {Object.entries(memo).map(([k, v]) => (
-                <span key={k} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">fib({k}) = {v}</span>
+                <Card key={k} className="p-2 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white shadow-sm hover:shadow-md transition-all">
+                  <div className="text-center">
+                    <div className="text-green-700 font-bold text-sm">fib({k}) = {v}</div>
+                  </div>
+                </Card>
               ))}
             </div>
             <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Result:</p>
-              <span className="bg-blue-200 text-blue-900 px-3 py-1 rounded text-lg font-bold">{result !== null ? result : '-'}</span>
+              <p className="text-sm text-gray-500 mb-2 flex items-center gap-2">
+                <FaCalculator className="text-blue-400" />
+                Result:
+              </p>
+              <Card className="p-3 border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-white">
+                <span className="text-blue-900 text-xl font-bold">{result !== null ? result : '-'}</span>
+              </Card>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Button from '@/components/Button';
 import SortingChart from '@/components/SortingChart';
@@ -11,16 +11,22 @@ const generateRandomArray = () => {
 };
 
 export default function CountingSort() {
-  const [array, setArray] = useState(generateRandomArray());
+  const [array, setArray] = useState([]);
   const [isSorting, setIsSorting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [operations, setOperations] = useState(0);
+  const [comparisons, setComparisons] = useState(0);
+  const [swaps, setSwaps] = useState(0);
   const [selectedIndices, setSelectedIndices] = useState([]);
   const [sortedIndices, setSortedIndices] = useState([]);
   const [speed, setSpeed] = useState(500); // Delay in milliseconds
   
   const pauseRef = useRef(false);
   const sortingRef = useRef(false);
+
+  // Initialize array on client side to prevent hydration mismatch
+  useEffect(() => {
+    setArray(generateRandomArray());
+  }, []);
 
   const sleep = async (ms) => {
     while (pauseRef.current) {
@@ -34,22 +40,23 @@ export default function CountingSort() {
     
     setIsSorting(true);
     sortingRef.current = true;
-    setOperations(0);
+    setComparisons(0);
+    setSwaps(0);
     setSortedIndices([]);
     pauseRef.current = false;
     setIsPaused(false);
     
     const arr = [...array];
     const n = arr.length;
-    let newOperations = 0;
+    let newComparisons = 0;
+    let newSwaps = 0;
     
     try {
       // Find the maximum element
       let max = arr[0];
       for (let i = 1; i < n && sortingRef.current; i++) {
         setSelectedIndices([i]);
-        newOperations++;
-        setOperations(newOperations);
+        newComparisons++;
         await sleep(speed);
         
         if (arr[i] > max) {
@@ -64,16 +71,15 @@ export default function CountingSort() {
       for (let i = 0; i < n && sortingRef.current; i++) {
         setSelectedIndices([i]);
         count[arr[i]]++;
-        newOperations++;
-        setOperations(newOperations);
+        newComparisons++;
         await sleep(speed);
       }
       
       // Modify count array to store actual positions
       for (let i = 1; i <= max && sortingRef.current; i++) {
         count[i] += count[i - 1];
-        newOperations++;
-        setOperations(newOperations);
+        newComparisons++;
+        await sleep(speed);
       }
       
       // Build the output array
@@ -82,8 +88,8 @@ export default function CountingSort() {
         setSelectedIndices([i]);
         output[count[arr[i]] - 1] = arr[i];
         count[arr[i]]--;
-        newOperations++;
-        setOperations(newOperations);
+        newSwaps++;
+        newComparisons++;
         await sleep(speed);
       }
       
@@ -92,8 +98,7 @@ export default function CountingSort() {
         arr[i] = output[i];
         setArray([...arr]);
         setSortedIndices(prev => [...prev, i]);
-        newOperations++;
-        setOperations(newOperations);
+        newComparisons++;
         await sleep(speed);
       }
     } finally {
@@ -102,6 +107,8 @@ export default function CountingSort() {
       setIsPaused(false);
       pauseRef.current = false;
       sortingRef.current = false;
+      setComparisons(newComparisons);
+      setSwaps(newSwaps);
     }
   };
 
@@ -115,7 +122,8 @@ export default function CountingSort() {
     setArray(generateRandomArray());
     setSelectedIndices([]);
     setSortedIndices([]);
-    setOperations(0);
+    setComparisons(0);
+    setSwaps(0);
     setIsSorting(false);
     setIsPaused(false);
     pauseRef.current = false;
@@ -226,12 +234,12 @@ export default function CountingSort() {
                 <p className="text-2xl font-semibold text-blue-600">{array.length}</p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Operations</h4>
-                <p className="text-2xl font-semibold text-gray-900">{operations}</p>
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Comparisons</h4>
+                <p className="text-2xl font-semibold text-gray-900">{comparisons}</p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Range</h4>
-                <p className="text-2xl font-semibold text-gray-900">10-99</p>
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Swaps</h4>
+                <p className="text-2xl font-semibold text-gray-900">{swaps}</p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <h4 className="text-sm font-medium text-gray-700 mb-1">Status</h4>

@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaFont, FaTachometerAlt, FaPlay, FaUndo, FaTable, FaCode, FaCalculator } from 'react-icons/fa';
 
 export default function EditDistanceVisualiser() {
   const [str1, setStr1] = useState('kitten');
@@ -54,24 +57,33 @@ export default function EditDistanceVisualiser() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Strings</h2>
-            <div className="mb-4 flex flex-col gap-2">
-              <InputControl
-                type="text"
-                label="String 1"
-                value={str1}
-                onChange={e => setStr1(e.target.value)}
-                placeholder="First string"
-                disabled={isRunning}
-              />
-              <InputControl
-                type="text"
-                label="String 2"
-                value={str2}
-                onChange={e => setStr2(e.target.value)}
-                placeholder="Second string"
-                disabled={isRunning}
-              />
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FaFont className="text-blue-500" />
+              Input Strings
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <Card className="p-4 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+                <InputControl
+                  type="text"
+                  label="String 1"
+                  value={str1}
+                  onChange={e => setStr1(e.target.value)}
+                  placeholder="First string"
+                  disabled={isRunning}
+                  className="mb-0"
+                />
+              </Card>
+              <Card className="p-4 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white">
+                <InputControl
+                  type="text"
+                  label="String 2"
+                  value={str2}
+                  onChange={e => setStr2(e.target.value)}
+                  placeholder="Second string"
+                  disabled={isRunning}
+                  className="mb-0"
+                />
+              </Card>
             </div>
           </div>
           <div className="bg-gray-50 rounded-xl p-6">
@@ -97,28 +109,39 @@ export default function EditDistanceVisualiser() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Speed</label>
-                <InputControl
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <FaTachometerAlt className="text-blue-400" />
+                  Speed
+                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
+                </label>
+                <input
                   type="range"
                   min="0"
                   max="900"
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isRunning}
+                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  style={{ accentColor: '#2563eb' }}
                 />
               </div>
               <div className="flex space-x-4">
-                <Button onClick={editDistanceDP} disabled={isRunning} className="flex-1">
+                <Button onClick={editDistanceDP} disabled={isRunning} className="flex-1 flex items-center justify-center gap-2">
+                  <FaPlay className="text-sm" />
                   {isRunning ? "Running..." : "Start Edit Distance"}
                 </Button>
-                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1">
+                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1 flex items-center justify-center gap-2">
+                  <FaUndo className="text-sm" />
                   Reset
                 </Button>
               </div>
             </div>
           </div>
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">DP Table</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <FaTable className="text-purple-500" />
+              DP Table
+            </h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-center">
                 <thead>
@@ -142,8 +165,13 @@ export default function EditDistanceVisualiser() {
               </table>
             </div>
             <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Edit Distance:</p>
-              <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">{distance !== null ? distance : '-'}</span>
+              <p className="text-sm text-gray-500 mb-2 flex items-center gap-2">
+                <FaCalculator className="text-green-400" />
+                Edit Distance:
+              </p>
+              <Card className="p-3 border-2 border-green-200 bg-gradient-to-br from-green-100 to-white">
+                <span className="text-green-700 text-lg font-bold">{distance !== null ? distance : '-'}</span>
+              </Card>
             </div>
           </div>
         </div>

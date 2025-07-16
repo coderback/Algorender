@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaKey, FaSearch, FaPlus, FaTrashAlt, FaExclamationTriangle } from 'react-icons/fa';
 
 export default function HashTableVisualiser() {
   const [table, setTable] = useState(Array(10).fill(null));
@@ -167,8 +170,11 @@ export default function HashTableVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
+          <Card className="p-6 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FaKey className="text-blue-500" />
+              Operations
+            </h2>
             <div className="space-y-4">
               <InputControl
                 label="Key"
@@ -183,30 +189,33 @@ export default function HashTableVisualiser() {
                 placeholder="Enter value"
               />
               <div className="flex space-x-3">
-                <Button onClick={insert} variant="primary" fullWidth>
+                <Button onClick={insert} variant="primary" className="flex-1 flex items-center justify-center gap-2">
+                  <FaPlus className="text-sm" />
                   Insert
                 </Button>
-                <Button onClick={search} variant="success" fullWidth>
+                <Button onClick={search} variant="success" className="flex-1 flex items-center justify-center gap-2">
+                  <FaSearch className="text-sm" />
                   Search
                 </Button>
               </div>
             </div>
-          </div>
+          </Card>
 
           {collisions.length > 0 && (
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Collisions</h3>
+            <Card className="p-6 border-2 border-yellow-100 bg-gradient-to-br from-yellow-50 to-white">
+              <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <FaExclamationTriangle className="text-yellow-500" />
+                Collisions
+              </h3>
               <div className="space-y-2">
                 {collisions.map((collision, i) => (
                   <div key={i} className="flex items-center space-x-2 text-gray-600">
-                    <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
+                    <FaExclamationTriangle className="w-5 h-5 text-yellow-500" />
                     <span>Key "{collision.key}" collided at index {collision.index}</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>

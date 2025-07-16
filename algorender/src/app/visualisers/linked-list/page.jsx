@@ -22,7 +22,7 @@ export default function LinkedListVisualiser() {
       value: parseInt(value), 
       next: null 
     };
-    
+
     const newList = [...list];
     if (newList.length > 0) {
       newList[newList.length - 1].next = newList.length;
@@ -37,10 +37,10 @@ export default function LinkedListVisualiser() {
 
   const removeFromEnd = () => {
     if (list.length === 0) return;
-    
+
     const newList = [...list];
     newList.pop();
-    
+
     if (newList.length > 0) {
       newList[newList.length - 1].next = null;
     }

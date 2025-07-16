@@ -32,7 +32,7 @@ export default function BTreeVisualiser() {
         isLeaf: true
       });
     } else {
-      const newTree = { ...tree };
+    const newTree = { ...tree };
       if (newTree.keys.length === 2 * order - 1) {
         // Root is full, create new root
         const newRoot = {
@@ -46,7 +46,7 @@ export default function BTreeVisualiser() {
       } else {
         insertNonFull(newTree, newValue);
       }
-      setTree(newTree);
+    setTree(newTree);
     }
     setValue('');
 
@@ -88,7 +88,7 @@ export default function BTreeVisualiser() {
       // Find child to insert into
       while (i >= 0 && key < node.keys[i]) {
         i--;
-      }
+    }
       i++;
       
       if (node.children[i].keys.length === 2 * order - 1) {
@@ -117,7 +117,7 @@ export default function BTreeVisualiser() {
     findPath(tree, searchValue, path);
     setSearchPath(path);
     setValue('');
-    setTimeout(() => setSearchPath([]), 2000);
+      setTimeout(() => setSearchPath([]), 2000);
   };
 
   const findPath = (node, value, path) => {
@@ -170,7 +170,7 @@ export default function BTreeVisualiser() {
     return (
       <div className="flex flex-col items-center relative">
         {level > 0 && (
-          <div 
+        <div
             className={`absolute w-24 h-12 -top-10 
               ${isLeftmost ? '-translate-x-12 border-t-2 border-l-2' : 
                 isRightmost ? 'translate-x-12 border-t-2 border-r-2' : 
@@ -208,24 +208,24 @@ export default function BTreeVisualiser() {
             bg-gray-800 text-white text-xs font-medium px-2 py-1 rounded-md -bottom-8 whitespace-nowrap">
             Keys: {node.keys.join(', ')} | {node.isLeaf ? 'Leaf Node' : 'Internal Node'}
           </div>
-        </div>
-        {!node.isLeaf && (
+          </div>
+          {!node.isLeaf && (
           <div 
             className={`flex justify-center mt-16 space-x-8`}
             style={{ minWidth: `${nodeWidth + 100}px` }}
           >
-            {node.children.map((child, index) => (
-              <div key={index} className="flex flex-col items-center">
+              {node.children.map((child, index) => (
+                <div key={index} className="flex flex-col items-center">
                 {renderNode(
                   child,
                   level + 1,
                   index === 0,
                   index === node.children.length - 1
                 )}
-              </div>
-            ))}
-          </div>
-        )}
+                </div>
+              ))}
+            </div>
+          )}
       </div>
     );
   };

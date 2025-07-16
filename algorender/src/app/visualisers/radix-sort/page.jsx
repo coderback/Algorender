@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Button from '@/components/Button';
 import SortingChart from '@/components/SortingChart';
@@ -11,7 +11,7 @@ const generateRandomArray = () => {
 };
 
 export default function RadixSort() {
-  const [array, setArray] = useState(generateRandomArray());
+  const [array, setArray] = useState([]);
   const [isSorting, setIsSorting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [operations, setOperations] = useState(0);
@@ -22,6 +22,11 @@ export default function RadixSort() {
   
   const pauseRef = useRef(false);
   const sortingRef = useRef(false);
+
+  // Initialize array on client side to prevent hydration mismatch
+  useEffect(() => {
+    setArray(generateRandomArray());
+  }, []);
 
   const sleep = async (ms) => {
     while (pauseRef.current) {

@@ -35,7 +35,7 @@ export default function SearchBar({ dataStructures, algorithms }) {
           }}
           onFocus={() => setShowSuggestions(true)}
           placeholder="Search visualizers..."
-          className="w-full px-4 py-2 text-gray-700 bg-white border rounded-lg focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+          className="w-full px-4 py-2 text-gray-700 bg-white border rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
         />
         <button
           onClick={() => setSearchQuery('')}
@@ -55,10 +55,10 @@ export default function SearchBar({ dataStructures, algorithms }) {
                 <li
                   key={index}
                   onClick={() => handleSearch(item)}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                  className="px-4 py-2 text-grey-500 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
                 >
                   <span>{item.name}</span>
-                  <span className="text-xs text-gray-500">{item.type}</span>
+                  <span className="text-xs text-blue-500">{item.type}</span>
                 </li>
               ))}
             </ul>

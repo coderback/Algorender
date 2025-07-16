@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaWeightHanging, FaCoins, FaTrashAlt, FaTachometerAlt } from 'react-icons/fa';
 
 const initialItems = [
   { weight: 2, value: 12 },
@@ -81,15 +84,24 @@ export default function Knapsack01Visualiser() {
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Items</h2>
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-white border rounded-lg px-3 py-1 text-sm">
-                  <span>W: {item.weight}, V: {item.value}</span>
-                  <button onClick={() => removeItem(idx)} className="text-red-500 hover:text-red-700">&times;</button>
-                </div>
+                <Card key={idx} className="flex items-center gap-4 p-4 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white shadow hover:shadow-lg transition-all">
+                  <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-blue-700 font-bold text-lg">
+                      <FaWeightHanging className="text-blue-400" /> W: {item.weight}
+                    </div>
+                    <div className="flex items-center gap-2 text-yellow-700 font-bold text-lg">
+                      <FaCoins className="text-yellow-400" /> V: {item.value}
+                    </div>
+                  </div>
+                  <button onClick={() => removeItem(idx)} className="ml-2 p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors" title="Remove">
+                    <FaTrashAlt />
+                  </button>
+                </Card>
               ))}
             </div>
-            <div className="flex gap-2 mb-2">
+            <div className="flex gap-2 mb-2 items-end">
               <InputControl
                 type="number"
                 label="Weight"
@@ -97,6 +109,7 @@ export default function Knapsack01Visualiser() {
                 onChange={e => setNewWeight(e.target.value)}
                 min={1}
                 placeholder="Weight"
+                className="flex-1"
               />
               <InputControl
                 type="number"
@@ -105,8 +118,9 @@ export default function Knapsack01Visualiser() {
                 onChange={e => setNewValue(e.target.value)}
                 min={1}
                 placeholder="Value"
+                className="flex-1"
               />
-              <Button onClick={addItem} variant="success">Add</Button>
+              <Button onClick={addItem} variant="primary" className="h-11 mt-1">Add</Button>
             </div>
             <div className="mt-4">
               <InputControl
@@ -142,14 +156,20 @@ export default function Knapsack01Visualiser() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Speed</label>
-                <InputControl
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <FaTachometerAlt className="text-blue-400" />
+                  Speed
+                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
+                </label>
+                <input
                   type="range"
                   min="0"
                   max="900"
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isRunning}
+                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  style={{ accentColor: '#2563eb' }}
                 />
               </div>
               <div className="flex space-x-4">

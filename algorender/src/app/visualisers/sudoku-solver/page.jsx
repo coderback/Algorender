@@ -267,15 +267,6 @@ const SudokuVisualizer = () => {
           </div>
         </div>
 
-        <StatsBar
-          stats={[
-            { label: 'Time (ms)', value: stats.time },
-            { label: 'Steps', value: stats.steps },
-            { label: 'Difficulty', value: stats.difficulty }
-          ]}
-          timeComplexity={timeComplexity}
-          spaceComplexity={timeComplexity.space}
-        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 shadow-xl">

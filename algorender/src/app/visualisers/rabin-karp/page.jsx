@@ -118,14 +118,6 @@ const RabinKarpVisualizer = () => {
           </div>
         </div>
 
-        <StatsBar
-          stats={[
-            { label: 'Comparisons', value: stats.comparisons },
-            { label: 'Matches', value: stats.matches },
-            { label: 'Time (ms)', value: stats.time }
-          ]}
-          timeComplexity={timeComplexity}
-        />
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-gray-50 rounded-xl p-6">

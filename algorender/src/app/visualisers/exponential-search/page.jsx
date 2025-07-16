@@ -1,22 +1,28 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 export default function ExponentialSearchVisualiser() {
-  const [array, setArray] = useState(Array.from({ length: 8 }, (_, i) => (i + 1) * 10));
+  const [array, setArray] = useState([]);
   const [target, setTarget] = useState('');
   const [currentIndex, setCurrentIndex] = useState(null);
-  const [rangeStart, setRangeStart] = useState(null);
-  const [rangeEnd, setRangeEnd] = useState(null);
   const [foundIndex, setFoundIndex] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [speed, setSpeed] = useState(500);
   const isSearchingRef = useRef(false);
   const isPausedRef = useRef(false);
+
+  // Initialize array on client side to prevent hydration mismatch
+  useEffect(() => {
+    const newArray = Array.from({ length: 8 }, () => Math.floor(Math.random() * 100)).sort((a, b) => a - b);
+    setArray(newArray);
+  }, []);
 
   // Keep refs in sync with state
   const setIsSearchingSafe = (val) => {
@@ -29,52 +35,21 @@ export default function ExponentialSearchVisualiser() {
   };
 
   const generateArray = () => {
-    const newArray = Array.from({ length: 8 }, (_, i) => (i + 1) * 10);
+    const newArray = Array.from({ length: 8 }, () => Math.floor(Math.random() * 100)).sort((a, b) => a - b);
     setArray(newArray);
     setCurrentIndex(null);
-    setRangeStart(null);
-    setRangeEnd(null);
     setFoundIndex(null);
-  };
-
-  const binarySearch = async (arr, target, start, end) => {
-    while (start <= end) {
-      if (!isSearchingRef.current) break; // Stop if search is cancelled
-      
-      // Handle pause
-      while (isPausedRef.current && isSearchingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      const mid = Math.floor((start + end) / 2);
-      setCurrentIndex(mid);
-      await new Promise(resolve => setTimeout(resolve, speed));
-
-      if (arr[mid] === target) {
-        return mid;
-      }
-
-      if (arr[mid] < target) {
-        start = mid + 1;
-      } else {
-        end = mid - 1;
-      }
-    }
-    return -1;
   };
 
   const exponentialSearch = async () => {
     if (!target) return;
     
     setIsSearchingSafe(true);
-    setCurrentIndex(0);
-    setRangeStart(null);
-    setRangeEnd(null);
+    setCurrentIndex(null);
     setFoundIndex(null);
 
     const targetValue = parseInt(target);
-    const n = array.length;
-
+    
     if (array[0] === targetValue) {
       setFoundIndex(0);
       setIsSearchingSafe(false);
@@ -82,33 +57,49 @@ export default function ExponentialSearchVisualiser() {
     }
 
     let i = 1;
-    while (i < n && array[i] <= targetValue) {
-      if (!isSearchingRef.current) break; // Stop if search is cancelled
+    while (i < array.length && array[i] <= targetValue) {
+      if (!isSearchingRef.current) break;
+      
+      setCurrentIndex(i);
       
       // Handle pause
       while (isPausedRef.current && isSearchingRef.current) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-
-      setCurrentIndex(i);
       await new Promise(resolve => setTimeout(resolve, speed));
-      i *= 2;
+      
+      i = i * 2;
     }
 
-    if (!isSearchingRef.current) {
-      setIsSearchingSafe(false);
-      return;
-    }
-
+    // Binary search in the found range
     const start = Math.floor(i / 2);
-    const end = Math.min(i, n - 1);
-    setRangeStart(start);
-    setRangeEnd(end);
+    const end = Math.min(i, array.length - 1);
+    
+    let left = start;
+    let right = end;
 
-    const result = await binarySearch(array, targetValue, start, end);
-    if (isSearchingRef.current) {
-      setFoundIndex(result);
+    while (left <= right) {
+      if (!isSearchingRef.current) break;
+      
+      const mid = Math.floor((left + right) / 2);
+      setCurrentIndex(mid);
+      
+      // Handle pause
+      while (isPausedRef.current && isSearchingRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      await new Promise(resolve => setTimeout(resolve, speed));
+      
+      if (array[mid] === targetValue) {
+        setFoundIndex(mid);
+        break;
+      } else if (array[mid] < targetValue) {
+        left = mid + 1;
+      } else {
+        right = mid - 1;
+      }
     }
+
     setIsSearchingSafe(false);
   };
 
@@ -118,8 +109,6 @@ export default function ExponentialSearchVisualiser() {
     generateArray();
     setTarget('');
     setCurrentIndex(null);
-    setRangeStart(null);
-    setRangeEnd(null);
     setFoundIndex(null);
   };
 
@@ -141,7 +130,7 @@ export default function ExponentialSearchVisualiser() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Array</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Sorted Array</h2>
             <div className="flex justify-center items-center space-x-2 py-8">
               {array.map((value, index) => (
                 <div
@@ -151,14 +140,22 @@ export default function ExponentialSearchVisualiser() {
                       ? 'bg-green-500 text-white border-green-700'
                       : currentIndex === index
                       ? 'bg-blue-500 text-white border-blue-700'
-                      : rangeStart !== null && rangeEnd !== null && index >= rangeStart && index <= rangeEnd
-                      ? 'bg-yellow-100 border-yellow-400 text-gray-900'
                       : 'bg-gray-100 border-gray-300 text-gray-800'
                   }`}
                 >
                   {value}
                 </div>
               ))}
+            </div>
+            <div className="flex justify-center space-x-8 text-sm">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                <span>Current</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <span>Found</span>
+              </div>
             </div>
           </div>
 
@@ -169,19 +166,19 @@ export default function ExponentialSearchVisualiser() {
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Array must be sorted</span>
+                <span>Find range where element is present</span>
               </div>
               <div className="flex items-start space-x-2">
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Find range by exponential jumps</span>
+                <span>Use binary search in that range</span>
               </div>
               <div className="flex items-start space-x-2">
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Use binary search within the range</span>
+                <span>Efficient for unbounded searches</span>
               </div>
             </div>
           </div>
@@ -192,7 +189,10 @@ export default function ExponentialSearchVisualiser() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                   Target Value
                 </label>
                 <InputControl
@@ -204,32 +204,50 @@ export default function ExponentialSearchVisualiser() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
                   Speed
+                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
                 </label>
-                <InputControl
+                <input
                   type="range"
                   min="0"
                   max="900"
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isSearching}
+                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  style={{ accentColor: '#2563eb' }}
                 />
               </div>
               <div className="flex space-x-4">
                 <Button
                   onClick={exponentialSearch}
                   disabled={isSearching || !target}
-                  className="flex-1"
+                  className="flex-1 flex items-center justify-center gap-2"
                 >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                   {isSearching ? 'Searching...' : 'Start Search'}
                 </Button>
                 {isSearching && (
                   <Button
                     onClick={togglePause}
                     variant="secondary"
-                    className="flex-1"
+                    className="flex-1 flex items-center justify-center gap-2"
                   >
+                    {isPaused ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
                     {isPaused ? 'Resume' : 'Pause'}
                   </Button>
                 )}
@@ -237,8 +255,11 @@ export default function ExponentialSearchVisualiser() {
                   onClick={reset}
                   disabled={isSearching && !isPaused}
                   variant="secondary"
-                  className="flex-1"
+                  className="flex-1 flex items-center justify-center gap-2"
                 >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                   Reset
                 </Button>
               </div>

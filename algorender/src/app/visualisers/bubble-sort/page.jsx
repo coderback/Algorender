@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Button from '@/components/Button';
 import SortingChart from '@/components/SortingChart';
@@ -11,7 +11,7 @@ const generateRandomArray = () => {
 };
 
 export default function BubbleSort() {
-  const [array, setArray] = useState(generateRandomArray());
+  const [array, setArray] = useState([]);
   const [isSorting, setIsSorting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [comparisons, setComparisons] = useState(0);
@@ -22,6 +22,11 @@ export default function BubbleSort() {
   
   const pauseRef = useRef(false);
   const sortingRef = useRef(false);
+
+  // Initialize array on client side to prevent hydration mismatch
+  useEffect(() => {
+    setArray(generateRandomArray());
+  }, []);
 
   const sleep = async (ms) => {
     while (pauseRef.current) {
@@ -50,18 +55,18 @@ export default function BubbleSort() {
       for (let i = 0; i < n - 1 && sortingRef.current; i++) {
         let swapped = false;
         for (let j = 0; j < n - i - 1 && sortingRef.current; j++) {
-          setSelectedIndices([j, j + 1]);
-          newComparisons++;
-          setComparisons(newComparisons);
-          
+        setSelectedIndices([j, j + 1]);
+        newComparisons++;
+        setComparisons(newComparisons);
+        
           await sleep(speed);
-          
-          if (arr[j] > arr[j + 1]) {
-            // Swap elements
-            [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
-            setArray([...arr]);
-            newSwaps++;
-            setSwaps(newSwaps);
+        
+        if (arr[j] > arr[j + 1]) {
+          // Swap elements
+          [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+          setArray([...arr]);
+          newSwaps++;
+          setSwaps(newSwaps);
             swapped = true;
           }
         }
@@ -70,18 +75,18 @@ export default function BubbleSort() {
           // Array is sorted before completing all passes
           setSortedIndices(Array.from({ length: n }, (_, i) => i));
           break;
-        }
-        
-        setSortedIndices(prev => [...prev, n - i - 1]);
       }
-      
+        
+      setSortedIndices(prev => [...prev, n - i - 1]);
+    }
+    
       if (sortingRef.current) {
         // Only update if sorting wasn't cancelled
         setSortedIndices(prev => [...new Set([...prev, 0])]);
       }
     } finally {
-      setSelectedIndices([]);
-      setIsSorting(false);
+    setSelectedIndices([]);
+    setIsSorting(false);
       setIsPaused(false);
       pauseRef.current = false;
       sortingRef.current = false;

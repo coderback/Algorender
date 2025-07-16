@@ -65,7 +65,8 @@ export default function Header() {
     <header className="w-full bg-white shadow-sm sticky top-0 z-10">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex-shrink-0">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+            <img src="/logo.svg" alt="Algorender Logo" className="h-8 w-8 object-contain" />
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight cursor-pointer">
               Algorender
             </h1>

@@ -5,6 +5,9 @@ import Layout from '@/components/Layout';
 import Button from '@/components/Button';
 import InputControl from '@/components/InputControl';
 import StatsBar from '@/components/StatsBar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaFont, FaPlay, FaUndo, FaSearch, FaCode } from 'react-icons/fa';
 
 const KMPVisualizer = () => {
   const [text, setText] = useState('');
@@ -91,8 +94,11 @@ const KMPVisualizer = () => {
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Input</h2>
+          <Card className="p-6 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FaFont className="text-blue-500" />
+              Input
+            </h2>
             <div className="space-y-4">
               <InputControl
                 type="text"
@@ -111,16 +117,21 @@ const KMPVisualizer = () => {
                 disabled={isSolving}
               />
             </div>
-          </div>
+          </Card>
 
-                      <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Controls</h2>
+          <Card className="p-6 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FaSearch className="text-green-500" />
+              Controls
+            </h2>
             <div className="flex flex-wrap gap-4">
               <Button
                 onClick={kmp}
                 disabled={isSolving || !text || !pattern}
                 variant="primary"
+                className="flex items-center gap-2"
               >
+                <FaPlay className="text-sm" />
                 {isSolving ? 'Running...' : 'Run Algorithm'}
               </Button>
               <Button
@@ -131,15 +142,17 @@ const KMPVisualizer = () => {
                   setStats({ comparisons: 0, matches: 0, time: 0 });
                 }}
                 variant="secondary"
+                className="flex items-center gap-2"
               >
+                <FaUndo className="text-sm" />
                 Reset
               </Button>
             </div>
-          </div>
+          </Card>
         </div>
 
         <div className="space-y-6">
-                      <div className="bg-gray-50 rounded-xl p-6">
+          <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Visualization</h2>
             <div className="relative">
               <div className="font-mono text-lg mb-4 break-all">
@@ -168,15 +181,6 @@ const KMPVisualizer = () => {
               )}
             </div>
           </div>
-
-          <StatsBar
-            stats={[
-              { label: 'Comparisons', value: stats.comparisons },
-              { label: 'Matches', value: stats.matches },
-              { label: 'Time (ms)', value: stats.time }
-            ]}
-            timeComplexity={timeComplexity}
-          />
 
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">How it Works</h2>

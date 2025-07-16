@@ -2,7 +2,6 @@
 import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import StatsBar from '@/components/StatsBar';
 import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 

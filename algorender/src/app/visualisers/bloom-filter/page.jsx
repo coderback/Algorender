@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaFilter, FaPlus, FaSearch, FaUndo, FaHashtag } from 'react-icons/fa';
 
 export default function BloomFilterVisualiser() {
   const [filter, setFilter] = useState(Array(20).fill(0));
@@ -120,8 +123,11 @@ export default function BloomFilterVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
+          <Card className="p-6 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FaFilter className="text-blue-500" />
+              Operations
+            </h2>
             <div className="space-y-4">
               <InputControl
                 label="Number of Hash Functions"
@@ -138,42 +144,42 @@ export default function BloomFilterVisualiser() {
                 placeholder="Enter element"
               />
               <div className="grid grid-cols-3 gap-3">
-                <Button onClick={insert} variant="primary" fullWidth>
+                <Button onClick={insert} variant="primary" className="flex items-center justify-center gap-2">
+                  <FaPlus className="text-sm" />
                   Insert
                 </Button>
-                <Button onClick={check} variant="success" fullWidth>
+                <Button onClick={check} variant="success" className="flex items-center justify-center gap-2">
+                  <FaSearch className="text-sm" />
                   Check
                 </Button>
-                <Button onClick={reset} variant="danger" fullWidth>
+                <Button onClick={reset} variant="danger" className="flex items-center justify-center gap-2">
+                  <FaUndo className="text-sm" />
                   Reset
                 </Button>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
+          <Card className="p-6 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white">
+            <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <FaHashtag className="text-green-500" />
+              How it Works
+            </h3>
             <div className="space-y-3 text-gray-600">
               <div className="flex items-start space-x-2">
-                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <FaPlus className="w-5 h-5 text-blue-500 mt-0.5" />
                 <span>Insert: Adds an element to the filter by setting multiple bits</span>
               </div>
               <div className="flex items-start space-x-2">
-                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <FaSearch className="w-5 h-5 text-blue-500 mt-0.5" />
                 <span>Check: Tests if an element might be in the set</span>
               </div>
               <div className="flex items-start space-x-2">
-                <svg className="w-5 h-5 text-yellow-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <FaFilter className="w-5 h-5 text-yellow-500 mt-0.5" />
                 <span>False positives are possible, but false negatives are not</span>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </Layout>

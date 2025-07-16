@@ -65,7 +65,7 @@ export default function BinaryTreeVisualiser() {
     findPath(tree, searchValue, path);
     setTraversalPath(path);
     setValue('');
-    setTimeout(() => setTraversalPath([]), 2000);
+      setTimeout(() => setTraversalPath([]), 2000);
   };
 
   const reset = () => {
@@ -92,7 +92,7 @@ export default function BinaryTreeVisualiser() {
     return (
       <div className="flex flex-col items-center relative">
         {level > 0 && (
-          <div 
+        <div
             className={`absolute w-24 h-12 -top-10 
               ${isLeft ? '-translate-x-12 border-t-2 border-l-2' : 'translate-x-12 border-t-2 border-r-2'} 
               border-gray-300/50 rounded-${isLeft ? 'tl' : 'tr'}`}
@@ -104,7 +104,7 @@ export default function BinaryTreeVisualiser() {
             ${isSelected
               ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 scale-110 ring-4 ring-blue-500/30'
               : 'bg-gradient-to-br from-white to-gray-50 shadow-lg shadow-gray-200/50 hover:shadow-xl hover:scale-105'
-            }`}
+          }`}
         >
           <span className={`text-2xl font-bold ${isSelected ? 'text-white' : 'text-gray-700'}`}>
             {node.value}
@@ -119,12 +119,12 @@ export default function BinaryTreeVisualiser() {
         </div>
         {(node.left || node.right) && (
           <div className="flex justify-center mt-16 space-x-24">
-            <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center">
               {renderNode(node.left, level + 1, true)}
-            </div>
-            <div className="flex flex-col items-center">
+              </div>
+              <div className="flex flex-col items-center">
               {renderNode(node.right, level + 1, false)}
-            </div>
+              </div>
           </div>
         )}
       </div>

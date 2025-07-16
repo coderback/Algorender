@@ -113,9 +113,9 @@ export default function ArrayVisualiser() {
                 <Button onClick={search} variant="secondary" fullWidth>
                   Search
                 </Button>
-                <Button onClick={reset} variant="secondary" fullWidth>
-                  Reset
-                </Button>
+              <Button onClick={reset} variant="secondary" fullWidth>
+                Reset
+              </Button>
               </div>
             </div>
           </div>

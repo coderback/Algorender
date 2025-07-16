@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Button from '@/components/Button';
 import SortingChart from '@/components/SortingChart';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { FaSort, FaTachometerAlt, FaPlay, FaPause, FaUndo, FaRandom } from 'react-icons/fa';
 
 // Function to generate random array of 8 numbers between 10 and 99
 const generateRandomArray = () => {
@@ -11,7 +14,7 @@ const generateRandomArray = () => {
 };
 
 export default function QuickSort() {
-  const [array, setArray] = useState(generateRandomArray());
+  const [array, setArray] = useState([]);
   const [isSorting, setIsSorting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [comparisons, setComparisons] = useState(0);
@@ -22,6 +25,11 @@ export default function QuickSort() {
   
   const pauseRef = useRef(false);
   const sortingRef = useRef(false);
+
+  // Initialize array on client side to prevent hydration mismatch
+  useEffect(() => {
+    setArray(generateRandomArray());
+  }, []);
 
   const sleep = async (ms) => {
     while (pauseRef.current) {
@@ -184,14 +192,18 @@ export default function QuickSort() {
                   onClick={quickSort}
                   disabled={isSorting && !isPaused}
                   variant="primary"
+                  className="flex items-center justify-center gap-2"
                 >
+                  <FaSort className="text-sm" />
                   {isSorting && !isPaused ? 'Sorting...' : 'Sort'}
                 </Button>
                 {isSorting && (
                   <Button
                     onClick={handlePauseResume}
                     variant="secondary"
+                    className="flex items-center justify-center gap-2"
                   >
+                    {isPaused ? <FaPlay className="text-sm" /> : <FaPause className="text-sm" />}
                     {isPaused ? 'Resume' : 'Pause'}
                   </Button>
                 )}
@@ -199,13 +211,17 @@ export default function QuickSort() {
                   onClick={reset}
                   disabled={isSorting && !isPaused}
                   variant="secondary"
+                  className="flex items-center justify-center gap-2"
                 >
+                  <FaRandom className="text-sm" />
                   New Array
                 </Button>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <FaTachometerAlt className="text-blue-400" />
                   Animation Speed
+                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
                 </label>
                 <input
                   type="range"
@@ -214,7 +230,8 @@ export default function QuickSort() {
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isSorting && !isPaused}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500 disabled:opacity-50"
+                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  style={{ accentColor: '#2563eb' }}
                 />
               </div>
             </div>
