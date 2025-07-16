@@ -4,10 +4,7 @@ import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Button from '@/components/Button';
 import InputControl from '@/components/InputControl';
-import StatsBar from '@/components/StatsBar';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaChessQueen, FaTachometerAlt, FaPlay, FaUndo, FaGrid } from 'react-icons/fa';
+import { FaChessQueen, FaTh } from 'react-icons/fa';
 
 const NQueensVisualizer = () => {
   const [n, setN] = useState(8);
@@ -116,7 +113,7 @@ const NQueensVisualizer = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center gap-2">
-              <FaGrid className="text-blue-400" />
+              <FaTh className="text-blue-400" />
               <InputControl
                 label="Board Size"
                 type="number"
