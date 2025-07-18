@@ -29,10 +29,6 @@ export default function NQueensVisualizer() {
     space: 'O(n)'
   };
 
-  useEffect(() => {
-    initializeBoard();
-  }, [initializeBoard]);
-
   const initializeBoard = useCallback(() => {
     const newBoard = Array(n).fill().map(() => Array(n).fill(0));
     setBoard(newBoard);
@@ -40,6 +36,10 @@ export default function NQueensVisualizer() {
     setCurrentSolution(0);
     setStats({ solutions: 0, time: 0, steps: 0 });
   }, [n]);
+
+  useEffect(() => {
+    initializeBoard();
+  }, [initializeBoard]);
 
   const isValid = (board, row, col) => {
     // Check column

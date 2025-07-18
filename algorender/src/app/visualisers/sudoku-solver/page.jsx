@@ -43,10 +43,6 @@ export default function SudokuVisualizer() {
     return array;
   };
 
-  useEffect(() => {
-    generatePuzzle();
-  }, [generatePuzzle]);
-
   const generatePuzzle = useCallback(() => {
     const newBoard = Array(9).fill().map(() => Array(9).fill(0));
     const newOriginalBoard = Array(9).fill().map(() => Array(9).fill(0));
@@ -108,6 +104,10 @@ export default function SudokuVisualizer() {
       status: 'New Puzzle'
     }));
   }, [stats.difficulty]);
+
+  useEffect(() => {
+    generatePuzzle();
+  }, [generatePuzzle]);
 
   const isValid = (board, row, col, num) => {
     // Check row
