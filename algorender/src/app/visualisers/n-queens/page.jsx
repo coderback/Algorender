@@ -10,7 +10,7 @@ import {
   ButtonPresets 
 } from '@/components/VisualizerControls';
 
-const NQueensVisualizer = () => {
+export default function NQueensVisualizer() {
   const [n, setN] = useState(8);
   const [board, setBoard] = useState([]);
   const [solutions, setSolutions] = useState([]);
@@ -68,7 +68,7 @@ const NQueensVisualizer = () => {
 
     const solve = async (board, row = 0) => {
       if (row === n) {
-        allSolutions.push(board.map(row => [...row]));
+        allSolutions.push(board.map(boardRow => [...boardRow]));
         setSolutions([...allSolutions]);
         setStats(prev => ({ ...prev, solutions: allSolutions.length }));
         return;
@@ -78,18 +78,18 @@ const NQueensVisualizer = () => {
         steps++;
         if (isValid(board, row, col)) {
           board[row][col] = 1;
-          setBoard(board.map(row => [...row]));
+          setBoard(board.map(boardRow => [...boardRow]));
           await new Promise(resolve => setTimeout(resolve, 100));
           
           await solve(board, row + 1);
           
           board[row][col] = 0;
-          setBoard(board.map(row => [...row]));
+          setBoard(board.map(boardRow => [...boardRow]));
         }
       }
     };
 
-    await solve(board.map(row => [...row]));
+    await solve(board.map(boardRow => [...boardRow]));
     const endTime = performance.now();
     setStats(prev => ({
       ...prev,
@@ -230,6 +230,4 @@ const NQueensVisualizer = () => {
       </div>
     </Layout>
   );
-};
-
-export default NQueensVisualizer; 
+} 
