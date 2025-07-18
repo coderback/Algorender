@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { DataStructureButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function QueueVisualiser() {
   const [queue, setQueue] = useState([1, 2, 3, 4, 5]);
@@ -106,48 +107,37 @@ export default function QueueVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
-              <InputControl
-                label="Value"
-                type="number"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="Enter value to enqueue"
-              />
+          <ControlsSection title="Operations">
+            <InputControl
+              label="Value"
+              type="number"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Enter value to enqueue"
+            />
+            <DataStructureButtonGrid
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            >
               <div className="grid grid-cols-3 gap-3">
-                <Button onClick={enqueue} variant="primary" fullWidth>
+                <Button onClick={enqueue} variant="primary" className="w-full">
                   Enqueue
                 </Button>
-                <Button onClick={dequeue} variant="danger" fullWidth>
+                <Button onClick={dequeue} variant="danger" className="w-full">
                   Dequeue
                 </Button>
-                <Button onClick={peek} variant="secondary" fullWidth>
+                <Button onClick={peek} variant="secondary" className="w-full">
                   Peek
                 </Button>
               </div>
-              <Button onClick={reset} variant="secondary" fullWidth>
-                Reset
-              </Button>
-            </div>
-          </div>
+            </DataStructureButtonGrid>
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Queue Size</h4>
-                <p className="text-2xl font-semibold text-blue-600">{queue.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Front Element</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {queue.length > 0 ? queue[0] : '-'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            stats={[
+              { label: 'Queue Size', value: queue.length, color: 'text-blue-600' },
+              { label: 'Front Element', value: queue.length > 0 ? queue[0] : '-' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

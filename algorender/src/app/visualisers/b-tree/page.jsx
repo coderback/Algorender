@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  ErrorDisplay,
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 export default function BTreeVisualiser() {
   const [tree, setTree] = useState(null);
@@ -12,6 +18,15 @@ export default function BTreeVisualiser() {
   const [searchPath, setSearchPath] = useState([]);
   const [error, setError] = useState('');
   const [order] = useState(3); // B-tree of order 3 (2-3 tree)
+
+  const deepCopyNode = (node) => {
+    if (!node) return null;
+    return {
+      keys: [...node.keys],
+      children: node.children.map(child => deepCopyNode(child)),
+      isLeaf: node.isLeaf
+    };
+  };
 
   const insert = (value) => {
     if (value === '') {
@@ -25,52 +40,66 @@ export default function BTreeVisualiser() {
     }
     setError('');
 
+    // Check for duplicate keys
+    if (tree && findPath(tree, newValue, [])) {
+      setError('Value already exists in the tree');
+      return;
+    }
+
     if (!tree) {
-      setTree({
+      const newTree = {
         keys: [newValue],
         children: [],
         isLeaf: true
-      });
+      };
+      setTree(newTree);
     } else {
-    const newTree = { ...tree };
-      if (newTree.keys.length === 2 * order - 1) {
+      let newTree;
+      if (tree.keys.length === 2 * order - 1) {
         // Root is full, create new root
-        const newRoot = {
+        newTree = {
           keys: [],
-          children: [newTree],
+          children: [deepCopyNode(tree)],
           isLeaf: false
         };
-        setTree(newRoot);
-        splitChild(newRoot, 0);
-        insertNonFull(newRoot, newValue);
+        splitChild(newTree, 0);
+        insertNonFull(newTree, newValue);
       } else {
+        newTree = deepCopyNode(tree);
         insertNonFull(newTree, newValue);
       }
-    setTree(newTree);
+      setTree(newTree);
     }
     setValue('');
 
-    // Highlight the path to the newly inserted node
-    const path = [];
-    findPath(tree, newValue, path);
-    setSearchPath(path);
-    setTimeout(() => setSearchPath([]), 1000);
+    // Use setTimeout to ensure tree state is updated before finding path
+    setTimeout(() => {
+      const path = [];
+      if (tree) {
+        findPath(tree, newValue, path);
+        setSearchPath(path);setTimeout(() => setSearchPath([]), 1000);
+      }
+    }, 50);
   };
 
   const splitChild = (parentNode, index) => {
     const childNode = parentNode.children[index];
+    const midIndex = Math.floor((2 * order - 1) / 2);
+    const midKey = childNode.keys[midIndex];
+
     const newNode = {
-      keys: childNode.keys.slice(order),
-      children: childNode.isLeaf ? [] : childNode.children.slice(order),
+      keys: childNode.keys.slice(midIndex + 1),
+      children: childNode.isLeaf ? [] : childNode.children.slice(midIndex +
+  1),
       isLeaf: childNode.isLeaf
     };
-    
-    childNode.keys = childNode.keys.slice(0, order - 1);
+
+    childNode.keys = childNode.keys.slice(0, midIndex);
     if (!childNode.isLeaf) {
-      childNode.children = childNode.children.slice(0, order);
+      childNode.children = childNode.children.slice(0, midIndex + 1);
     }
-    
-    parentNode.keys.splice(index, 0, childNode.keys[order - 1]);
+
+    parentNode.keys.splice(index, 0, midKey);
     parentNode.children.splice(index + 1, 0, newNode);
   };
 
@@ -78,7 +107,8 @@ export default function BTreeVisualiser() {
     let i = node.keys.length - 1;
 
     if (node.isLeaf) {
-      // Insert into leaf node
+      // Insert into leaf node - shift keys to make room
+      node.keys.push(0); // Make room for new key
       while (i >= 0 && key < node.keys[i]) {
         node.keys[i + 1] = node.keys[i];
         i--;
@@ -88,7 +118,7 @@ export default function BTreeVisualiser() {
       // Find child to insert into
       while (i >= 0 && key < node.keys[i]) {
         i--;
-    }
+      }
       i++;
       
       if (node.children[i].keys.length === 2 * order - 1) {
@@ -123,20 +153,20 @@ export default function BTreeVisualiser() {
   const findPath = (node, value, path) => {
     if (!node) return false;
     path.push(node);
-    
+
     let i = 0;
     while (i < node.keys.length && value > node.keys[i]) {
       i++;
     }
-    
+
     if (i < node.keys.length && value === node.keys[i]) {
       return true;
     }
-    
+
     if (node.isLeaf) {
       return false;
     }
-    
+
     return findPath(node.children[i], value, path);
   };
 
@@ -210,7 +240,7 @@ export default function BTreeVisualiser() {
           </div>
           </div>
           {!node.isLeaf && (
-          <div 
+          <div
             className={`flex justify-center mt-16 space-x-8`}
             style={{ minWidth: `${nodeWidth + 100}px` }}
           >
@@ -270,60 +300,53 @@ export default function BTreeVisualiser() {
                 <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Order {order}: Each node has at most {2 * order - 1} keys</span>
+                <span>Order {order}: Max {2 * order - 1} keys, min {order - 1} keys per node</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Nodes split when full, maintaining balanced tree structure</span>
               </div>
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
-              <InputControl
-                label="Value"
-                type="number"
-                value={value}
-                onChange={(e) => {
-                  setValue(e.target.value);
-                  setError('');
-                }}
-                placeholder="Enter value"
-                error={error}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => insert(value)} variant="primary" fullWidth>
-                  Insert
-                </Button>
-                <Button onClick={() => search(value)} variant="secondary" fullWidth>
-                  Search
-                </Button>
-              </div>
-              <Button onClick={reset} variant="secondary" fullWidth>
-                Reset
-              </Button>
-            </div>
-          </div>
+          <ErrorDisplay error={error} />
+          
+          <ControlsSection title="Operations">
+            <InputControl
+              label="Value"
+              type="number"
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setError('');
+              }}
+              placeholder="Enter value"
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                ButtonPresets.dataStructure.insert(() => insert(value), !value.trim()),
+                ButtonPresets.dataStructure.search(() => search(value), !value.trim())
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Tree Height</h4>
-                <p className="text-2xl font-semibold text-blue-600">
-                  {getHeight(tree) - 1}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Total Keys</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {countKeys(tree)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Tree Height', value: tree ? getHeight(tree) : 0, color: 'text-blue-600' },
+              { label: 'Total Keys', value: countKeys(tree), color: 'text-gray-900' },
+              { label: 'Tree Order', value: order, color: 'text-green-600' }
+            ]}
+            columns={3}
+          />
         </div>
       </div>
     </Layout>
   );
-} 
+}

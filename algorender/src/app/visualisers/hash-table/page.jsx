@@ -3,16 +3,25 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  StatisticsDisplay, 
+  EnhancedDataStructureButtonGrid,
+  ButtonPresets,
+  ErrorDisplay,
+  SuccessDisplay 
+} from '@/components/VisualizerControls';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { FaKey, FaSearch, FaPlus, FaTrashAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaKey, FaSearch, FaPlus, FaTrashAlt, FaExclamationTriangle, FaUndo } from 'react-icons/fa';
 
 export default function HashTableVisualiser() {
   const [table, setTable] = useState(Array(10).fill(null));
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
   const [collisions, setCollisions] = useState([]);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const hashFunction = (key) => {
     let hash = 0;
@@ -24,15 +33,32 @@ export default function HashTableVisualiser() {
   };
 
   const insert = () => {
-    if (!key || !value) return;
+    setError('');
+    setSuccess('');
+    
+    if (!key || !value) {
+      setError('Both key and value are required');
+      return;
+    }
 
+    // Check if key already exists
     const index = hashFunction(key);
+    let current = table[index];
+    while (current) {
+      if (current.key === key) {
+        setError(`Key "${key}" already exists in the hash table`);
+        return;
+      }
+      current = current.next;
+    }
+
     const newTable = [...table];
     const newCollisions = [...collisions];
 
     if (newTable[index] === null) {
       newTable[index] = { key, value };
       setCollisions(newCollisions.filter(c => c.index !== index));
+      setSuccess(`Successfully inserted "${key}" at index ${index}`);
     } else {
       if (!newTable[index].next) {
         newTable[index] = {
@@ -47,6 +73,7 @@ export default function HashTableVisualiser() {
         current.next = { key, value };
       }
       newCollisions.push({ index, key });
+      setSuccess(`Successfully inserted "${key}" at index ${index} (collision resolved by chaining)`);
     }
 
     setTable(newTable);
@@ -78,7 +105,13 @@ export default function HashTableVisualiser() {
   };
 
   const search = () => {
-    if (!key) return;
+    setError('');
+    setSuccess('');
+    
+    if (!key) {
+      setError('Key is required for search');
+      return;
+    }
 
     const index = hashFunction(key);
     let current = table[index];
@@ -87,6 +120,7 @@ export default function HashTableVisualiser() {
     while (current) {
       if (current.key === key) {
         setValue(current.value);
+        setSuccess(`Found "${key}" with value "${current.value}" at index ${index}`);
         return;
       }
       current = current.next;
@@ -94,7 +128,39 @@ export default function HashTableVisualiser() {
     }
 
     setValue('');
+    setError(`Key "${key}" not found in the hash table`);
   };
+
+  const reset = () => {
+    setTable(Array(10).fill(null));
+    setKey('');
+    setValue('');
+    setCollisions([]);
+    setError('');
+    setSuccess('');
+  };
+
+  // Calculate statistics
+  const totalEntries = table.reduce((count, slot) => {
+    if (!slot) return count;
+    let entries = 1;
+    let current = slot.next;
+    while (current) {
+      entries++;
+      current = current.next;
+    }
+    return count + entries;
+  }, 0);
+
+  const loadFactor = ((totalEntries / table.length) * 100).toFixed(1);
+  const occupiedSlots = table.filter(slot => slot !== null).length;
+
+  const stats = [
+    { label: 'Total Entries', value: totalEntries, color: 'text-blue-600' },
+    { label: 'Occupied Slots', value: occupiedSlots, color: 'text-green-600' },
+    { label: 'Load Factor', value: `${loadFactor}%`, color: 'text-purple-600' },
+    { label: 'Collisions', value: collisions.length, color: 'text-orange-600' }
+  ];
 
   return (
     <Layout
@@ -170,36 +236,37 @@ export default function HashTableVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <Card className="p-6 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FaKey className="text-blue-500" />
-              Operations
-            </h2>
-            <div className="space-y-4">
-              <InputControl
-                label="Key"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                placeholder="Enter key"
-              />
-              <InputControl
-                label="Value"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="Enter value"
-              />
-              <div className="flex space-x-3">
-                <Button onClick={insert} variant="primary" className="flex-1 flex items-center justify-center gap-2">
-                  <FaPlus className="text-sm" />
-                  Insert
-                </Button>
-                <Button onClick={search} variant="success" className="flex-1 flex items-center justify-center gap-2">
-                  <FaSearch className="text-sm" />
-                  Search
-                </Button>
-              </div>
-            </div>
-          </Card>
+          <ErrorDisplay error={error} onDismiss={() => setError('')} />
+          <SuccessDisplay message={success} onDismiss={() => setSuccess('')} />
+          
+          <ControlsSection title="Operations">
+            <InputControl
+              label="Key"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="Enter key"
+            />
+            <InputControl
+              label="Value"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Enter value"
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                ButtonPresets.dataStructure.insert(insert, !key || !value),
+                ButtonPresets.dataStructure.search(search, !key)
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+          </ControlsSection>
+
+          <StatisticsDisplay 
+            title="Statistics" 
+            stats={stats}
+            columns={2}
+          />
 
           {collisions.length > 0 && (
             <Card className="p-6 border-2 border-yellow-100 bg-gradient-to-br from-yellow-50 to-white">
@@ -211,7 +278,7 @@ export default function HashTableVisualiser() {
                 {collisions.map((collision, i) => (
                   <div key={i} className="flex items-center space-x-2 text-gray-600">
                     <FaExclamationTriangle className="w-5 h-5 text-yellow-500" />
-                    <span>Key "{collision.key}" collided at index {collision.index}</span>
+                    <span>Key &quot;{collision.key}&quot; collided at index {collision.index}</span>
                   </div>
                 ))}
               </div>

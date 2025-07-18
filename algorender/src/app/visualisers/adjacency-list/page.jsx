@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  ErrorDisplay,
+  SuccessDisplay,
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 export default function AdjacencyListVisualiser() {
   const [graph, setGraph] = useState({
@@ -20,23 +27,58 @@ export default function AdjacencyListVisualiser() {
   const [fromNode, setFromNode] = useState('');
   const [toNode, setToNode] = useState('');
   const [searchPath, setSearchPath] = useState([]);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const addNode = () => {
+    if (graph.nodes.length >= 10) {
+      setError('Maximum 10 nodes allowed');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     const newId = graph.nodes.length + 1;
     setGraph(prev => ({
       nodes: [...prev.nodes, newId],
       edges: [...prev.edges, []]
     }));
+    setSuccess(`Node ${newId} added successfully`);
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const addEdge = () => {
-    if (!fromNode || !toNode) return;
+    if (!fromNode.trim() || !toNode.trim()) {
+      setError('Please enter both node IDs');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     const from = parseInt(fromNode);
     const to = parseInt(toNode);
 
-    if (from === to) return;
-    if (from < 1 || from > graph.nodes.length || to < 1 || to > graph.nodes.length) return;
-    if (graph.edges[from - 1].includes(to)) return;
+    if (isNaN(from) || isNaN(to)) {
+      setError('Please enter valid numbers');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (from === to) {
+      setError('Cannot create edge to same node');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (from < 1 || from > graph.nodes.length || to < 1 || to > graph.nodes.length) {
+      setError('Node IDs must be between 1 and ' + graph.nodes.length);
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (graph.edges[from - 1].includes(to)) {
+      setError('Edge already exists between these nodes');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
 
     setGraph(prev => ({
       ...prev,
@@ -52,9 +94,18 @@ export default function AdjacencyListVisualiser() {
     }));
     setFromNode('');
     setToNode('');
+    setSuccess(`Edge added: ${from} ↔ ${to}`);
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const removeNode = (nodeId) => {
+    if (graph.nodes.length <= 1) {
+      setError('Cannot remove the last node');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    const removedEdges = graph.edges[nodeId - 1].length;
     setGraph(prev => ({
       nodes: prev.nodes.filter(id => id !== nodeId),
       edges: prev.edges
@@ -65,21 +116,8 @@ export default function AdjacencyListVisualiser() {
         )
     }));
     setSelectedNode(null);
-  };
-
-  const removeEdge = (from, to) => {
-    setGraph(prev => ({
-      ...prev,
-      edges: prev.edges.map((neighbors, index) => {
-        if (index === from - 1) {
-          return neighbors.filter(n => n !== to);
-        }
-        if (index === to - 1) {
-          return neighbors.filter(n => n !== from);
-        }
-        return neighbors;
-      })
-    }));
+    setSuccess(`Node ${nodeId} and ${removedEdges} connections removed`);
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const bfs = (startId) => {
@@ -102,7 +140,11 @@ export default function AdjacencyListVisualiser() {
     }
 
     setSearchPath(path);
-    setTimeout(() => setSearchPath([]), 3000);
+    setSuccess(`BFS from node ${startId}: visited ${path.length} nodes`);
+    setTimeout(() => {
+      setSearchPath([]);
+      setSuccess('');
+    }, 3000);
   };
 
   const reset = () => {
@@ -120,6 +162,8 @@ export default function AdjacencyListVisualiser() {
     setFromNode('');
     setToNode('');
     setSearchPath([]);
+    setError('');
+    setSuccess('');
   };
 
   return (
@@ -156,7 +200,7 @@ export default function AdjacencyListVisualiser() {
                         {graph.edges[index].map(neighbor => (
                           <div
                             key={neighbor}
-                            className="px-2 py-1 bg-gray-100 rounded text-sm"
+                            className="px-2 py-1 bg-gray-100 rounded text-sm text-gray-900 font-medium"
                           >
                             {neighbor}
                           </div>
@@ -198,83 +242,90 @@ export default function AdjacencyListVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
+          <ErrorDisplay error={error} />
+          <SuccessDisplay message={success} />
+          
+          <ControlsSection title="Adjacency List Operations">
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                ButtonPresets.dataStructure.insert(addNode, graph.nodes.length >= 10),
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+            
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-700">Add Edge</h4>
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={addNode} variant="primary" fullWidth>
-                  Add Node
-                </Button>
-                <Button onClick={reset} variant="secondary" fullWidth>
-                  Reset
-                </Button>
-              </div>
-
-              <div className="space-y-3">
                 <InputControl
                   label="From Node"
                   type="number"
                   value={fromNode}
                   onChange={(e) => setFromNode(e.target.value)}
-                  placeholder="Enter node ID"
+                  placeholder="Node ID"
                 />
                 <InputControl
                   label="To Node"
                   type="number"
                   value={toNode}
                   onChange={(e) => setToNode(e.target.value)}
-                  placeholder="Enter node ID"
+                  placeholder="Node ID"
                 />
-                <Button onClick={addEdge} variant="primary" fullWidth>
-                  Add Edge
-                </Button>
               </div>
+              <EnhancedDataStructureButtonGrid
+                operations={[
+                  {
+                    onClick: addEdge,
+                    icon: ButtonPresets.dataStructure.insert().icon,
+                    label: 'Add Edge',
+                    disabled: !fromNode.trim() || !toNode.trim(),
+                    variant: 'primary'
+                  }
+                ]}
+              />
+            </div>
 
-              {selectedNode && (
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => removeNode(selectedNode)}
-                    variant="secondary"
-                    fullWidth
-                  >
-                    Remove Node {selectedNode}
-                  </Button>
-                  <Button
-                    onClick={() => bfs(selectedNode)}
-                    variant="primary"
-                    fullWidth
-                  >
-                    BFS from Node {selectedNode}
-                  </Button>
+            {selectedNode && (
+              <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="text-sm font-medium text-blue-700">Selected Node {selectedNode}</h4>
+                <div className="text-xs text-blue-600 mb-2">
+                  Neighbors: {graph.edges[selectedNode - 1].length > 0 ? 
+                    graph.edges[selectedNode - 1].join(', ') : 'None'}
                 </div>
-              )}
-            </div>
-          </div>
+                <EnhancedDataStructureButtonGrid
+                  operations={[
+                    ButtonPresets.dataStructure.remove(() => removeNode(selectedNode), graph.nodes.length <= 1),
+                    {
+                      onClick: () => bfs(selectedNode),
+                      icon: ButtonPresets.dataStructure.search().icon,
+                      label: 'Run BFS',
+                      variant: 'secondary'
+                    }
+                  ]}
+                />
+              </div>
+            )}
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Nodes</h4>
-                <p className="text-2xl font-semibold text-blue-600">{graph.nodes.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Edges</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {graph.edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Density</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {(
-                    (graph.edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2) /
-                    (graph.nodes.length * (graph.nodes.length - 1))
-                  ).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Nodes', value: graph.nodes.length, color: 'text-blue-600' },
+              { label: 'Edges', value: Math.floor(graph.edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2), color: 'text-green-600' },
+              { 
+                label: 'Avg Degree', 
+                value: graph.nodes.length > 0 ? 
+                  (graph.edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / graph.nodes.length).toFixed(1) : 
+                  '0.0', 
+                color: 'text-gray-900' 
+              },
+              { 
+                label: 'Connected', 
+                value: searchPath.length > 0 ? `${searchPath.length} nodes` : 'Select & BFS', 
+                color: 'text-purple-600' 
+              }
+            ]}
+            columns={2}
+          />
         </div>
       </div>
     </Layout>

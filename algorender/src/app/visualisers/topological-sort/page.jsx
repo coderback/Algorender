@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
-import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import {
+  ControlsSection,
+  SpeedControl,
+  GraphVisualizerButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
 
 const initialGraph = {
   nodes: [0, 1, 2, 3, 4, 5],
@@ -123,57 +128,43 @@ export default function TopologicalSortVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Speed
-                </label>
-                <InputControl
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={topologicalSort}
-                  disabled={isRunning}
-                  className="flex-1"
-                >
-                  {isRunning ? "Running..." : "Start Topological Sort"}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isRunning}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <GraphVisualizerButtonGrid
+              primaryAction={ButtonPresets.graph.primary(topologicalSort, isRunning, 'Topological Sort')}
+              resetAction={ButtonPresets.graph.reset(reset)}
+              isRunning={isRunning}
+              showStartNodeSelector={false}
+            />
+          </ControlsSection>
 
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Order Length', value: order.length, color: 'text-blue-600' },
+              { label: 'Visited Nodes', value: visited.length, color: 'text-green-600' },
+              { label: 'Progress', value: `${Math.round((order.length / graph.nodes.length) * 100)}%`, color: 'text-gray-900' }
+            ]}
+            columns={3}
+          />
+          
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Order Length</p>
-                <p className="text-2xl font-semibold text-blue-600">{order.length}</p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Topological Order:</p>
-              <div className="flex flex-wrap gap-2">
-                {order.map((node, i) => (
-                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">{node}</span>
-                ))}
-              </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Topological Order</h3>
+            <div className="flex flex-wrap gap-2">
+              {order.length > 0 ? (
+                order.map((node, i) => (
+                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                    {i + 1}: {node}
+                  </span>
+                ))
+              ) : (
+                <span className="text-gray-500 text-sm">No topological order yet</span>
+              )}
             </div>
           </div>
         </div>

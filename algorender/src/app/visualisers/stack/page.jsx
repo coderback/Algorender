@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { DataStructureButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function StackVisualiser() {
   const [stack, setStack] = useState([1, 2, 3, 4, 5]);
@@ -109,48 +110,37 @@ export default function StackVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
-              <InputControl
-                label="Value"
-                type="number"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="Enter value to push"
-              />
+          <ControlsSection title="Operations">
+            <InputControl
+              label="Value"
+              type="number"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Enter value to push"
+            />
+            <DataStructureButtonGrid
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            >
               <div className="grid grid-cols-3 gap-3">
-                <Button onClick={push} variant="primary" fullWidth>
+                <Button onClick={push} variant="primary" className="w-full">
                   Push
                 </Button>
-                <Button onClick={pop} variant="danger" fullWidth>
+                <Button onClick={pop} variant="danger" className="w-full">
                   Pop
                 </Button>
-                <Button onClick={peek} variant="secondary" fullWidth>
+                <Button onClick={peek} variant="secondary" className="w-full">
                   Peek
                 </Button>
               </div>
-              <Button onClick={reset} variant="secondary" fullWidth>
-                Reset
-              </Button>
-            </div>
-          </div>
+            </DataStructureButtonGrid>
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Stack Size</h4>
-                <p className="text-2xl font-semibold text-blue-600">{stack.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Top Element</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {stack.length > 0 ? stack[stack.length - 1] : '-'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            stats={[
+              { label: 'Stack Size', value: stack.length, color: 'text-blue-600' },
+              { label: 'Top Element', value: stack.length > 0 ? stack[stack.length - 1] : '-' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

@@ -3,8 +3,15 @@
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import InputControl from "@/components/InputControl";
-import Button from "@/components/Button";
 import { Card, CardContent } from "@/components/ui/card";
+import { 
+  ControlsSection, 
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  SuccessDisplay,
+  ErrorDisplay,
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 function TrieNode() {
   this.children = {};
@@ -78,27 +85,77 @@ export default function TrieVisualiser() {
   const [searchResult, setSearchResult] = useState(null);
   const [prefixResult, setPrefixResult] = useState(null);
   const [words, setWords] = useState([]);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
 
   const handleInsert = () => {
-    if (!word) return;
+    if (!word.trim()) {
+      setError('Please enter a word to insert');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
+    if (words.includes(word)) {
+      setError(`Word "${word}" already exists in trie`);
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
     insertWord(root, word);
     setWords((prev) => [...new Set([...prev, word])]);
+    setSuccess(`Successfully inserted "${word}"`);
     setWord("");
     setSearchResult(null);
     setPrefixResult(null);
     setRoot(Object.assign(Object.create(Object.getPrototypeOf(root)), root)); // force update
+    
+    setTimeout(() => setSuccess(null), 2000);
   };
 
   const handleSearch = () => {
-    if (!word) return;
-    setSearchResult(searchWord(root, word));
+    if (!word.trim()) {
+      setError('Please enter a word to search');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
+    const result = searchWord(root, word);
+    setSearchResult(result);
     setPrefixResult(null);
+    
+    if (result) {
+      setSuccess(`Found word "${word}" in trie`);
+    } else {
+      setError(`Word "${word}" not found in trie`);
+    }
+    
+    setTimeout(() => {
+      setSuccess(null);
+      setError(null);
+    }, 2000);
   };
 
   const handlePrefix = () => {
-    if (!prefix) return;
-    setPrefixResult(startsWith(root, prefix));
+    if (!prefix.trim()) {
+      setError('Please enter a prefix to check');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
+    const result = startsWith(root, prefix);
+    setPrefixResult(result);
     setSearchResult(null);
+    
+    if (result) {
+      setSuccess(`Prefix "${prefix}" exists in trie`);
+    } else {
+      setError(`Prefix "${prefix}" not found in trie`);
+    }
+    
+    setTimeout(() => {
+      setSuccess(null);
+      setError(null);
+    }, 2000);
   };
 
   const handleReset = () => {
@@ -108,6 +165,8 @@ export default function TrieVisualiser() {
     setPrefix("");
     setSearchResult(null);
     setPrefixResult(null);
+    setSuccess(null);
+    setError(null);
   };
 
   return (
@@ -178,84 +237,56 @@ export default function TrieVisualiser() {
           </Card>
         </div>
         <div className="space-y-6">
-          <Card>
-            <CardContent className="py-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Insert/Search Word</label>
-                  <InputControl
-                    type="text"
-                    value={word}
-                    onChange={(e) => setWord(e.target.value)}
-                    placeholder="Enter word"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <Button onClick={handleInsert} disabled={!word}>
-                      Insert
-                    </Button>
-                    <Button onClick={handleSearch} disabled={!word} variant="secondary">
-                      Search
-                    </Button>
-                  </div>
-                  {searchResult !== null && (
-                    <div className="mt-2 text-sm">
-                      {searchResult ? (
-                        <span className="text-green-600">Word found in trie!</span>
-                      ) : (
-                        <span className="text-red-500">Word not found.</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Prefix Match</label>
-                  <InputControl
-                    type="text"
-                    value={prefix}
-                    onChange={(e) => setPrefix(e.target.value)}
-                    placeholder="Enter prefix"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <Button onClick={handlePrefix} disabled={!prefix}>
-                      Check Prefix
-                    </Button>
-                  </div>
-                  {prefixResult !== null && (
-                    <div className="mt-2 text-sm">
-                      {prefixResult ? (
-                        <span className="text-green-600">Prefix exists in trie!</span>
-                      ) : (
-                        <span className="text-red-500">Prefix not found.</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <Button onClick={handleReset} variant="secondary">
-                    Reset Trie
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-6">
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <h4 className="text-sm font-medium text-gray-700 mb-1">Words</h4>
-                    <p className="text-2xl font-semibold text-blue-600">{words.length}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <h4 className="text-sm font-medium text-gray-700 mb-1">Nodes</h4>
-                    <p className="text-2xl font-semibold text-gray-900">{countNodes(root)}</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ErrorDisplay error={error} />
+          <SuccessDisplay message={success} />
+          
+          <ControlsSection title="Word Operations">
+            <div className="space-y-4">
+              <InputControl
+                label="Insert/Search Word"
+                type="text"
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
+                placeholder="Enter word"
+              />
+              
+              <EnhancedDataStructureButtonGrid
+                operations={[
+                  ButtonPresets.dataStructure.insert(handleInsert, !word.trim()),
+                  ButtonPresets.dataStructure.search(handleSearch, !word.trim())
+                ]}
+                resetAction={ButtonPresets.dataStructure.reset(handleReset)}
+              />
+              
+              <InputControl
+                label="Prefix Match"
+                type="text"
+                value={prefix}
+                onChange={(e) => setPrefix(e.target.value)}
+                placeholder="Enter prefix"
+              />
+              
+              <EnhancedDataStructureButtonGrid
+                operations={[
+                  {
+                    onClick: handlePrefix,
+                    icon: ButtonPresets.dataStructure.search.icon,
+                    label: 'Check Prefix',
+                    disabled: !prefix.trim(),
+                    variant: 'secondary'
+                  }
+                ]}
+              />
+            </div>
+          </ControlsSection>
+
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Words', value: words.length, color: 'text-blue-600' },
+              { label: 'Nodes', value: countNodes(root), color: 'text-gray-900' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

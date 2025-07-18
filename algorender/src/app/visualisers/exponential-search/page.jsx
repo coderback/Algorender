@@ -6,6 +6,7 @@ import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { SpeedControl, VisualizerButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function ExponentialSearchVisualiser() {
   const [array, setArray] = useState([]);
@@ -150,11 +151,11 @@ export default function ExponentialSearchVisualiser() {
             <div className="flex justify-center space-x-8 text-sm">
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                <span>Current</span>
+                <span className="text-gray-700 font-medium">Current</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-green-500 rounded"></div>
-                <span>Found</span>
+                <span className="text-gray-700 font-medium">Found</span>
               </div>
             </div>
           </div>
@@ -185,102 +186,45 @@ export default function ExponentialSearchVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  Target Value
-                </label>
-                <InputControl
-                  type="number"
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  disabled={isSearching}
-                  placeholder="Enter value to search"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isSearching}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
-                  style={{ accentColor: '#2563eb' }}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={exponentialSearch}
-                  disabled={isSearching || !target}
-                  className="flex-1 flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  {isSearching ? 'Searching...' : 'Start Search'}
-                </Button>
-                {isSearching && (
-                  <Button
-                    onClick={togglePause}
-                    variant="secondary"
-                    className="flex-1 flex items-center justify-center gap-2"
-                  >
-                    {isPaused ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    {isPaused ? 'Resume' : 'Pause'}
-                  </Button>
-                )}
-                <Button
-                  onClick={reset}
-                  disabled={isSearching && !isPaused}
-                  variant="secondary"
-                  className="flex-1 flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Reset
-                </Button>
-              </div>
+          <ControlsSection>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Target Value
+              </label>
+              <InputControl
+                type="number"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                disabled={isSearching}
+                placeholder="Enter value to search"
+              />
             </div>
-          </div>
+            <VisualizerButtonGrid
+              primaryAction={{
+                ...ButtonPresets.search.primary(exponentialSearch, isSearching, isPaused),
+                disabled: isSearching || !target
+              }}
+              pauseAction={isSearching ? { onClick: togglePause } : null}
+              resetAction={ButtonPresets.search.reset(reset)}
+              isRunning={isSearching}
+              isPaused={isPaused}
+            />
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isSearching}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Array Size</p>
-                <p className="text-2xl font-semibold text-blue-600">{array.length}</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Found Index</p>
-                <p className="text-2xl font-semibold text-gray-600">
-                  {foundIndex !== null ? foundIndex : 'Not Found'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            stats={[
+              { label: 'Array Size', value: array.length, color: 'text-blue-600' },
+              { label: 'Found Index', value: foundIndex !== null ? foundIndex : 'Not Found' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

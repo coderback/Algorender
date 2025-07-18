@@ -5,8 +5,14 @@ import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaRegClock, FaTrashAlt, FaTachometerAlt } from 'react-icons/fa';
+import {
+  ControlsSection,
+  SpeedControl,
+  EnhancedDataStructureButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
+import { FaRegClock, FaTrashAlt } from 'react-icons/fa';
 
 const initialActivities = [
   { start: 1, end: 3 },
@@ -140,63 +146,50 @@ export default function ActivitySelectionVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <FaTachometerAlt className="text-purple-400" />
-                  Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-purple-200 to-pink-400 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-400/30 transition-all"
-                  style={{ accentColor: '#a21caf' }}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={greedyActivitySelection}
-                  disabled={isRunning}
-                  className="flex-1"
-                >
-                  {isRunning ? "Running..." : "Start Activity Selection"}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isRunning}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                {
+                  onClick: greedyActivitySelection,
+                  icon: ButtonPresets.dataStructure.search.icon,
+                  label: isRunning ? 'Running...' : 'Start Selection',
+                  disabled: isRunning,
+                  variant: 'primary'
+                }
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+              disabled={isRunning}
+            />
+          </ControlsSection>
 
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Activities Selected', value: selected.length, color: 'text-blue-600' },
+              { label: 'Total Activities', value: activities.length, color: 'text-gray-900' },
+              { label: 'Selection Rate', value: `${Math.round((selected.length / activities.length) * 100)}%`, color: 'text-green-600' }
+            ]}
+            columns={3}
+          />
+          
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Activities Selected</p>
-                <p className="text-2xl font-semibold text-blue-600">{selected.length}</p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Selected Activities:</p>
-              <div className="flex flex-wrap gap-2">
-                {selected.map((act, i) => (
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Selected Activities</h3>
+            <div className="flex flex-wrap gap-2">
+              {selected.length > 0 ? (
+                selected.map((act, i) => (
                   <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
-                    [{act.start}, {act.end}]
+                    {i + 1}: [{act.start}, {act.end}]
                   </span>
-                ))}
-              </div>
+                ))
+              ) : (
+                <span className="text-gray-500 text-sm">No activities selected yet</span>
+              )}
             </div>
           </div>
         </div>

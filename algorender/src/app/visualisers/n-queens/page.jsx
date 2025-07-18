@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import Button from '@/components/Button';
 import InputControl from '@/components/InputControl';
-import { FaChessQueen, FaTh } from 'react-icons/fa';
+import { 
+  ControlsSection, 
+  VisualizerButtonGrid,
+  StatisticsDisplay, 
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 const NQueensVisualizer = () => {
   const [n, setN] = useState(8);
@@ -27,15 +31,15 @@ const NQueensVisualizer = () => {
 
   useEffect(() => {
     initializeBoard();
-  }, [n]);
+  }, [initializeBoard]);
 
-  const initializeBoard = () => {
+  const initializeBoard = useCallback(() => {
     const newBoard = Array(n).fill().map(() => Array(n).fill(0));
     setBoard(newBoard);
     setSolutions([]);
     setCurrentSolution(0);
     setStats({ solutions: 0, time: 0, steps: 0 });
-  };
+  }, [n]);
 
   const isValid = (board, row, col) => {
     // Check column
@@ -104,41 +108,15 @@ const NQueensVisualizer = () => {
 
   return (
     <Layout 
-      title="N-Queens Problem"
-      description="Visualize the N-Queens problem using backtracking."
+      title="N-Queens Problem Visualiser"
+      description="Visualise the N-Queens problem using backtracking algorithm."
       timeComplexity={{ best: 'O(n!)', average: 'O(n!)', worst: 'O(n!)' }}
       spaceComplexity="O(n)"
     >
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center gap-2">
-              <FaTh className="text-blue-400" />
-              <InputControl
-                label="Board Size"
-                type="number"
-                value={n}
-                onChange={(e) => setN(Math.min(Math.max(4, parseInt(e.target.value) || 4), 12))}
-                min={4}
-                max={12}
-                disabled={isSolving}
-              />
-            </div>
-            <Button
-              onClick={solveNQueens}
-              disabled={isSolving}
-              variant="primary"
-              className="flex items-center gap-2"
-            >
-              <FaChessQueen className="text-sm" />
-              {isSolving ? 'Solving...' : 'Solve'}
-            </Button>
-          </div>
-        </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Board</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Board ({n}×{n})</h2>
             <div className="grid gap-1" style={{ 
               gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
               aspectRatio: '1/1'
@@ -153,7 +131,7 @@ const NQueensVisualizer = () => {
                     style={{ aspectRatio: '1/1' }}
                   >
                     {cell === 1 && (
-                      <div className="w-3/4 h-3/4 rounded-full bg-forest-500" />
+                      <div className="w-3/4 h-3/4 rounded-full bg-blue-500" />
                     )}
                   </div>
                 ))
@@ -162,51 +140,92 @@ const NQueensVisualizer = () => {
           </div>
 
           <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Solutions</h2>
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {solutions.map((_, index) => (
-                  <Button
-                    key={index}
-                    onClick={() => showSolution(index)}
-                    variant={currentSolution === index ? 'primary' : 'secondary'}
-                    size="sm"
-                  >
-                    Solution {index + 1}
-                  </Button>
-                ))}
+            <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
+            <div className="space-y-3 text-gray-600">
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Places queens row by row</span>
               </div>
-              <div className="mt-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
-                <div className="space-y-3 text-gray-600">
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Places queens row by row</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Checks if each position is safe (no conflicts)</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Backtracks when no valid position is found</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Continues until all solutions are found</span>
-                  </div>
-                </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Checks if each position is safe (no conflicts)</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Backtracks when no valid position is found</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Continues until all solutions are found</span>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="space-y-6">
+          <ControlsSection title="Configuration">
+            <InputControl
+              label="Board Size (4-12)"
+              type="number"
+              value={n}
+              onChange={(e) => setN(Math.min(Math.max(4, parseInt(e.target.value) || 4), 12))}
+              min={4}
+              max={12}
+              disabled={isSolving}
+            />
+            
+            <VisualizerButtonGrid
+              primaryAction={{
+                ...ButtonPresets.search.primary(solveNQueens, isSolving, false),
+                label: isSolving ? 'Solving...' : 'Solve N-Queens',
+                disabled: isSolving
+              }}
+              resetAction={{
+                ...ButtonPresets.search.reset(initializeBoard),
+                label: 'Reset Board'
+              }}
+              isRunning={isSolving}
+            />
+          </ControlsSection>
+
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Solutions Found', value: stats.solutions, color: 'text-green-600' },
+              { label: 'Steps Taken', value: stats.steps, color: 'text-blue-600' },
+              { label: 'Time (ms)', value: stats.time, color: 'text-gray-900' }
+            ]}
+            columns={3}
+          />
+
+          {solutions.length > 0 && (
+            <div className="bg-gray-50 rounded-xl p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Solutions ({solutions.length})</h2>
+              <div className="flex flex-wrap gap-2">
+                {solutions.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => showSolution(index)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentSolution === index 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Solution {index + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

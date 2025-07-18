@@ -490,13 +490,13 @@ function Home() {
                         </p>
                         <div className="space-y-2">
                           <div className="flex items-center text-sm text-gray-500">
-                            <span className="w-24">Time:</span>
+                            <span className="w-24 text-gray-500">Time:</span>
                             <span className="font-medium text-gray-700">
                               {item.timeComplexity.average}
                             </span>
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
-                            <span className="w-24">Space:</span>
+                            <span className="w-24 text-gray-500">Space:</span>
                             <span className="font-medium text-gray-700">
                               {item.spaceComplexity}
                             </span>

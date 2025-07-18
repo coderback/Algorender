@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
+import { SpeedControl, VisualizerButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function InterpolationSearchVisualiser() {
   const [array, setArray] = useState(Array.from({ length: 8 }, (_, i) => (i + 1) * 10));
@@ -164,78 +165,45 @@ export default function InterpolationSearchVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Target Value
-                </label>
-                <InputControl
-                  type="number"
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  disabled={isSearching}
-                  placeholder="Enter value to search"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Speed
-                </label>
-                <InputControl
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isSearching}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={interpolationSearch}
-                  disabled={isSearching || !target}
-                  className="flex-1"
-                >
-                  {isSearching ? 'Searching...' : 'Start Search'}
-                </Button>
-                {isSearching && (
-                  <Button
-                    onClick={togglePause}
-                    variant="secondary"
-                    className="flex-1"
-                  >
-                    {isPaused ? 'Resume' : 'Pause'}
-                  </Button>
-                )}
-                <Button
-                  onClick={reset}
-                  disabled={isSearching && !isPaused}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
-              </div>
+          <ControlsSection>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Target Value
+              </label>
+              <InputControl
+                type="number"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                disabled={isSearching}
+                placeholder="Enter value to search"
+              />
             </div>
-          </div>
+            <VisualizerButtonGrid
+              primaryAction={{
+                ...ButtonPresets.search.primary(interpolationSearch, isSearching, isPaused),
+                disabled: isSearching || !target
+              }}
+              pauseAction={isSearching ? { onClick: togglePause } : null}
+              resetAction={ButtonPresets.search.reset(reset)}
+              isRunning={isSearching}
+              isPaused={isPaused}
+            />
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isSearching}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Array Size</p>
-                <p className="text-2xl font-semibold text-blue-600">{array.length}</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Found Index</p>
-                <p className="text-2xl font-semibold text-gray-600">
-                  {foundIndex !== null ? foundIndex : 'Not Found'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            stats={[
+              { label: 'Array Size', value: array.length, color: 'text-blue-600' },
+              { label: 'Found Index', value: foundIndex !== null ? foundIndex : 'Not Found' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

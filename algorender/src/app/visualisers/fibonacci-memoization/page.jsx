@@ -3,10 +3,15 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaCalculator, FaDatabase, FaTachometerAlt, FaPlay, FaUndo } from 'react-icons/fa';
+import {
+  ControlsSection,
+  SpeedControl,
+  EnhancedDataStructureButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
+import { FaCalculator, FaDatabase } from 'react-icons/fa';
 
 export default function FibonacciMemoVisualiser() {
   const [n, setN] = useState(8);
@@ -55,7 +60,6 @@ export default function FibonacciMemoVisualiser() {
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FaCalculator className="text-blue-500" />
               Recursive Calls
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
@@ -99,61 +103,69 @@ export default function FibonacciMemoVisualiser() {
           </div>
         </div>
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <FaTachometerAlt className="text-blue-400" />
-                  Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
-                  style={{ accentColor: '#2563eb' }}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button onClick={runFib} disabled={isRunning} className="flex-1 flex items-center justify-center gap-2">
-                  <FaPlay className="text-sm" />
-                  {isRunning ? "Running..." : "Start Fibonacci"}
-                </Button>
-                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1 flex items-center justify-center gap-2">
-                  <FaUndo className="text-sm" />
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={(e) => setSpeed(1000 - e.target.value)}
+              disabled={isRunning}
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                {
+                  onClick: runFib,
+                  icon: ButtonPresets.dataStructure.search.icon,
+                  label: isRunning ? 'Running...' : 'Start Fibonacci',
+                  disabled: isRunning,
+                  variant: 'primary'
+                }
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+              disabled={isRunning}
+            />
+          </ControlsSection>
+
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Target N', value: n, color: 'text-blue-600' },
+              { label: 'Total Calls', value: calls.length, color: 'text-orange-600' },
+              { label: 'Memoized Values', value: Object.keys(memo).length, color: 'text-green-600' }
+            ]}
+            columns={3}
+          />
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-              <FaDatabase className="text-green-500" />
               Memo Table
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
-              {Object.entries(memo).map(([k, v]) => (
-                <Card key={k} className="p-2 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white shadow-sm hover:shadow-md transition-all">
-                  <div className="text-center">
-                    <div className="text-green-700 font-bold text-sm">fib({k}) = {v}</div>
-                  </div>
+            {Object.keys(memo).length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+                {Object.entries(memo).map(([k, v]) => (
+                  <Card key={k} className="p-2 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white shadow-sm hover:shadow-md transition-all">
+                    <div className="text-center">
+                      <div className="text-green-700 font-bold text-sm">fib({k}) = {v}</div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                <FaDatabase className="mx-auto text-4xl mb-2 opacity-50" />
+                <p>Click &apos;Start Fibonacci&apos; to build the memo table</p>
+              </div>
+            )}
+            
+            {result !== null && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-500 mb-2 flex items-center gap-2">
+                  <FaCalculator className="text-blue-400" />
+                  Final Result:
+                </p>
+                <Card className="p-3 border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-white">
+                  <span className="text-blue-900 text-xl font-bold">fib({n}) = {result}</span>
                 </Card>
-              ))}
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-2 flex items-center gap-2">
-                <FaCalculator className="text-blue-400" />
-                Result:
-              </p>
-              <Card className="p-3 border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-white">
-                <span className="text-blue-900 text-xl font-bold">{result !== null ? result : '-'}</span>
-              </Card>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import SearchBar from './SearchBar';
 import { usePathname } from 'next/navigation';
 
@@ -66,7 +67,7 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <img src="/logo.svg" alt="Algorender Logo" className="h-8 w-8 object-contain" />
+            <Image src="/logo.svg" alt="Algorender Logo" width={48} height={48} className="object-contain" />
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight cursor-pointer">
               Algorender
             </h1>

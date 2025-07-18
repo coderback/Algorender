@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  ErrorDisplay,
+  SuccessDisplay,
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 export default function HashSetVisualiser() {
   const [hashSet, setHashSet] = useState({
@@ -16,6 +23,8 @@ export default function HashSetVisualiser() {
   const [searchValue, setSearchValue] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [collisionPath, setCollisionPath] = useState([]);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
   const hash = (value) => {
     let hash = 0;
@@ -27,7 +36,12 @@ export default function HashSetVisualiser() {
   };
 
   const insert = () => {
-    if (!value) return;
+    if (!value.trim()) {
+      setError('Please enter a value to insert');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
     if (hashSet.size / hashSet.capacity >= hashSet.loadFactor) {
       rehash();
     }
@@ -37,8 +51,12 @@ export default function HashSetVisualiser() {
     
     // Check if value already exists
     if (bucket.includes(value)) {
+      setError(`Value "${value}" already exists`);
       setSearchResult({ found: true, index, bucketIndex: bucket.indexOf(value) });
-      setTimeout(() => setSearchResult(null), 2000);
+      setTimeout(() => {
+        setError(null);
+        setSearchResult(null);
+      }, 2000);
       return;
     }
 
@@ -57,19 +75,32 @@ export default function HashSetVisualiser() {
     }));
 
     setCollisionPath(path);
-    setTimeout(() => setCollisionPath([]), 2000);
+    setSuccess(`Successfully inserted "${value}"`);
+    setTimeout(() => {
+      setCollisionPath([]);
+      setSuccess(null);
+    }, 2000);
     setValue('');
   };
 
   const remove = () => {
-    if (!value) return;
+    if (!value.trim()) {
+      setError('Please enter a value to remove');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
     const index = hash(value);
     const bucket = hashSet.buckets[index];
     const bucketIndex = bucket.indexOf(value);
 
     if (bucketIndex === -1) {
+      setError(`Value "${value}" not found`);
       setSearchResult({ found: false, index });
-      setTimeout(() => setSearchResult(null), 2000);
+      setTimeout(() => {
+        setError(null);
+        setSearchResult(null);
+      }, 2000);
       return;
     }
 
@@ -81,11 +112,18 @@ export default function HashSetVisualiser() {
       size: prev.size - 1
     }));
 
+    setSuccess(`Successfully removed "${value}"`);
+    setTimeout(() => setSuccess(null), 2000);
     setValue('');
   };
 
   const search = () => {
-    if (!searchValue) return;
+    if (!searchValue.trim()) {
+      setError('Please enter a value to search');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
     const index = hash(searchValue);
     const bucket = hashSet.buckets[index];
     const bucketIndex = bucket.indexOf(searchValue);
@@ -95,7 +133,18 @@ export default function HashSetVisualiser() {
       index,
       bucketIndex
     });
-    setTimeout(() => setSearchResult(null), 2000);
+    
+    if (bucketIndex !== -1) {
+      setSuccess(`Found "${searchValue}" at bucket ${index}`);
+    } else {
+      setError(`"${searchValue}" not found`);
+    }
+    
+    setTimeout(() => {
+      setSearchResult(null);
+      setSuccess(null);
+      setError(null);
+    }, 2000);
   };
 
   const rehash = () => {
@@ -128,6 +177,8 @@ export default function HashSetVisualiser() {
     setSearchValue('');
     setSearchResult(null);
     setCollisionPath([]);
+    setError(null);
+    setSuccess(null);
   };
 
   return (
@@ -209,74 +260,56 @@ export default function HashSetVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
+          <ErrorDisplay error={error} />
+          <SuccessDisplay message={success} />
+          
+          <ControlsSection title="Operations">
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={reset} variant="secondary" fullWidth>
-                  Reset
-                </Button>
-                <Button onClick={rehash} variant="primary" fullWidth>
-                  Rehash
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <InputControl
-                  label="Value"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  placeholder="Enter value to insert/remove"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <Button onClick={insert} variant="primary" fullWidth>
-                    Insert
-                  </Button>
-                  <Button onClick={remove} variant="secondary" fullWidth>
-                    Remove
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <InputControl
-                  label="Search Value"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="Enter value to search"
-                />
-                <Button onClick={search} variant="primary" fullWidth>
-                  Search
-                </Button>
-              </div>
+              <InputControl
+                label="Value"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Enter value to insert/remove"
+              />
+              
+              <EnhancedDataStructureButtonGrid
+                operations={[
+                  ButtonPresets.dataStructure.insert(insert),
+                  ButtonPresets.dataStructure.remove(remove, !value.trim()),
+                  {
+                    onClick: rehash,
+                    icon: ButtonPresets.dataStructure.search().icon,
+                    label: 'Rehash',
+                    variant: 'secondary'
+                  }
+                ]}
+                resetAction={ButtonPresets.dataStructure.reset(reset)}
+              />
+              
+              <InputControl
+                label="Search Value"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder="Enter value to search"
+              />
+              
+              <EnhancedDataStructureButtonGrid
+                operations={[
+                  ButtonPresets.dataStructure.search(search, !searchValue.trim())
+                ]}
+              />
             </div>
-          </div>
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Size</h4>
-                <p className="text-2xl font-semibold text-blue-600">{hashSet.size}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Capacity</h4>
-                <p className="text-2xl font-semibold text-gray-900">{hashSet.capacity}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Load Factor</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {(hashSet.size / hashSet.capacity).toFixed(2)}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Collisions</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {hashSet.buckets.reduce((sum, bucket) => sum + Math.max(0, bucket.length - 1), 0)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Size', value: hashSet.size, color: 'text-blue-600' },
+              { label: 'Capacity', value: hashSet.capacity, color: 'text-gray-900' },
+              { label: 'Load Factor', value: (hashSet.size / hashSet.capacity).toFixed(2), color: 'text-gray-900' },
+              { label: 'Collisions', value: hashSet.buckets.reduce((sum, bucket) => sum + Math.max(0, bucket.length - 1), 0), color: 'text-red-600' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

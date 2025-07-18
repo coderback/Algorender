@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
-import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaNetworkWired, FaTachometerAlt, FaPlay, FaUndo, FaNodeJs } from 'react-icons/fa';
+import {
+  ControlsSection,
+  SpeedControl,
+  GraphVisualizerButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
 
 const initialGraph = {
   nodes: [0, 1, 2, 3, 4, 5],
@@ -131,88 +133,61 @@ export default function DFSVisualiser() {
         </div>
 
         <div className="space-y-6">
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <GraphVisualizerButtonGrid
+              primaryAction={ButtonPresets.graph.primary(dfs, isRunning, 'DFS')}
+              resetAction={ButtonPresets.graph.reset(reset)}
+              isRunning={isRunning}
+              startNode={startNode}
+              onStartNodeChange={setStartNode}
+              nodeOptions={graph.nodes}
+            />
+          </ControlsSection>
+
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Nodes Visited', value: visited.length, color: 'text-green-600' },
+              { label: 'Stack Size', value: stack.length, color: 'text-blue-600' },
+              { label: 'Progress', value: `${Math.round((visited.length / graph.nodes.length) * 100)}%`, color: 'text-gray-900' }
+            ]}
+            columns={3}
+          />
+          
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Traversal Details</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <FaNodeJs className="text-blue-400" />
-                  Start Node
-                </label>
-                <InputControl
-                  type="number"
-                  min={0}
-                  max={graph.nodes.length - 1}
-                  value={startNode}
-                  onChange={e => setStartNode(e.target.value)}
-                  disabled={isRunning}
-                />
+                <p className="text-sm text-gray-500 mb-1">Traversal Order:</p>
+                <div className="flex flex-wrap gap-2">
+                  {visited.length > 0 ? (
+                    visited.map((node, i) => (
+                      <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                        {i + 1}: {node}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-sm">No nodes visited yet</span>
+                  )}
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <FaTachometerAlt className="text-blue-400" />
-                  Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
-                  style={{ accentColor: '#2563eb' }}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={dfs}
-                  disabled={isRunning}
-                  className="flex-1 flex items-center justify-center gap-2"
-                >
-                  <FaNetworkWired className="text-sm" />
-                  {isRunning ? 'Running...' : 'Start DFS'}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isRunning}
-                  variant="secondary"
-                  className="flex-1 flex items-center justify-center gap-2"
-                >
-                  <FaUndo className="text-sm" />
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Nodes Visited</p>
-                <p className="text-2xl font-semibold text-blue-600">{visited.length}</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Stack Size</p>
-                <p className="text-2xl font-semibold text-gray-600">{stack.length}</p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Traversal Order:</p>
-              <div className="flex flex-wrap gap-2">
-                {visited.map((node, i) => (
-                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">{node}</span>
-                ))}
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Stack:</p>
-              <div className="flex flex-wrap gap-2">
-                {stack.map((node, i) => (
-                  <span key={i} className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold">{node}</span>
-                ))}
+                <p className="text-sm text-gray-500 mb-1">Current Stack:</p>
+                <div className="flex flex-wrap gap-2">
+                  {stack.length > 0 ? (
+                    stack.map((node, i) => (
+                      <span key={i} className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold">{node}</span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-sm">Stack is empty</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

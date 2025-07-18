@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  ErrorDisplay,
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 export default function BinaryTreeVisualiser() {
   const [tree, setTree] = useState(null);
@@ -178,51 +184,36 @@ export default function BinaryTreeVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
-              <InputControl
-                label="Value"
-                type="number"
-                value={value}
-                onChange={(e) => {
-                  setValue(e.target.value);
-                  setError('');
-                }}
-                placeholder="Enter value"
-                error={error}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => insert(value)} variant="primary" fullWidth>
-                  Insert
-                </Button>
-                <Button onClick={() => search(value)} variant="secondary" fullWidth>
-                  Search
-                </Button>
-              </div>
-              <Button onClick={reset} variant="secondary" fullWidth>
-                Reset
-              </Button>
-            </div>
-          </div>
+          <ErrorDisplay error={error} />
+          
+          <ControlsSection title="Operations">
+            <InputControl
+              label="Value"
+              type="number"
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setError('');
+              }}
+              placeholder="Enter value"
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                ButtonPresets.dataStructure.insert(() => insert(value), !value.trim()),
+                ButtonPresets.dataStructure.search(() => search(value), !value.trim())
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Tree Height</h4>
-                <p className="text-2xl font-semibold text-blue-600">
-                  {getTreeHeight(tree) - 1}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Total Nodes</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {countNodes(tree)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Tree Height', value: getTreeHeight(tree) - 1, color: 'text-blue-600' },
+              { label: 'Total Nodes', value: countNodes(tree), color: 'text-gray-900' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

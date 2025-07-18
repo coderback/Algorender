@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
-import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  SpeedControl,
+  GraphVisualizerButtonGrid, 
+  StatisticsDisplay, 
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 const initialGraph = {
   nodes: [0, 1, 2, 3, 4, 5],
@@ -145,76 +150,45 @@ export default function PrimsVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Node
-                </label>
-                <InputControl
-                  type="number"
-                  min={0}
-                  max={graph.nodes.length - 1}
-                  value={startNode}
-                  onChange={e => setStartNode(e.target.value)}
-                  disabled={isRunning}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Speed
-                </label>
-                <InputControl
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={prims}
-                  disabled={isRunning}
-                  className="flex-1"
-                >
-                  {isRunning ? "Running..." : "Start Prim's"}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isRunning}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <GraphVisualizerButtonGrid
+              primaryAction={ButtonPresets.graph.primary(prims, isRunning, "Prim's")}
+              resetAction={ButtonPresets.graph.reset(reset)}
+              isRunning={isRunning}
+              startNode={startNode}
+              onStartNodeChange={setStartNode}
+              nodeOptions={graph.nodes}
+            />
+          </ControlsSection>
 
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'MST Edges', value: mstEdges.length, color: 'text-green-600' },
+              { label: 'Visited Nodes', value: visited.length, color: 'text-blue-600' },
+              { label: 'Progress', value: `${Math.round((visited.length / graph.nodes.length) * 100)}%`, color: 'text-gray-900' }
+            ]}
+            columns={3}
+          />
+          
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">MST Edges</p>
-                <p className="text-2xl font-semibold text-blue-600">{mstEdges.length}</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Visited Nodes</p>
-                <p className="text-2xl font-semibold text-gray-600">{visited.length}</p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">MST Edges:</p>
-              <div className="flex flex-wrap gap-2">
-                {mstEdges.map((edge, i) => (
+            <h3 className="text-lg font-medium text-gray-900 mb-4">MST Edges</h3>
+            <div className="flex flex-wrap gap-2">
+              {mstEdges.length > 0 ? (
+                mstEdges.map((edge, i) => (
                   <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
                     ({edge.from}, {edge.to}, w={edge.weight})
                   </span>
-                ))}
-              </div>
+                ))
+              ) : (
+                <span className="text-gray-500 text-sm">No edges in MST yet</span>
+              )}
             </div>
           </div>
         </div>

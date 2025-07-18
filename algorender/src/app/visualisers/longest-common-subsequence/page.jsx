@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  SpeedControl,
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 export default function LCSVisualiser() {
   const [str1, setStr1] = useState('AGGTAB');
@@ -104,30 +110,37 @@ export default function LCSVisualiser() {
           </div>
         </div>
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Speed</label>
-                <InputControl
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button onClick={lcsDP} disabled={isRunning} className="flex-1">
-                  {isRunning ? "Running..." : "Start LCS"}
-                </Button>
-                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1">
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                {
+                  onClick: lcsDP,
+                  icon: ButtonPresets.dataStructure.search.icon,
+                  label: isRunning ? 'Running...' : 'Start LCS',
+                  disabled: isRunning,
+                  variant: 'primary'
+                }
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+          </ControlsSection>
+          
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'String 1 Length', value: str1.length, color: 'text-blue-600' },
+              { label: 'String 2 Length', value: str2.length, color: 'text-green-600' },
+              { label: 'LCS Length', value: lcs.length, color: 'text-purple-600' },
+              { label: 'LCS', value: lcs || 'Not calculated', color: 'text-gray-900' }
+            ]}
+            columns={2}
+          />
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">DP Table</h3>
             <div className="overflow-x-auto">
@@ -145,7 +158,7 @@ export default function LCSVisualiser() {
                     <tr key={i}>
                       <td className="px-2 py-1 text-xs text-gray-500 font-semibold">{i}</td>
                       {row.map((cell, j) => (
-                        <td key={j} className={`px-2 py-1 text-sm font-semibold`}>{cell}</td>
+                        <td key={j} className={`px-2 py-1 text-sm font-semibold text-gray-900`}>{cell}</td>
                       ))}
                     </tr>
                   ))}

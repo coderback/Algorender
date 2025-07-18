@@ -5,8 +5,14 @@ import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaWeightHanging, FaCoins, FaTrashAlt, FaTachometerAlt } from 'react-icons/fa';
+import {
+  ControlsSection,
+  SpeedControl,
+  EnhancedDataStructureButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
+import { FaWeightHanging, FaCoins, FaTrashAlt } from 'react-icons/fa';
 
 const initialItems = [
   { weight: 10, value: 60 },
@@ -159,67 +165,50 @@ export default function GreedyKnapsackVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <FaTachometerAlt className="text-blue-400" />
-                  Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
-                  style={{ accentColor: '#2563eb' }}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={greedyKnapsack}
-                  disabled={isRunning}
-                  className="flex-1"
-                >
-                  {isRunning ? "Running..." : "Start Greedy Knapsack"}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isRunning}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                {
+                  onClick: greedyKnapsack,
+                  icon: ButtonPresets.dataStructure.search.icon,
+                  label: isRunning ? 'Running...' : 'Start Knapsack',
+                  disabled: isRunning,
+                  variant: 'primary'
+                }
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+              disabled={isRunning}
+            />
+          </ControlsSection>
 
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Total Value', value: totalValue.toFixed(2), color: 'text-blue-600' },
+              { label: 'Items Used', value: selected.length, color: 'text-green-600' },
+              { label: 'Capacity Used', value: `${Math.round(((capacity - (capacity - selected.reduce((acc, item) => acc + (item.weight * item.taken), 0))) / capacity) * 100)}%`, color: 'text-gray-900' }
+            ]}
+            columns={3}
+          />
+          
           <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Total Value</p>
-                <p className="text-2xl font-semibold text-blue-600">{totalValue.toFixed(2)}</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Items Used</p>
-                <p className="text-2xl font-semibold text-gray-600">{selected.length}</p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Selected Items:</p>
-              <div className="flex flex-wrap gap-2">
-                {selected.map((item, i) => (
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Selected Items</h3>
+            <div className="flex flex-wrap gap-2">
+              {selected.length > 0 ? (
+                selected.map((item, i) => (
                   <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
-                    W: {item.weight}, V: {item.value}, Taken: {(item.taken * 100).toFixed(0)}%
+                    {i + 1}: W:{item.weight}, V:{item.value}, {(item.taken * 100).toFixed(0)}%
                   </span>
-                ))}
-              </div>
+                ))
+              ) : (
+                <span className="text-gray-500 text-sm">No items selected yet</span>
+              )}
             </div>
           </div>
         </div>

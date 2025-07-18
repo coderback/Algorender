@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
-import StatsBar from '@/components/StatsBar';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaFont, FaTachometerAlt, FaPlay, FaUndo, FaTable, FaCode } from 'react-icons/fa';
+import { 
+  ControlsSection, 
+  SpeedControl,
+  VisualizerButtonGrid, 
+  StatisticsDisplay, 
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 export default function LCSVisualiser() {
   const [str1, setStr1] = useState('AGGTAB');
@@ -86,158 +88,138 @@ export default function LCSVisualiser() {
   const handleSpeedChange = (e) => setSpeed(1000 - e.target.value);
 
   return (
-    <Layout timeComplexity={timeComplexity}>
-      <div className="space-y-6">
-        <div className="bg-gray-50 rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <FaFont className="text-blue-500" />
-            Input Strings
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <Card className="p-4 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+    <Layout
+      title="Longest Common Subsequence Visualiser"
+      description="Visualise the LCS dynamic programming algorithm step by step."
+      timeComplexity={timeComplexity}
+      spaceComplexity="O(mn)"
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Input Strings</h2>
+            <div className="space-y-4">
               <InputControl
                 label="String 1"
                 type="text"
                 value={str1}
                 onChange={(e) => setStr1(e.target.value)}
                 disabled={isRunning}
-                className="mb-0"
+                placeholder="Enter first string"
               />
-            </Card>
-            <Card className="p-4 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white">
               <InputControl
                 label="String 2"
                 type="text"
                 value={str2}
                 onChange={(e) => setStr2(e.target.value)}
                 disabled={isRunning}
-                className="mb-0"
-              />
-            </Card>
-          </div>
-          <div className="flex gap-4">
-            <Button
-              onClick={lcsDP}
-              disabled={isRunning || !str1 || !str2}
-              variant="primary"
-              className="flex-1 flex items-center justify-center gap-2"
-            >
-              <FaPlay className="text-sm" />
-              {isRunning ? 'Running...' : 'Find LCS'}
-            </Button>
-            <Button
-              onClick={reset}
-              variant="secondary"
-              className="flex-1 flex items-center justify-center gap-2"
-            >
-              <FaUndo className="text-sm" />
-              Reset
-            </Button>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 rounded-xl p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-            <FaTachometerAlt className="text-blue-400" />
-            Speed Control
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                <FaTachometerAlt className="text-blue-400" />
-                Speed
-                <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="900"
-                value={1000 - speed}
-                onChange={handleSpeedChange}
-                disabled={isRunning}
-                className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
-                style={{ accentColor: '#2563eb' }}
+                placeholder="Enter second string"
               />
             </div>
           </div>
-        </div>
 
-        <StatsBar
-          stats={[
-            { label: 'Comparisons', value: stats.comparisons },
-            { label: 'LCS Length', value: stats.matches },
-            { label: 'Time (ms)', value: stats.time }
-          ]}
-          timeComplexity={timeComplexity}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6 border-2 border-purple-100 bg-gradient-to-br from-purple-50 to-white shadow-lg">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <FaTable className="text-purple-500" />
-              Dynamic Programming Table
-            </h2>
-            <div className="overflow-x-auto">
-              <div className="min-w-max">
-                <div className="grid grid-cols-[auto_repeat(auto-fit,minmax(2rem,1fr))] gap-1">
-                  <div className="w-8 h-8"></div>
-                  {str2.split('').map((char, j) => (
-                    <div key={j} className="w-8 h-8 flex items-center justify-center border border-gray-200 bg-gray-50">
-                      {char}
-                    </div>
-                  ))}
-                  {dp.map((row, i) => (
-                    <React.Fragment key={i}>
-                      <div className="w-8 h-8 flex items-center justify-center border border-gray-200 bg-gray-50">
-                        {i > 0 ? str1[i - 1] : ''}
-                      </div>
-                      {row.map((cell, j) => (
-                        <div
-                          key={j}
-                          className="w-8 h-8 flex items-center justify-center border border-gray-200"
-                        >
-                          {cell}
-                        </div>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </div>
+          <div className="bg-gray-50 rounded-xl p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
+            <div className="space-y-3 text-gray-600">
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Create a DP table of size (m+1) × (n+1)</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>If characters match, add 1 to diagonal value</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Otherwise, take max of left and top values</span>
               </div>
             </div>
-          </Card>
-
-          <Card className="p-6 border-2 border-orange-100 bg-gradient-to-br from-orange-50 to-white shadow-lg">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <FaCode className="text-orange-500" />
-              How it Works
-            </h2>
-            <div className="space-y-4">
-              <p className="text-gray-600">
-                The Longest Common Subsequence algorithm uses dynamic programming:
-              </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
-                <li>Create a DP table of size (m+1) × (n+1)</li>
-                <li>If characters match, add 1 to the diagonal value</li>
-                <li>If characters don't match, take max of left and top values</li>
-                <li>Backtrack to find the actual subsequence</li>
-                <li>Time complexity is O(mn) where m and n are string lengths</li>
-              </ul>
-            </div>
-          </Card>
+          </div>
         </div>
 
-        {lcs && (
-          <Card className="p-6 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white shadow-lg">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <FaFont className="text-green-500" />
-              Result
-            </h2>
-            <div className="p-4 bg-white rounded-lg border-2 border-green-200">
-              <p className="text-gray-700">Longest Common Subsequence: <span className="font-mono text-green-700 font-bold">{lcs}</span></p>
+        <div className="space-y-6">
+          <ControlsSection>
+            <VisualizerButtonGrid
+              primaryAction={{
+                ...ButtonPresets.search.primary(lcsDP, isRunning, false),
+                label: isRunning ? 'Running...' : 'Find LCS',
+                disabled: isRunning || !str1.trim() || !str2.trim()
+              }}
+              resetAction={ButtonPresets.search.reset(reset)}
+              isRunning={isRunning}
+            />
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+          </ControlsSection>
+
+          <StatisticsDisplay
+            stats={[
+              { label: 'Comparisons', value: stats.comparisons, color: 'text-blue-600' },
+              { label: 'LCS Length', value: stats.matches, color: 'text-green-600' },
+              { label: 'Time (ms)', value: stats.time, color: 'text-gray-900' }
+            ]}
+            columns={3}
+          />
+        </div>
+      </div>
+
+      <div className="bg-gray-50 rounded-xl p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Dynamic Programming Table</h2>
+        {dp.length > 0 ? (
+          <div className="overflow-x-auto">
+            <div className="min-w-max">
+              <div className="grid grid-cols-[auto_repeat(auto-fit,minmax(2rem,1fr))] gap-1">
+                <div className="w-8 h-8"></div>
+                {str2.split('').map((char, j) => (
+                  <div key={j} className="w-8 h-8 flex items-center justify-center border border-gray-200 bg-gray-50">
+                    {char}
+                  </div>
+                ))}
+                {dp.map((row, i) => (
+                  <React.Fragment key={i}>
+                    <div className="w-8 h-8 flex items-center justify-center border border-gray-200 bg-gray-50">
+                      {i > 0 ? str1[i - 1] : ''}
+                    </div>
+                    {row.map((cell, j) => (
+                      <div
+                        key={j}
+                        className="w-8 h-8 flex items-center justify-center border border-gray-200 bg-white"
+                      >
+                        {cell}
+                      </div>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
-          </Card>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            Run the algorithm to see the DP table
+          </div>
         )}
       </div>
+
+      {lcs && (
+        <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Result</h2>
+          <div className="p-4 bg-white rounded-lg">
+            <p className="text-gray-700">
+              Longest Common Subsequence: 
+              <span className="font-mono text-green-700 font-bold ml-2">{lcs}</span>
+            </p>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 } 

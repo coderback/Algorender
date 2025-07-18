@@ -3,10 +3,15 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaFont, FaTachometerAlt, FaPlay, FaUndo, FaTable, FaCode, FaCalculator } from 'react-icons/fa';
+import {
+  ControlsSection,
+  SpeedControl,
+  EnhancedDataStructureButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
+import { FaFont, FaTable, FaCalculator } from 'react-icons/fa';
 
 export default function EditDistanceVisualiser() {
   const [str1, setStr1] = useState('kitten');
@@ -58,7 +63,6 @@ export default function EditDistanceVisualiser() {
         <div className="space-y-6">
           <div className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FaFont className="text-blue-500" />
               Input Strings
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -105,74 +109,82 @@ export default function EditDistanceVisualiser() {
           </div>
         </div>
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <FaTachometerAlt className="text-blue-400" />
-                  Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
-                  style={{ accentColor: '#2563eb' }}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button onClick={editDistanceDP} disabled={isRunning} className="flex-1 flex items-center justify-center gap-2">
-                  <FaPlay className="text-sm" />
-                  {isRunning ? "Running..." : "Start Edit Distance"}
-                </Button>
-                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1 flex items-center justify-center gap-2">
-                  <FaUndo className="text-sm" />
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={(e) => setSpeed(1000 - e.target.value)}
+              disabled={isRunning}
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                {
+                  onClick: editDistanceDP,
+                  icon: ButtonPresets.dataStructure.search.icon,
+                  label: isRunning ? 'Running...' : 'Start Edit Distance',
+                  disabled: isRunning,
+                  variant: 'primary'
+                }
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+              disabled={isRunning}
+            />
+          </ControlsSection>
+
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'String 1 Length', value: str1.length, color: 'text-blue-600' },
+              { label: 'String 2 Length', value: str2.length, color: 'text-green-600' },
+              { label: 'Edit Distance', value: distance !== null ? distance : '-', color: 'text-purple-600' }
+            ]}
+            columns={3}
+          />
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-              <FaTable className="text-purple-500" />
               DP Table
             </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-center">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-1 text-xs text-gray-500">i \ j</th>
-                    {Array.from({ length: str2.length + 1 }, (_, j) => (
-                      <th key={j} className="px-2 py-1 text-xs text-gray-500">{j}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dp.map((row, i) => (
-                    <tr key={i}>
-                      <td className="px-2 py-1 text-xs text-gray-500 font-semibold">{i}</td>
-                      {row.map((cell, j) => (
-                        <td key={j} className={`px-2 py-1 text-sm font-semibold`}>{cell}</td>
+            {dp.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-center">
+                  <thead>
+                    <tr>
+                      <th className="px-2 py-1 text-xs text-gray-500">i \ j</th>
+                      {Array.from({ length: str2.length + 1 }, (_, j) => (
+                        <th key={j} className="px-2 py-1 text-xs text-gray-500">{j}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-2 flex items-center gap-2">
-                <FaCalculator className="text-green-400" />
-                Edit Distance:
-              </p>
-              <Card className="p-3 border-2 border-green-200 bg-gradient-to-br from-green-100 to-white">
-                <span className="text-green-700 text-lg font-bold">{distance !== null ? distance : '-'}</span>
-              </Card>
-            </div>
+                  </thead>
+                  <tbody>
+                    {dp.map((row, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1 text-xs text-gray-500 font-semibold">{i}</td>
+                        {row.map((cell, j) => (
+                          <td key={j} className="px-2 py-1 text-sm font-semibold text-gray-700">{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                <FaTable className="mx-auto text-4xl mb-2 opacity-50" />
+                <p>Click &apos;Start Edit Distance&apos; to build the DP table</p>
+              </div>
+            )}
+            
+            {distance !== null && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-500 mb-2 flex items-center gap-2">
+                  <FaCalculator className="text-green-400" />
+                  Final Edit Distance:
+                </p>
+                <Card className="p-3 border-2 border-green-200 bg-gradient-to-br from-green-100 to-white">
+                  <span className="text-green-700 text-lg font-bold">{distance}</span>
+                </Card>
+              </div>
+            )}
           </div>
         </div>
       </div>

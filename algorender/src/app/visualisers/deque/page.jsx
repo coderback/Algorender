@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { EnhancedDataStructureButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function DequeVisualiser() {
   const [deque, setDeque] = useState([1, 2, 3, 4, 5]);
@@ -128,63 +128,35 @@ export default function DequeVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
-              <InputControl
-                label="Value"
-                type="number"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="Enter value"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={pushFront} variant="primary" fullWidth>
-                  Push Front
-                </Button>
-                <Button onClick={pushBack} variant="primary" fullWidth>
-                  Push Back
-                </Button>
-                <Button onClick={popFront} variant="danger" fullWidth>
-                  Pop Front
-                </Button>
-                <Button onClick={popBack} variant="danger" fullWidth>
-                  Pop Back
-                </Button>
-                <Button onClick={peekFront} variant="secondary" fullWidth>
-                  Peek Front
-                </Button>
-                <Button onClick={peekBack} variant="secondary" fullWidth>
-                  Peek Back
-                </Button>
-              </div>
-              <Button onClick={reset} variant="secondary" fullWidth>
-                Reset
-              </Button>
-            </div>
-          </div>
+          <ControlsSection title="Operations">
+            <InputControl
+              label="Value"
+              type="number"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Enter value"
+            />
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                { onClick: pushFront, label: 'Push Front', variant: 'primary' },
+                { onClick: pushBack, label: 'Push Back', variant: 'primary' },
+                { onClick: popFront, label: 'Pop Front', variant: 'danger' },
+                { onClick: popBack, label: 'Pop Back', variant: 'danger' },
+                { onClick: peekFront, label: 'Peek Front', variant: 'secondary' },
+                { onClick: peekBack, label: 'Peek Back', variant: 'secondary' }
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Deque Size</h4>
-                <p className="text-2xl font-semibold text-blue-600">{deque.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Front Element</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {deque.length > 0 ? deque[0] : '-'}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Back Element</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {deque.length > 0 ? deque[deque.length - 1] : '-'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            stats={[
+              { label: 'Deque Size', value: deque.length, color: 'text-blue-600' },
+              { label: 'Front Element', value: deque.length > 0 ? deque[0] : '-' },
+              { label: 'Back Element', value: deque.length > 0 ? deque[deque.length - 1] : '-' }
+            ]}
+            columns={3}
+          />
         </div>
       </div>
     </Layout>

@@ -5,8 +5,14 @@ import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaWeightHanging, FaCoins, FaTrashAlt, FaTachometerAlt } from 'react-icons/fa';
+import {
+  ControlsSection,
+  SpeedControl,
+  EnhancedDataStructureButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
+import { FaWeightHanging, FaCoins, FaTrashAlt } from 'react-icons/fa';
 
 const initialItems = [
   { weight: 2, value: 12 },
@@ -152,70 +158,87 @@ export default function Knapsack01Visualiser() {
           </div>
         </div>
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <FaTachometerAlt className="text-blue-400" />
-                  Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
-                  style={{ accentColor: '#2563eb' }}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button onClick={knapsack01} disabled={isRunning} className="flex-1">
-                  {isRunning ? "Running..." : "Start 0/1 Knapsack"}
-                </Button>
-                <Button onClick={reset} disabled={isRunning} variant="secondary" className="flex-1">
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={(e) => setSpeed(1000 - e.target.value)}
+              disabled={isRunning}
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                {
+                  onClick: knapsack01,
+                  icon: ButtonPresets.dataStructure.search.icon,
+                  label: isRunning ? 'Running...' : 'Start Knapsack',
+                  disabled: isRunning,
+                  variant: 'primary'
+                }
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+              disabled={isRunning}
+            />
+          </ControlsSection>
+
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Items Count', value: items.length, color: 'text-blue-600' },
+              { label: 'Capacity', value: capacity, color: 'text-green-600' },
+              { label: 'Selected Items', value: selected.length, color: 'text-purple-600' }
+            ]}
+            columns={3}
+          />
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">DP Table</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-center">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-1 text-xs text-gray-500">i \ w</th>
-                    {Array.from({ length: parseInt(capacity) + 1 }, (_, w) => (
-                      <th key={w} className="px-2 py-1 text-xs text-gray-500">{w}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dp.map((row, i) => (
-                    <tr key={i}>
-                      <td className="px-2 py-1 text-xs text-gray-500 font-semibold">{i}</td>
-                      {row.map((cell, w) => (
-                        <td key={w} className={`px-2 py-1 text-sm font-semibold ${selected.includes(i - 1) && w === parseInt(capacity) ? 'bg-green-100 text-green-700' : ''}`}>{cell}</td>
+            {dp.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-center">
+                  <thead>
+                    <tr>
+                      <th className="px-2 py-1 text-xs text-gray-500">i \ w</th>
+                      {Array.from({ length: parseInt(capacity) + 1 }, (_, w) => (
+                        <th key={w} className="px-2 py-1 text-xs text-gray-500">{w}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-1">Selected Items:</p>
-              <div className="flex flex-wrap gap-2">
-                {selected.map((idx, i) => (
-                  <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
-                    W: {items[idx].weight}, V: {items[idx].value}
-                  </span>
-                ))}
+                  </thead>
+                  <tbody>
+                    {dp.map((row, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1 text-xs text-gray-500 font-semibold">{i}</td>
+                        {row.map((cell, w) => (
+                          <td key={w} className={`px-2 py-1 text-sm font-semibold text-gray-700 ${selected.includes(i - 1) && w === parseInt(capacity) ? 'bg-green-100 text-green-700' : ''}`}>{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                <FaCoins className="mx-auto text-4xl mb-2 opacity-50" />
+                <p>Click &apos;Start Knapsack&apos; to build the DP table</p>
+              </div>
+            )}
+            
+            {selected.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-500 mb-2">Selected Items:</p>
+                <div className="flex flex-wrap gap-2">
+                  {selected.map((idx, i) => (
+                    <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                      {i + 1}: W:{items[idx].weight}, V:{items[idx].value}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-2 p-2 bg-blue-50 rounded">
+                  <span className="text-blue-700 font-semibold text-sm">
+                    Total Value: {selected.reduce((sum, idx) => sum + items[idx].value, 0)} | 
+                    Total Weight: {selected.reduce((sum, idx) => sum + items[idx].weight, 0)}/{capacity}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

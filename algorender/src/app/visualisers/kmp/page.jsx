@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
-import Button from '@/components/Button';
 import InputControl from '@/components/InputControl';
-import StatsBar from '@/components/StatsBar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaFont, FaPlay, FaUndo, FaSearch, FaCode } from 'react-icons/fa';
+import { FaFont } from 'react-icons/fa';
+import { 
+  ControlsSection, 
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 const KMPVisualizer = () => {
   const [text, setText] = useState('');
@@ -94,10 +97,9 @@ const KMPVisualizer = () => {
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <Card className="p-6 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+          <Card className="bg-gray-50 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FaFont className="text-blue-500" />
-              Input
+              String Inputs
             </h2>
             <div className="space-y-4">
               <InputControl
@@ -119,36 +121,41 @@ const KMPVisualizer = () => {
             </div>
           </Card>
 
-          <Card className="p-6 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FaSearch className="text-green-500" />
-              Controls
-            </h2>
-            <div className="flex flex-wrap gap-4">
-              <Button
-                onClick={kmp}
-                disabled={isSolving || !text || !pattern}
-                variant="primary"
-                className="flex items-center gap-2"
-              >
-                <FaPlay className="text-sm" />
-                {isSolving ? 'Running...' : 'Run Algorithm'}
-              </Button>
-              <Button
-                onClick={() => {
+          <ControlsSection title="Controls">
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                {
+                  onClick: kmp,
+                  icon: ButtonPresets.dataStructure.search.icon,
+                  label: isSolving ? 'Running...' : 'Run KMP',
+                  disabled: isSolving || !text.trim() || !pattern.trim(),
+                  variant: 'primary'
+                }
+              ]}
+              resetAction={{
+                onClick: () => {
                   setText('');
                   setPattern('');
                   setMatches([]);
                   setStats({ comparisons: 0, matches: 0, time: 0 });
-                }}
-                variant="secondary"
-                className="flex items-center gap-2"
-              >
-                <FaUndo className="text-sm" />
-                Reset
-              </Button>
-            </div>
-          </Card>
+                },
+                icon: ButtonPresets.dataStructure.reset().icon,
+                label: 'Reset',
+                disabled: false
+              }}
+            />
+          </ControlsSection>
+          
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Comparisons', value: stats.comparisons, color: 'text-blue-600' },
+              { label: 'Matches Found', value: stats.matches, color: 'text-green-600' },
+              { label: 'Pattern Length', value: pattern.length, color: 'text-gray-900' },
+              { label: 'Text Length', value: text.length, color: 'text-gray-900' }
+            ]}
+            columns={2}
+          />
         </div>
 
         <div className="space-y-6">
@@ -183,35 +190,35 @@ const KMPVisualizer = () => {
           </div>
 
           <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">How it Works</h2>
+            <h2 className="text-xl font-medium text-gray-900 mb-4">How it Works</h2>
             <div className="space-y-4">
               <p className="text-gray-600 mb-4">
                 The KMP algorithm uses a failure function to avoid unnecessary comparisons:
               </p>
               <div className="space-y-3 text-gray-600">
                 <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Preprocess pattern to create LPS (Longest Proper Prefix which is also Suffix) array</span>
+                  <span>Preprocess pattern to create LPS array (orange visualization)</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Use LPS array to skip comparisons when a mismatch occurs</span>
+                  <span>Compare characters with animated highlighting (blue current position)</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>When a match is found, continue from the next position</span>
+                  <span>When match found, highlight in green and continue</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <svg className="w-5 h-5 text-forest-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>When a mismatch occurs, use LPS to determine where to continue matching</span>
+                  <span>Use LPS array to skip unnecessary comparisons on mismatch</span>
                 </div>
               </div>
             </div>

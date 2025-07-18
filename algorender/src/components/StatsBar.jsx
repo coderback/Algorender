@@ -8,7 +8,7 @@ export default function StatsBar({ stats, timeComplexity }) {
             {stats.map((stat, index) => (
               <div key={index}>
                 <span className="block font-medium text-gray-500">{stat.label}</span>
-                <span>{stat.value}</span>
+                <span className="text-gray-900 font-semibold">{stat.value}</span>
               </div>
             ))}
           </div>
@@ -21,19 +21,19 @@ export default function StatsBar({ stats, timeComplexity }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-700">
             <div>
               <span className="block font-medium text-gray-500">Best Case</span>
-              <span>{timeComplexity.best}</span>
+              <span className="text-gray-900 font-semibold">{timeComplexity.best}</span>
             </div>
             <div>
               <span className="block font-medium text-gray-500">Average Case</span>
-              <span>{timeComplexity.average}</span>
+              <span className="text-gray-900 font-semibold">{timeComplexity.average}</span>
             </div>
             <div>
               <span className="block font-medium text-gray-500">Worst Case</span>
-              <span>{timeComplexity.worst}</span>
+              <span className="text-gray-900 font-semibold">{timeComplexity.worst}</span>
             </div>
             <div>
               <span className="block font-medium text-gray-500">Space</span>
-              <span>{timeComplexity.space}</span>
+              <span className="text-gray-900 font-semibold">{timeComplexity.space}</span>
             </div>
           </div>
         </div>

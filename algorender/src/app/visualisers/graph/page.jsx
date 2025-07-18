@@ -1,9 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  EnhancedDataStructureButtonGrid, 
+  StatisticsDisplay, 
+  ErrorDisplay,
+  SuccessDisplay,
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 export default function GraphVisualiser() {
   const [graph, setGraph] = useState({
@@ -29,13 +36,11 @@ export default function GraphVisualiser() {
   const [toNode, setToNode] = useState('');
   const [weight, setWeight] = useState('');
   const [searchPath, setSearchPath] = useState([]);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const canvasRef = useRef(null);
 
-  useEffect(() => {
-    drawGraph();
-  }, [graph, selectedNode, selectedEdge, searchPath]);
-
-  const drawGraph = () => {
+  const drawGraph = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -79,9 +84,19 @@ export default function GraphVisualiser() {
       ctx.textBaseline = 'middle';
       ctx.fillText(node.id.toString(), node.x, node.y);
     });
-  };
+  }, [graph, selectedNode, selectedEdge, searchPath]);
+
+  useEffect(() => {
+    drawGraph();
+  }, [drawGraph]);
 
   const addNode = () => {
+    if (graph.nodes.length >= 12) {
+      setError('Maximum 12 nodes allowed');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
     const newId = Math.max(...graph.nodes.map(n => n.id)) + 1;
     const newNode = {
       id: newId,
@@ -92,16 +107,50 @@ export default function GraphVisualiser() {
       ...prev,
       nodes: [...prev.nodes, newNode]
     }));
+    setSuccess(`Node ${newId} added successfully`);
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const addEdge = () => {
-    if (!fromNode || !toNode || !weight) return;
+    if (!fromNode.trim() || !toNode.trim() || !weight.trim()) {
+      setError('Please fill in all edge fields');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
     const from = parseInt(fromNode);
     const to = parseInt(toNode);
     const weightValue = parseInt(weight);
 
-    if (from === to) return;
-    if (graph.edges.some(e => e.from === from && e.to === to)) return;
+    if (isNaN(from) || isNaN(to) || isNaN(weightValue)) {
+      setError('Please enter valid numbers');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (!graph.nodes.some(n => n.id === from)) {
+      setError(`Node ${from} does not exist`);
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (!graph.nodes.some(n => n.id === to)) {
+      setError(`Node ${to} does not exist`);
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (from === to) {
+      setError('Cannot create edge to same node');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (graph.edges.some(e => (e.from === from && e.to === to) || (e.from === to && e.to === from))) {
+      setError('Edge already exists between these nodes');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
 
     setGraph(prev => ({
       ...prev,
@@ -110,14 +159,19 @@ export default function GraphVisualiser() {
     setFromNode('');
     setToNode('');
     setWeight('');
+    setSuccess(`Edge added: ${from} → ${to} (weight: ${weightValue})`);
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const removeNode = (nodeId) => {
+    const removedEdges = graph.edges.filter(e => e.from === nodeId || e.to === nodeId).length;
     setGraph(prev => ({
       nodes: prev.nodes.filter(n => n.id !== nodeId),
       edges: prev.edges.filter(e => e.from !== nodeId && e.to !== nodeId)
     }));
     setSelectedNode(null);
+    setSuccess(`Node ${nodeId} and ${removedEdges} connected edges removed`);
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const removeEdge = (from, to) => {
@@ -126,6 +180,8 @@ export default function GraphVisualiser() {
       edges: prev.edges.filter(e => !(e.from === from && e.to === to))
     }));
     setSelectedEdge(null);
+    setSuccess(`Edge ${from} → ${to} removed`);
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const bfs = (startId) => {
@@ -150,7 +206,11 @@ export default function GraphVisualiser() {
     }
 
     setSearchPath(path);
-    setTimeout(() => setSearchPath([]), 3000);
+    setSuccess(`BFS traversal from node ${startId}: visited ${path.length} nodes`);
+    setTimeout(() => {
+      setSearchPath([]);
+      setSuccess('');
+    }, 3000);
   };
 
   const reset = () => {
@@ -177,6 +237,8 @@ export default function GraphVisualiser() {
     setToNode('');
     setWeight('');
     setSearchPath([]);
+    setError('');
+    setSuccess('');
   };
 
   return (
@@ -246,85 +308,93 @@ export default function GraphVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={addNode} variant="primary" fullWidth>
-                  Add Node
-                </Button>
-                <Button onClick={reset} variant="secondary" fullWidth>
-                  Reset
-                </Button>
-              </div>
-
-              <div className="space-y-3">
+          <ErrorDisplay error={error} />
+          <SuccessDisplay message={success} />
+          
+          <ControlsSection title="Graph Operations">
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                ButtonPresets.dataStructure.insert(addNode, graph.nodes.length >= 12),
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+            
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-700">Add Edge</h4>
+              <div className="grid grid-cols-3 gap-3">
                 <InputControl
-                  label="From Node"
+                  label="From"
                   type="number"
                   value={fromNode}
                   onChange={(e) => setFromNode(e.target.value)}
-                  placeholder="Enter node ID"
+                  placeholder="Node ID"
                 />
                 <InputControl
-                  label="To Node"
+                  label="To"
                   type="number"
                   value={toNode}
                   onChange={(e) => setToNode(e.target.value)}
-                  placeholder="Enter node ID"
+                  placeholder="Node ID"
                 />
                 <InputControl
                   label="Weight"
                   type="number"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
-                  placeholder="Enter edge weight"
+                  placeholder="Weight"
                 />
-                <Button onClick={addEdge} variant="primary" fullWidth>
-                  Add Edge
-                </Button>
               </div>
-
-              {selectedNode && (
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => removeNode(selectedNode.id)}
-                    variant="secondary"
-                    fullWidth
-                  >
-                    Remove Node {selectedNode.id}
-                  </Button>
-                  <Button
-                    onClick={() => bfs(selectedNode.id)}
-                    variant="primary"
-                    fullWidth
-                  >
-                    BFS from Node {selectedNode.id}
-                  </Button>
-                </div>
-              )}
+              <EnhancedDataStructureButtonGrid
+                operations={[
+                  {
+                    onClick: addEdge,
+                    icon: ButtonPresets.dataStructure.insert().icon,
+                    label: 'Add Edge',
+                    disabled: !fromNode.trim() || !toNode.trim() || !weight.trim(),
+                    variant: 'primary'
+                  }
+                ]}
+              />
             </div>
-          </div>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Nodes</h4>
-                <p className="text-2xl font-semibold text-blue-600">{graph.nodes.length}</p>
+            {selectedNode && (
+              <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="text-sm font-medium text-blue-700">Selected Node {selectedNode.id}</h4>
+                <EnhancedDataStructureButtonGrid
+                  operations={[
+                    ButtonPresets.dataStructure.remove(() => removeNode(selectedNode.id)),
+                    {
+                      onClick: () => bfs(selectedNode.id),
+                      icon: ButtonPresets.dataStructure.search().icon,
+                      label: 'Run BFS',
+                      variant: 'secondary'
+                    }
+                  ]}
+                />
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Edges</h4>
-                <p className="text-2xl font-semibold text-gray-900">{graph.edges.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Density</h4>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {(graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1))).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </div>
+            )}
+          </ControlsSection>
+
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Nodes', value: graph.nodes.length, color: 'text-blue-600' },
+              { label: 'Edges', value: graph.edges.length, color: 'text-green-600' },
+              { 
+                label: 'Density', 
+                value: graph.nodes.length > 1 ? 
+                  (graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1))).toFixed(2) : 
+                  '0.00', 
+                color: 'text-gray-900' 
+              },
+              { 
+                label: 'Connected', 
+                value: searchPath.length > 0 ? `${searchPath.length} nodes` : 'Click BFS', 
+                color: 'text-purple-600' 
+              }
+            ]}
+            columns={2}
+          />
         </div>
       </div>
     </Layout>

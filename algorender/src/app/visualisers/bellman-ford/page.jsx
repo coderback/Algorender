@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
-import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  SpeedControl,
+  GraphVisualizerButtonGrid, 
+  EnhancedStatisticsDisplay, 
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 const initialGraph = {
   nodes: [0, 1, 2, 3, 4, 5],
@@ -122,81 +127,37 @@ export default function BellmanFordVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Node
-                </label>
-                <InputControl
-                  type="number"
-                  min={0}
-                  max={graph.nodes.length - 1}
-                  value={startNode}
-                  onChange={e => setStartNode(e.target.value)}
-                  disabled={isRunning}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Speed
-                </label>
-                <InputControl
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={bellmanFord}
-                  disabled={isRunning}
-                  className="flex-1"
-                >
-                  {isRunning ? 'Running...' : 'Start Bellman-Ford'}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isRunning}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <GraphVisualizerButtonGrid
+              primaryAction={ButtonPresets.graph.primary(bellmanFord, isRunning, 'Bellman-Ford')}
+              resetAction={ButtonPresets.graph.reset(reset)}
+              isRunning={isRunning}
+              startNode={startNode}
+              onStartNodeChange={setStartNode}
+              nodeOptions={graph.nodes}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Distance Table</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-center">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-1 text-xs text-gray-500">Node</th>
-                    {graph.nodes.map((node) => (
-                      <th key={node} className="px-2 py-1 text-xs text-gray-500">{node}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="px-2 py-1 text-xs text-gray-500 font-semibold">Distance</td>
-                    {graph.nodes.map((node) => (
-                      <td key={node} className="px-2 py-1 text-sm font-semibold text-blue-700">
-                        {distances[node] === undefined || distances[node] === Infinity ? '∞' : distances[node]}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-4 text-sm text-gray-500">Iteration: {iteration}</div>
-          </div>
+          <EnhancedStatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Iteration', value: iteration, color: 'text-blue-600' },
+              { label: 'Current Edge', value: updatedEdge ? `${updatedEdge[0]} → ${updatedEdge[1]}` : 'None', color: 'text-green-600' }
+            ]}
+            tableData={[
+              ['Node', ...graph.nodes],
+              ['Distance', ...graph.nodes.map(node => 
+                distances[node] === undefined || distances[node] === Infinity ? '∞' : distances[node]
+              )]
+            ]}
+            tableHeaders={['', ...graph.nodes.map(node => node.toString())]}
+          />
         </div>
       </div>
     </Layout>

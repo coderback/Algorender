@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { EnhancedDataStructureButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function ArrayVisualiser() {
   const [array, setArray] = useState([1, 2, 3, 4, 5]);
@@ -93,46 +93,31 @@ export default function ArrayVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Operations</h2>
-            <div className="space-y-4">
-              <InputControl
-                label="Value"
-                type="number"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="Enter value"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={insert} variant="primary" fullWidth>
-                  Insert
-                </Button>
-                <Button onClick={remove} variant="danger" fullWidth>
-                  Remove
-                </Button>
-                <Button onClick={search} variant="secondary" fullWidth>
-                  Search
-                </Button>
-              <Button onClick={reset} variant="secondary" fullWidth>
-                Reset
-              </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection title="Operations">
+            <InputControl
+              label="Value"
+              type="number"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Enter value"
+            />
+            
+            <EnhancedDataStructureButtonGrid
+              operations={[
+                ButtonPresets.dataStructure.insert(insert, !value.trim()),
+                ButtonPresets.dataStructure.remove(remove),
+                ButtonPresets.dataStructure.search(search, !value.trim())
+              ]}
+              resetAction={ButtonPresets.dataStructure.reset(reset)}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Array Length</h4>
-                <p className="text-2xl font-semibold text-blue-600">{array.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Selected Index</h4>
-                <p className="text-2xl font-semibold text-gray-900">{selectedIndex !== null ? selectedIndex : '-'}</p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            stats={[
+              { label: 'Array Length', value: array.length, color: 'text-blue-600' },
+              { label: 'Selected Index', value: selectedIndex !== null ? selectedIndex : '-' }
+            ]}
+          />
         </div>
       </div>
     </Layout>

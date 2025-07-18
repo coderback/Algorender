@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import Button from '@/components/Button';
-import InputControl from '@/components/InputControl';
-import StatsBar from '@/components/StatsBar';
+import {
+  ControlsSection,
+  SpeedControl,
+  EnhancedDataStructureButtonGrid,
+  StatisticsDisplay,
+  ButtonPresets
+} from '@/components/VisualizerControls';
+import { FaPuzzlePiece, FaRandom, FaPlay, FaCog } from 'react-icons/fa';
 
 const SudokuVisualizer = () => {
   const [board, setBoard] = useState(Array(9).fill().map(() => Array(9).fill(0)));
   const [originalBoard, setOriginalBoard] = useState(Array(9).fill().map(() => Array(9).fill(0)));
   const [isSolving, setIsSolving] = useState(false);
+  const [speed, setSpeed] = useState(400);
   const [stats, setStats] = useState({
     difficulty: 'medium',
     startTime: null,
@@ -39,9 +45,9 @@ const SudokuVisualizer = () => {
 
   useEffect(() => {
     generatePuzzle();
-  }, []);
+  }, [generatePuzzle]);
 
-  const generatePuzzle = () => {
+  const generatePuzzle = useCallback(() => {
     const newBoard = Array(9).fill().map(() => Array(9).fill(0));
     const newOriginalBoard = Array(9).fill().map(() => Array(9).fill(0));
     
@@ -101,7 +107,7 @@ const SudokuVisualizer = () => {
       steps: 0,
       status: 'New Puzzle'
     }));
-  };
+  }, [stats.difficulty]);
 
   const isValid = (board, row, col, num) => {
     // Check row
@@ -151,7 +157,7 @@ const SudokuVisualizer = () => {
                 stepCount++;
                 setStats(prev => ({ ...prev, steps: stepCount }));
                 setBoard(board.map(row => [...row]));
-                await new Promise(resolve => setTimeout(resolve, 50));
+                await new Promise(resolve => setTimeout(resolve, speed));
 
                 if (await solve(board)) {
                   return true;
@@ -161,7 +167,7 @@ const SudokuVisualizer = () => {
                 stepCount++;
                 setStats(prev => ({ ...prev, steps: stepCount }));
                 setBoard(board.map(row => [...row]));
-                await new Promise(resolve => setTimeout(resolve, 50));
+                await new Promise(resolve => setTimeout(resolve, speed));
               }
             }
             return false;
@@ -206,6 +212,11 @@ const SudokuVisualizer = () => {
     generatePuzzle();
   };
 
+  const reset = () => {
+    generatePuzzle();
+    setStats(prev => ({ ...prev, steps: 0, status: 'Reset' }));
+  };
+
   return (
     <Layout 
       title="Sudoku Solver"
@@ -214,8 +225,11 @@ const SudokuVisualizer = () => {
       spaceComplexity="O(n²)"
     >
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-end gap-4">
+        <div className="bg-gray-50 rounded-xl p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            Puzzle Settings
+          </h2>
+          <div className="flex items-center gap-4">
             <div className="flex flex-col gap-1">
               <label htmlFor="difficulty" className="text-sm font-medium text-gray-700">
                 Difficulty Level
@@ -224,6 +238,7 @@ const SudokuVisualizer = () => {
                 id="difficulty"
                 value={stats.difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
+                disabled={isSolving}
                 className="
                   h-10
                   px-4
@@ -240,175 +255,236 @@ const SudokuVisualizer = () => {
                   bg-[right_0.75rem_center]
                   bg-no-repeat
                   pr-10
+                  disabled:opacity-50 disabled:cursor-not-allowed
                 "
               >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-                <option value="expert">Expert</option>
+                <option value="easy">Easy (30 clues)</option>
+                <option value="medium">Medium (40 clues)</option>
+                <option value="hard">Hard (50 clues)</option>
+                <option value="expert">Expert (60 clues)</option>
               </select>
             </div>
-            <Button
-              onClick={generatePuzzle}
-              disabled={isSolving}
-              variant="secondary"
-              className="h-10"
-            >
-              New Puzzle
-            </Button>
-            <Button
-              onClick={solveSudoku}
-              disabled={isSolving}
-              variant="primary"
-              className="h-10"
-            >
-              {isSolving ? 'Solving...' : 'Solve'}
-            </Button>
           </div>
         </div>
 
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Sudoku Board</h2>
-            <div className="grid grid-cols-9 gap-2 bg-white p-4 rounded-2xl shadow-lg">
-              {board.map((row, i) => 
-                row.map((cell, j) => (
-                  <div
-                    key={`${i}-${j}`}
-                    className={`relative ${
-                      (i + 1) % 3 === 0 && i < 8 ? 'border-b border-slate-200' : ''
-                    } ${
-                      (j + 1) % 3 === 0 && j < 8 ? 'border-r border-slate-200' : ''
-                    } ${
-                      (i + 1) % 3 === 0 && (j + 1) % 3 === 0 && i < 8 && j < 8 ? 'border-b border-r border-slate-300' : ''
-                    }`}
-                  >
-                    <input
-                      type="number"
-                      value={cell || ''}
-                      onChange={(e) => handleCellChange(i, j, e.target.value)}
-                      className={`
-                        w-full h-full text-center text-lg font-medium
-                        transition-all duration-200
-                        focus:outline-none focus:ring-2 focus:ring-slate-400/20
-                        ${originalBoard[i][j] !== 0
-                          ? 'bg-slate-100 text-slate-900 font-semibold'
-                          : 'bg-white text-slate-900 hover:bg-slate-50'
-                        }
-                        ${isSolving ? 'cursor-not-allowed' : 'cursor-pointer'}
-                        disabled:opacity-50
-                        rounded-lg
-                        border border-slate-200
-                        hover:border-slate-300
-                        focus:border-slate-400
-                        shadow-sm
-                        hover:shadow
-                        active:shadow-inner
-                      `}
-                      min="1"
-                      max="9"
-                      disabled={isSolving || originalBoard[i][j] !== 0}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Statistics</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-4 rounded-xl shadow-sm">
-                <div className="text-sm text-gray-500">Status</div>
-                <div className="text-lg font-semibold text-gray-900">{stats.status}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 shadow-xl">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              Sudoku Board
+            </h2>
+            <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-200">
+              {/* Sudoku Grid Container */}
+              <div className="grid grid-cols-3 gap-3">
+                {Array.from({ length: 9 }, (_, boxIndex) => {
+                  const boxRow = Math.floor(boxIndex / 3);
+                  const boxCol = boxIndex % 3;
+                  return (
+                    <div
+                      key={boxIndex}
+                      className="grid grid-cols-3 gap-1 p-2 bg-gray-100 rounded-lg border-2 border-gray-300"
+                    >
+                      {Array.from({ length: 9 }, (_, cellIndex) => {
+                        const cellRow = Math.floor(cellIndex / 3);
+                        const cellCol = cellIndex % 3;
+                        const globalRow = boxRow * 3 + cellRow;
+                        const globalCol = boxCol * 3 + cellCol;
+                        const cell = board[globalRow][globalCol];
+                        const isOriginal = originalBoard[globalRow][globalCol] !== 0;
+                        
+                        return (
+                          <div
+                            key={cellIndex}
+                            className="relative aspect-square"
+                          >
+                            <input
+                              type="text"
+                              value={cell || ''}
+                              onChange={(e) => handleCellChange(globalRow, globalCol, e.target.value)}
+                              className={`
+                                w-full h-full text-center text-xl font-bold
+                                transition-all duration-300
+                                focus:outline-none focus:ring-3 focus:ring-blue-400/50
+                                rounded-md border-2
+                                ${isOriginal
+                                  ? 'bg-blue-50 text-blue-900 border-blue-200 font-black shadow-inner'
+                                  : cell 
+                                    ? 'bg-green-50 text-green-800 border-green-200 shadow-sm hover:shadow-md'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300 hover:bg-blue-50/50'
+                                }
+                                ${isSolving ? 'cursor-not-allowed animate-pulse' : 'cursor-pointer'}
+                                disabled:opacity-60
+                                focus:scale-105
+                                hover:scale-102
+                                transform
+                              `}
+                              maxLength="1"
+                              disabled={isSolving || isOriginal}
+                              onKeyDown={(e) => {
+                                // Only allow numbers 1-9 and navigation keys
+                                if (!/[1-9]/.test(e.key) && 
+                                    !['Backspace', 'Delete', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
+                            />
+                            {/* Visual indicator for original numbers */}
+                            {isOriginal && (
+                              <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-70"></div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="bg-white p-4 rounded-xl shadow-sm">
-                <div className="text-sm text-gray-500">Grid Size</div>
-                <div className="text-lg font-semibold text-gray-900">{stats.gridSize}</div>
-              </div>
-              <div className="bg-white p-4 rounded-xl shadow-sm">
-                <div className="text-sm text-gray-500">Difficulty</div>
-                <div className="text-lg font-semibold text-gray-900 capitalize">{stats.difficulty}</div>
-              </div>
-              <div className="bg-white p-4 rounded-xl shadow-sm">
-                <div className="text-sm text-gray-500">Steps</div>
-                <div className="text-lg font-semibold text-gray-900">{stats.steps}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">How it Works</h2>
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Algorithm Steps</h3>
-                <div className="space-y-3 text-gray-600">
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Finds an empty cell</span>
+              
+              {/* Board Legend */}
+              <div className="mt-4 flex items-center justify-center gap-6 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-50 border-2 border-blue-200 rounded relative">
+                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                   </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Tries numbers 1-9 in that cell</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Checks if the number is valid in that position</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>If valid, moves to the next cell</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>If no valid number is found, backtracks</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Continues until the puzzle is solved</span>
-                  </div>
+                  <span>Given numbers</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-50 border-2 border-green-200 rounded"></div>
+                  <span>Your input</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded"></div>
+                  <span>Empty cells</span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Rules</h3>
-                <div className="space-y-3 text-gray-600">
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Each row must contain numbers 1-9</span>
+          <div className="space-y-6">
+            <ControlsSection>
+              <SpeedControl
+                speed={speed}
+                onSpeedChange={(e) => setSpeed(1000 - e.target.value)}
+                disabled={isSolving}
+                label="Solving Speed"
+              />
+              
+              <EnhancedDataStructureButtonGrid
+                operations={[
+                  {
+                    onClick: solveSudoku,
+                    icon: FaPlay,
+                    label: isSolving ? 'Solving...' : 'Solve Puzzle',
+                    disabled: isSolving,
+                    variant: 'primary'
+                  },
+                  {
+                    onClick: generatePuzzle,
+                    icon: FaRandom,
+                    label: 'New Puzzle',
+                    disabled: isSolving,
+                    variant: 'secondary'
+                  }
+                ]}
+                resetAction={ButtonPresets.dataStructure.reset(reset)}
+                disabled={isSolving}
+              />
+            </ControlsSection>
+
+            <StatisticsDisplay
+              title="Statistics"
+              stats={[
+                { label: 'Status', value: stats.status, color: stats.solved ? 'text-green-600' : stats.status === 'Solving' ? 'text-blue-600' : 'text-gray-600' },
+                { label: 'Difficulty', value: stats.difficulty.charAt(0).toUpperCase() + stats.difficulty.slice(1), color: 'text-purple-600' },
+                { label: 'Steps', value: stats.steps, color: 'text-orange-600' },
+                { label: 'Grid Size', value: stats.gridSize, color: 'text-gray-600' }
+              ]}
+              columns={2}
+            />
+
+            {stats.timeTaken && (
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <FaPuzzlePiece className="text-green-500" />
+                  <span className="text-green-700 font-semibold">Puzzle Solved!</span>
+                </div>
+                <p className="text-green-600 text-sm">
+                  Completed in {Math.round(stats.timeTaken / 1000)} seconds with {stats.steps} steps
+                </p>
+              </div>
+            )}
+            
+            <div className="bg-gray-50 rounded-xl p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">How it Works</h3>
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <h4 className="text-md font-medium text-gray-800">Algorithm Steps</h4>
+                  <div className="space-y-3 text-gray-600">
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Finds an empty cell</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Tries numbers 1-9 in that cell</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Checks if the number is valid in that position</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>If valid, moves to the next cell</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>If no valid number is found, backtracks</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Continues until the puzzle is solved</span>
+                    </div>
                   </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Each column must contain numbers 1-9</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Each 3x3 box must contain numbers 1-9</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>No number can be repeated in any row, column, or box</span>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-md font-medium text-gray-800">Rules</h4>
+                  <div className="space-y-3 text-gray-600">
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Each row must contain numbers 1-9</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Each column must contain numbers 1-9</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Each 3x3 box must contain numbers 1-9</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>No number can be repeated in any row, column, or box</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -420,4 +496,4 @@ const SudokuVisualizer = () => {
   );
 };
 
-export default SudokuVisualizer; 
+export default SudokuVisualizer;

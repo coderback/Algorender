@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
-import InputControl from '@/components/InputControl';
-import Button from '@/components/Button';
+import { 
+  ControlsSection, 
+  SpeedControl,
+  GraphVisualizerButtonGrid, 
+  StatisticsDisplay, 
+  ButtonPresets 
+} from '@/components/VisualizerControls';
 
 const initialNodes = [0, 1, 2, 3];
 const initialMatrix = [
@@ -112,55 +117,33 @@ export default function FloydWarshallVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Controls</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Speed
-                </label>
-                <InputControl
-                  type="range"
-                  min="0"
-                  max="900"
-                  value={1000 - speed}
-                  onChange={handleSpeedChange}
-                  disabled={isRunning}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  onClick={floydWarshall}
-                  disabled={isRunning || k >= nodes.length}
-                  className="flex-1"
-                >
-                  {isRunning ? 'Running...' : 'Start Floyd-Warshall'}
-                </Button>
-                <Button
-                  onClick={reset}
-                  disabled={isRunning}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ControlsSection>
+            <SpeedControl
+              speed={speed}
+              onSpeedChange={handleSpeedChange}
+              disabled={isRunning}
+            />
+            
+            <GraphVisualizerButtonGrid
+              primaryAction={{
+                ...ButtonPresets.graph.primary(floydWarshall, isRunning, 'Floyd-Warshall'),
+                disabled: isRunning || k >= nodes.length
+              }}
+              resetAction={ButtonPresets.graph.reset(reset)}
+              isRunning={isRunning}
+              showStartNodeSelector={false}
+            />
+          </ControlsSection>
 
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Nodes</p>
-                <p className="text-2xl font-semibold text-blue-600">{nodes.length}</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-500">Current k</p>
-                <p className="text-2xl font-semibold text-gray-600">{k}</p>
-              </div>
-            </div>
-          </div>
+          <StatisticsDisplay
+            title="Statistics"
+            stats={[
+              { label: 'Nodes', value: nodes.length, color: 'text-blue-600' },
+              { label: 'Current k', value: k, color: 'text-gray-900' },
+              { label: 'Progress', value: `${Math.round((k / nodes.length) * 100)}%`, color: 'text-green-600' }
+            ]}
+            columns={3}
+          />
         </div>
       </div>
     </Layout>

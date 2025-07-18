@@ -55,9 +55,9 @@ export default function SearchBar({ dataStructures, algorithms }) {
                 <li
                   key={index}
                   onClick={() => handleSearch(item)}
-                  className="px-4 py-2 text-grey-500 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
                 >
-                  <span>{item.name}</span>
+                  <span className="text-gray-900 font-medium">{item.name}</span>
                   <span className="text-xs text-blue-500">{item.type}</span>
                 </li>
               ))}
