@@ -51,7 +51,6 @@ const categories = {
 
 export default function Header() {
   const pathname = usePathname();
-  const isHomePage = pathname === '/';
 
   // Transform categories into searchable items
   const dataStructures = categories.data.flatMap(category =>

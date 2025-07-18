@@ -6,17 +6,17 @@ import { usePathname } from 'next/navigation';
 
 export default function Layout({ children, title, description, timeComplexity, spaceComplexity }) {
   const pathname = usePathname();
-  const isAlgorithm = pathname.includes('-sort') || 
-                     pathname.includes('-search') || 
-                     pathname.includes('dijkstra') || 
-                     pathname.includes('prim') || 
+  const isAlgorithm = pathname.includes('-sort') ||
+                     pathname.includes('-search') ||
+                     pathname.includes('dijkstra') ||
+                     pathname.includes('prim') ||
                      pathname.includes('kruskals') ||
-                     pathname.includes('knapsack') || 
-                     pathname.includes('n-queens') || 
-                     pathname.includes('sudoku') || 
-                     pathname.includes('rabin-karp') || 
-                     pathname.includes('kmp') || 
-                     pathname.includes('z-algorithm') || 
+                     pathname.includes('knapsack') ||
+                     pathname.includes('n-queens') ||
+                     pathname.includes('sudoku') ||
+                     pathname.includes('rabin-karp') ||
+                     pathname.includes('kmp') ||
+                     pathname.includes('z-algorithm') ||
                      pathname.includes('trie') ||
                      pathname.includes('manacher');
 
