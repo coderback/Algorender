@@ -11,7 +11,7 @@ import {
 } from '@/components/VisualizerControls';
 import { FaPuzzlePiece, FaRandom, FaPlay, FaCog } from 'react-icons/fa';
 
-const SudokuVisualizer = () => {
+export default function SudokuVisualizer() {
   const [board, setBoard] = useState(Array(9).fill().map(() => Array(9).fill(0)));
   const [originalBoard, setOriginalBoard] = useState(Array(9).fill().map(() => Array(9).fill(0)));
   const [isSolving, setIsSolving] = useState(false);
@@ -494,6 +494,4 @@ const SudokuVisualizer = () => {
       </div>
     </Layout>
   );
-};
-
-export default SudokuVisualizer;
+}
