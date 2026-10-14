@@ -17,35 +17,10 @@ export default function SearchBar({ dataStructures, algorithms }) {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getUrlPath = (name) => {
-    // Special mappings for items that don't follow the standard naming convention
-    const specialMappings = {
-      'N-Queens Problem': 'n-queens',
-      'Sudoku Solver': 'sudoku-solver',
-      'Dijkstra\'s Algorithm': 'dijkstra',
-      'Prim\'s Algorithm': 'prims',
-      'Kruskal\'s Algorithm': 'kruskals',
-      'Rabin-Karp Algorithm': 'rabin-karp',
-      'KMP Algorithm': 'kmp',
-      'Z-Algorithm': 'z-algorithm',
-      'Manacher\'s Algorithm': 'manacher',
-      'Fibonacci (Memoization)': 'fibonacci-memoization',
-      '0/1 Knapsack': 'knapsack-01',
-      'Knapsack (Greedy)': 'knapsack-greedy',
-      'Longest Common Subsequence': 'longest-common-subsequence',
-      'Edit Distance': 'edit-distance',
-      'Depth-First Search (DFS)': 'depth-first-search',
-      'Breadth-First Search (BFS)': 'breadth-first-search',
-      'Activity Selection': 'activity-selection'
-    };
-    
-    return specialMappings[name] || name.toLowerCase().replace(/ /g, '-');
-  };
-
   const handleSearch = (item) => {
     setSearchQuery('');
     setShowSuggestions(false);
-    router.push(`/visualisers/${getUrlPath(item.name)}`);
+    router.push(item.path);
   };
 
   return (
@@ -73,7 +48,7 @@ export default function SearchBar({ dataStructures, algorithms }) {
       </div>
 
       {showSuggestions && searchQuery && (
-        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200">
+        <div className="absolute z-10 w-full mt-1 max-h-80 overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-200">
           {filteredItems.length > 0 ? (
             <ul className="py-1">
               {filteredItems.map((item, index) => (

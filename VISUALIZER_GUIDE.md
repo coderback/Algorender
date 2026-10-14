@@ -173,18 +173,19 @@ const bubbleSort = async () => {
 };
 ```
 
-### Step 4: Add to Homepage
+### Step 4: Register the Visualizer
 
-Update `src/app/page.jsx` to include your new visualizer:
+Add one entry to `src/data/visualisers.js`. The home page, header search and the
+"Back to Categories" link all read from this registry:
 
 ```javascript
-// Add to appropriate array (algorithms or dataStructures)
-const algorithms = [
+// Add to algorithmEntries or dataStructureEntries
+const algorithmEntries = [
   // ... existing algorithms
   {
     name: 'Your Algorithm',
     description: 'Brief description of what this algorithm does.',
-    path: '/visualisers/your-algorithm',
+    slug: 'your-algorithm', // must match the folder under src/app/visualisers/
     category: 'Sorting', // or appropriate category
     timeComplexity: { best: 'O(n)', average: 'O(n²)', worst: 'O(n²)' },
     spaceComplexity: 'O(1)'
@@ -1754,18 +1755,18 @@ export default function YourDPAlgorithmVisualizer() {
 
 ## Integration Guide
 
-### 1. Adding to Homepage
+### 1. Registering the Visualizer
 
-Update `src/app/page.jsx` to include your new visualizer:
+Add an entry to `src/data/visualisers.js`:
 
 ```javascript
-// Add to the appropriate array
-const algorithms = [
+// Add to algorithmEntries or dataStructureEntries
+const algorithmEntries = [
   // ... existing algorithms
   {
     name: 'Your Algorithm Name',
     description: 'Brief description of the algorithm or data structure.',
-    path: '/visualisers/your-algorithm-name',
+    slug: 'your-algorithm-name', // must match the folder under src/app/visualisers/
     category: 'Sorting', // Categories: Sorting, Searching, Graph, Greedy, Dynamic Programming, Backtracking, String Matching
     timeComplexity: {
       best: 'O(n)',
@@ -1777,16 +1778,13 @@ const algorithms = [
 ];
 ```
 
-### 2. Update Navigation Detection
+Set `hidden: true` to keep a route out of the home page and search.
 
-If your visualizer is an algorithm, update the algorithm detection logic in `src/components/Layout.jsx`:
+### 2. Navigation and Search
 
-```javascript
-const isAlgorithm = pathname.includes('-sort') ||
-                   pathname.includes('-search') ||
-                   pathname.includes('your-algorithm-name') || // Add your algorithm
-                   // ... other patterns
-```
+Nothing else to update: `page.jsx`, `Header.jsx`/`SearchBar.jsx` and the back link in
+`Layout.jsx` derive the card, the search result and the algorithm/data-structure tab
+from the registry entry.
 
 ### 3. Custom Components
 

@@ -3,64 +3,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import SearchBar from './SearchBar';
-import { usePathname } from 'next/navigation';
-
-// Get data from CategoryGrid
-const categories = {
-  data: [
-    {
-      title: 'Linear Structures',
-      modules: ['Array', 'Linked List', 'Stack', 'Queue', 'Deque'],
-    },
-    {
-      title: 'Hierarchical Structures',
-      modules: ['Binary Tree', 'AVL Tree', 'B-Tree', 'Heap'],
-    },
-    {
-      title: 'Hash-Based Structures',
-      modules: ['Hash Table', 'Hash Set'],
-    },
-  ],
-  algo: [
-    {
-      title: 'Searching & Sorting',
-      modules: ['Linear Search', 'Binary Search', 'Bubble Sort', 'Insertion Sort', 'Selection Sort', 'Merge Sort', 'Quick Sort', 'Heap Sort'],
-    },
-    {
-      title: 'Greedy Algorithms',
-      modules: ['Knapsack (Greedy)', 'Dijkstra\'s Algorithm', 'Prim\'s Algorithm', 'Activity Selection'],
-    },
-    {
-      title: 'Dynamic Programming',
-      modules: ['Fibonacci (Memoization)', '0/1 Knapsack', 'Longest Common Subsequence', 'Edit Distance'],
-    },
-    {
-      title: 'Backtracking & Branch-and-Bound',
-      modules: ['N-Queens Problem', 'Sudoku Solver'],
-    },
-    {
-      title: 'Graph Algorithms',
-      modules: ['Depth-First Search (DFS)', 'Breadth-First Search (BFS)', 'Dijkstra\'s Algorithm', 'Prim\'s Algorithm'],
-    },
-    {
-      title: 'String & Pattern-Matching',
-      modules: ['Rabin-Karp Algorithm', 'KMP Algorithm', 'Z-Algorithm', 'Manacher\'s Algorithm'],
-    },
-  ],
-};
+import { dataStructures, algorithms } from '@/data/visualisers';
 
 export default function Header() {
-  const pathname = usePathname();
-
-  // Transform categories into searchable items
-  const dataStructures = categories.data.flatMap(category =>
-    category.modules.map(name => ({ name }))
-  );
-  
-  const algorithms = categories.algo.flatMap(category =>
-    category.modules.map(name => ({ name }))
-  );
-
   return (
     <header className="w-full bg-white shadow-sm sticky top-0 z-10">
       <div className="max-w-6xl mx-auto px-4 py-4">

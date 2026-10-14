@@ -3,22 +3,11 @@
 import Link from 'next/link';
 import Header from './Header';
 import { usePathname } from 'next/navigation';
+import { getVisualiserByPath } from '@/data/visualisers';
 
 export default function Layout({ children, title, description, timeComplexity, spaceComplexity }) {
   const pathname = usePathname();
-  const isAlgorithm = pathname.includes('-sort') ||
-                     pathname.includes('-search') ||
-                     pathname.includes('dijkstra') ||
-                     pathname.includes('prim') ||
-                     pathname.includes('kruskals') ||
-                     pathname.includes('knapsack') ||
-                     pathname.includes('n-queens') ||
-                     pathname.includes('sudoku') ||
-                     pathname.includes('rabin-karp') ||
-                     pathname.includes('kmp') ||
-                     pathname.includes('z-algorithm') ||
-                     pathname.includes('trie') ||
-                     pathname.includes('manacher');
+  const isAlgorithm = getVisualiserByPath(pathname)?.type === 'algorithm';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
