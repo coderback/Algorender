@@ -363,16 +363,6 @@ const algorithmEntries = [
     spaceComplexity: 'O(mn)'
   },
   {
-    // Older duplicate of longest-common-subsequence
-    name: 'Longest Common Subsequence',
-    description: 'Finds the longest subsequence present in both strings.',
-    slug: 'lcs',
-    category: 'Dynamic Programming',
-    timeComplexity: { best: 'O(mn)', average: 'O(mn)', worst: 'O(mn)' },
-    spaceComplexity: 'O(mn)',
-    hidden: true
-  },
-  {
     name: 'Edit Distance',
     description: 'Calculates the minimum number of operations to convert one string to another.',
     slug: 'edit-distance',
