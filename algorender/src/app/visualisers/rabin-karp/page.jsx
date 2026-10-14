@@ -28,13 +28,6 @@ const RabinKarpVisualizer = () => {
     hashComparisons: 0
   });
 
-  const timeComplexity = {
-    best: 'O(n + m)',
-    average: 'O(n + m)',
-    worst: 'O(nm)',
-    space: 'O(1)'
-  };
-
   const rabinKarp = async () => {
     if (!text.trim() || !pattern.trim()) return;
     

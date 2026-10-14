@@ -21,7 +21,7 @@ const initialMatrix = [
 
 export default function FloydWarshallVisualiser() {
   const wait = useCancellableWait();
-  const [nodes, setNodes] = useState(initialNodes);
+  const nodes = initialNodes;
   const [matrix, setMatrix] = useState(initialMatrix.map(row => [...row]));
   const [k, setK] = useState(0);
   const [isRunning, setIsRunning] = useState(false);

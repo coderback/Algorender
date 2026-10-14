@@ -22,13 +22,6 @@ const KMPVisualizer = () => {
     time: 0
   });
 
-  const timeComplexity = {
-    best: 'O(n + m)',
-    average: 'O(n + m)',
-    worst: 'O(n + m)',
-    space: 'O(m)'
-  };
-
   const computeLPSArray = (pattern) => {
     const lps = new Array(pattern.length).fill(0);
     let len = 0;

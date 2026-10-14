@@ -24,13 +24,6 @@ export default function NQueensVisualizer() {
     steps: 0
   });
 
-  const timeComplexity = {
-    best: 'O(n!)',
-    average: 'O(n!)',
-    worst: 'O(n!)',
-    space: 'O(n)'
-  };
-
   const initializeBoard = useCallback(() => {
     const newBoard = Array(n).fill().map(() => Array(n).fill(0));
     setBoard(newBoard);

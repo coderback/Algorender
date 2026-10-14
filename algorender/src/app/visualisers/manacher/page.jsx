@@ -20,7 +20,6 @@ const ManacherVisualizer = () => {
   const [transformedString, setTransformedString] = useState('');
   const [pArray, setPArray] = useState([]);
   const [currentCenter, setCurrentCenter] = useState(-1);
-  const [currentRight, setCurrentRight] = useState(-1);
   const [isSolving, setIsSolving] = useState(false);
   const [speed, setSpeed] = useState(400);
   const [stats, setStats] = useState({
@@ -30,13 +29,6 @@ const ManacherVisualizer = () => {
     longestLength: 0
   });
 
-  const timeComplexity = {
-    best: 'O(n)',
-    average: 'O(n)',
-    worst: 'O(n)',
-    space: 'O(n)'
-  };
-
   const manacher = async () => {
     if (!text.trim()) return;
     
@@ -44,7 +36,6 @@ const ManacherVisualizer = () => {
     setPalindromes([]);
     setPArray([]);
     setCurrentCenter(-1);
-    setCurrentRight(-1);
     const startTime = performance.now();
     let comparisons = 0;
     const newPalindromes = [];
@@ -60,7 +51,6 @@ const ManacherVisualizer = () => {
 
     for (let i = 0; i < n; i++) {
       setCurrentCenter(center);
-      setCurrentRight(right);
       setPArray([...p]);
       await wait(speed);
       
@@ -120,7 +110,6 @@ const ManacherVisualizer = () => {
     setPArray(p);
     setPalindromes(newPalindromes);
     setCurrentCenter(-1);
-    setCurrentRight(-1);
     setStats(prev => ({ 
       ...prev, 
       palindromes: newPalindromes.length,
@@ -135,7 +124,6 @@ const ManacherVisualizer = () => {
     setTransformedString('');
     setPArray([]);
     setCurrentCenter(-1);
-    setCurrentRight(-1);
     setStats({ comparisons: 0, palindromes: 0, time: 0, longestLength: 0 });
   };
 
@@ -144,20 +132,6 @@ const ManacherVisualizer = () => {
     return palindromes.reduce((longest, current) => 
       current.length > longest.length ? current : longest
     );
-  };
-
-  const generateRandomColors = (count) => {
-    const colors = [
-      'bg-red-200 border-red-400 text-red-800',
-      'bg-blue-200 border-blue-400 text-blue-800',
-      'bg-green-200 border-green-400 text-green-800',
-      'bg-yellow-200 border-yellow-400 text-yellow-800',
-      'bg-purple-200 border-purple-400 text-purple-800',
-      'bg-pink-200 border-pink-400 text-pink-800',
-      'bg-indigo-200 border-indigo-400 text-indigo-800',
-      'bg-teal-200 border-teal-400 text-teal-800'
-    ];
-    return Array.from({ length: count }, (_, i) => colors[i % colors.length]);
   };
 
   const longestPalindrome = getLongestPalindrome();

@@ -30,7 +30,7 @@ function getAdjList(nodes, edges, reverse = false) {
 
 export default function KosarajuVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [sccs, setSccs] = useState([]);
   const [visited, setVisited] = useState([]);
   const [isRunning, setIsRunning] = useState(false);

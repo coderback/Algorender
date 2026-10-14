@@ -49,8 +49,6 @@ export default function FibonacciMemoVisualiser() {
     setIsRunning(false);
   };
 
-  const handleSpeedChange = (e) => setSpeed(1000 - e.target.value);
-
   return (
     <Layout
       title="Fibonacci (Memoization) Visualiser"

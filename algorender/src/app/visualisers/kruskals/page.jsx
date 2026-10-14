@@ -44,19 +44,13 @@ function union(parent, rank, x, y) {
 
 export default function KruskalVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [mstEdges, setMstEdges] = useState([]);
-  const [edgeIndex, setEdgeIndex] = useState(0);
-  const [parent, setParent] = useState([]);
-  const [rank, setRank] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
   const [speed, setSpeed] = useState(500);
 
   const reset = () => {
     setMstEdges([]);
-    setEdgeIndex(0);
-    setParent([]);
-    setRank([]);
     setIsRunning(false);
   };
 
@@ -68,8 +62,6 @@ export default function KruskalVisualiser() {
     const mst = [];
     let i = 0;
     let e = 0;
-    setParent([...parent]);
-    setRank([...rank]);
     while (e < graph.nodes.length - 1 && i < edges.length) {
       const { from, to, weight } = edges[i++];
       const x = find(parent, from);
@@ -79,8 +71,6 @@ export default function KruskalVisualiser() {
         union(parent, rank, x, y);
         e++;
         setMstEdges([...mst]);
-        setParent([...parent]);
-        setRank([...rank]);
         await wait(speed);
       }
     }

@@ -38,7 +38,7 @@ function getAdjList(nodes, edges) {
 
 export default function PrimsVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [startNode, setStartNode] = useState(0);
   const [mstEdges, setMstEdges] = useState([]);
   const [visited, setVisited] = useState([]);

@@ -34,7 +34,7 @@ function getAdjList(nodes, edges) {
 
 export default function DijkstraVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [startNode, setStartNode] = useState(0);
   const [distances, setDistances] = useState({});
   const [visited, setVisited] = useState([]);

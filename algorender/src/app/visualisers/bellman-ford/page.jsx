@@ -30,7 +30,7 @@ const initialGraph = {
 
 export default function BellmanFordVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [startNode, setStartNode] = useState(0);
   const [distances, setDistances] = useState({});
   const [iteration, setIteration] = useState(0);

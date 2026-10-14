@@ -14,7 +14,6 @@ import {
 export default function BTreeVisualiser() {
   const [tree, setTree] = useState(null);
   const [value, setValue] = useState('');
-  const [selectedNode, setSelectedNode] = useState(null);
   const [searchPath, setSearchPath] = useState([]);
   const [error, setError] = useState('');
   const [order] = useState(3); // B-tree of order 3 (2-3 tree)
@@ -173,7 +172,6 @@ export default function BTreeVisualiser() {
   const reset = () => {
     setTree(null);
     setValue('');
-    setSelectedNode(null);
     setSearchPath([]);
     setError('');
   };

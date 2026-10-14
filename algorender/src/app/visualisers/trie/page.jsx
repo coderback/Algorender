@@ -82,8 +82,6 @@ export default function TrieVisualiser() {
   const [root, setRoot] = useState(() => new TrieNode());
   const [word, setWord] = useState("");
   const [prefix, setPrefix] = useState("");
-  const [searchResult, setSearchResult] = useState(null);
-  const [prefixResult, setPrefixResult] = useState(null);
   const [words, setWords] = useState([]);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
@@ -105,8 +103,6 @@ export default function TrieVisualiser() {
     setWords((prev) => [...new Set([...prev, word])]);
     setSuccess(`Successfully inserted "${word}"`);
     setWord("");
-    setSearchResult(null);
-    setPrefixResult(null);
     setRoot(Object.assign(Object.create(Object.getPrototypeOf(root)), root)); // force update
     
     setTimeout(() => setSuccess(null), 2000);
@@ -120,8 +116,6 @@ export default function TrieVisualiser() {
     }
     
     const result = searchWord(root, word);
-    setSearchResult(result);
-    setPrefixResult(null);
     
     if (result) {
       setSuccess(`Found word "${word}" in trie`);
@@ -143,8 +137,6 @@ export default function TrieVisualiser() {
     }
     
     const result = startsWith(root, prefix);
-    setPrefixResult(result);
-    setSearchResult(null);
     
     if (result) {
       setSuccess(`Prefix "${prefix}" exists in trie`);
@@ -163,8 +155,6 @@ export default function TrieVisualiser() {
     setWords([]);
     setWord("");
     setPrefix("");
-    setSearchResult(null);
-    setPrefixResult(null);
     setSuccess(null);
     setError(null);
   };

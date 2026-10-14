@@ -29,7 +29,7 @@ function getAdjList(nodes, edges) {
 
 export default function TopologicalSortVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [order, setOrder] = useState([]);
   const [visited, setVisited] = useState([]);
   const [isRunning, setIsRunning] = useState(false);

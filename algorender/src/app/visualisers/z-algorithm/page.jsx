@@ -30,13 +30,6 @@ const ZAlgorithmVisualizer = () => {
     zArrayLength: 0
   });
 
-  const timeComplexity = {
-    best: 'O(n + m)',
-    average: 'O(n + m)',
-    worst: 'O(n + m)',
-    space: 'O(n + m)'
-  };
-
   const zAlgorithm = async () => {
     if (!text.trim() || !pattern.trim()) return;
     

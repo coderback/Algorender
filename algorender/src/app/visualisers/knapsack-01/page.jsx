@@ -79,8 +79,6 @@ export default function Knapsack01Visualiser() {
     setIsRunning(false);
   };
 
-  const handleSpeedChange = (e) => setSpeed(1000 - e.target.value);
-
   return (
     <Layout
       title="0/1 Knapsack Visualiser"

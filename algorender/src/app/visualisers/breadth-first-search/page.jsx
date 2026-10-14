@@ -26,7 +26,7 @@ function getAdjList(nodes, edges) {
 
 export default function BFSVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [startNode, setStartNode] = useState(0);
   const [visited, setVisited] = useState([]);
   const [queue, setQueue] = useState([]);

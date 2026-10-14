@@ -29,13 +29,6 @@ export default function SudokuVisualizer() {
     gridSize: '9x9'
   });
 
-  const timeComplexity = {
-    best: 'O(9^(n²))',
-    average: 'O(9^(n²))',
-    worst: 'O(9^(n²))',
-    space: 'O(n²)'
-  };
-
   // Fisher-Yates shuffle algorithm
   const shuffle = (array) => {
     for (let i = array.length - 1; i > 0; i--) {

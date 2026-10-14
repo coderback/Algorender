@@ -52,8 +52,6 @@ export default function EditDistanceVisualiser() {
     setIsRunning(false);
   };
 
-  const handleSpeedChange = (e) => setSpeed(1000 - e.target.value);
-
   return (
     <Layout
       title="Edit Distance Visualiser"

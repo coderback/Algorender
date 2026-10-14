@@ -29,11 +29,9 @@ function getAdjList(nodes, edges) {
 
 export default function TarjanVisualiser() {
   const wait = useCancellableWait();
-  const [graph, setGraph] = useState(initialGraph);
+  const graph = initialGraph;
   const [sccs, setSccs] = useState([]);
   const [visited, setVisited] = useState([]);
-  const [indexMap, setIndexMap] = useState({});
-  const [lowLinkMap, setLowLinkMap] = useState({});
   const [isRunning, setIsRunning] = useState(false);
   const [speed, setSpeed] = useState(500);
 
@@ -42,8 +40,6 @@ export default function TarjanVisualiser() {
   const reset = () => {
     setSccs([]);
     setVisited([]);
-    setIndexMap({});
-    setLowLinkMap({});
     setIsRunning(false);
   };
 
@@ -61,18 +57,14 @@ export default function TarjanVisualiser() {
       index++;
       stack.push(v);
       onStack[v] = true;
-      setIndexMap({ ...indexMap });
-      setLowLinkMap({ ...lowLinkMap });
       setVisited([...stack]);
       await wait(speed);
       for (const w of adjList[v]) {
         if (indexMap[w] === undefined) {
           await strongConnect(w);
           lowLinkMap[v] = Math.min(lowLinkMap[v], lowLinkMap[w]);
-          setLowLinkMap({ ...lowLinkMap });
         } else if (onStack[w]) {
           lowLinkMap[v] = Math.min(lowLinkMap[v], indexMap[w]);
-          setLowLinkMap({ ...lowLinkMap });
         }
       }
       if (lowLinkMap[v] === indexMap[v]) {

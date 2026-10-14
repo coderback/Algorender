@@ -114,7 +114,6 @@ export default function HashTableVisualiser() {
 
     const index = hashFunction(key);
     let current = table[index];
-    let chainIndex = 0;
 
     while (current) {
       if (current.key === key) {
@@ -123,7 +122,6 @@ export default function HashTableVisualiser() {
         return;
       }
       current = current.next;
-      chainIndex++;
     }
 
     setValue('');

@@ -174,16 +174,6 @@ export default function GraphVisualiser() {
     setTimeout(() => setSuccess(''), 2000);
   };
 
-  const removeEdge = (from, to) => {
-    setGraph(prev => ({
-      ...prev,
-      edges: prev.edges.filter(e => !(e.from === from && e.to === to))
-    }));
-    setSelectedEdge(null);
-    setSuccess(`Edge ${from} → ${to} removed`);
-    setTimeout(() => setSuccess(''), 2000);
-  };
-
   const bfs = (startId) => {
     const visited = new Set();
     const queue = [startId];
