@@ -2,16 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The UI is light-only: every page uses light Tailwind colours, so these
+   must not switch with prefers-color-scheme. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: light;
 }
 
 body {
