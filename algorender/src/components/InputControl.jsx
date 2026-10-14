@@ -8,6 +8,7 @@ export default function InputControl({
   placeholder, 
   min, 
   max,
+  disabled = false,
   error,
   helperText,
   className = ''
@@ -24,6 +25,7 @@ export default function InputControl({
           onChange={onChange}
           min={min}
           max={max}
+          disabled={disabled}
           placeholder={placeholder}
           className={`
             w-full h-11 px-4 py-2.5 bg-white border-2 rounded-xl shadow-sm
