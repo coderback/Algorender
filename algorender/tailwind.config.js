@@ -1,4 +1,5 @@
 const colors = require('tailwindcss/colors');
+const defaultTheme = require('tailwindcss/defaultTheme');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -7,6 +8,11 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Geist fonts loaded in app/layout.jsx via next/font CSS variables
+      fontFamily: {
+        sans: ['var(--font-geist-sans)', ...defaultTheme.fontFamily.sans],
+        mono: ['var(--font-geist-mono)', ...defaultTheme.fontFamily.mono],
+      },
       colors: {
         // shadcn/ui tokens used by components/ui (card, tabs). Fixed light
         // values from the app's palette: the UI has no dark theme.
