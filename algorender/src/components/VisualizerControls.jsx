@@ -10,7 +10,7 @@ export function SpeedControl({ speed, onSpeedChange, disabled = false, label = "
       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
         <FaTachometerAlt className="w-4 h-4 text-blue-400" />
         {label}
-        <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
+        <span className="ml-auto text-xs text-gray-500">{speed} ms</span>
       </label>
       <input
         type="range"

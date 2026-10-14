@@ -170,7 +170,7 @@ export default function DijkstraVisualiser() {
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                   <FaTachometerAlt className="text-blue-400" />
                   Speed
-                  <span className="ml-auto text-xs text-gray-500">{(1000 - speed)} ms</span>
+                  <span className="ml-auto text-xs text-gray-500">{speed} ms</span>
                 </label>
                 <input
                   type="range"
