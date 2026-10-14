@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import { 
   ControlsSection, 
   SpeedControl,
@@ -36,6 +37,7 @@ function getAdjList(nodes, edges) {
 }
 
 export default function PrimsVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [startNode, setStartNode] = useState(0);
   const [mstEdges, setMstEdges] = useState([]);
@@ -76,7 +78,7 @@ export default function PrimsVisualiser() {
       visitedSet.add(nextEdge.to);
       setMstEdges([...mst]);
       setVisited([...visitedSet]);
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
       for (const { node, weight } of adjList[nextEdge.to]) {
         if (!visitedSet.has(node)) {
           edges.push({ from: nextEdge.to, to: node, weight });

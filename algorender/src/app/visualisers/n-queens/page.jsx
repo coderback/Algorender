@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import { 
   ControlsSection, 
@@ -11,6 +12,7 @@ import {
 } from '@/components/VisualizerControls';
 
 export default function NQueensVisualizer() {
+  const wait = useCancellableWait();
   const [n, setN] = useState(8);
   const [board, setBoard] = useState([]);
   const [solutions, setSolutions] = useState([]);
@@ -79,7 +81,7 @@ export default function NQueensVisualizer() {
         if (isValid(board, row, col)) {
           board[row][col] = 1;
           setBoard(board.map(boardRow => [...boardRow]));
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await wait(100);
           
           await solve(board, row + 1);
           

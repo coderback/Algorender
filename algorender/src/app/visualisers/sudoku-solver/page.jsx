@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import {
   ControlsSection,
   SpeedControl,
@@ -12,6 +13,7 @@ import {
 import { FaPuzzlePiece, FaRandom, FaPlay, FaCog } from 'react-icons/fa';
 
 export default function SudokuVisualizer() {
+  const wait = useCancellableWait();
   const [board, setBoard] = useState(Array(9).fill().map(() => Array(9).fill(0)));
   const [originalBoard, setOriginalBoard] = useState(Array(9).fill().map(() => Array(9).fill(0)));
   const [isSolving, setIsSolving] = useState(false);
@@ -157,7 +159,7 @@ export default function SudokuVisualizer() {
                 stepCount++;
                 setStats(prev => ({ ...prev, steps: stepCount }));
                 setBoard(board.map(row => [...row]));
-                await new Promise(resolve => setTimeout(resolve, speed));
+                await wait(speed);
 
                 if (await solve(board)) {
                   return true;
@@ -167,7 +169,7 @@ export default function SudokuVisualizer() {
                 stepCount++;
                 setStats(prev => ({ ...prev, steps: stepCount }));
                 setBoard(board.map(row => [...row]));
-                await new Promise(resolve => setTimeout(resolve, speed));
+                await wait(speed);
               }
             }
             return false;

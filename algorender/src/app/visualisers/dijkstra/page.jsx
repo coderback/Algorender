@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +35,7 @@ function getAdjList(nodes, edges) {
 }
 
 export default function DijkstraVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [startNode, setStartNode] = useState(0);
   const [distances, setDistances] = useState({});
@@ -70,14 +72,14 @@ export default function DijkstraVisualiser() {
       setVisited([...visitedOrder]);
       setQueue([...q]);
       setDistances({ ...dist });
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
       for (const { node: v, weight } of adjList[u]) {
         if (q.includes(v)) {
           if (dist[u] + weight < dist[v]) {
             dist[v] = dist[u] + weight;
             prev[v] = u;
             setDistances({ ...dist });
-            await new Promise(res => setTimeout(res, speed / 2));
+            await wait(speed / 2);
           }
         }
       }

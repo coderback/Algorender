@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,6 +27,7 @@ function getAdjList(nodes, edges) {
 }
 
 export default function BFSVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [startNode, setStartNode] = useState(0);
   const [visited, setVisited] = useState([]);
@@ -54,7 +56,7 @@ export default function BFSVisualiser() {
       visitedOrder.push(node);
       setVisited([...visitedOrder]);
       setQueue([...q]);
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
       for (const neighbor of adjList[node]) {
         if (!visitedSet.has(neighbor)) {
           visitedSet.add(neighbor);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +22,7 @@ const initialItems = [
 ];
 
 export default function GreedyKnapsackVisualiser() {
+  const wait = useCancellableWait();
   const [items, setItems] = useState(initialItems);
   const [capacity, setCapacity] = useState(50);
   const [selected, setSelected] = useState([]);
@@ -69,7 +71,7 @@ export default function GreedyKnapsackVisualiser() {
       }
       setSelected([...selected]);
       setTotalValue(value);
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
     }
     setIsRunning(false);
   };

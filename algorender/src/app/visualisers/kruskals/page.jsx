@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import { 
   ControlsSection, 
   SpeedControl,
@@ -42,6 +43,7 @@ function union(parent, rank, x, y) {
 }
 
 export default function KruskalVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [mstEdges, setMstEdges] = useState([]);
   const [edgeIndex, setEdgeIndex] = useState(0);
@@ -79,7 +81,7 @@ export default function KruskalVisualiser() {
         setMstEdges([...mst]);
         setParent([...parent]);
         setRank([...rank]);
-        await new Promise(res => setTimeout(res, speed));
+        await wait(speed);
       }
     }
     setIsRunning(false);

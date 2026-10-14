@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import {
   ControlsSection,
   SpeedControl,
@@ -28,6 +29,7 @@ function getAdjList(nodes, edges, reverse = false) {
 }
 
 export default function KosarajuVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [sccs, setSccs] = useState([]);
   const [visited, setVisited] = useState([]);
@@ -50,7 +52,7 @@ export default function KosarajuVisualiser() {
     async function dfs1(node) {
       visitedSet.add(node);
       setVisited([...visitedSet]);
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
       for (const neighbor of adjList[node]) {
         if (!visitedSet.has(neighbor)) {
           await dfs1(neighbor);
@@ -69,7 +71,7 @@ export default function KosarajuVisualiser() {
       visitedSet2.add(node);
       scc.push(node);
       setVisited([...visitedSet2]);
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
       for (const neighbor of revAdjList[node]) {
         if (!visitedSet2.has(neighbor)) {
           await dfs2(neighbor, scc);
@@ -83,7 +85,7 @@ export default function KosarajuVisualiser() {
         await dfs2(node, scc);
         sccs.push([...scc]);
         setSccs([...sccs]);
-        await new Promise(res => setTimeout(res, speed / 2));
+        await wait(speed / 2);
       }
     }
     setIsRunning(false);

@@ -91,12 +91,14 @@ const pauseRef = useRef(false);
 ### Async Control Flow
 
 ```javascript
-// Standard sleep function with pause support
+// Standard sleep function with pause support.
+// Always wait via useCancellableWait so the loop stops when the user navigates away.
+const wait = useCancellableWait(); // never resolves after unmount
 const sleep = async (ms) => {
   while (pauseRef.current) {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await wait(100);
   }
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return wait(ms);
 };
 
 // Cancellation pattern in loops
@@ -213,6 +215,7 @@ const algorithmEntries = [
 
 import { useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import SortingChart from '@/components/SortingChart';
 import VisualizerControls from '@/components/VisualizerControls';
 import { Button } from '@/components/ui/button';
@@ -268,11 +271,12 @@ export default function YourAlgorithmVisualizer() {
   }, []);
   
   // Sleep function with pause support
+  const wait = useCancellableWait(); // never resolves after unmount
   const sleep = async (ms) => {
     while (pauseRef.current) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await wait(100);
     }
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return wait(ms);
   };
   
   // Main algorithm implementation
@@ -524,6 +528,7 @@ export default function YourAlgorithmVisualizer() {
 
 import { useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import VisualizerControls from '@/components/VisualizerControls';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -583,11 +588,12 @@ export default function YourGraphAlgorithmVisualizer() {
   const pauseRef = useRef(false);
   
   // Sleep function with pause support
+  const wait = useCancellableWait(); // never resolves after unmount
   const sleep = async (ms) => {
     while (pauseRef.current) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await wait(100);
     }
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return wait(ms);
   };
   
   // Graph visualization component
@@ -943,6 +949,7 @@ export default function YourGraphAlgorithmVisualizer() {
 
 import { useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import VisualizerControls from '@/components/VisualizerControls';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -992,11 +999,12 @@ export default function YourDataStructureVisualizer() {
   const pauseRef = useRef(false);
   
   // Sleep function with pause support
+  const wait = useCancellableWait(); // never resolves after unmount
   const sleep = async (ms) => {
     while (pauseRef.current) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await wait(100);
     }
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return wait(ms);
   };
   
   // Data structure visualization component
@@ -1354,6 +1362,7 @@ export default function YourDataStructureVisualizer() {
 
 import { useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import VisualizerControls from '@/components/VisualizerControls';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1396,11 +1405,12 @@ export default function YourDPAlgorithmVisualizer() {
   const pauseRef = useRef(false);
   
   // Sleep function with pause support
+  const wait = useCancellableWait(); // never resolves after unmount
   const sleep = async (ms) => {
     while (pauseRef.current) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await wait(100);
     }
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return wait(ms);
   };
   
   // DP table visualization component

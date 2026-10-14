@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -14,6 +15,7 @@ import {
 import { FaFont, FaTable, FaCalculator } from 'react-icons/fa';
 
 export default function EditDistanceVisualiser() {
+  const wait = useCancellableWait();
   const [str1, setStr1] = useState('kitten');
   const [str2, setStr2] = useState('sitting');
   const [dp, setDp] = useState([]);
@@ -43,7 +45,7 @@ export default function EditDistanceVisualiser() {
           dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
         }
         setDp(dp.map(row => [...row]));
-        await new Promise(res => setTimeout(res, speed));
+        await wait(speed);
       }
     }
     setDistance(dp[m][n]);

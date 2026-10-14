@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +23,7 @@ const initialItems = [
 ];
 
 export default function Knapsack01Visualiser() {
+  const wait = useCancellableWait();
   const [items, setItems] = useState(initialItems);
   const [capacity, setCapacity] = useState(5);
   const [dp, setDp] = useState([]);
@@ -61,7 +63,7 @@ export default function Knapsack01Visualiser() {
           dp[i][w] = dp[i - 1][w];
         }
         setDp(dp.map(row => [...row]));
-        await new Promise(res => setTimeout(res, speed));
+        await wait(speed);
       }
     }
     // Backtrack to find selected items

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -14,6 +15,7 @@ import {
 import { FaCalculator, FaDatabase } from 'react-icons/fa';
 
 export default function FibonacciMemoVisualiser() {
+  const wait = useCancellableWait();
   const [n, setN] = useState(8);
   const [calls, setCalls] = useState([]);
   const [memo, setMemo] = useState({});
@@ -32,7 +34,7 @@ export default function FibonacciMemoVisualiser() {
     setCalls(calls => [...calls, k]);
     if (memoObj[k] !== undefined) return memoObj[k];
     if (k <= 1) return k;
-    await new Promise(res => setTimeout(res, speed));
+    await wait(speed);
     const val = await fib(k - 1, memoObj) + await fib(k - 2, memoObj);
     memoObj[k] = val;
     setMemo({ ...memoObj });

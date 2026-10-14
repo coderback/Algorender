@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import {
   ControlsSection,
@@ -13,6 +14,7 @@ import {
 import { FaSearch, FaTable, FaFont } from 'react-icons/fa';
 
 const ZAlgorithmVisualizer = () => {
+  const wait = useCancellableWait();
   const [text, setText] = useState('');
   const [pattern, setPattern] = useState('');
   const [matches, setMatches] = useState([]);
@@ -56,7 +58,7 @@ const ZAlgorithmVisualizer = () => {
     for (let i = 1; i < n; i++) {
       setCurrentPosition(i);
       setZArray([...z]);
-      await new Promise(resolve => setTimeout(resolve, speed));
+      await wait(speed);
       
       comparisons++;
       if (i > r) {

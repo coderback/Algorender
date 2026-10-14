@@ -2,11 +2,13 @@
 
 import { useState, useRef } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { SpeedControl, VisualizerButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function InterpolationSearchVisualiser() {
+  const wait = useCancellableWait();
   const [array, setArray] = useState(Array.from({ length: 8 }, (_, i) => (i + 1) * 10));
   const [target, setTarget] = useState('');
   const [left, setLeft] = useState(null);
@@ -56,7 +58,7 @@ export default function InterpolationSearchVisualiser() {
       
       // Handle pause
       while (isPausedRef.current && isSearchingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await wait(100);
       }
 
       if (low === high) {
@@ -70,7 +72,7 @@ export default function InterpolationSearchVisualiser() {
         low + ((high - low) * (targetValue - array[low])) / (array[high] - array[low])
       );
       setPos(pos);
-      await new Promise(resolve => setTimeout(resolve, speed));
+      await wait(speed);
 
       if (array[pos] === targetValue) {
         setFoundIndex(pos);

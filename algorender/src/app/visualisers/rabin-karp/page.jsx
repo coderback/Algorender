@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import { 
   ControlsSection, 
@@ -13,6 +14,7 @@ import {
 import { FaHashtag, FaSearch } from 'react-icons/fa';
 
 const RabinKarpVisualizer = () => {
+  const wait = useCancellableWait();
   const [text, setText] = useState('');
   const [pattern, setPattern] = useState('');
   const [matches, setMatches] = useState([]);
@@ -65,7 +67,7 @@ const RabinKarpVisualizer = () => {
     // Slide the pattern over text one by one
     for (let i = 0; i <= n - m; i++) {
       setCurrentWindow(i);
-      await new Promise(resolve => setTimeout(resolve, speed));
+      await wait(speed);
       
       hashComparisons++;
       // Check the hash values of current window of text and pattern

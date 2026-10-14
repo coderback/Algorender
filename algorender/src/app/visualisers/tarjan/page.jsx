@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import {
   ControlsSection,
   SpeedControl,
@@ -27,6 +28,7 @@ function getAdjList(nodes, edges) {
 }
 
 export default function TarjanVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [sccs, setSccs] = useState([]);
   const [visited, setVisited] = useState([]);
@@ -62,7 +64,7 @@ export default function TarjanVisualiser() {
       setIndexMap({ ...indexMap });
       setLowLinkMap({ ...lowLinkMap });
       setVisited([...stack]);
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
       for (const w of adjList[v]) {
         if (indexMap[w] === undefined) {
           await strongConnect(w);
@@ -83,7 +85,7 @@ export default function TarjanVisualiser() {
         } while (w !== v);
         sccs.push([...scc]);
         setSccs([...sccs]);
-        await new Promise(res => setTimeout(res, speed / 2));
+        await wait(speed / 2);
       }
     }
     for (const v of graph.nodes) {

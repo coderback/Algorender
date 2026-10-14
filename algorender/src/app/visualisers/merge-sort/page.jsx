@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import Button from '@/components/Button';
 import SortingChart from '@/components/SortingChart';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +16,7 @@ const generateRandomArray = () => {
 };
 
 export default function MergeSort() {
+  const wait = useCancellableWait();
   const [array, setArray] = useState([]);
   const [isSorting, setIsSorting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -34,9 +36,9 @@ export default function MergeSort() {
 
   const sleep = async (ms) => {
     while (pauseRef.current) {
-      await new Promise(r => setTimeout(r, 100)); // Check every 100ms
+      await wait(100); // Check every 100ms
     }
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return wait(ms);
   };
 
   const merge = async (arr, left, mid, right, newComparisons, newSwaps) => {

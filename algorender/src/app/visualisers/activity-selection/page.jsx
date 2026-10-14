@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +25,7 @@ const initialActivities = [
 ];
 
 export default function ActivitySelectionVisualiser() {
+  const wait = useCancellableWait();
   const [activities, setActivities] = useState(initialActivities);
   const [selected, setSelected] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -59,7 +61,7 @@ export default function ActivitySelectionVisualiser() {
         selected.push(act);
         lastEnd = act.end;
         setSelected([...selected]);
-        await new Promise(res => setTimeout(res, speed));
+        await wait(speed);
       }
     }
     setIsRunning(false);

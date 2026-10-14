@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import {
   ControlsSection,
   SpeedControl,
@@ -27,6 +28,7 @@ function getAdjList(nodes, edges) {
 }
 
 export default function TopologicalSortVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [order, setOrder] = useState([]);
   const [visited, setVisited] = useState([]);
@@ -48,7 +50,7 @@ export default function TopologicalSortVisualiser() {
     async function dfs(node) {
       visitedSet.add(node);
       setVisited([...visitedSet]);
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
       for (const neighbor of adjList[node]) {
         if (!visitedSet.has(neighbor)) {
           await dfs(neighbor);
@@ -56,7 +58,7 @@ export default function TopologicalSortVisualiser() {
       }
       stack.push(node);
       setOrder([...stack].reverse());
-      await new Promise(res => setTimeout(res, speed / 2));
+      await wait(speed / 2);
     }
     for (const node of graph.nodes) {
       if (!visitedSet.has(node)) {

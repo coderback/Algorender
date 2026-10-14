@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { SpeedControl, VisualizerButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 export default function JumpSearchVisualiser() {
+  const wait = useCancellableWait();
   const [array, setArray] = useState([]);
   const [target, setTarget] = useState('');
   const [currentIndex, setCurrentIndex] = useState(null);
@@ -64,9 +66,9 @@ export default function JumpSearchVisualiser() {
       
       // Handle pause
       while (isPausedRef.current && isSearchingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await wait(100);
       }
-      await new Promise(resolve => setTimeout(resolve, speed));
+      await wait(speed);
       
       prev = curr;
       curr += step;
@@ -80,9 +82,9 @@ export default function JumpSearchVisualiser() {
       
       // Handle pause
       while (isPausedRef.current && isSearchingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await wait(100);
       }
-      await new Promise(resolve => setTimeout(resolve, speed));
+      await wait(speed);
       
       if (array[prev] === targetValue) {
         setFoundIndex(prev);

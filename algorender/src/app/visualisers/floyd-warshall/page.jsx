@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import { 
   ControlsSection, 
   SpeedControl,
@@ -19,6 +20,7 @@ const initialMatrix = [
 ];
 
 export default function FloydWarshallVisualiser() {
+  const wait = useCancellableWait();
   const [nodes, setNodes] = useState(initialNodes);
   const [matrix, setMatrix] = useState(initialMatrix.map(row => [...row]));
   const [k, setK] = useState(0);
@@ -41,11 +43,11 @@ export default function FloydWarshallVisualiser() {
           if (dist[i][step] + dist[step][j] < dist[i][j]) {
             dist[i][j] = dist[i][step] + dist[step][j];
             setMatrix(dist.map(row => [...row]));
-            await new Promise(res => setTimeout(res, speed));
+            await wait(speed);
           }
         }
       }
-      await new Promise(res => setTimeout(res, speed));
+      await wait(speed);
     }
     setIsRunning(false);
   };

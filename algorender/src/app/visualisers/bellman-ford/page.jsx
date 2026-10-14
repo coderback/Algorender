@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import { 
   ControlsSection, 
   SpeedControl,
@@ -28,6 +29,7 @@ const initialGraph = {
 };
 
 export default function BellmanFordVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [startNode, setStartNode] = useState(0);
   const [distances, setDistances] = useState({});
@@ -54,7 +56,7 @@ export default function BellmanFordVisualiser() {
       let updated = false;
       for (const { from, to, weight } of graph.edges) {
         setUpdatedEdge([from, to]);
-        await new Promise(res => setTimeout(res, speed));
+        await wait(speed);
         if (dist[from] !== Infinity && dist[from] + weight < dist[to]) {
           dist[to] = dist[from] + weight;
           setDistances({ ...dist });

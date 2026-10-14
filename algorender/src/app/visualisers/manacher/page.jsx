@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import {
   ControlsSection,
@@ -13,6 +14,7 @@ import {
 import { FaSearch, FaTable, FaFont, FaCircle } from 'react-icons/fa';
 
 const ManacherVisualizer = () => {
+  const wait = useCancellableWait();
   const [text, setText] = useState('');
   const [palindromes, setPalindromes] = useState([]);
   const [transformedString, setTransformedString] = useState('');
@@ -60,7 +62,7 @@ const ManacherVisualizer = () => {
       setCurrentCenter(center);
       setCurrentRight(right);
       setPArray([...p]);
-      await new Promise(resolve => setTimeout(resolve, speed));
+      await wait(speed);
       
       comparisons++;
       if (i < right) {
@@ -77,7 +79,7 @@ const ManacherVisualizer = () => {
         
         // Update visualization during expansion
         setPArray([...p]);
-        await new Promise(resolve => setTimeout(resolve, speed / 2));
+        await wait(speed / 2);
       }
       
       if (i + p[i] > right) {

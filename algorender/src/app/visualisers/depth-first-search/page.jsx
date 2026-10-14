@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useCancellableWait } from '@/hooks/useCancellableWait';
 import {
   ControlsSection,
   SpeedControl,
@@ -28,6 +29,7 @@ function getAdjList(nodes, edges) {
 }
 
 export default function DFSVisualiser() {
+  const wait = useCancellableWait();
   const [graph, setGraph] = useState(initialGraph);
   const [startNode, setStartNode] = useState(0);
   const [visited, setVisited] = useState([]);
@@ -57,7 +59,7 @@ export default function DFSVisualiser() {
         visitedSet.add(node);
         setVisited([...visitedOrder]);
         setStack([...stack]);
-        await new Promise(res => setTimeout(res, speed));
+        await wait(speed);
         for (const neighbor of [...adjList[node]].reverse()) {
           if (!visitedSet.has(neighbor)) {
             stack.push(neighbor);
