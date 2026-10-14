@@ -5,7 +5,7 @@ import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   ControlsSection,
   SpeedControl,

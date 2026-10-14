@@ -30,8 +30,7 @@ Algorender is an interactive web application for visualizing algorithms and data
 - **Frontend Framework**: Next.js 15.3.3
 - **UI Library**: React 19.0.0
 - **Styling**: TailwindCSS 4.1.8
-- **Animations**: Motion 12.17.0
-- **Analytics**: Vercel Analytics and Speed Insights
+- **Analytics**: Vercel Analytics
 
 ## Getting Started
 

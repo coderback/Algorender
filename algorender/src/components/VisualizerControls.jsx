@@ -1,6 +1,6 @@
 'use client';
 
-import { FaTachometerAlt, FaSort, FaPlay, FaPause, FaRandom, FaSearch, FaUndo, FaRoute, FaProjectDiagram, FaPlus, FaMinus, FaEdit, FaCheckCircle, FaTimesCircle, FaTimes } from 'react-icons/fa';
+import { FaTachometerAlt, FaSort, FaPlay, FaPause, FaRandom, FaSearch, FaUndo, FaRoute, FaPlus, FaMinus, FaCheckCircle, FaTimesCircle, FaTimes } from 'react-icons/fa';
 import Button from './Button';
 
 // Standardized Speed Control based on linear-search pattern

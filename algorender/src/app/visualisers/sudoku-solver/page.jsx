@@ -10,7 +10,7 @@ import {
   StatisticsDisplay,
   ButtonPresets
 } from '@/components/VisualizerControls';
-import { FaPuzzlePiece, FaRandom, FaPlay, FaCog } from 'react-icons/fa';
+import { FaPuzzlePiece, FaRandom, FaPlay } from 'react-icons/fa';
 
 export default function SudokuVisualizer() {
   const wait = useCancellableWait();

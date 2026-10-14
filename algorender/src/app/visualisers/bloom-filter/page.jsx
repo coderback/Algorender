@@ -4,8 +4,7 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { FaFilter, FaPlus, FaSearch, FaUndo, FaHashtag } from 'react-icons/fa';
 
 export default function BloomFilterVisualiser() {

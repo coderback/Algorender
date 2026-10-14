@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import InputControl from '@/components/InputControl';
-import { Card, CardContent } from '@/components/ui/card';
-import { FaFont } from 'react-icons/fa';
+import { Card } from '@/components/ui/card';
 import { 
   ControlsSection, 
   EnhancedDataStructureButtonGrid, 

@@ -218,9 +218,8 @@ import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
 import SortingChart from '@/components/SortingChart';
 import VisualizerControls from '@/components/VisualizerControls';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 
 // Algorithm metadata
 const ALGORITHM_INFO = {
@@ -424,7 +423,7 @@ export default function YourAlgorithmVisualizer() {
                 disabled={array.length === 0}
               />
               
-              <Separator />
+              <hr className="border-gray-200" />
               
               {/* Speed Control */}
               <div className="space-y-2">
@@ -448,7 +447,7 @@ export default function YourAlgorithmVisualizer() {
                 <Button
                   onClick={initializeArray}
                   disabled={isRunning}
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                 >
                   Generate New Array
@@ -530,10 +529,8 @@ import { useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
 import VisualizerControls from '@/components/VisualizerControls';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 // Algorithm metadata
 const ALGORITHM_INFO = {
@@ -851,7 +848,7 @@ export default function YourGraphAlgorithmVisualizer() {
               {/* Node Selection */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="start-node">Start Node</Label>
+                  <label className="block text-sm font-medium text-gray-700" htmlFor="start-node">Start Node</label>
                   <select
                     id="start-node"
                     value={startNode}
@@ -867,7 +864,7 @@ export default function YourGraphAlgorithmVisualizer() {
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="end-node">End Node</Label>
+                  <label className="block text-sm font-medium text-gray-700" htmlFor="end-node">End Node</label>
                   <select
                     id="end-node"
                     value={endNode}
@@ -886,7 +883,7 @@ export default function YourGraphAlgorithmVisualizer() {
               
               {/* Speed Control */}
               <div className="space-y-2">
-                <Label>Speed: {speed}ms</Label>
+                <label className="block text-sm font-medium text-gray-700">Speed: {speed}ms</label>
                 <input
                   type="range"
                   min="100"
@@ -951,10 +948,8 @@ import { useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
 import VisualizerControls from '@/components/VisualizerControls';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 // Data structure metadata
 const DATA_STRUCTURE_INFO = {
@@ -1232,8 +1227,8 @@ export default function YourDataStructureVisualizer() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="input-value">Value</Label>
-                <Input
+                <label className="block text-sm font-medium text-gray-700" htmlFor="input-value">Value</label>
+                <input className="w-full h-11 px-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   id="input-value"
                   type="number"
                   value={inputValue}
@@ -1254,7 +1249,7 @@ export default function YourDataStructureVisualizer() {
                 <Button
                   onClick={searchElement}
                   disabled={isOperating || !inputValue.trim()}
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                 >
                   Search
@@ -1262,7 +1257,7 @@ export default function YourDataStructureVisualizer() {
                 <Button
                   onClick={deleteElement}
                   disabled={isOperating || !inputValue.trim()}
-                  variant="destructive"
+                  variant="danger"
                   className="w-full"
                 >
                   Delete
@@ -1272,7 +1267,7 @@ export default function YourDataStructureVisualizer() {
               <Button
                 onClick={clearStructure}
                 disabled={isOperating}
-                variant="outline"
+                variant="secondary"
                 className="w-full"
               >
                 Clear All
@@ -1280,7 +1275,7 @@ export default function YourDataStructureVisualizer() {
               
               {/* Speed Control */}
               <div className="space-y-2">
-                <Label>Animation Speed: {speed}ms</Label>
+                <label className="block text-sm font-medium text-gray-700">Animation Speed: {speed}ms</label>
                 <input
                   type="range"
                   min="100"
@@ -1364,10 +1359,8 @@ import { useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
 import VisualizerControls from '@/components/VisualizerControls';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 // Algorithm metadata
 const ALGORITHM_INFO = {
@@ -1656,8 +1649,8 @@ export default function YourDPAlgorithmVisualizer() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="input1">Input 1</Label>
-                <Input
+                <label className="block text-sm font-medium text-gray-700" htmlFor="input1">Input 1</label>
+                <input className="w-full h-11 px-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   id="input1"
                   value={input1}
                   onChange={(e) => setInput1(e.target.value.toUpperCase())}
@@ -1666,8 +1659,8 @@ export default function YourDPAlgorithmVisualizer() {
                 />
               </div>
               <div>
-                <Label htmlFor="input2">Input 2</Label>
-                <Input
+                <label className="block text-sm font-medium text-gray-700" htmlFor="input2">Input 2</label>
+                <input className="w-full h-11 px-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   id="input2"
                   value={input2}
                   onChange={(e) => setInput2(e.target.value.toUpperCase())}
@@ -1679,7 +1672,7 @@ export default function YourDPAlgorithmVisualizer() {
               <Button
                 onClick={initializeDP}
                 disabled={isRunning}
-                variant="outline"
+                variant="secondary"
                 className="w-full"
               >
                 Initialize Table
@@ -1705,7 +1698,7 @@ export default function YourDPAlgorithmVisualizer() {
               
               {/* Speed Control */}
               <div className="space-y-2">
-                <Label>Speed: {speed}ms</Label>
+                <label className="block text-sm font-medium text-gray-700">Speed: {speed}ms</label>
                 <input
                   type="range"
                   min="100"

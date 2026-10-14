@@ -11,7 +11,7 @@ import {
   StatisticsDisplay,
   ButtonPresets
 } from '@/components/VisualizerControls';
-import { FaSearch, FaTable, FaFont, FaCircle } from 'react-icons/fa';
+import { FaTable, FaCircle } from 'react-icons/fa';
 
 const ManacherVisualizer = () => {
   const wait = useCancellableWait();

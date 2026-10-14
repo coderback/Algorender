@@ -3,11 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
-import Button from '@/components/Button';
 import SortingChart from '@/components/SortingChart';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaSort, FaTachometerAlt, FaPlay, FaPause, FaUndo, FaRandom } from 'react-icons/fa';
 import { SpeedControl, VisualizerButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 
 // Function to generate random array of 8 numbers between 10 and 99

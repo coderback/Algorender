@@ -11,9 +11,8 @@ import {
   ErrorDisplay,
   SuccessDisplay 
 } from '@/components/VisualizerControls';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaKey, FaSearch, FaPlus, FaTrashAlt, FaExclamationTriangle, FaUndo } from 'react-icons/fa';
+import { Card } from '@/components/ui/card';
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 export default function HashTableVisualiser() {
   const [table, setTable] = useState(Array(10).fill(null));

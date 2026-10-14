@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
-import Button from '@/components/Button';
 import SortingChart from '@/components/SortingChart';
 import { SpeedControl, VisualizerButtonGrid, StatisticsDisplay, ControlsSection, ButtonPresets } from '@/components/VisualizerControls';
 

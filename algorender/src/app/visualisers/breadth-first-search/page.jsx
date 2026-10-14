@@ -5,9 +5,7 @@ import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
 import Button from '@/components/Button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { FaNetworkWired, FaTachometerAlt, FaPlay, FaUndo, FaNodeJs } from 'react-icons/fa';
+import { FaNetworkWired, FaTachometerAlt, FaUndo, FaNodeJs } from 'react-icons/fa';
 
 const initialGraph = {
   nodes: [0, 1, 2, 3, 4, 5],

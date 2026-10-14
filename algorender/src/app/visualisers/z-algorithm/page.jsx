@@ -11,7 +11,7 @@ import {
   StatisticsDisplay,
   ButtonPresets
 } from '@/components/VisualizerControls';
-import { FaSearch, FaTable, FaFont } from 'react-icons/fa';
+import { FaSearch, FaTable } from 'react-icons/fa';
 
 const ZAlgorithmVisualizer = () => {
   const wait = useCancellableWait();

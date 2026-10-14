@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useCancellableWait } from '@/hooks/useCancellableWait';
 import InputControl from '@/components/InputControl';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   ControlsSection,
   SpeedControl,
