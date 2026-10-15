@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { collectErrors } from './errors';
 
 const SORTS = [
   'bubble-sort',
@@ -13,7 +14,7 @@ const SORTS = [
 
 const narration = (page: Page) => page.getByTestId('narration');
 const stepCounter = (page: Page) => page.getByText(/^\d+\/\d+$/);
-const mainLane = (page: Page) => page.locator('section[aria-label="Array"] p.sr-only');
+const mainLane = (page: Page) => page.getByRole('group', { name: 'Array', exact: true }).locator('p.sr-only');
 
 /** Opens a visualiser and waits until React has attached its handlers. */
 async function open(page: Page, path: string) {
@@ -52,9 +53,7 @@ function distinctPositions(samples: { x: number; y: number }[]) {
 
 for (const slug of SORTS) {
   test(`${slug} plays to a sorted end with no console errors`, async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    const errors = collectErrors(page);
 
     await open(page, `/visualisers/${slug}?preset=random&n=8&seed=3`);
     await expect(stepCounter(page)).toHaveText(/^1\/\d+$/);

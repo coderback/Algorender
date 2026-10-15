@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { collectErrors } from './errors';
 
 const lessonPaths = ['binary-search', 'two-pointers', 'memoization', 'dijkstra'];
 
@@ -19,9 +20,7 @@ test('the concept map links lessons and visualisers', async ({ page }) => {
 
 for (const slug of lessonPaths) {
   test(`${slug} lesson renders every stage with no console errors`, async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    const errors = collectErrors(page);
     await openLesson(page, slug);
     for (const stage of ['Why it matters', 'Key parts', 'See it work', 'Predict', 'Check yourself', 'Recap']) {
       await expect(page.getByText(stage, { exact: true }).first()).toBeVisible();

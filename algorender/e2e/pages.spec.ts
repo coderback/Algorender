@@ -10,10 +10,12 @@ test('the sorting race runs to a winner', async ({ page }) => {
 test('the growth chart has a legend, a keyboard-readable crosshair and a table view', async ({ page }) => {
   await page.goto('/compare');
   await expect(page.getByRole('list', { name: 'Legend' })).toContainText('Merge Sort');
-  await page.getByRole('img', { name: /against input size n/ }).locator('rect[tabindex="0"]').focus();
+  const reader = page.getByRole('group', { name: /against input size n/ }).getByRole('slider', { name: /Input size/ });
+  await reader.focus();
   await expect(page.getByRole('status').filter({ hasText: 'n = 64' })).toBeVisible();
   await page.keyboard.press('ArrowLeft');
   await expect(page.getByRole('status').filter({ hasText: 'n = 60' })).toBeVisible();
+  await expect(reader).toHaveAttribute('aria-valuetext', 'n = 60');
   await page.getByRole('button', { name: 'Show as a table' }).click();
   await expect(page.getByRole('table')).toContainText('64');
 });

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { collectErrors } from './errors';
 import { visualisers } from '../src/data/visualisers.js';
 
 const narration = (page: Page) => page.getByTestId('narration');
@@ -12,9 +13,7 @@ async function open(page: Page, path: string) {
 // algorithm can be run to its last step, with no console errors.
 for (const v of visualisers.filter((v: { hidden?: boolean }) => !v.hidden)) {
   test(`${v.slug} loads and runs`, async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    const errors = collectErrors(page);
 
     await open(page, v.path);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(v.name);
