@@ -25,6 +25,8 @@ export type TracePlayer = {
   last: number;
   playing: boolean;
   speed: number;
+  /** True when a gate (an unanswered prediction) holds the player at this frame. */
+  blocked: boolean;
   /** How long the view should take to animate into the current frame. 0 = jump. */
   tweenMs: number;
   play: () => void;
@@ -39,19 +41,31 @@ export type TracePlayer = {
 /**
  * Plays a recorded trace on a requestAnimationFrame clock. Holds only an index:
  * the frames themselves are immutable, so stepping back is as cheap as forward.
+ *
+ * `gate(i)` returning true stops playback at frame i and blocks stepping
+ * forward from it (Predict mode uses this to wait for an answer). Seeking can
+ * still jump past a gate: exploring is always allowed. `autoPlay` starts
+ * playing on mount (used to animate a data-structure operation right away).
  */
-export function useTracePlayer(frameCount: number, initialIndex = 0): TracePlayer {
+export function useTracePlayer(
+  frameCount: number,
+  { initialIndex = 0, gate, autoPlay = false }: { initialIndex?: number; gate?: (index: number) => boolean; autoPlay?: boolean } = {},
+): TracePlayer {
   const last = Math.max(0, frameCount - 1);
   const [index, setIndex] = useState(() => clamp(initialIndex, 0, last));
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(() => autoPlay && last > 0 && !gate?.(clamp(initialIndex, 0, last)));
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
   const [instant, setInstant] = useState(false);
 
-  // Mirror of `index` for the playback loop, which must not restart every step.
+  // Mirrors for the playback loop and callbacks, which must not restart every step.
   const indexRef = useRef(index);
+  const gateRef = useRef(gate);
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
+  useEffect(() => {
+    gateRef.current = gate;
+  }, [gate]);
 
   useEffect(() => {
     if (!playing) return;
@@ -64,16 +78,17 @@ export function useTracePlayer(frameCount: number, initialIndex = 0): TracePlaye
     const tick = (now: number) => {
       if (prev !== null) elapsed += now - prev;
       prev = now;
-      if (elapsed >= interval) {
-        const steps = Math.floor(elapsed / interval);
-        elapsed -= steps * interval;
-        pos = Math.min(last, pos + steps);
-        setIndex(pos);
-        if (pos >= last) {
+      while (elapsed >= interval) {
+        elapsed -= interval;
+        pos += 1;
+        // Stop on arrival at the end or at a gated frame; never run past one.
+        if (pos >= last || gateRef.current?.(pos)) {
+          setIndex(Math.min(pos, last));
           setPlaying(false);
           return;
         }
       }
+      setIndex(pos);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -82,6 +97,7 @@ export function useTracePlayer(frameCount: number, initialIndex = 0): TracePlaye
 
   const play = useCallback(() => {
     setInstant(false);
+    if (gateRef.current?.(indexRef.current)) return;
     if (indexRef.current >= last) {
       // Replaying from the end: jump back to the start first.
       indexRef.current = 0;
@@ -101,14 +117,18 @@ export function useTracePlayer(frameCount: number, initialIndex = 0): TracePlaye
     [last],
   );
 
-  const stepForward = useCallback(() => stepTo(indexRef.current + 1, false), [stepTo]);
+  const stepForward = useCallback(() => {
+    if (gateRef.current?.(indexRef.current)) return;
+    stepTo(indexRef.current + 1, false);
+  }, [stepTo]);
   const stepBack = useCallback(() => stepTo(indexRef.current - 1, false), [stepTo]);
   const seek = useCallback((next: number) => stepTo(next, true), [stepTo]);
   const toggle = useCallback(() => (playing ? pause() : play()), [playing, pause, play]);
 
   const tweenMs = instant ? 0 : playing ? playTweenMs(speed) : MANUAL_TWEEN_MS;
+  const blocked = gate?.(index) ?? false;
 
-  return { index, last, playing, speed, tweenMs, play, pause, toggle, stepForward, stepBack, seek, setSpeed };
+  return { index, last, playing, speed, blocked, tweenMs, play, pause, toggle, stepForward, stepBack, seek, setSpeed };
 }
 
 /** Keyboard shortcuts: ←/→ step, Space play/pause, Home/End jump. */

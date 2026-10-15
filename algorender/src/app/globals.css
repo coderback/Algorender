@@ -38,7 +38,8 @@
   --color-mark-swap: #d55e00;
   --color-mark-write: #cc79a7;
   --color-mark-focus: #e69f00;
-  --color-mark-sorted: #009e73;
+  --color-mark-frontier: #56b4e9;
+  --color-mark-done: #009e73;
 }
 
 /*

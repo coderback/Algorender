@@ -6,10 +6,22 @@
 
 export type VarValue = string | number | boolean | null;
 
+/**
+ * A question about what happens in the NEXT frame, asked in Predict mode before
+ * the learner may step past this frame. The frame's own note must not give the
+ * answer away.
+ */
+export type Checkpoint = {
+  question: string;
+  choices: readonly string[];
+  /** Index into `choices`. */
+  answer: number;
+};
+
 export type Frame<S> = {
   /** Snapshot of everything the view needs. Shares unchanged parts with the previous frame. */
   state: S;
-  /** Index into the algorithm's pseudo-code, or null when no line applies. */
+  /** Index into the pseudo-code, or null when no line applies. */
   line: number | null;
   /** One-sentence narration of what this step does and why. Also announced to screen readers. */
   note: string;
@@ -17,6 +29,7 @@ export type Frame<S> = {
   vars: Record<string, VarValue>;
   /** Running counters (comparisons, swaps, writes, …). */
   stats: Record<string, number>;
+  checkpoint?: Checkpoint;
 };
 
 export type Trace<S> = {

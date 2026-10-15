@@ -1,8 +1,10 @@
+import type { MarkKey } from '@/viz/marks';
+
 /** Stable identity of an array element. Elements are keyed by id, never by index, so they can move. */
 export type ItemId = string;
 
-/** What an element is doing in this frame. Each mark has one colour and one glyph across the app. */
-export type Mark = 'compare' | 'swap' | 'write' | 'pivot' | 'min' | 'key' | 'sorted';
+/** What an element is doing in this frame; see the shared vocabulary in src/viz/marks.ts. */
+export type Mark = MarkKey;
 
 /** A row of slots. Items move between slots and between lanes; null is an empty slot. */
 export type Lane = {

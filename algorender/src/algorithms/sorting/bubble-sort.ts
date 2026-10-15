@@ -1,5 +1,8 @@
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, SWAPS, type ArrayAlgorithm } from '../types';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, SWAPS, sortTraits } from './shared';
 
 const pseudocode = [
   'for i from 0 to n − 2:',
@@ -40,23 +43,35 @@ function* run(input: readonly number[]) {
       const b = t.value(j + 1);
       t.count('comparisons');
       const outOfOrder = a > b;
+      const view = { pointers: { j, 'j+1': j + 1 }, ranges: unsorted };
       yield t.frame({
+        ...view,
         line: 3,
-        note: outOfOrder ? `${a} > ${b}: this pair is out of order.` : `${a} ≤ ${b}: already in order, so leave them.`,
+        note: `Compare neighbours ${a} and ${b}.`,
         marks: { compare: [j, j + 1] },
-        pointers: { j, 'j+1': j + 1 },
-        ranges: unsorted,
         vars: { i, j, swapped },
+        checkpoint: {
+          question: `Are ${a} and ${b} out of order?`,
+          choices: ['Yes: swap them', 'No: leave them'],
+          answer: outOfOrder ? 0 : 1,
+        },
       });
       if (outOfOrder) {
         t.swap(j, j + 1);
         swapped = true;
         yield t.frame({
+          ...view,
           line: 4,
-          note: `Swap them: ${a} moves one place right.`,
+          note: `${a} > ${b}, so swap them: ${a} moves one place right.`,
           marks: { swap: [j, j + 1] },
-          pointers: { j, 'j+1': j + 1 },
-          ranges: unsorted,
+          vars: { i, j, swapped },
+        });
+      } else {
+        yield t.frame({
+          ...view,
+          line: 3,
+          note: `${a} ≤ ${b}: already in order, so leave them.`,
+          marks: { compare: [j, j + 1] },
           vars: { i, j, swapped },
         });
       }
@@ -82,23 +97,24 @@ function* run(input: readonly number[]) {
   yield t.frame({ note: 'Sorted: every value has bubbled into place.' });
 }
 
-export const bubbleSort: ArrayAlgorithm = {
+export const bubbleSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'bubble-sort',
   view: 'array',
-  input: { min: 5, max: 99, defaultSize: 10, maxSize: 40 },
+  input: arrayInput({ min: 5, max: 99, defaultSize: 10, maxSize: 40 }),
   pseudocode,
   stats: [COMPARISONS, SWAPS],
-  legend: ['compare', 'swap', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, 'compare', 'swap', 'sorted'],
   run,
   content: {
     idea: 'Walk through the array comparing each pair of neighbours, swapping any pair that is out of order. After one pass the largest value has "bubbled" to the end. Repeat on the shrinking unsorted part.',
     invariant: 'After k passes, the last k positions hold the k largest values in their final order.',
     whenToUse: 'Almost never in production: it makes O(n²) comparisons. It is the simplest sort to reason about, and with the early-exit check it finishes after one pass on input that is already sorted.',
-    properties: { stable: true, inPlace: true, comparisonBased: true },
+    traits: sortTraits({ stable: true, inPlace: true, comparisonBased: true }),
     experiments: [
-      { preset: 'sorted', prompt: 'One pass, no swaps, and it stops: the O(n) best case.' },
-      { preset: 'reversed', prompt: 'Every comparison is a swap: the O(n²) worst case.' },
-      { preset: 'nearly-sorted', prompt: 'Count the passes. How does it compare with reversed input?' },
+      { example: 'sorted', prompt: 'One pass, no swaps, and it stops: the O(n) best case.' },
+      { example: 'reversed', prompt: 'Every comparison is a swap: the O(n²) worst case.' },
+      { example: 'nearly-sorted', prompt: 'Count the passes. How does it compare with reversed input?' },
     ],
   },
-};
+});

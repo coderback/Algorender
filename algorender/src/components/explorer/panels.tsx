@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { VarValue } from '@/engine/types';
-import { DEFAULT_BAR, MARKS } from '@/viz/array/marks';
-import type { Mark } from '@/viz/array/types';
+import type { LegendEntry } from '@/engine/module';
+import { MARKS, NEUTRAL } from '@/viz/marks';
 
 export function Panel({ title, children, className = '' }: { title: string; children: ReactNode; className?: string }) {
   return (
@@ -88,23 +88,32 @@ export function VarsPanel({ vars }: { vars: Record<string, VarValue> }) {
   );
 }
 
-export function Legend({ marks }: { marks: readonly Mark[] }) {
+export function Legend({ entries }: { entries: readonly LegendEntry[] }) {
   return (
     <Panel title="Legend">
       <ul className="grid grid-cols-2 gap-x-3 gap-y-2 px-4 py-3 text-sm text-gray-700">
-        <li className="flex items-center gap-2">
-          <span className={`h-4 w-3 rounded-sm ring-1 ring-black/10 ring-inset ${DEFAULT_BAR}`} aria-hidden />
-          Not yet placed
-        </li>
-        {marks.map((m) => (
-          <li key={m} className="flex items-center gap-2">
-            <span className={`h-4 w-3 rounded-sm ring-1 ring-black/10 ring-inset ${MARKS[m].bar}`} aria-hidden />
-            <span className={`w-6 text-center text-xs font-bold ${MARKS[m].text}`} aria-hidden>
-              {MARKS[m].glyph}
-            </span>
-            {MARKS[m].label}
-          </li>
-        ))}
+        {entries.map((entry) => {
+          if (typeof entry === 'object' && 'neutral' in entry) {
+            return (
+              <li key="neutral" className="flex items-center gap-2">
+                <span className={`h-4 w-3 rounded-sm ring-1 ring-black/10 ring-inset ${NEUTRAL.bg}`} aria-hidden />
+                <span className="w-6" aria-hidden />
+                {entry.neutral}
+              </li>
+            );
+          }
+          const mark = typeof entry === 'string' ? entry : entry.mark;
+          const style = MARKS[mark];
+          return (
+            <li key={mark} className="flex items-center gap-2">
+              <span className={`h-4 w-3 shrink-0 rounded-sm ring-1 ring-black/10 ring-inset ${style.bg}`} aria-hidden />
+              <span className={`w-6 shrink-0 text-center text-xs font-bold ${style.text}`} aria-hidden>
+                {style.glyph}
+              </span>
+              {typeof entry === 'string' ? style.label : entry.label}
+            </li>
+          );
+        })}
       </ul>
     </Panel>
   );

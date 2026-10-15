@@ -1,5 +1,8 @@
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, SWAPS, type ArrayAlgorithm } from '../types';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, SWAPS, YES_NO, sortTraits } from './shared';
 
 const pseudocode = [
   'for i from 0 to n − 2:',
@@ -42,23 +45,24 @@ function* run(input: readonly number[]) {
       const smaller = v < best;
       yield t.frame({
         line: 3,
-        note: smaller ? `${v} < ${best}: a new smallest value.` : `${v} ≥ ${best}: not smaller, keep looking.`,
+        note: `Compare ${v} with the smallest so far, ${best}.`,
         marks: { compare: [j], min: [min] },
         pointers: { i, j, min },
         ranges: unsorted,
         vars: { i, j, min },
+        checkpoint: { question: `Is ${v} the new smallest value?`, choices: YES_NO, answer: smaller ? 0 : 1 },
       });
-      if (smaller) {
-        min = j;
-        yield t.frame({
-          line: 4,
-          note: `Remember position ${j} (value ${v}) as the smallest so far.`,
-          marks: { min: [min] },
-          pointers: { i, j, min },
-          ranges: unsorted,
-          vars: { i, j, min },
-        });
-      }
+      if (smaller) min = j;
+      yield t.frame({
+        line: smaller ? 4 : 3,
+        note: smaller
+          ? `${v} < ${best}: remember position ${j} as the new smallest.`
+          : `${v} ≥ ${best}: not smaller, keep looking.`,
+        marks: smaller ? { min: [min] } : { compare: [j], min: [min] },
+        pointers: { i, j, min },
+        ranges: unsorted,
+        vars: { i, j, min },
+      });
     }
 
     const smallest = t.value(min);
@@ -87,22 +91,23 @@ function* run(input: readonly number[]) {
   yield t.frame({ note: 'Sorted: the last element is the largest, so it is already in place.' });
 }
 
-export const selectionSort: ArrayAlgorithm = {
+export const selectionSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'selection-sort',
   view: 'array',
-  input: { min: 5, max: 99, defaultSize: 10, maxSize: 40 },
+  input: arrayInput({ min: 5, max: 99, defaultSize: 10, maxSize: 40 }),
   pseudocode,
   stats: [COMPARISONS, SWAPS],
-  legend: ['compare', 'min', 'swap', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, 'compare', 'min', 'swap', 'sorted'],
   run,
   content: {
     idea: 'Scan the unsorted part for its smallest value and swap it to the front of that part. The sorted part grows from the left by one element per pass.',
     invariant: 'Positions 0 to i − 1 hold the i smallest values, already in their final order.',
     whenToUse: 'When writes are expensive: it makes at most n − 1 swaps. It still makes about n²/2 comparisons whatever the input, so it is rarely the fastest choice.',
-    properties: { stable: false, inPlace: true, comparisonBased: true },
+    traits: sortTraits({ stable: false, inPlace: true, comparisonBased: true }),
     experiments: [
-      { preset: 'sorted', prompt: 'The comparison count does not drop: selection sort always scans the whole unsorted part.' },
-      { preset: 'reversed', prompt: 'Count the swaps: still at most n − 1, unlike bubble sort.' },
+      { example: 'sorted', prompt: 'The comparison count does not drop: selection sort always scans the whole unsorted part.' },
+      { example: 'reversed', prompt: 'Count the swaps: still at most n − 1, unlike bubble sort.' },
     ],
   },
-};
+});

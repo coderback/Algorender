@@ -1,5 +1,8 @@
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, WRITES, type ArrayAlgorithm } from '../types';
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, WRITES, sortTraits } from './shared';
 
 const pseudocode = [
   'for place = 1, 10, 100, … ≤ max:',
@@ -71,6 +74,20 @@ function* run(input: readonly number[]) {
       const x = t.value(i);
       const d = digitOf(x, place);
       const pos = t.counter(COUNT, d) - 1;
+      // Distractors: the number's other digits, then a neighbouring digit.
+      const choices = [...new Set([d, ...[1, 10, 100].map((p) => digitOf(x, p)), (d + 1) % 10])].slice(0, 3).sort((a, b) => a - b);
+      yield t.frame({
+        line: 4,
+        note: `Next, place ${x} from position ${i}.`,
+        marks: { key: [i] },
+        pointers: { i },
+        vars: { place, i, x },
+        checkpoint: {
+          question: `Which count cell decides where ${x} goes in the ${name} pass?`,
+          choices: choices.map((c) => `count[${c}]`),
+          answer: choices.indexOf(d),
+        },
+      });
       t.setCounter(COUNT, d, pos);
       t.move(i, [OUTPUT, pos]);
       yield t.frame({
@@ -97,22 +114,23 @@ function* run(input: readonly number[]) {
   yield t.frame({ note: 'Sorted: every digit has had its pass, from least to most significant.' });
 }
 
-export const radixSort: ArrayAlgorithm = {
+export const radixSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'radix-sort',
   view: 'array',
-  input: { min: 1, max: 999, defaultSize: 10, maxSize: 24 },
+  input: arrayInput({ min: 1, max: 999, defaultSize: 10, maxSize: 24 }),
   pseudocode,
   stats: [COMPARISONS, WRITES],
-  legend: ['key', 'write', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, 'key', 'write', 'sorted'],
   run,
   content: {
     idea: 'Sort numbers one digit at a time, from the least significant digit to the most, using a stable counting sort for each digit. Because every pass is stable, the order from earlier digits survives as the tie-breaker.',
     invariant: 'After the pass for a given digit, the array is sorted by that digit and every digit to its right.',
     whenToUse: 'Fixed-width integer or string keys: O(d · (n + b)) time for d digits in base b, with no comparisons at all. Common for large integer datasets.',
-    properties: { stable: true, inPlace: false, comparisonBased: false },
+    traits: sortTraits({ stable: true, inPlace: false, comparisonBased: false }),
     experiments: [
-      { preset: 'random', prompt: 'In the tens pass, numbers with the same tens digit stay in ones-digit order: that is stability at work.' },
-      { preset: 'few-unique', prompt: 'Equal numbers always move together. Does the number of passes change?' },
+      { example: 'random', prompt: 'In the tens pass, numbers with the same tens digit stay in ones-digit order: that is stability at work.' },
+      { example: 'few-unique', prompt: 'Equal numbers always move together. Does the number of passes change?' },
     ],
   },
-};
+});

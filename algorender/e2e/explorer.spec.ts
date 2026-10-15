@@ -148,3 +148,30 @@ test('@mobile the visual, narration and controls fit without horizontal scroll',
   expect(overflow).toBeLessThanOrEqual(0);
   await expect(page.getByRole('button', { name: /Play/ })).toBeVisible();
 });
+
+test('predict mode stops at a decision until the learner answers', async ({ page }) => {
+  // Reversed input: the first comparison is out of order, so the answer is "Yes: swap them".
+  await open(page, '/visualisers/bubble-sort?preset=reversed&n=5&seed=1&mode=predict');
+  const forward = page.getByRole('button', { name: /Step forward|Answer the question first/ });
+  await forward.click(); // intro → start of pass 1
+  await forward.click(); // → first comparison, which asks a question
+  await expect(page.getByRole('group', { name: 'Predict the next step' })).toContainText('out of order?');
+  await expect(forward).toBeDisabled();
+
+  await page.keyboard.press('1');
+  await expect(page.getByText(/Right\. Step forward/)).toBeVisible();
+  await expect(page.getByLabel('Predictions correct')).toHaveText('1/1 right');
+  await expect(forward).toBeEnabled();
+  await forward.click();
+  await expect(narration(page)).toContainText('so swap them');
+});
+
+test('switching back to Watch mode removes the questions', async ({ page }) => {
+  await open(page, '/visualisers/quick-sort?preset=random&n=6&seed=4&mode=predict');
+  await page.keyboard.press('End');
+  await page.getByRole('button', { name: 'Watch' }).click();
+  await expect(page).not.toHaveURL(/mode=predict/);
+  await page.keyboard.press('Home');
+  await page.getByRole('button', { name: /Play/ }).click();
+  await expect(page.getByRole('group', { name: 'Predict the next step' })).toHaveCount(0);
+});

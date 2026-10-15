@@ -1,5 +1,8 @@
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, SWAPS, type ArrayAlgorithm } from '../types';
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, SWAPS, sortTraits } from './shared';
 
 const pseudocode = [
   'quickSort(lo, hi):',
@@ -50,21 +53,35 @@ function* run(input: readonly number[]) {
       const goesLeft = v < pivot;
       yield t.frame({
         line: 10,
-        note: goesLeft ? `${v} < ${pivot}: it belongs on the left side.` : `${v} ≥ ${pivot}: it stays on the right side.`,
+        note: `Compare ${v} with the pivot, ${pivot}.`,
         marks: { compare: [j], pivot: [hi] },
         pointers: { i, j },
         ranges: sides(lo, i, j),
         vars: { lo, hi, pivot, i, j, depth },
+        checkpoint: {
+          question: `Which side of the pivot does ${v} belong on?`,
+          choices: [`Left: smaller than ${pivot}`, `Right: at least ${pivot}`],
+          answer: goesLeft ? 0 : 1,
+        },
       });
-      if (goesLeft) {
+      if (!goesLeft) {
+        yield t.frame({
+          line: 10,
+          note: `${v} ≥ ${pivot}: it stays on the right side.`,
+          marks: { compare: [j], pivot: [hi] },
+          pointers: { i, j },
+          ranges: sides(lo, i, j + 1),
+          vars: { lo, hi, pivot, i, j, depth },
+        });
+      } else {
         const displaced = t.value(i);
         t.swap(i, j);
         yield t.frame({
           line: 11,
           note:
             i === j
-              ? `It is already at the boundary, so just grow the left side.`
-              : `Swap it with ${displaced}, the first value of the right side, and grow the left side.`,
+              ? `${v} < ${pivot}: it belongs on the left. It is already at the boundary, so just grow the left side.`
+              : `${v} < ${pivot}: it belongs on the left. Swap it with ${displaced}, the first value of the right side, and grow the left side.`,
           marks: { swap: i === j ? [] : [i, j], pivot: [hi] },
           pointers: { i: i + 1, j },
           ranges: sides(lo, i + 1, j + 1),
@@ -114,23 +131,24 @@ function* run(input: readonly number[]) {
   yield t.frame({ note: 'Sorted: every element has been a pivot or a one-element part.' });
 }
 
-export const quickSort: ArrayAlgorithm = {
+export const quickSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'quick-sort',
   view: 'array',
-  input: { min: 5, max: 99, defaultSize: 10, maxSize: 40 },
+  input: arrayInput({ min: 5, max: 99, defaultSize: 10, maxSize: 40 }),
   pseudocode,
   stats: [COMPARISONS, SWAPS],
-  legend: ['pivot', 'compare', 'swap', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, 'pivot', 'compare', 'swap', 'sorted'],
   run,
   content: {
     idea: 'Pick a pivot and partition the array so smaller values sit to its left and the rest to its right. The pivot is then in its final place, and each side is sorted the same way. This version (Lomuto partition) uses the last element as the pivot.',
     invariant: 'During partition: positions lo to i − 1 are smaller than the pivot, i to j − 1 are at least the pivot, and j onward are not yet examined.',
     whenToUse: 'The fastest general-purpose comparison sort in practice: in place with good cache behaviour. Real implementations pick the pivot at random or by median-of-three to avoid the O(n²) worst case.',
-    properties: { stable: false, inPlace: true, comparisonBased: true },
+    traits: sortTraits({ stable: false, inPlace: true, comparisonBased: true }),
     experiments: [
-      { preset: 'sorted', prompt: 'With the last element as pivot, every partition is maximally lopsided: the O(n²) worst case. Pivot choice matters.' },
-      { preset: 'random', prompt: 'Partitions are roughly balanced, so the work is about n log n.' },
-      { preset: 'few-unique', prompt: 'Many equal values all land on one side. How does that affect the partitions?' },
+      { example: 'sorted', prompt: 'With the last element as pivot, every partition is maximally lopsided: the O(n²) worst case. Pivot choice matters.' },
+      { example: 'random', prompt: 'Partitions are roughly balanced, so the work is about n log n.' },
+      { example: 'few-unique', prompt: 'Many equal values all land on one side. How does that affect the partitions?' },
     ],
   },
-};
+});

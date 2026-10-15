@@ -1,5 +1,8 @@
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, WRITES, type ArrayAlgorithm } from '../types';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, WRITES, YES_NO, sortTraits } from './shared';
 
 const pseudocode = [
   'for i from 1 to n − 1:',
@@ -47,6 +50,15 @@ function* run(input: readonly number[]) {
       const v = t.value(j);
       t.count('comparisons');
       const sorted = [{ from: 0, to: i, tone: 'left' as const, label: 'sorted part' }];
+      yield t.frame({
+        line: 3,
+        note: `Compare ${v} with the key, ${key}.`,
+        marks: { compare: [j], key: [[KEY, gap]] },
+        pointers: { j },
+        ranges: sorted,
+        vars: { i, j, key },
+        checkpoint: { question: `Does ${v} need to shift right to make room for ${key}?`, choices: YES_NO, answer: v > key ? 0 : 1 },
+      });
       if (v <= key) {
         yield t.frame({
           line: 3,
@@ -58,20 +70,12 @@ function* run(input: readonly number[]) {
         });
         break;
       }
-      yield t.frame({
-        line: 3,
-        note: `${v} > ${key}, so ${v} has to move right.`,
-        marks: { compare: [j], key: [[KEY, gap]] },
-        pointers: { j },
-        ranges: sorted,
-        vars: { i, j, key },
-      });
       t.move(j, j + 1);
       t.move([KEY, gap], [KEY, j], { count: false });
       gap = j;
       yield t.frame({
         line: 4,
-        note: `Shift ${v} one place right. The gap moves left to position ${j}.`,
+        note: `${v} > ${key}: shift ${v} one place right. The gap moves left to position ${j}.`,
         marks: { write: [j + 1], key: [[KEY, gap]] },
         pointers: { j },
         ranges: sorted,
@@ -103,22 +107,23 @@ function* run(input: readonly number[]) {
   yield t.frame({ note: 'Sorted: the sorted part now covers the whole array.' });
 }
 
-export const insertionSort: ArrayAlgorithm = {
+export const insertionSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'insertion-sort',
   view: 'array',
-  input: { min: 5, max: 99, defaultSize: 10, maxSize: 40 },
+  input: arrayInput({ min: 5, max: 99, defaultSize: 10, maxSize: 40 }),
   pseudocode,
   stats: [COMPARISONS, WRITES],
-  legend: ['key', 'compare', 'write', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, { mark: 'key', label: 'Key being inserted' }, 'compare', 'write', 'sorted'],
   run,
   content: {
     idea: 'Like sorting a hand of cards: take the next card, slide the larger cards in your hand one place right, and drop the card into the gap.',
     invariant: 'Positions 0 to i − 1 are sorted among themselves (but not necessarily final: a smaller value may still arrive).',
     whenToUse: 'Small or nearly sorted arrays. It runs in O(n + d) time, where d is the number of out-of-order pairs, which is why fast library sorts such as Timsort switch to it for short runs.',
-    properties: { stable: true, inPlace: true, comparisonBased: true },
+    traits: sortTraits({ stable: true, inPlace: true, comparisonBased: true }),
     experiments: [
-      { preset: 'nearly-sorted', prompt: 'Most values shift zero or one place: close to linear time.' },
-      { preset: 'reversed', prompt: 'Every value slides all the way to the front: the O(n²) worst case.' },
+      { example: 'nearly-sorted', prompt: 'Most values shift zero or one place: close to linear time.' },
+      { example: 'reversed', prompt: 'Every value slides all the way to the front: the O(n²) worst case.' },
     ],
   },
-};
+});

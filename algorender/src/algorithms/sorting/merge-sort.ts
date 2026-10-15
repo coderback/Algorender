@@ -1,5 +1,8 @@
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, WRITES, type ArrayAlgorithm } from '../types';
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, WRITES, sortTraits } from './shared';
 
 const pseudocode = [
   'mergeSort(lo, hi):',
@@ -50,6 +53,7 @@ function* run(input: readonly number[]) {
       const a = t.value(i);
       const b = t.value(j);
       t.count('comparisons');
+      const takeLeft = a <= b;
       yield t.frame({
         line: 9,
         note: `Compare the front of each half: ${a} and ${b}.`,
@@ -57,8 +61,12 @@ function* run(input: readonly number[]) {
         pointers: { i, j, k: [BUFFER, k] },
         ranges: halves(lo, mid, hi),
         vars: { lo, mid, hi, i, j, k, depth },
+        checkpoint: {
+          question: 'Which value goes into the buffer next?',
+          choices: [`${a}, from the left half`, `${b}, from the right half`],
+          answer: takeLeft ? 0 : 1,
+        },
       });
-      const takeLeft = a <= b;
       t.move(takeLeft ? i : j, [BUFFER, k]);
       yield t.frame({
         line: takeLeft ? 9 : 10,
@@ -131,22 +139,23 @@ function* run(input: readonly number[]) {
   yield t.frame({ note: 'Sorted: the final merge combined two sorted halves of the whole array.' });
 }
 
-export const mergeSort: ArrayAlgorithm = {
+export const mergeSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'merge-sort',
   view: 'array',
-  input: { min: 5, max: 99, defaultSize: 10, maxSize: 32 },
+  input: arrayInput({ min: 5, max: 99, defaultSize: 10, maxSize: 32 }),
   pseudocode,
   stats: [COMPARISONS, WRITES],
-  legend: ['compare', 'write', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, 'compare', 'write', 'sorted'],
   run,
   content: {
     idea: 'Split the array in half, sort each half recursively, then merge the two sorted halves by repeatedly taking the smaller front value. The work happens on the way back up: merging two sorted lists is easy.',
     invariant: 'When merge(lo, mid, hi) runs, both halves are already sorted, and the buffer always holds the smallest remaining values in order.',
     whenToUse: 'When you need a guaranteed O(n log n) and a stable sort, such as sorting linked lists or data too big for memory (external sorting). The price is O(n) extra space for the buffer.',
-    properties: { stable: true, inPlace: false, comparisonBased: true },
+    traits: sortTraits({ stable: true, inPlace: false, comparisonBased: true }),
     experiments: [
-      { preset: 'sorted', prompt: 'The work barely changes: merge sort does O(n log n) whatever the order.' },
-      { preset: 'reversed', prompt: 'Each merge empties one half before touching the other. Watch the leftovers step.' },
+      { example: 'sorted', prompt: 'The work barely changes: merge sort does O(n log n) whatever the order.' },
+      { example: 'reversed', prompt: 'Each merge empties one half before touching the other. Watch the leftovers step.' },
     ],
   },
-};
+});

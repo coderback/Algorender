@@ -4,8 +4,10 @@ import { useState, type ReactNode } from 'react';
 import { FiChevronLeft, FiChevronRight, FiLink, FiPause, FiPlay, FiRotateCcw, FiSkipBack, FiSkipForward } from 'react-icons/fi';
 import { DEFAULT_SPEED, SPEEDS, type TracePlayer } from '@/engine/useTracePlayer';
 
-export function PlayerControls({ player }: { player: TracePlayer }) {
-  const { index, last, playing, speed } = player;
+/** Transport controls. `children` adds extra controls (e.g. the Watch/Predict switch) to the second row. */
+export function PlayerControls({ player, children }: { player: TracePlayer; children?: ReactNode }) {
+  const { index, last, playing, speed, blocked } = player;
+  const waiting = blocked ? 'Answer the question first' : null;
   const atStart = index === 0;
   const atEnd = index === last;
   const [copied, setCopied] = useState(false);
@@ -35,14 +37,14 @@ export function PlayerControls({ player }: { player: TracePlayer }) {
           <button
             type="button"
             onClick={player.toggle}
-            disabled={last === 0}
+            disabled={last === 0 || blocked}
             aria-label={playing ? 'Pause (Space)' : atEnd ? 'Replay (Space)' : 'Play (Space)'}
-            title={playing ? 'Pause (Space)' : atEnd ? 'Replay (Space)' : 'Play (Space)'}
+            title={waiting ?? (playing ? 'Pause (Space)' : atEnd ? 'Replay (Space)' : 'Play (Space)')}
             className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-lg text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-40"
           >
             {playing ? <FiPause /> : atEnd ? <FiRotateCcw /> : <FiPlay className="translate-x-px" />}
           </button>
-          <IconButton label="Step forward (→)" onClick={player.stepForward} disabled={atEnd}>
+          <IconButton label={waiting ?? 'Step forward (→)'} onClick={player.stepForward} disabled={atEnd || blocked}>
             <FiChevronRight />
           </IconButton>
           <IconButton label="Go to end (End)" onClick={() => player.seek(last)} disabled={atEnd}>
@@ -82,7 +84,8 @@ export function PlayerControls({ player }: { player: TracePlayer }) {
             ))}
           </select>
         </label>
-        <span className="hidden md:inline">← → step · Space play/pause · Home/End jump</span>
+        {children}
+        <span className="hidden xl:inline">← → step · Space play · Home/End jump</span>
         <button
           type="button"
           onClick={copyLink}

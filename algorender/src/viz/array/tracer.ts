@@ -1,4 +1,4 @@
-import type { Frame, VarValue } from '@/engine/types';
+import type { Checkpoint, Frame, VarValue } from '@/engine/types';
 import type { ArrayState, Counter, ItemId, Lane, Mark, Pointer, Range, RangeTone } from './types';
 
 export const MAIN = 'main';
@@ -15,6 +15,8 @@ export type FrameOptions = {
   vars?: Record<string, VarValue>;
   /** Highlight one cell per counter, by counter id. */
   counterHighlight?: Record<string, number | null>;
+  /** Predict-mode question about the next frame. This frame's note must not reveal the answer. */
+  checkpoint?: Checkpoint;
 };
 
 /**
@@ -180,6 +182,7 @@ export class ArrayTracer {
       note: opts.note,
       vars: opts.vars ?? {},
       stats: { ...this.stats },
+      ...(opts.checkpoint && { checkpoint: opts.checkpoint }),
     };
   }
 

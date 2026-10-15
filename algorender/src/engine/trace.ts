@@ -12,3 +12,20 @@ export function recordTrace<S>(frames: Iterable<Frame<S>>, maxFrames = MAX_FRAME
   }
   return { frames: recorded, truncated: false };
 }
+
+/**
+ * Runs a data-structure operation: records its frames and captures the
+ * generator's return value, the structure's state after the operation.
+ */
+export function recordOperation<S, M>(
+  op: Generator<Frame<S>, M>,
+  maxFrames = MAX_FRAMES,
+): Trace<S> & { result: M } {
+  const frames: Frame<S>[] = [];
+  for (;;) {
+    const next = op.next();
+    if (next.done) return { frames, truncated: false, result: next.value };
+    if (frames.length >= maxFrames) throw new Error('Operation produced too many frames');
+    frames.push(next.value);
+  }
+}

@@ -1,5 +1,8 @@
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, WRITES, type ArrayAlgorithm } from '../types';
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, WRITES, sortTraits } from './shared';
 
 const pseudocode = [
   'count ← zeros, one per value 0..max',
@@ -66,6 +69,21 @@ function* run(input: readonly number[]) {
   for (let i = n - 1; i >= 0; i--) {
     const x = t.value(i);
     const pos = t.counter(COUNT, x) - 1;
+    // Alternate the order of the choices so the answer isn't always first.
+    const choices = i % 2 === 0 ? [pos, pos + 1] : [pos + 1, pos];
+    yield t.frame({
+      line: 5,
+      note: `Next, place ${x} from position ${i}. count[${x}] is ${pos + 1}.`,
+      marks: { key: [i] },
+      pointers: { i },
+      counterHighlight: { [COUNT]: x },
+      vars: { i, x },
+      checkpoint: {
+        question: `Which output position does ${x} go to?`,
+        choices: choices.map(String),
+        answer: choices.indexOf(pos),
+      },
+    });
     t.setCounter(COUNT, x, pos);
     t.move(i, [OUTPUT, pos]);
     yield t.frame({
@@ -87,22 +105,23 @@ function* run(input: readonly number[]) {
   });
 }
 
-export const countingSort: ArrayAlgorithm = {
+export const countingSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'counting-sort',
   view: 'array',
-  input: { min: 0, max: 9, defaultSize: 12, maxSize: 30 },
+  input: arrayInput({ min: 0, max: 9, defaultSize: 12, maxSize: 30 }),
   pseudocode,
   stats: [COMPARISONS, WRITES],
-  legend: ['key', 'write', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, 'key', 'write', 'sorted'],
   run,
   content: {
     idea: 'Instead of comparing elements, count how many times each value occurs. Running totals of those counts tell you exactly where each value belongs in the output.',
     invariant: 'After the running totals, count[v] is the number of elements ≤ v, which is one past the last output position for value v.',
     whenToUse: 'Integer keys in a small range k: O(n + k) time beats any comparison sort. It is useless when k is huge compared with n, and it is the inner step of radix sort.',
-    properties: { stable: true, inPlace: false, comparisonBased: false },
+    traits: sortTraits({ stable: true, inPlace: false, comparisonBased: false }),
     experiments: [
-      { preset: 'few-unique', prompt: 'Only a few distinct values: most of the count array stays zero.' },
-      { preset: 'reversed', prompt: 'Order makes no difference to the work: always one pass to count and one to place.' },
+      { example: 'few-unique', prompt: 'Only a few distinct values: most of the count array stays zero.' },
+      { example: 'reversed', prompt: 'Order makes no difference to the work: always one pass to count and one to place.' },
     ],
   },
-};
+});

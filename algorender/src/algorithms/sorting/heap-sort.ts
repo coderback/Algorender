@@ -1,5 +1,8 @@
 import { ArrayTracer } from '@/viz/array/tracer';
-import { COMPARISONS, SWAPS, type ArrayAlgorithm } from '../types';
+import { arrayInput } from '@/engine/inputs';
+import { defineAlgorithm } from '@/engine/module';
+import type { ArrayState } from '@/viz/array/types';
+import { COMPARISONS, SWAPS, YES_NO, sortTraits } from './shared';
 
 const pseudocode = [
   'for i from ⌊n / 2⌋ − 1 down to 0:',
@@ -51,6 +54,7 @@ function* run(input: readonly number[]) {
         pointers: { i, c },
         ranges: regions(size),
         vars: { phase, i, c, size },
+        checkpoint: { question: `Does ${parent} need to swap with ${child}?`, choices: YES_NO, answer: child > parent ? 0 : 1 },
       });
       t.count('comparisons');
       if (child <= parent) {
@@ -120,22 +124,23 @@ function* run(input: readonly number[]) {
   yield t.frame({ note: 'Sorted: the heap has shrunk to one element, the smallest.' });
 }
 
-export const heapSort: ArrayAlgorithm = {
+export const heapSort = defineAlgorithm<number[], ArrayState>({
+  kind: 'algorithm',
   slug: 'heap-sort',
   view: 'array',
-  input: { min: 5, max: 99, defaultSize: 10, maxSize: 40 },
+  input: arrayInput({ min: 5, max: 99, defaultSize: 10, maxSize: 40 }),
   pseudocode,
   stats: [COMPARISONS, SWAPS],
-  legend: ['key', 'compare', 'swap', 'sorted'],
+  legend: [{ neutral: 'Not yet placed' }, 'key', 'compare', 'swap', 'sorted'],
   run,
   content: {
     idea: 'Treat the array as a binary tree and rearrange it into a max-heap, where every parent is at least as large as its children. The root is then the maximum: swap it to the end, shrink the heap by one, and sift the new root down to restore the heap.',
     invariant: 'Positions 0 to size − 1 form a max-heap; positions size to n − 1 hold the largest values in sorted order.',
     whenToUse: 'A guaranteed O(n log n) with O(1) extra space. In practice it is slower than quick sort because of poor cache locality, so it is mostly used as a fallback (as in introsort).',
-    properties: { stable: false, inPlace: true, comparisonBased: true },
+    traits: sortTraits({ stable: false, inPlace: true, comparisonBased: true }),
     experiments: [
-      { preset: 'sorted', prompt: 'Sorted input does not help: building the heap still moves many values.' },
-      { preset: 'reversed', prompt: 'A reversed array is already a max-heap. Watch the build phase do almost nothing.' },
+      { example: 'sorted', prompt: 'Sorted input does not help: building the heap still moves many values.' },
+      { example: 'reversed', prompt: 'A reversed array is already a max-heap. Watch the build phase do almost nothing.' },
     ],
   },
-};
+});

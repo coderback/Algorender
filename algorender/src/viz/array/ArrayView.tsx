@@ -2,7 +2,8 @@
 
 import { LayoutGroup, motion } from 'motion/react';
 import type { CSSProperties } from 'react';
-import { DEFAULT_BAR, MARKS, RANGE_TONES } from './marks';
+import { MARKS, NEUTRAL } from '@/viz/marks';
+import { RANGE_TONES } from './marks';
 import type { ArrayState, Counter, ItemId, Lane, Mark } from './types';
 
 /** Widest a slot gets, so short arrays don't turn into slabs. */
@@ -134,7 +135,7 @@ function Item({
       </span>
       <div className="relative w-full min-h-0 flex-1">
         <div
-          className={`absolute inset-x-0 bottom-0 rounded-t-md ring-1 ring-black/10 ring-inset transition-colors ${meta ? meta.bar : DEFAULT_BAR}`}
+          className={`absolute inset-x-0 bottom-0 rounded-t-md ring-1 ring-black/10 ring-inset transition-colors ${meta ? meta.bg : NEUTRAL.bg}`}
           style={{ height: `${height}%`, transitionDuration: 'var(--tween, 300ms)' }}
         />
       </div>
