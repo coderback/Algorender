@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Algorender - Algorithm & Data Structure Visualizer",
   description: "Interactive visualizations of algorithms and data structures to help you understand how they work. Learn through step-by-step execution with real-time statistics and educational content.",
 };

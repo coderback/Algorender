@@ -16,8 +16,11 @@ function useHydrated() {
   );
 }
 
-/** Interactive part of a visualiser page: picks the explorer for the module's kind. */
-export function Visualiser({ slug }: { slug: string }) {
+/**
+ * Interactive part of a visualiser page: picks the explorer for the module's
+ * kind. The embed variant drops extras meant for the full page.
+ */
+export function Visualiser({ slug, variant = 'page' }: { slug: string; variant?: 'page' | 'embed' }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const hydrated = useHydrated();
   const visualiser = getModule(slug);
@@ -28,6 +31,7 @@ export function Visualiser({ slug }: { slug: string }) {
       {visualiser.kind === 'algorithm' ? (
         <AlgorithmExplorer
           module={visualiser}
+          variant={variant}
           onScrollTop={() => rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
       ) : (

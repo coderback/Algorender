@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { FiChevronLeft, FiChevronRight, FiLink, FiPause, FiPlay, FiRotateCcw, FiSkipBack, FiSkipForward } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiCode, FiLink, FiPause, FiPlay, FiRotateCcw, FiSkipBack, FiSkipForward } from 'react-icons/fi';
 import { DEFAULT_SPEED, SPEEDS, type TracePlayer } from '@/engine/useTracePlayer';
 
 /** Transport controls. `children` adds extra controls (e.g. the Watch/Predict switch) to the second row. */
@@ -10,17 +10,22 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
   const waiting = blocked ? 'Answer the question first' : null;
   const atStart = index === 0;
   const atEnd = index === last;
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'link' | 'embed' | null>(null);
 
-  const copyLink = async () => {
+  const copy = async (kind: 'link' | 'embed') => {
     const url = new URL(window.location.href);
     url.searchParams.set('step', String(index));
+    url.pathname = url.pathname.replace(/^\/(visualisers|embed)\//, kind === 'embed' ? '/embed/' : '/visualisers/');
+    const text =
+      kind === 'link'
+        ? url.toString()
+        : `<iframe src="${url}" title="Algorender visualisation" width="100%" height="760" style="border:0" loading="lazy"></iframe>`;
     try {
-      await navigator.clipboard.writeText(url.toString());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(text);
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
-      window.history.replaceState(null, '', url);
+      if (kind === 'link') window.history.replaceState(null, '', url);
     }
   };
 
@@ -86,13 +91,23 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
         </label>
         {children}
         <span className="hidden xl:inline">← → step · Space play · Home/End jump</span>
-        <button
-          type="button"
-          onClick={copyLink}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-700 hover:bg-blue-50"
-        >
-          <FiLink aria-hidden /> {copied ? 'Link copied' : 'Copy link to this step'}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => copy('link')}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-700 hover:bg-blue-50"
+          >
+            <FiLink aria-hidden /> {copied === 'link' ? 'Link copied' : 'Copy link to this step'}
+          </button>
+          <button
+            type="button"
+            onClick={() => copy('embed')}
+            title="Copy an <iframe> snippet that embeds this visualiser at this step"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-700 hover:bg-blue-50"
+          >
+            <FiCode aria-hidden /> {copied === 'embed' ? 'Embed copied' : 'Embed'}
+          </button>
+        </div>
       </div>
     </div>
   );

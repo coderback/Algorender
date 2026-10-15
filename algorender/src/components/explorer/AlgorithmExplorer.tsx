@@ -12,7 +12,15 @@ import { TraceStage, type Density, type Mode } from './TraceStage';
 import { modeFromParams, stepFromParams, writeUrl } from './url';
 
 /** Runs an algorithm on a chosen input and replays its trace. */
-export function AlgorithmExplorer({ module: algo, onScrollTop }: { module: AnyAlgorithm; onScrollTop: () => void }) {
+export function AlgorithmExplorer({
+  module: algo,
+  variant = 'page',
+  onScrollTop,
+}: {
+  module: AnyAlgorithm;
+  variant?: 'page' | 'embed';
+  onScrollTop: () => void;
+}) {
   const params = useSearchParams();
   const [initial] = useState(() => {
     const p = new URLSearchParams(params.toString());
@@ -52,7 +60,7 @@ export function AlgorithmExplorer({ module: algo, onScrollTop }: { module: AnyAl
         predict={{ mode, density, setMode: changeMode, setDensity }}
       />
       <InputPanel spec={algo.input} source={source} onChange={changeSource} />
-      <Experiments algo={algo} onTry={tryExample} />
+      {variant === 'page' && <Experiments algo={algo} onTry={tryExample} />}
     </div>
   );
 }
