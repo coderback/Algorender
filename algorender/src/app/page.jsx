@@ -16,7 +16,7 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-linear-to-b from-white to-blue-50 text-gray-800">
-      <main className="max-w-7xl mx-auto px-4 py-10">
+      <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Data Structure & Algorithm Visualizer
@@ -24,6 +24,14 @@ function Home() {
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             Interactive visualizations of algorithms and data structures to help you understand how they work.
           </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/learn" className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+              Start with the concept map and lessons
+            </Link>
+            <Link href="/compare" className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-800 hover:border-blue-300">
+              Race the sorting algorithms
+            </Link>
+          </div>
         </div>
 
         <div className="flex justify-center mb-8">
@@ -103,7 +111,7 @@ function Home() {
             </div>
           ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

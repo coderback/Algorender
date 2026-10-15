@@ -16,7 +16,10 @@ export default function Header() {
               <Image src="/logo.svg" alt="" width={48} height={48} className="object-contain" />
               <span className="text-2xl font-bold text-gray-900 tracking-tight">Algorender</span>
             </Link>
-            <nav aria-label="Main" className="hidden sm:block">
+            <nav aria-label="Main" className="hidden items-center gap-5 sm:flex">
+              <Link href="/learn" className="text-sm font-medium text-gray-600 hover:text-blue-700">
+                Learn
+              </Link>
               <Link href="/compare" className="text-sm font-medium text-gray-600 hover:text-blue-700">
                 Compare sorts
               </Link>

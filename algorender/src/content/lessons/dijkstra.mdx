@@ -1,0 +1,110 @@
+<Section step="hook" title="Every sat-nav asks this question">
+
+What is the shortest route from A to F, when roads have different lengths? Breadth-first search answers it when every road
+is the same length, because it explores in rings of "one step away", "two steps away"… With lengths, the nearest node is
+no longer the one with the fewest steps.
+
+Dijkstra's idea is to keep exploring in rings, but rings of **distance**: always handle the closest node you haven't
+finished yet. Once a node is the closest unfinished one, nothing can ever give it a shorter route, so you can **settle**
+it for good.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="dist[v]">The best distance from the start to v found so far. Starts at ∞ for everything except the start (0).</Term>
+  <Term name="settled">A node whose distance is final. Each node is settled exactly once.</Term>
+  <Term name="relaxation">Checking an edge u → v: if dist[u] + w beats dist[v], update dist[v] and remember u as v's predecessor.</Term>
+  <Term name="min-heap">A priority queue that hands back the unsettled node with the smallest tentative distance.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch the distances settle">
+
+<Explore slug="dijkstra" settings={{ preset: 'roads' }} caption="Nodes are settled in increasing order of distance: 0, 2, 3, 8, 10, 13. At the end, following prev from F gives the route." />
+
+Watch the heap panel: a node can be pushed several times as its distance improves. The older, larger entries become stale
+and are skipped when popped. That "lazy" approach is simpler than updating entries in place.
+
+<KeyIdea>
+
+When a node is popped from the heap with the smallest distance, every other route to it has to leave the settled region
+through a node at least that far away, and **edges never shorten a route**. So its distance can't improve: it is final.
+That argument is the whole proof, and its one assumption is that no edge is negative.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: settle and relax">
+
+Predict which node is settled next and whether each edge improves a distance.
+
+<PredictChallenge slug="dijkstra" settings={{ preset: 'detour' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Break the assumption">
+
+Pick the graph with a negative edge. Dijkstra settles B at distance 2 straight away, before discovering that going
+through C would cost 5 − 4 = 1. The visualiser finishes, then checks the true distances and names the ones it got wrong.
+
+<Explore slug="dijkstra" settings={{ preset: 'negative' }} caption="One negative edge is enough to make settling too early wrong." />
+
+<Misconception title="Dijkstra handles any weighted graph">
+
+It needs every edge to be non-negative. With negative edges use **Bellman–Ford**, which relaxes every edge V − 1 times and
+can even detect a negative cycle, where no shortest path exists at all.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Which node does Dijkstra settle next?',
+      choices: ['The node discovered first', 'The unsettled node with the smallest tentative distance', 'The neighbour with the lightest edge', 'Any unsettled node'],
+      answer: 1,
+      why: 'Settling in order of distance is what makes each settled distance final.',
+    },
+    {
+      q: 'dist[C] = 7 and an edge B → C has weight 2, with dist[B] = 4. What does relaxing the edge do?',
+      choices: ['Nothing: 7 is already final', 'dist[C] becomes 6 and prev[C] becomes B', 'dist[C] becomes 2', 'dist[B] becomes 5'],
+      answer: 1,
+      why: '4 + 2 = 6 < 7, so the route through B is shorter: update the distance and the predecessor.',
+    },
+    {
+      q: 'Why can Dijkstra give wrong answers with a negative edge?',
+      choices: [
+        'The heap cannot store negative numbers',
+        'A settled node might later be reachable more cheaply, but it is never revisited',
+        'It runs forever',
+        'Negative edges are skipped',
+      ],
+      answer: 1,
+      why: 'The proof that a popped distance is final assumes edges never shorten a route. A negative edge breaks that.',
+    },
+    {
+      q: 'With a binary heap, about how long does Dijkstra take on V nodes and E edges?',
+      choices: ['O(V + E)', 'O((V + E) log V)', 'O(V · E)', 'O(V³)'],
+      answer: 1,
+      why: 'Each edge can push one heap entry, and each heap operation costs O(log V).',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Dijkstra settles nodes in increasing order of distance, relaxing each settled node's edges.
+- A min-heap finds the closest unsettled node in O(log V); stale entries are skipped.
+- It is correct **only without negative edges**; Bellman–Ford handles those.
+- It is breadth-first search with "rings of distance" instead of "rings of steps", and the basis of routing and A* search.
+
+</Section>

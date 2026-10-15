@@ -1,3 +1,5 @@
+import createMDX from '@next/mdx';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Pin the workspace root: a stray lockfile in the home directory otherwise
@@ -5,4 +7,13 @@ const nextConfig = {
   turbopack: { root: import.meta.dirname },
 };
 
-export default nextConfig;
+// Lessons are MDX (src/content/lessons). Plugins are named as strings so
+// Turbopack can load them: math via KaTeX, and ids on headings for links.
+const withMDX = createMDX({
+  options: {
+    remarkPlugins: ['remark-math'],
+    rehypePlugins: ['rehype-katex', 'rehype-slug'],
+  },
+});
+
+export default withMDX(nextConfig);

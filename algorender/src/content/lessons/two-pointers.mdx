@@ -1,0 +1,104 @@
+<Section step="hook" title="Do you really need to check every pair?">
+
+Given a list of prices and a gift card, is there a pair of items that spends it exactly? The obvious answer tries every
+pair: with $n$ items that is $\tfrac{n(n-1)}{2}$ pairs, about 5,000 for 100 items and 50 million for 10,000.
+
+If the prices are **sorted**, you can do it in at most $n - 1$ checks. The trick is to stop thinking about pairs and
+start thinking about **ruling values out**.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="L and R">Two indices: L starts at the smallest value, R at the largest. They only ever move inward.</Term>
+  <Term name="sum">A[L] + A[R], compared with the target at every step.</Term>
+  <Term name="ruled out">A value that cannot be part of any answer, given what we know. Each step rules out exactly one.</Term>
+  <Term name="still possible">The positions between L and R: any answer must lie entirely inside them.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch values get ruled out">
+
+<Explore slug="two-pointers" settings={{ preset: 'present', n: 10, seed: 7 }} caption="Each step compares one pair and rules out the smaller or the larger value, with the reason in the narration." />
+
+The reasoning is the whole algorithm:
+
+- If A[L] + A[R] is **too small**, then A[L] plus *anything* still possible is too small, because A[R] is the largest
+  thing left. So A[L] can't be in any answer: move L right.
+- If the sum is **too big**, A[R] plus anything still possible is too big, because A[L] is the smallest thing left. So
+  A[R] is out: move R left.
+
+<KeyIdea>
+
+**Any pair that hits the target lies entirely inside [L, R].** Each step keeps that true and shrinks the range by one, so
+after at most $n - 1$ steps you have either found the pair or proved there isn't one. That is O(n) instead of O(n²).
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: which pointer moves?">
+
+<PredictChallenge slug="two-pointers" settings={{ preset: 'absent', n: 10, seed: 21 }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Try the edge cases">
+
+Pick "Pair at the ends" and count the checks: one. Pick "No pair" and watch L and R meet. Then make up your own sorted
+list and target in the input box.
+
+<Explore slug="two-pointers" settings={{ preset: 'ends', n: 12, seed: 4 }} input />
+
+<Misconception title="It works on unsorted data too">
+
+The argument "A[R] is the largest thing left" is only true if the array is sorted. On unsorted data, moving L right can
+skip the very value you needed. Sort first (O(n log n), still far better than O(n²)), or use a hash set of values you
+have seen, which finds a pair in O(n) without sorting.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A = [1, 4, 6, 9, 13], target 15. L = 0, R = 4: the sum is 1 + 13 = 14. What happens?',
+      choices: ['Move L right', 'Move R left', 'Stop: no pair exists', 'Move both pointers'],
+      answer: 0,
+      why: '14 < 15, and 13 is the largest value left, so 1 cannot reach 15 with any partner.',
+    },
+    {
+      q: 'For 1,000 sorted values, at most how many sums does two pointers check?',
+      choices: ['10', '999', '1,000', '499,500'],
+      answer: 1,
+      why: 'Each check rules out one value and L < R must hold, so at most n − 1 = 999 checks. Checking every pair would be 499,500.',
+    },
+    {
+      q: 'Why is it safe to move R left when the sum is too big?',
+      choices: [
+        'Because A[R] is the largest value',
+        'Because A[L] is the smallest value still possible, so A[R] overshoots with every partner',
+        'Because the array has no duplicates',
+        'Because we already checked every pair with A[R]',
+      ],
+      answer: 1,
+      why: 'If even the smallest remaining partner is too much, every other partner is too: A[R] cannot be in the answer.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Two pointers use **order** to rule out one value per step, turning O(n²) pair checks into O(n).
+- The invariant: any answer lies inside [L, R].
+- The same shape solves 3Sum (fix one value, two-pointer the rest), container with most water, and removing duplicates in place.
+- Next: the **sliding window** keeps two pointers moving in the same direction instead of toward each other.
+
+</Section>

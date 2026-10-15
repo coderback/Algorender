@@ -1,0 +1,378 @@
+# The concept graph. Every concept belongs to a track, lists its prerequisites,
+# and points at the visualisers (and lesson, if written) that teach it.
+# Validated by src/content/concepts.ts and src/content/content.test.ts:
+# ids exist, prerequisites form no cycle, every visualiser on the site is
+# taught by at least one concept, and planned concepts have nothing to open yet.
+
+tracks:
+  - id: foundations
+    title: Foundations
+    summary: How to measure an algorithm, and the recursive thinking most of the rest builds on.
+  - id: linear
+    title: Arrays and lists
+    summary: Sequences in memory, and the structures built from them.
+  - id: searching-sorting
+    title: Searching and sorting
+    summary: Finding things fast, and putting things in order.
+  - id: hashing
+    title: Hashing
+    summary: Turning keys into positions for constant-time lookups.
+  - id: trees
+    title: Trees and heaps
+    summary: Hierarchies that keep data ordered or prioritised.
+  - id: patterns
+    title: Problem-solving patterns
+    summary: Techniques that turn up again and again in interview problems.
+  - id: graphs
+    title: Graphs
+    summary: Networks of things and the connections between them.
+  - id: design
+    title: Algorithm design
+    summary: Greedy choices, dynamic programming and backtracking.
+  - id: strings
+    title: Strings
+    summary: Searching text without starting over at every mismatch.
+  - id: math
+    title: Math for CS and ML
+    summary: The linear algebra, calculus and probability behind machine learning.
+    planned: true
+  - id: ml
+    title: Machine learning
+    summary: From fitting a line to attention, built step by step.
+    planned: true
+  - id: systems
+    title: Systems
+    summary: How operating systems, databases and distributed systems really work.
+    planned: true
+
+concepts:
+  # ── Foundations ──────────────────────────────────────────────
+  - id: big-o
+    title: Big-O and growth
+    track: foundations
+    summary: Counting how the work an algorithm does grows as its input grows.
+    links: [{ href: /compare, label: Race the sorts and chart their growth }]
+  - id: recursion
+    title: Recursion and the call tree
+    track: foundations
+    summary: Solving a problem by solving smaller copies of it, and picturing the calls as a tree.
+    prereqs: [big-o]
+    visualisers: [fibonacci-memoization, subsets]
+
+  # ── Arrays and lists ─────────────────────────────────────────
+  - id: arrays
+    title: Arrays
+    track: linear
+    summary: Contiguous cells with constant-time indexing, and the cost of growing and shifting.
+    prereqs: [big-o]
+    visualisers: [array]
+  - id: stacks-queues
+    title: Stacks and queues
+    track: linear
+    summary: Last in first out, and first in first out, on top of arrays and rings.
+    prereqs: [arrays]
+    visualisers: [stack, queue, deque]
+  - id: linked-lists
+    title: Linked lists
+    track: linear
+    summary: Nodes joined by pointers, so inserting is cheap but finding is not.
+    prereqs: [arrays]
+    visualisers: [linked-list]
+
+  # ── Searching and sorting ────────────────────────────────────
+  - id: linear-search
+    title: Linear search
+    track: searching-sorting
+    summary: Checking every element in turn, the baseline everything else is measured against.
+    prereqs: [arrays]
+    visualisers: [linear-search]
+  - id: binary-search
+    title: Binary search
+    track: searching-sorting
+    summary: Halving a sorted search space with every comparison.
+    prereqs: [linear-search]
+    visualisers: [binary-search, jump-search, exponential-search, interpolation-search, fibonacci-search]
+    lesson: binary-search
+  - id: quadratic-sorts
+    title: Simple sorts
+    track: searching-sorting
+    summary: Bubble, selection and insertion sort, and why they cost O(n²).
+    prereqs: [arrays]
+    visualisers: [bubble-sort, selection-sort, insertion-sort]
+    links: [{ href: /compare, label: Race them }]
+  - id: merge-sort
+    title: Merge sort
+    track: searching-sorting
+    summary: Divide in half, sort each half, merge, for a guaranteed O(n log n).
+    prereqs: [quadratic-sorts, recursion]
+    visualisers: [merge-sort]
+  - id: quick-sort
+    title: Quick sort
+    track: searching-sorting
+    summary: Partition around a pivot, then sort each side; fast on average, fragile on bad pivots.
+    prereqs: [quadratic-sorts, recursion]
+    visualisers: [quick-sort]
+  - id: heap-sort
+    title: Heap sort
+    track: searching-sorting
+    summary: Build a max-heap in place, then repeatedly move the maximum to the end.
+    prereqs: [heaps]
+    visualisers: [heap-sort]
+  - id: non-comparison-sorts
+    title: Sorting without comparisons
+    track: searching-sorting
+    summary: Counting and radix sort beat the n log n limit by never comparing two elements.
+    prereqs: [quadratic-sorts]
+    visualisers: [counting-sort, radix-sort]
+
+  # ── Hashing ──────────────────────────────────────────────────
+  - id: hash-tables
+    title: Hash tables
+    track: hashing
+    summary: Hash a key to a bucket, chain collisions, and resize before chains grow long.
+    prereqs: [arrays, linked-lists]
+    visualisers: [hash-table, hash-set]
+  - id: bloom-filters
+    title: Bloom filters
+    track: hashing
+    summary: A few bits per item that answer "definitely not" or "probably yes".
+    prereqs: [hash-tables]
+    visualisers: [bloom-filter]
+
+  # ── Trees and heaps ──────────────────────────────────────────
+  - id: binary-search-trees
+    title: Binary search trees
+    track: trees
+    summary: Smaller keys to the left, larger to the right, so search follows one path.
+    prereqs: [binary-search, recursion]
+    visualisers: [binary-tree]
+  - id: balanced-trees
+    title: Self-balancing trees
+    track: trees
+    summary: AVL rotations keep a search tree's height near log n whatever the insert order.
+    prereqs: [binary-search-trees]
+    visualisers: [avl-tree]
+  - id: b-trees
+    title: B-trees
+    track: trees
+    summary: Wide nodes with many keys, the shape behind database indexes.
+    prereqs: [balanced-trees]
+    visualisers: [b-tree]
+  - id: heaps
+    title: Heaps and priority queues
+    track: trees
+    summary: A tree packed into an array that always has its smallest (or largest) item on top.
+    prereqs: [arrays]
+    visualisers: [heap]
+  - id: tries
+    title: Tries
+    track: trees
+    summary: One letter per edge, so every path from the root spells a prefix.
+    prereqs: [linked-lists]
+    visualisers: [trie]
+  - id: union-find
+    title: Union-find
+    track: trees
+    summary: Disjoint sets as a forest, with path compression for near-constant time.
+    prereqs: [arrays, recursion]
+    visualisers: [union-find]
+
+  # ── Patterns ─────────────────────────────────────────────────
+  - id: two-pointers
+    title: Two pointers
+    track: patterns
+    summary: Move two indices toward each other to rule out a value at every step.
+    prereqs: [arrays, big-o]
+    visualisers: [two-pointers]
+    lesson: two-pointers
+  - id: sliding-window
+    title: Sliding window
+    track: patterns
+    summary: Keep one running total and slide it, instead of re-adding every window.
+    prereqs: [two-pointers]
+    visualisers: [sliding-window]
+  - id: monotonic-stack
+    title: Monotonic stack
+    track: patterns
+    summary: A stack kept in order, so each element is pushed and popped once.
+    prereqs: [stacks-queues]
+    visualisers: [monotonic-stack]
+  - id: intervals
+    title: Intervals
+    track: patterns
+    summary: Sort by start, then sweep, to merge overlaps or count rooms.
+    prereqs: [merge-sort, heaps]
+    visualisers: [merge-intervals, meeting-rooms]
+
+  # ── Graphs ───────────────────────────────────────────────────
+  - id: graph-representations
+    title: Representing graphs
+    track: graphs
+    summary: Adjacency lists versus adjacency matrices, and what each costs.
+    prereqs: [arrays, linked-lists]
+    visualisers: [graph, adjacency-list, adjacency-matrix]
+  - id: bfs-dfs
+    title: Breadth-first and depth-first search
+    track: graphs
+    summary: Exploring a graph with a queue or a stack, level by level or path by path.
+    prereqs: [graph-representations, stacks-queues]
+    visualisers: [breadth-first-search, depth-first-search]
+  - id: topological-sort
+    title: Topological sort
+    track: graphs
+    summary: Ordering tasks so every dependency comes first, or proving there is a cycle.
+    prereqs: [bfs-dfs]
+    visualisers: [topological-sort]
+  - id: shortest-paths
+    title: Shortest paths
+    track: graphs
+    summary: Dijkstra's greedy settling, and Bellman–Ford for negative edges.
+    prereqs: [bfs-dfs, heaps]
+    visualisers: [dijkstra, bellman-ford]
+    lesson: dijkstra
+  - id: all-pairs-shortest-paths
+    title: All-pairs shortest paths
+    track: graphs
+    summary: Floyd–Warshall tries every node as a stepping stone between every pair.
+    prereqs: [shortest-paths, dynamic-programming]
+    visualisers: [floyd-warshall]
+  - id: minimum-spanning-trees
+    title: Minimum spanning trees
+    track: graphs
+    summary: Connecting every node at least cost, growing a tree (Prim) or merging forests (Kruskal).
+    prereqs: [bfs-dfs, heaps, union-find]
+    visualisers: [prims, kruskals]
+  - id: strongly-connected-components
+    title: Strongly connected components
+    track: graphs
+    summary: Groups of nodes that can all reach each other, found with one or two depth-first passes.
+    prereqs: [bfs-dfs]
+    visualisers: [kosaraju, tarjan]
+
+  # ── Algorithm design ─────────────────────────────────────────
+  - id: greedy
+    title: Greedy algorithms
+    track: design
+    summary: Taking the best-looking choice each time, and knowing when that is safe.
+    prereqs: [quadratic-sorts]
+    visualisers: [activity-selection, knapsack-greedy]
+  - id: memoization
+    title: Memoization
+    track: design
+    summary: Remembering answers to repeated subproblems turns exponential recursion into linear work.
+    prereqs: [recursion]
+    visualisers: [fibonacci-memoization]
+    lesson: memoization
+  - id: dynamic-programming
+    title: Dynamic programming
+    track: design
+    summary: Filling a table of subproblem answers in an order where each cell's inputs are ready.
+    prereqs: [memoization]
+    visualisers: [coin-change, house-robber, unique-paths, knapsack-01]
+  - id: sequence-dp
+    title: Dynamic programming on sequences
+    track: design
+    summary: Comparing two strings, or one sequence with itself, cell by cell.
+    prereqs: [dynamic-programming]
+    visualisers: [longest-common-subsequence, edit-distance, longest-increasing-subsequence]
+  - id: backtracking
+    title: Backtracking
+    track: design
+    summary: Build a solution one choice at a time and undo choices that lead nowhere.
+    prereqs: [recursion]
+    visualisers: [subsets, permutations, n-queens, sudoku-solver]
+
+  # ── Strings ──────────────────────────────────────────────────
+  - id: string-matching
+    title: String matching
+    track: strings
+    summary: Finding a pattern in text without restarting from scratch after each mismatch.
+    prereqs: [arrays, hash-tables]
+    visualisers: [kmp, rabin-karp, z-algorithm]
+  - id: palindromes
+    title: Palindromes
+    track: strings
+    summary: Manacher's algorithm reuses mirror images to find every palindrome in linear time.
+    prereqs: [string-matching]
+    visualisers: [manacher]
+
+  # ── Planned: math ────────────────────────────────────────────
+  - id: vectors-matrices
+    title: Vectors and matrices
+    track: math
+    summary: Matrices as transformations that warp space.
+    planned: true
+  - id: eigenvectors
+    title: Eigenvectors
+    track: math
+    summary: The directions a transformation only stretches.
+    prereqs: [vectors-matrices]
+    planned: true
+  - id: derivatives-gradients
+    title: Derivatives and gradients
+    track: math
+    summary: Slopes in one dimension, and the direction of steepest ascent in many.
+    planned: true
+  - id: chain-rule
+    title: The chain rule
+    track: math
+    summary: How changes flow through a computation graph, one link at a time.
+    prereqs: [derivatives-gradients]
+    planned: true
+  - id: probability
+    title: Probability and Bayes
+    track: math
+    summary: Conditional probability as areas, and updating beliefs with evidence.
+    planned: true
+
+  # ── Planned: machine learning ────────────────────────────────
+  - id: gradient-descent
+    title: Gradient descent
+    track: ml
+    summary: Walking downhill on a loss surface, and why the step size matters.
+    prereqs: [derivatives-gradients]
+    planned: true
+  - id: linear-regression
+    title: Linear regression
+    track: ml
+    summary: Fitting a line by shrinking the squared residuals.
+    prereqs: [gradient-descent, vectors-matrices]
+    planned: true
+  - id: neural-networks
+    title: Neural networks and backpropagation
+    track: ml
+    summary: Layers of weighted sums, trained by pushing the chain rule backwards.
+    prereqs: [linear-regression, chain-rule]
+    planned: true
+  - id: attention
+    title: Attention and transformers
+    track: ml
+    summary: Every token weighs every other token to decide what matters.
+    prereqs: [neural-networks, eigenvectors]
+    planned: true
+
+  # ── Planned: systems ─────────────────────────────────────────
+  - id: cpu-scheduling
+    title: CPU scheduling
+    track: systems
+    summary: First come first served, shortest job first, round robin, on a Gantt chart.
+    prereqs: [stacks-queues, heaps]
+    planned: true
+  - id: caching
+    title: Caching and LRU
+    track: systems
+    summary: Keeping hot data close with a hash map and a linked list.
+    prereqs: [hash-tables, linked-lists]
+    planned: true
+  - id: consistent-hashing
+    title: Consistent hashing
+    track: systems
+    summary: Spreading keys over servers so adding one moves few keys.
+    prereqs: [hash-tables]
+    planned: true
+  - id: consensus
+    title: Consensus with Raft
+    track: systems
+    summary: How a cluster agrees on a log even when machines fail.
+    prereqs: [graph-representations]
+    planned: true
