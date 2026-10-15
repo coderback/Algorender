@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { FiAlertTriangle, FiArrowRight, FiCheck, FiLoader, FiPlay, FiRotateCcw, FiX } from 'react-icons/fi';
 import { TraceStage } from '@/components/explorer/TraceStage';
-import { argsFor, getExercise, type Exercise, type ExerciseInput, type Verdict } from '@/content/exercises';
+import { getExercise, type Exercise, type Verdict } from '@/content/exercises';
 import type { Trace } from '@/engine/types';
 import type { ArrayState } from '@/viz/array/types';
 import { CodeEditor } from './editor/CodeEditor';
@@ -97,8 +97,7 @@ function WorkspaceInner({ exercise }: { exercise: Exercise }) {
     setConfirmReset(false);
     const source = codes[language];
     const entry = language === 'python' ? exercise.entry.python : exercise.entry.js;
-    const call = (input: ExerciseInput) =>
-      runtime.run({ language, code: source, entry, args: argsFor(input), limits: DEFAULT_LIMITS });
+    const call = (input: unknown) => runtime.run({ language, code: source, entry, args: exercise.args(input), limits: DEFAULT_LIMITS });
 
     const shown = exercise.examples.find((e) => e.id === example) ?? exercise.examples[0];
     const result = await call(shown.input);

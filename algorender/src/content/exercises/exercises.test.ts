@@ -9,7 +9,7 @@ import { runJs } from '@/workspace/js/runtime';
 import { HARNESS } from '@/workspace/python/harness';
 import { DEFAULT_LIMITS, LANGUAGES, type Language, type RunEvent, type RunRequest, type RunResult } from '@/workspace/protocol';
 import { traceRun } from '@/workspace/trace';
-import { argsFor, exercises, type Exercise, type ExerciseInput } from '.';
+import { exercises, stripBlanks, type Exercise } from '.';
 
 let runPython: (json: string) => string;
 
@@ -21,12 +21,12 @@ beforeAll(async () => {
 
 const LANGS = Object.keys(LANGUAGES) as Language[];
 
-function run(exercise: Exercise, language: Language, code: string, input: ExerciseInput): RunResult {
+function run(exercise: Exercise, language: Language, code: string, input: unknown): RunResult {
   const request: RunRequest = {
     language,
     code,
     entry: language === 'python' ? exercise.entry.python : exercise.entry.js,
-    args: argsFor(input),
+    args: exercise.args(input),
     limits: DEFAULT_LIMITS,
   };
   return language === 'python' ? JSON.parse(runPython(JSON.stringify(request))) : runJs(request);
@@ -42,6 +42,15 @@ const actions = (r: RunResult) =>
   });
 
 describe.each(exercises.map((e) => [e.slug, e] as const))('%s', (_slug, exercise) => {
+  it('marks its blanks on the exact solution', () => {
+    for (const language of LANGS) {
+      if (exercise.blanks) expect(stripBlanks(exercise.blanks[language])).toBe(exercise.solution[language]);
+    }
+    for (const stage of exercise.fades ?? []) {
+      for (const n of stage) expect(exercise.blanks?.python).toContain(`«${n}:`);
+    }
+  });
+
   it('has examples, tests, hints and a visualiser to compare with', () => {
     expect(exercise.examples.length).toBeGreaterThan(0);
     expect(exercise.tests.length).toBeGreaterThan(0);
