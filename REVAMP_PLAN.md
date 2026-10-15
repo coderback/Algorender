@@ -1,0 +1,787 @@
+# Algorender 2.0 — Revamp Plan
+
+> **Status:** proposal · 2026-10-15
+> This replaces the server-centric direction in `SCALING_GUIDE.md`. `VISUALIZER_GUIDE.md` documents the old async-loop pattern and will be rewritten once the new engine lands.
+> It draws on an audit of the current codebase plus four research tracks: learning science, gamification, the competitive landscape, and the technical stack. Key sources are in the appendix.
+
+## TL;DR
+
+1. **Replace the engine instead of patching 52 pages.** The choppiness comes from the architecture:
+   - every page mutates React state inside an async `wait()` loop;
+   - bars are keyed by array index, so nothing ever actually moves;
+   - there is no concept of a "step".
+
+   The fix is *record → replay*. Each algorithm becomes a pure generator that emits a trace of typed steps. One shared player then renders those steps, interpolates between them, scrubs, and steps backward.
+2. **Watching doesn't teach; doing does.** The most consistent finding in algorithm-visualization research is that *what learners do* matters more than *what they see*. Predicting, performing steps, changing inputs and building are what produce learning. Algorender today sits on the lowest rung, viewing. Every concept should move learners up the ladder: **See → Predict → Do → Build → Practice → Retain**.
+3. **Positioning: the interactive, executable textbook and gym for the CS→AI stack.** No product combines all four of these:
+   - visuals you can step through;
+   - *your own code*, in your language, driving those same visuals;
+   - a pattern-tagged judge whose failing tests replay visually;
+   - spaced review and mastery tracking on one prerequisite graph spanning DS&A → Math → ML → Systems.
+4. **Gamification: yes, if the game is the learning task.** Examples: "be the algorithm", predict the step, break it, debug it. XP is earned for mastery and spaced recall, never for time or activity, and competitive features are opt-in. Points, badges and leaderboards bolted on top have weak, fragile evidence: competition alone has ≈0 effect in rigorous studies.
+5. **AI tutor: yes, with guardrails.** Unrestricted GPT-4 raised practice scores but cut exam scores by 17%. A grounded, hints-only tutor did not cause that harm. Ground the tutor in the live trace and a reference solution, and enforce a hint ladder in the UI.
+6. **Stack:**
+
+   | Area | Choice |
+   |---|---|
+   | App | Next 16 + TypeScript + Tailwind 4 |
+   | Animation | Motion for tweening; d3/elk for layout |
+   | Code editor | CodeMirror 6 |
+   | In-browser execution | Pyodide + Web Workers (Python/JS) |
+   | Authoritative judging | Firecracker sandbox (Java/C++/Go) |
+   | Content | Fumadocs MDX |
+   | Accounts and progress | Own Postgres + Better Auth, inside the Next.js app |
+   | Spaced repetition | ts-fsrs |
+   | Tutor | Claude 5.5 models |
+
+7. **Order:** foundation and engine → port the 52 visualizers with lesson structure → code workspace → practice and progress → math and ML tracks → personalization and tutor → play mode, systems track, community.
+
+---
+
+## 1. Where Algorender is today
+
+**Inventory.**
+- 52 visualizers: 15 data structures and 37 algorithms. Bloom Filter is hidden.
+- 12,153 lines of `page.jsx`, about 233 per page, with no shared engine.
+- JavaScript, no tests, Next 15.5, Tailwind 3.4, dark mode disabled.
+
+### Why it's choppy (root causes)
+
+| # | Cause | Where |
+|---|---|---|
+| 1 | Bars and nodes are keyed by array index, so a swap is just two fixed slots changing height. Nothing travels. | `components/SortingChart.jsx:57` (`key={index}`); same pattern in 38 pages |
+| 2 | The swap and the next comparison highlight land in the same React render, so the swap is never seen with its highlight | `bubble-sort/page.jsx:60–69`, `insertion-sort:66–74`, `merge-sort:49–62` |
+| 3 | The step delay (100–1000 ms) is unrelated to the 300 ms CSS transition. Slow speeds look like stop-motion; fast speeds cut motion off mid-way. | `components/VisualizerControls.jsx:16–19` |
+| 4 | Speed is captured when the run starts, pause is polled every 100 ms, and Reset can bring a stale loop back to life | `bubble-sort:33–38, 64` |
+| 5 | Structural operations apply synchronously, so the shape jumps. 17 pages don't animate at all. | `avl-tree:36–66`, `heap:27–64` |
+| 6 | Graph algorithms never draw a graph: nodes sit in a flex-wrap and edges are a text list | `dijkstra:103–123`, `breadth-first-search:84–104` |
+| 7 | Trees use fixed flex spacing plus absolutely positioned connectors that miss their children. Tailwind classes built at runtime are never generated. | `avl-tree:182–188`, `binary-tree:99–105`, `b-tree:211` |
+| 8 | Key intermediate structures are never shown: the counting array, radix buckets, KMP's prefix (LPS) table, Tarjan's low-link values, DP cell dependencies | `counting-sort:81–85`, `radix-sort:46–87`, `kmp:46–81` |
+
+### Missing teaching features
+- No step forward or back, scrubbing, per-step narration, pseudo-code highlighting or variable inspector.
+- No code in any language, no quizzes, no exercises.
+- "How it works" is 2–4 one-liners per page.
+- Complexities are defined in two places and disagree in 21 of 52 pages.
+
+### Other debt
+- **Accessibility:** zero ARIA or keyboard support; state is shown by colour alone (a red/green problem for colour-blind users); no `prefers-reduced-motion` handling.
+- **Mobile:** fixed widths break small screens (`w-12` bars, `min-w-[800px]` trees, a 600 px canvas).
+- **SEO:** every page has the same `<title>`.
+- **Bugs:** state is mutated in place (`linked-list:28`, `trie:21–28`); Bellman-Ford has no negative-cycle check; KMP promises visuals it doesn't render.
+
+### Verdict
+Keep the content inventory and the registry (`src/data/visualisers.js`); replace the page implementations. Each algorithm's real logic is 20–60 lines. Port it into a generator and delete the per-page animation code.
+
+---
+
+## 2. What the research says
+
+### 2.1 Visualizations teach through engagement, not viewing
+
+- **Hundhausen, Douglas & Stasko 2002**, a meta-study of 24 experiments: *how* learners use an algorithm visualization matters more than *what* it shows. Over 40% of the experiments found no effect at all.
+- **The Naps et al. 2002 engagement taxonomy** ranks engagement as no viewing → viewing → responding → changing → constructing → presenting. Algorithm visualization has little value without active engagement.
+- **Crouch et al. 2004:** students who passively watched a demonstration understood the concept no better than students who never saw it. Students who *predicted the outcome first* understood significantly more.
+- **Tversky et al. 2002; Berney & Bétrancourt 2016:** animation beats static pictures only modestly (g≈0.2–0.4). People conceive continuous processes as discrete steps, so step boundaries and learner control matter.
+- **Mayer & Chandler 2001:** splitting an animation into segments with a "continue" click improves transfer.
+- **Shaffer et al. 2010** surveyed 500+ algorithm visualizations. Most are low quality and skewed toward easy topics such as sorting. Hard topics are under-served, which is an opening for Algorender.
+- **TRAKLA2**, where the learner performs the algorithm's steps on the data structure and is auto-graded, is the closest precedent for "be the algorithm".
+
+### 2.2 Principles → features
+
+| Principle (evidence) | What Algorender builds |
+|---|---|
+| Predict before reveal (Crouch 2004; Kim et al., CHI 2017) | **Predict gates**: "which pair swaps next?", "which node does Dijkstra pop?" The learner's prediction is shown next to the actual result |
+| Segmenting and learner control (Mayer; Tversky) | **Stepping by default**: autoplay is opt-in and pauses at segment boundaries; scrubbable timeline with step-back |
+| Contiguity, signaling, coherence (Mayer 2017, median d≈0.5–1.3) | **Synced views**: code line ↔ visual ↔ narration updated each step; captions *beside* the visual; one colour meaning per state; no decorative motion |
+| Pre-training (Mayer) | **Pre-training cards**: a 30-second "parts list" (pivot, frontier, attention head) before the full run |
+| Worked examples → fading (Renkl & Atkinson 2003; van Merriënboer 1990) | **Fading ladder** per topic: watch → fill a trace table → Parsons problem (reorder given lines) → fill-in-the-blank → write from scratch |
+| Tracing before writing (Lister 2004; Xie et al. 2019) | **Tracing gates**: trace and "explain in plain English" checks before code-writing problems |
+| PRIMM (Sentance et al. 2019) | **Exercise template**: Predict → Run → Investigate → Modify → Make |
+| Retrieval and spacing (Dunlosky 2013; Adesope 2017) | **FSRS review queue** with cards generated from visualizer states ("what is the array after pass 2?") |
+| Interleaving similar categories (Brunmair & Richter 2019) | **Mixed sets** of easily confused things: BFS/DFS/Dijkstra, quick/merge/heap sort, L1/L2 regularization |
+| Self-explanation (Bisra et al. 2018, g≈0.55) | **"Why" prompts** at pivotal steps ("why is the pivot now final?") with rubric or AI feedback |
+| Concreteness fading (Fyfe 2014); "concrete before abstract" (3Blue1Brown) | **Math and ML lessons**: concrete numbers → symbols → formula, each term colour-linked to the visual |
+| Expertise reversal (Kalyuga 2003) | **Adaptive scaffolding** fades with mastery; experts can skip straight to problems |
+| Mastery needs delayed, varied retrieval (Oreopoulos et al. 2026: "three in a row" did not improve delayed learning) | **Mastery** means correct on *new* inputs *days later*, not an immediate streak |
+| Ladder of abstraction (Bret Victor) | **Abstraction views**: small multiples of every pass; operations-vs-n charts across algorithms; parameter sweeps |
+
+### 2.3 AI tutors
+
+| Study | Finding |
+|---|---|
+| **Bastani et al., PNAS 2025** (~1,000 students) | Unrestricted GPT-4: practice +48%, exam **−17%**. A hint-only "GPT Tutor" grounded in teacher solutions: practice +127% with no exam harm, but no exam gain either. |
+| **Kestin et al., Scientific Reports 2025** (Harvard physics) | A tutor with pre-written solutions and *platform-enforced* step sequencing beat in-class active learning by about 0.6 SD. The prompt alone could not keep students in order. |
+| **Khanmigo** (NBER working-paper draft, 2026) | No measurable benefit over Khan Academy alone. Students wanted answers, got hints, and stopped using it. Restriction without engagement design fails. |
+| **CS-specific tools** (CodeAid, CodeHelp, CS50 Duck) | Conceptual help, pseudo-code and error annotation work; full solutions are never given. |
+| **Prather 2024; Lehmann 2025** | Using an LLM as a *substitute* for thinking reduces understanding and widens the gap between weak and strong students. |
+
+**Design implications:**
+- Ground the tutor in the reference solution and the live trace.
+- Enforce a hint ladder in the UI: concept → pointer to the line or step → pseudo-code → partial code.
+- Trigger help on mistakes inside practice.
+- Let the tutor drive the visualizer ("look at step 14").
+- Run a cheap post-check that blocks solution leaks.
+
+### 2.4 Gamification: the verdict
+
+**What the evidence says:**
+- **Meta-analyses:** the cognitive effect is g≈0.4–0.5 (Sailer & Homner 2020; Bai et al. 2020). Only the cognitive effect survives in rigorous studies; motivational and behavioural effects are fragile.
+- **Novelty:** effects dip around week 4 (Rodrigues et al. 2022).
+- **Competition:** competition alone ≈0 (motivational g=−0.09). Competition **plus collaboration** is strong (g=0.61–0.73). Both figures are from the rigorous subset in Sailer & Homner.
+- **Badges, points, streaks:**
+  - Mandatory badges plus a leaderboard *lowered* intrinsic motivation and exam scores (Hanus & Fox 2015).
+  - Points raise the *quantity* of work, not competence (Mekler 2017).
+  - A broken streak reduces later engagement (Silverman & Barasch 2023).
+- **In programming specifically**, levels were the only game element with a measurable effect (Costa 2023).
+- **Game-based learning**, where the learning *is* the game, shows d≈0.3 on learning and 0.36 on retention (Wouters 2013; Clark 2016).
+- **AI and public rankings:**
+  - Advent of Code removed its global leaderboard in 2025 because of the stress it caused.
+  - Codeforces banned AI-written solutions in rated rounds.
+  - Public leaderboards on code problems are now polluted by AI.
+
+**Verdict: valid, as an active "Play" mode next to "Watch", not a cosmetic skin.** The design is in §7.
+
+### 2.5 The market gap
+
+| Product | Strength | What it lacks |
+|---|---|---|
+| VisuAlgo, USFCA, algorithm-visualizer.org | Free, broad DS&A coverage | Dated; no user code, no ML or math, no learning path |
+| Python Tutor | Steps through *your* code | Generic memory boxes (an array never becomes bars); no curriculum |
+| LeetCode, NeetCode, AlgoMonster | Problem bank, patterns, video | No interactive visuals, no spaced review, one-size roadmap |
+| Brilliant | Best interactive micro-lessons | Too shallow for interview-level DS&A; little real coding |
+| Math Academy | Adaptive mastery plus spaced repetition | No visual intuition, no coding |
+| Polo Club, bbycroft, 3Blue1Brown, MLU-Explain | The best ML and math explainers | Isolated, passive, no exercises or path. Distill has been on hiatus since 2021. |
+| Deep-ML, TorchLeet | Implement ML in the browser | No picture of what *your* model code is doing |
+
+**Cross-domain links nobody shows:**
+- DP ↔ Bellman equation ↔ RL value iteration
+- Chain rule → computational graph → backprop
+- Graph search → HNSW vector search
+- Hashing → Bloom filter → LSM tree
+- Heaps → OS schedulers
+- Dijkstra → link-state routing
+- Edit distance ↔ Viterbi
+
+**Pricing:** paid interview-prep tiers cluster at $119–199 per year (NeetCode $119, LeetCode $159, ByteByteGo $189). Free visuals are table stakes because VisuAlgo and Python Tutor are free. If Algorender charges, it should charge for practice, personalization, the judge and the tutor.
+
+---
+
+## 3. Product vision
+
+**In one line:** see it, predict it, build it, break it, keep it. That applies to every concept from bubble sort to backprop to Raft, all on one engine and one prerequisite graph.
+
+### 3.1 The learning loop (every concept)
+
+| Stage | Engagement level | What the learner gets |
+|---|---|---|
+| **Hook** | — | One paragraph of motivation plus a concrete example: why does this exist? |
+| **See** | controlled viewing | Stepper with synced code, narration and state, plus pre-training cards |
+| **Predict** | responding | Predict gates at key steps |
+| **Do** | changing | Be-the-algorithm; custom and adversarial inputs |
+| **Build** | constructing | Parsons → fill-in → write it in your language; your code drives the same visual |
+| **Practice** | constructing | Pattern-tagged problems; failing tests replay visually |
+| **Retain** | retrieval | Spaced review cards; interleaved sets |
+| **Explain** | presenting | Explain-it-back; record and share a narrated walkthrough |
+
+### 3.2 Surfaces
+- **Explore**: free, no login. Every visualizer, with shareable permalinks and embeddable iframes. This is the search-traffic entry point.
+- **Learn**: tracks and courses made of lessons (MDX with embedded widgets).
+- **Practice**: problem bank, pattern drills and the judge.
+- **Review**: the daily spaced-repetition (FSRS) queue.
+- **Play**: game modes (§7).
+- **Plan**: a personalized study plan built from goal, available time and a diagnostic.
+- **Tutor**: a context-aware side panel available everywhere.
+
+---
+
+## 4. Feature catalogue
+
+Impact = impact on learning. Diff = differentiation from competitors. Effort is S/M/L; phase refers to §8.
+
+| Feature | Impact | Diff | Effort | Phase |
+|---|---|---|---|---|
+| Trace engine + player (step back, scrub, speed, keyboard, reduced motion) | enabler | — | M | 0 |
+| Synced triple view: code line ↔ visual ↔ narration + variables | H | M | M | 0–1 |
+| Predict-the-next-step gates | H | H | S | 1 |
+| Custom and adversarial inputs; presets (sorted, reversed, duplicates, worst case) | H | M | S | 1 |
+| Lesson template (hook, pre-training, see, predict, do, check) | H | M | M | 1 |
+| Algorithm races and complexity playground (operations vs n, curve fit) | H | H | S–M | 1 |
+| Shareable permalinks and embeds | M | M | S | 1 |
+| Be-the-algorithm mode | H | H | M | 1–2 |
+| Code workspace: CodeMirror + Python/JS/TS in the browser | H | M | M | 2 |
+| **Visualize YOUR code** (visual-collections API; Python-Tutor-style tracing mode) | H | H | L | 2 |
+| Parsons, fill-in-the-blank and faded worked examples | H | M | S | 2 |
+| Bug-hunt mode | M | M | S | 2 |
+| Problem bank with typed signatures and multi-language stubs | H | M | M | 3 |
+| Server judge (Java, C++, Go, …) with hidden tests | H | M | L | 3 |
+| Failing test case replays visually on *your* code | H | H | M | 3 |
+| Pattern-recognition drills (30-second "which pattern?") | H | H | S | 3 |
+| Accounts and local-first progress sync | enabler | — | M | 3 |
+| FSRS review queue with auto-generated cards | H | M | M | 3 |
+| Math manipulatives (grid warps, eigenvectors, gradients, Bayes, CLT) | H | M | M | 4 |
+| ML labs (regression, k-means, MLP playground, micrograd graph, attention, sampling, 2D diffusion) | H | H | M–L | 4 |
+| "Build micrograd / nanoGPT visually" track | H | H | M | 4 |
+| Knowledge map, diagnostic placement, mastery tracking (BKT) | H | H | M | 5 |
+| Personalized study plans (goal + weekly hours → schedule that re-plans) | H | M | M | 5 |
+| AI tutor (grounded, hint ladder, trace-aware) | H | M | M | 5 |
+| Explain-it-back with rubric scoring | H | M | M | 5 |
+| Misconception-targeted quizzes | H | M | M | 5 |
+| Play mode (§7) | M–H | M | M | 6 |
+| Systems simulators (scheduling, paging, Raft, LSM, consistent hashing, queueing) | H | H | M | 6 |
+| Mock interview mode | M | M | L | 6 |
+| Classroom / teacher mode | M | M | L | 6+ |
+| Community-authored visualizations | M | H | L | 6+ |
+| i18n, offline PWA drills, notes and Anki export | M | L | S–M | 6+ |
+| Accessibility (keyboard, aria-live narration, colour-blind-safe palette) | M | M | S | **every phase** |
+
+---
+
+## 5. Curriculum map
+
+There are five tracks on one prerequisite graph. ★ marks the most visually compelling topics; ✓ marks topics that exist today and will be ported.
+
+### 0. Foundations
+Big-O and growth curves★ → recursion and the call stack★ → loop invariants.
+
+### 1. Data structures and algorithms
+
+**Existing, to port:**
+- sorting (8)✓, searching (6)✓, graph algorithms (10)✓
+- DP (4)✓, backtracking (2)✓, strings (5)✓
+- linear, hierarchical, graph and hash data structures (15)✓
+
+**Build first, by LeetCode pattern:**
+- sliding window★, two pointers★, monotonic stack★
+- union-find★, backtracking decision tree★
+- the DP family★ (coin change, LIS, grid paths, house robber)
+- interval sweep★, segment tree★, Fenwick tree
+- A★ on a grid★, top-k / two heaps, LRU cache★
+- binary search on the answer, prefix sums, red-black tree
+
+### 2. Math for CS and ML
+- **Discrete math:** logic and proofs; induction★ shown beside recursion; recurrences and the Master theorem (recursion tree★); combinatorics; modular arithmetic and RSA★.
+- **Probability and statistics:** Bayes (area diagram)★; distributions; CLT sampler★; MLE/MAP; Markov chains★; Monte Carlo★.
+- **Linear algebra:** matrices as grid warps★; determinant as area★; eigenvectors★; projections and least squares★; SVD (image compression)★; PCA.
+- **Calculus:** derivative as slope★; chain rule as a computational graph★; Taylor series★; gradients and contours★; Jacobian and Hessian.
+- **Optimization:** gradient descent, momentum and Adam on 2D loss surfaces★; convexity; Lagrange multipliers★.
+- **Information theory:** entropy, cross-entropy and KL★; Huffman coding★ (a bridge to DS&A).
+- **Numerical methods:** floating-point bit layout★; Newton's method★; log-sum-exp stability.
+
+### 3. Machine learning
+- **Classical:**
+  - linear regression★ (drag points, see residuals), logistic regression★
+  - k-NN★ (Voronoi cells), k-means★, PCA★
+  - decision trees★, gradient boosting★, SVM★ (margin, kernel lift), naive Bayes
+  - bias-variance★, regularization geometry★, ROC★
+- **Deep learning:**
+  - perceptron★, MLP playground★, backprop and autograd (micrograd graph)★
+  - optimizers and normalization
+  - CNN★ (kernels, feature maps), RNN/LSTM★
+  - embeddings★, attention★ (Q/K/V heatmap), transformer block★
+- **LLMs:** BPE tokenization★; sampling (temperature, top-k, top-p)★; KV cache★; LoRA★; RAG and HNSW vector search★; quantization★; MoE routing★; RLHF/DPO.
+- **Reinforcement learning:** bandits★; gridworld MDP★; value and policy iteration★ (linked to DP); Q-learning★; MCTS★.
+- **Generative models:** VAE latent walk★; GAN★; diffusion on 2D points★.
+
+### 4. Systems and software engineering
+- **Operating systems:** CPU scheduling Gantt chart★; paging, TLB and page replacement★; race-condition interleavings★; deadlock★.
+- **Networking:** TCP handshake and the congestion-control sawtooth★.
+- **Storage and databases:** B+tree and LSM compaction★; isolation anomalies★.
+- **Caching:** LRU/LFU★; consistent hashing★.
+- **Distributed systems:** Raft★; Lamport and vector clocks★; token-bucket rate limiter★; queueing latency (p99 vs utilization)★.
+- **System design:** case studies run on a simulator.
+
+**Cross-links to make explicit in lessons:**
+- DP ↔ Bellman equation ↔ value iteration
+- chain rule ↔ backprop
+- edit distance ↔ Viterbi
+- heaps ↔ schedulers
+- Dijkstra / Bellman-Ford ↔ routing
+- hashing ↔ Bloom filter ↔ LSM tree
+- graph search ↔ HNSW
+
+---
+
+## 6. Architecture
+
+### 6.1 Trace engine (record → replay)
+
+Each algorithm becomes a pure, deterministic generator. Running it to completion yields a `Trace`, and a separate player renders any step of that trace.
+
+```ts
+// src/engine/types.ts — sketch
+type Id = string;                         // stable identity — never an array index
+
+type Step = {
+  line?: number;                          // pseudo-code / source line to highlight
+  note: string;                           // narration (also announced via aria-live)
+  vars?: Record<string, unknown>;         // variable inspector
+  marks?: Record<Id, Mark>;               // compare | active | done | pivot | frontier …
+  ops: Op[];                              // what changed since the previous step
+  checkpoint?: Checkpoint;                // predict / be-the-algorithm prompt
+};
+
+type Op =
+  | { t: 'swap'; a: Id; b: Id }
+  | { t: 'set'; id: Id; value: unknown }
+  | { t: 'move'; id: Id; to: number }
+  | { t: 'push' | 'pop'; container: Id; id?: Id }
+  | { t: 'link' | 'unlink'; from: Id; to: Id }          // lists, trees, graphs
+  | { t: 'cell'; r: number; c: number; value: unknown; deps?: [number, number][] };
+
+type Trace<S> = {
+  algo: string; input: unknown; seed: number;
+  initial: S; steps: Step[]; keyframes: Map<number, S>;
+};
+
+function* bubbleSort(items: Item[]): Generator<Step> { /* one Step per meaningful event */ }
+```
+
+- **Seeking.** *As built in Phase 0:* each frame stores a copy-on-write snapshot, so frames share every lane that didn't change. Seeking is a plain array lookup, and memory stays small at the input sizes the visualisers allow. Ops plus keyframes (a keyframe every ~50 steps) remain the plan for traces too large to snapshot, such as ML training runs.
+- **Determinism.** Inputs come from a seeded random generator. That enables:
+  - permalinks such as `?algo=quick-sort&seed=42&step=37`;
+  - snapshot tests;
+  - a tutor that can say "look at step 37".
+- **Correctness.** Property tests (fast-check) check that replaying the trace produces exactly what the algorithm actually outputs.
+- **One schema for everything.** The visual-collections API (§6.4) emits the same `Op`s, so the learner's code and the built-in algorithms share one player.
+- **Caps.** Traces are capped at ~50k events. Past that, a "fast mode" drops per-comparison events.
+
+### 6.2 Player
+
+**API.** `useTracePlayer(trace)` returns `{ index, playing, speed, step(±1), seek(i), play(), pause() }`. It runs on a `requestAnimationFrame` clock.
+
+**Timing.**
+- Tween duration is derived from speed, which removes the delay/transition mismatch.
+- Scrubbing uses zero-duration tweens.
+
+**Keyboard.** ←/→ step, Space plays and pauses, Home/End jump to the ends.
+
+**Accessibility.**
+- `<MotionConfig reducedMotion="user">`: with reduced motion, the view cuts straight to end states while stepping and narration still work.
+- Narration is announced in an `aria-live="polite"` region.
+- A pause control is always available (WCAG 2.2.2).
+
+### 6.3 Renderer primitives
+
+| Primitive | Used by | Tech | Switch renderer above |
+|---|---|---|---|
+| `ArrayView` (bars, cells, pointers, windows) | sorting, searching, two pointers, sliding window, strings | SVG/HTML + Motion `layout`, keyed by id | ~500 items → Canvas2D |
+| `GraphView` | graph algorithms, graph data structures, HNSW, Raft | SVG; layout computed **once** (seeded d3-force, elkjs, dagre) | ~300 nodes / 1k edges → Sigma or Pixi |
+| `TreeView` | BST, AVL, red-black, B-tree, heap, trie, segment tree, recursion trees | SVG + d3-hierarchy tidy layout each frame; nodes animate by id | ~1k nodes |
+| `GridView` | DP tables, pathfinding, sudoku, N-Queens, matrices | CSS grid / SVG + an overlay of dependency arrows | ~2,500 cells → Canvas2D |
+| `StackQueueView`, `HashView`, `MemoryView` | linear structures, hashing, Python-Tutor mode | SVG/HTML | — |
+| `PlotView` | complexity playground, loss curves, distributions, math | SVG (d3-scale/shape); Mafs for interactive planes | — |
+| `NetworkView` | MLP, CNN, attention | SVG when small, Canvas or Pixi for thousands of edges | ~1k edges |
+| `SurfaceView` | loss landscapes, 3D math | three.js / react-three-fiber | — |
+
+**Design system.**
+- One colour means one thing across every primitive.
+- The palette is colour-blind-safe, and state is also shown by shape or pattern, never by colour alone.
+- Light and dark themes.
+
+### 6.4 Code workspace
+
+**Editor.** CodeMirror 6: works on mobile and is roughly 200 KB, versus 2–5 MB for Monaco, which has no official mobile support.
+
+**Run** (in the browser, free to operate):
+- **Python:** Pyodide 314 in a Worker. About 6 MB, lazy-loaded, cached by a service worker.
+- **JS/TS:** a Worker, with esbuild-wasm or Babel transpiling TypeScript. QuickJS where hard step or memory limits are needed.
+- **Verdicts:** computed locally in practice mode and labelled as such, because hidden tests can't be hidden from a browser.
+
+**Submit** (server, authoritative):
+- **Sandbox:** Firecracker-based. Vercel Sandbox first, e2b as the alternative.
+- **Languages:** Python, JS/TS, Java, C++ and Go first; Rust, C#, Kotlin and SQL later.
+- **Cost:** about $0.0002 per batched submission at current published rates.
+- **Rejected options:**
+  - Self-hosted Judge0: its last release (April 2024) fixed a CVSS-10 sandbox escape, and there has been none since.
+  - Piston: its public API closed in February 2026.
+
+**Problem schema** (YAML validated by Zod). Each problem has:
+- a typed signature that generates each language's stub and test driver;
+- sample, hidden and generated tests;
+- comparators: exact, float tolerance, unordered, or custom;
+- per-language time multipliers;
+- reference solutions in every language, all checked in CI.
+
+The driver reads every test from stdin and writes results to a side channel, so the learner's `print` calls can't corrupt the verdict. Comparison runs outside the sandbox, in trusted code.
+
+**Visualizing the learner's code** works in two tiers:
+1. **Visual collections:** `VisualArray`, `VisualGraph`, `VisualGrid` and `VisualTree`, whose operations emit the same `Op`s as the built-in algorithms.
+   - Semantics are exact: a comparison is known, not guessed.
+   - Works in any language.
+   - The driver wraps inputs automatically based on the signature: `List[int]` → bars, `TreeNode` → tree, a 2D list → grid, an adjacency dict → graph.
+2. **Generic tracing**, Python-Tutor style, for intro lessons: `sys.settrace` inside Pyodide for Python, Babel AST instrumentation for JS.
+   - **Spike first:** confirm that `sys.settrace` works inside Pyodide.
+
+### 6.5 ML and math
+- **Precompute by default:**
+  - Train small models offline in PyTorch.
+  - Export per-step metrics and float16 weight/activation snapshots as chunked binaries on a CDN.
+  - Scrub them with the same player. This is deterministic and works on phones.
+- **Train live only tiny models** (≤10k parameters), using a hand-written TypeScript autograd in a Worker. That code doubles as the "build micrograd" exercise.
+- **Inference demos:** transformers.js v4 or ONNX Runtime Web, using WebGPU with a WASM fallback.
+  - Avoid TensorFlow.js: no release since January 2025.
+  - WebGPU is still missing on Firefox for Linux and Android, so always ship fallbacks.
+- **Math:**
+  - KaTeX rendered at build time (remark-math / rehype-katex).
+  - Mafs for interactive 2D planes; react-three-fiber for 3D.
+  - Don't depend on Desmos: its partner terms are unpublished.
+
+### 6.6 Content system
+
+**Lessons.**
+- Written in MDX via **Fumadocs MDX** (used headless), with Zod-validated frontmatter.
+- Ruled out: `next-mdx-remote` was archived in April 2026, and Contentlayer is dead.
+
+**Widgets** are MDX components registered globally, with JSON-serializable props:
+- `<Visualizer algo="quick-sort" input={[5,3,8]} mode="predict" />`
+- `<Exercise id="two-sum" />`
+- `<Quiz id="bst-1" />`
+- `<Review card="heap-after-insert" />`
+
+**Data.**
+- Problems, quizzes, concepts and the prerequisite graph live as YAML/JSON collections.
+- CI fails on broken references and builds every page.
+- `src/data/visualisers.js` becomes the `concepts` collection: one source of truth for complexities, which fixes the 21 pages that currently disagree.
+
+**i18n (later).** Per-locale content directories with stable IDs, and `next-intl` for UI strings.
+
+### 6.7 Accounts, progress, personalization
+
+**Anonymous-first progress.**
+- Progress is an append-only event log in IndexedDB (Dexie) with UUIDv7 IDs.
+- On sign-in it is pushed to the server idempotently.
+
+**Accounts** (decided 2026-10-15).
+- **Own managed Postgres** (e.g. Neon) accessed with **Drizzle**, plus **Better Auth** running inside the Next.js app. Users, sessions and every other table live in our own schema.
+- No separate backend service for now. All database access goes through server-only modules (`src/server/*`): route handlers and server actions. The browser never talks to the database directly. If we later need long-running workers or a public API, those modules can be lifted into a service without a rewrite.
+- Better Auth plugins cover what's coming: Stripe for paid extras, organizations for classroom mode.
+- Only the server can write verdicts from the authoritative judge.
+
+**Spaced repetition** (`ts-fsrs`). Attempt outcomes map to review ratings:
+
+| Outcome | Rating |
+|---|---|
+| Failed | Again |
+| Solved with hints | Hard |
+| Solved | Good |
+| Solved fast | Easy |
+
+**Mastery.**
+- BKT (or a lighter Elo/IRT model) per concept, over the prerequisite graph.
+- A concept counts as mastered only after *delayed, varied* retrieval.
+- Study plans draw next items from the "outer fringe" of what the learner has mastered.
+
+**Study plans.** A goal (e.g. "interview-ready in 8 weeks", "ML engineer foundations"), weekly hours and a diagnostic produce a schedule over the graph. The schedule re-plans from actual performance.
+
+```
+users(id, locale, settings jsonb, created_at)
+concepts(id, slug, title, domain);  concept_prereqs(concept_id, prereq_id, strength)
+attempts(id uuidv7, user_id, item_id, item_version, lang, verdict, passed, total,
+         runtime_ms, hints_used, code_hash, source[local|server], created_at)
+mastery(user_id, concept_id, p_known, n_obs, updated_at)
+review_cards(user_id, card_id, due, stability, difficulty, reps, lapses, state, last_review)
+review_logs(id, user_id, card_id, rating, review_at, elapsed_days, scheduled_days)
+course_plans(id, user_id, goal, target_date);  course_plan_items(plan_id, position, item_id, status, scheduled_for)
+tutor_usage(user_id, day, input_tokens, cached_tokens, output_tokens, cost_usd)
+-- Access control lives in server code: every query is scoped to the session user,
+-- and server-judged verdicts are written only by the judge route.
+```
+
+### 6.8 AI tutor
+
+**Models.**
+- Haiku 5.5: quick hints, classification and the solution-leak check.
+- Sonnet 5.5: code review and debugging.
+- Opus 5.5: only where an eval shows it earns its cost.
+- Rough cost per active learner at 200 turns a month: about $0.20 on Haiku to about $3.30 on Sonnet.
+
+**Prompt layout.**
+- Order: a fixed Socratic system prompt with the hint ladder → cached lesson and problem context, including the reference solution → the conversation.
+- Per-turn state (the learner's code, test results, current trace step) is injected as data.
+- Learner code is clearly delimited, to blunt prompt injection.
+
+**Guardrails enforced in the UI, not just the prompt.**
+- Hint levels unlock one at a time.
+- A full solution only after several genuine attempts plus an explicit request.
+- Before asking for help, a short "what do you think is happening?" prompt; afterwards, a one-line reflection.
+
+**Tools.** The tutor can call `seekTrace(step)`, `highlight(ids)` and `runTests()`, so its explanations point at the visual.
+
+**Cost and abuse control.**
+- Login required.
+- Upstash per-user rate limits and daily token budgets.
+- `max_tokens` caps.
+- A global spend kill switch.
+
+### 6.9 Recommended stack
+
+Versions were checked against the npm registry on 2026-10-15.
+
+| Concern | Choice | Version |
+|---|---|---|
+| Framework | Next.js App Router | 16.4.1 |
+| UI | React (+ React Compiler) | 19.3.1 |
+| Language | TypeScript, adopted incrementally via `allowJs` | 6.0.3. TS 7 is out, but its package drops the JS compiler API that Next's type-check uses, and typescript-eslint supports only versions below 6.1. |
+| Styling | Tailwind + shadcn/ui | 4.3.3 |
+| Tweening | Motion (`motion/react`) | 14.2.0 |
+| Layout math | d3, elkjs, dagre | — |
+| Heavy 2D / 3D | PixiJS / three + react-three-fiber | — |
+| Editor | CodeMirror 6 | @codemirror/view 6.43.14 |
+| Python in the browser | Pyodide (in a Worker) | 314.0.7 |
+| Server judge | Vercel Sandbox (alternative: e2b) | — |
+| Content | Fumadocs MDX + Zod | 15.4.7 / 4.6.7 |
+| Math | KaTeX, Mafs | 0.19.0 / — |
+| Auth + database | Managed Postgres (e.g. Neon) + Drizzle + Better Auth | better-auth 1.7.x |
+| Spaced repetition | ts-fsrs | 5.4.2 |
+| AI | Claude 5.5 models via the AI SDK | ai 7.0.141 |
+| Tests | Vitest + fast-check + Playwright | 5.0.4 / — / 1.64.1 |
+
+**Upgrade notes:**
+- `next lint` is removed in Next 16. Switch to the ESLint CLI with flat config; the untracked `.eslintrc.json` goes away.
+- Node 22+.
+- Turbopack is the default for dev and build.
+- Upgrade Tailwind with `npx @tailwindcss/upgrade`.
+
+### 6.10 Target layout
+
+```
+algorender/
+  content/
+    lessons/<track>/<slug>.mdx
+    problems/<slug>.yaml
+    concepts.yaml              # replaces src/data/visualisers.js; includes prerequisite edges
+  src/
+    engine/                    # types, trace builder, keyframes, seeded PRNG, useTracePlayer
+    algorithms/<slug>.ts       # pure generators + pseudo-code + metadata
+    viz/                       # ArrayView, GraphView, TreeView, GridView, PlotView, …
+    workspace/                 # editor, runtimes (pyodide, js), visual collections, judge client
+    learn/                     # lesson widgets: Predict, BeTheAlgorithm, Parsons, Quiz, Review
+    progress/                  # event log, sync, fsrs, mastery
+    tutor/                     # client panel (server route lives in app/api/tutor)
+    app/                       # /visualisers/[slug], /learn/[track]/[lesson], /practice/[slug], /review, /plan
+```
+
+A single dynamic `/visualisers/[slug]` route replaces the 52 hand-written pages. It keeps the existing URLs, so search rankings and links survive without redirects. Legacy static folders take precedence until each one is ported and deleted.
+
+---
+
+## 7. Gamification design: "Play" mode
+
+**On by default** (gives information, rewards mastery):
+- **Mastery XP**, earned for:
+  - first-try correct predictions and steps on *randomized* inputs;
+  - delayed spaced-review recall at 1, 7 and 30 days;
+  - transfer problems.
+- **Zero XP** for watching or for time spent; diminishing returns on repeats and on items below the learner's level.
+- **Levels per topic** (trace → predict → implement → analyze) rather than one global level. Levels were the only element with an effect in programming studies.
+- **Informational badges** for learning behaviours: first-try accuracy, finding a counterexample, explaining a step. Never mandatory.
+- **A daily challenge**: your due reviews plus one new item.
+
+**Opt-in only:**
+- **Weekly streaks** ("4 review days a week"), with free built-in repair and no loss-framed notifications.
+- **Skill-matched leagues** of about 30 people:
+  - ranked on mastery XP, with team and co-op variants;
+  - the default view is your personal best plus a histogram of everyone's solutions (as in Zachtronics games), not a rank.
+- **Timed modes**, only on material the learner has already mastered.
+- **Asynchronous duels** on randomized interactive traces. AI copy-paste can't shortcut "perform step 7 of this heap".
+
+**Never:**
+- XP for activity or time
+- paid streak repair or XP boosts
+- hearts or lives that block practice
+- loot boxes
+- global all-time leaderboards on code problems
+- public ranking of beginners
+
+**Game modes built on the engine:**
+1. **Be the Algorithm:** perform the next swap, relaxation or rotation; any divergence from the true trace is visualized.
+2. **Predict the Frame.**
+3. **Comparison Budget:** sort using fewer comparisons than merge sort. This teaches the n log n lower bound.
+4. **Invariant Puzzles:** keep heap, BST or red-black properties valid under scripted operations.
+5. **Break It:** craft quicksort's worst case, a hash-flooding input, a counterexample to a greedy algorithm, or a learning rate that diverges.
+6. **Debug It:** a buggy implementation's trace diverges from the correct one; find the faulty line.
+7. **Constrained-instruction puzzles** (in the style of Human Resource Machine), scored on steps and memory against a histogram of all players.
+8. **ML challenges:**
+   - gradient-descent golf;
+   - hyperparameter tuning with a budget of runs and a *hidden* test set, so overfitting the public board is itself the lesson;
+   - diagnose-the-loss-curve.
+9. **Boss battles:** cumulative, interleaved challenges, e.g. "pick and run the right shortest-path algorithm".
+
+**Measuring it.**
+- Run an A/B test for 12+ weeks with a holdout group that has gamification off; novelty effects dip around week 4.
+- Decide on learning metrics.
+- Watch the ratio of XP to mastery gained, the rate of rapid guessing, and outcomes for the bottom quartile.
+
+---
+
+## 8. Roadmap
+
+Every phase ships something usable; nothing waits for the whole revamp. Old pages stay live until their replacement ships.
+
+### Phase 0 — Foundation
+
+**Work:**
+- **Upgrades:** Next 15.5 → 16 and Tailwind 3 → 4; TypeScript via `allowJs`; ESLint flat config; Vitest and Playwright.
+- **Design system:** tokens for light and dark themes, a colour-blind-safe state palette, accessible base components.
+- **Engine:** types, trace builder, keyframes, seeded random generator, `useTracePlayer`.
+- **Controls and panes:** a `<Stepper>` (step, scrub, speed, keyboard, reduced motion), plus narration and pseudo-code panes.
+- **Primitives:** `ArrayView` and `GridView` first.
+- **Proof:** port the 8 sorting algorithms to generators.
+
+**Done when:**
+- In bubble, quick and merge sort, bars visibly move, the run steps backward and scrubs, and a URL can link to a specific step.
+- Property tests pass.
+- Lighthouse accessibility score ≥ 95.
+
+**Status (2026-10-15, branch `revamp/phase-0`):**
+- **Done:**
+  - Upgraded to Next 16.4, React 19.3, Tailwind 4.3 and TypeScript 6.0 (with `allowJs`), with ESLint flat config, Vitest + fast-check and Playwright.
+  - Engine built: `src/engine`, `src/viz/array`, `src/components/explorer`.
+  - All 8 sorting algorithms ported, served by `app/visualisers/[slug]`; the old pages and `SortingChart` are deleted.
+  - 53 unit and property tests: sorted output, no element lost or duplicated in any frame, valid pseudo-code lines, stability where claimed.
+  - 16 Playwright tests, covering:
+    - every sort runs to the end;
+    - bars glide rather than jump, measured per animation frame;
+    - reduced motion cuts straight to each state;
+    - keyboard controls, step-back, deep links and custom input;
+    - no horizontal scroll on mobile.
+- **Not done:**
+  - `GridView` moves to Phase 1 alongside the DP ports.
+  - The Lighthouse accessibility audit hasn't been run yet.
+  - The dark theme waits until the legacy pages, which hard-code light colours, are ported.
+
+### Phase 1 — Port and teach
+
+**Work:**
+- **Primitives:** `GraphView`, `TreeView`, `StackQueueView`, `HashView`.
+- **Port** the remaining 44 visualizers, fixing the correctness bugs found in the audit.
+- **Structure:** the lesson template and `concepts.yaml`; one dynamic `/explore/[slug]` route; per-page metadata and OG images; a sitemap.
+- **Features:** predict gates, custom and adversarial inputs, algorithm races, the complexity playground, permalinks and embeds.
+- **New DS&A pattern visualizers:** sliding window, two pointers, monotonic stack, union-find, intervals, the backtracking tree, the DP family.
+
+**Done when:**
+- All 52 visualizers run on the new engine.
+- The old `/visualisers/*` URLs redirect.
+- Every concept has hook → see → predict.
+
+### Phase 2 — Code workspace
+
+**Work:**
+- **Runtime:** CodeMirror; Pyodide and JS/TS Workers; the visual-collections API for Python and JS.
+- **Tracing:** Python-Tutor-style trace mode, after the `settrace` spike.
+- **Exercises:** Parsons, fill-in, faded examples and bug-hunt; the PRIMM exercise template.
+
+**Done when:** a learner writes bubble sort in Python or JS and watches *their* code drive `ArrayView`.
+
+### Phase 3 — Practice and progress
+
+**Work:**
+- **Problems:** the problem schema and code generation; about 75 problems tagged by pattern (Grind/NeetCode-style coverage).
+- **Judging:** the local judge; the server judge (Vercel Sandbox) for Java, C++ and Go.
+- **Feedback:** failing tests replay visually; pattern drills.
+- **Progress:** Postgres + Better Auth, the local-first event log with sync, and the FSRS review queue with auto-generated cards.
+
+**Done when:** a learner can sign in, solve problems in 5 languages, and use a daily review queue that works offline and syncs.
+
+### Phase 4 — Math and ML tracks
+
+**Work:**
+- **Primitives and rendering:** `PlotView`, `NetworkView`, `SurfaceView`; KaTeX; Mafs.
+- **Math, build first:** grid warps, eigenvectors, gradient descent and optimizers, the chain-rule graph, Bayes, CLT, entropy and KL, SVD, floating point.
+- **ML, build first:** linear and logistic regression, k-means, decision trees and boosting, perceptron and MLP, micrograd, CNN, attention, BPE, sampling, KV cache, gridworld Q-learning, 2D diffusion.
+- **Supporting work:** an offline training pipeline for precomputed traces; the "build micrograd visually" track.
+
+### Phase 5 — Personalization and tutor
+
+**Work:**
+- **Personalization:** the knowledge-map UI, diagnostic placement, BKT mastery, the study-plan generator.
+- **Tutor:** grounded, with a hint ladder, trace tools, a leak check and budgets.
+- **Assessment:** explain-it-back; misconception-targeted quizzes.
+
+### Phase 6 — Play, systems, community
+
+**Work:**
+- **Play mode** (§7).
+- **Systems track:** the simulators.
+- **Extras:** mock interviews, classroom mode, community visualizations, i18n, PWA.
+
+---
+
+## 9. Success metrics
+
+- **Learning (primary):**
+  - spaced-review accuracy at 1, 7 and 30 days;
+  - first-try accuracy on unseen randomized traces;
+  - pre/post concept checks;
+  - time to mastery;
+  - transfer-problem success.
+- **Engagement (secondary):** weekly learners, spaced vs binge sessions, course completion.
+- **Guardrails:** hint-abuse rate, reported solution leaks, tutor cost per learner, bottom-quartile outcomes.
+
+## 10. Risks
+
+| Risk | Mitigation |
+|---|---|
+| Scope: this is years of content | Ship phase by phase. Once the engine and primitives exist, each new concept is mostly content work. Follow the build-first lists. |
+| Authoring cost, the reason Distill stopped | Reusable primitives, generators of about 50 lines each, MDX widgets, content CI |
+| Running untrusted code | Managed Firecracker sandbox with no network, resource limits (ulimits) and one ephemeral sandbox per submission. Comparators run outside it, behind auth and quotas. |
+| Weight of browser runtimes: Pyodide is ~6 MB, cross-origin isolation (COOP/COEP) breaks embeds, iOS memory is tight | Lazy-load in Workers, cache with a service worker, send isolation headers only on workspace routes, fall back to the server |
+| AI tutor cost, abuse and answer leakage | Model routing, per-user budgets, prompt caching, a leak checker, a kill switch |
+| Dependency churn: TF.js dormant, next-mdx-remote archived, Mafs slow-moving | Thin adapters, schema-validated content, CI that builds everything |
+| Novelty-driven engagement that hides a lack of learning | Learning metrics and holdout groups |
+
+## 11. Decisions
+
+**Made (2026-10-15):**
+1. **Accounts and backend:** our own managed Postgres + Drizzle + Better Auth inside the Next.js app. No separate backend service for now (§6.7).
+2. **Business model:** free visuals; paid practice, judge, tutor and study plans, priced within the $119–199/yr band competitors use.
+3. **Migration:** Phase 0 on the `revamp/phase-0` branch, then port page by page with the old routes live until each replacement ships.
+
+**Still open:**
+4. **Judge languages** beyond Python/JS/TS: Java, C++ and Go are recommended.
+5. **Brand scope:** keep the name "Algorender" as it expands into ML, math and systems?
+
+---
+
+## Appendix: key sources
+
+**Learning science and visualization**
+- Hundhausen, Douglas & Stasko 2002, *J. Visual Languages & Computing* — https://doi.org/10.1006/jvlc.2002.0237
+- Naps et al. 2002, ITiCSE working group, engagement taxonomy — https://doi.org/10.1145/960568.782998
+- Crouch, Fagen, Callan & Mazur 2004, *Am. J. Physics* (prediction vs passive demos) — https://www.compadre.org/portal/items/detail.cfm?ID=2329
+- Tversky, Morrison & Bétrancourt 2002, "Animation: can it facilitate?" — https://faculty.washington.edu/aragon/classes/hcde411/w13/readings/Tversky_AnimationFacilitate_IJHCS02.pdf
+- Berney & Bétrancourt 2016, *Computers & Education* — https://archive-ouverte.unige.ch/unige:92234
+- Mayer 2017, "Using multimedia for e-learning", *JCAL* — https://doi.org/10.1111/jcal.12197
+- Shaffer et al. 2010, "Algorithm Visualization: The State of the Field", *TOCE* — https://doi.org/10.1145/1821996.1821997
+- Xie et al. 2019, theory of instruction for intro programming — https://faculty.washington.edu/ajko/papers/Xie2019IntroCSTheoryOfInstruction.pdf
+- Ericson et al. 2022, Parsons problems working group — https://doi.org/10.1145/3571785.3574127
+- Oreopoulos, Liut, Sungu & Low 2026 (what counts as mastery) — https://doi.org/10.26300/01qv-6c22
+- FSRS benchmark — https://github.com/open-spaced-repetition/srs-benchmark
+- Bret Victor, "Up and Down the Ladder of Abstraction" — https://worrydream.com/LadderOfAbstraction/ · "Learnable Programming" — https://worrydream.com/LearnableProgramming/
+- Transformer Explainer (Cho et al.) — https://arxiv.org/abs/2408.04619
+
+**AI tutors**
+- Bastani et al. 2025, *PNAS* — https://doi.org/10.1073/pnas.2422633122
+- Kestin et al. 2025, *Scientific Reports* — https://pmc.ncbi.nlm.nih.gov/articles/PMC12179260/
+- Khanmigo evaluation (Hechinger summary of NBER draft, Sept 2026) — https://hechingerreport.org/proof-points-khanmigo-math-ai-tutor/
+- CodeAid — https://arxiv.org/abs/2401.11314 · CodeHelp — https://arxiv.org/abs/2308.06921 · Prather et al. "The Widening Gap" — https://arxiv.org/abs/2405.17739
+
+**Gamification**
+- Sailer & Homner 2020, *Educational Psychology Review* — https://link.springer.com/article/10.1007/s10648-019-09498-w
+- Hanus & Fox 2015, *Computers & Education* — https://doi.org/10.1016/j.compedu.2014.08.019
+- Silverman & Barasch 2023, *J. Consumer Research* (broken streaks) — https://doi.org/10.1093/jcr/ucac029
+- Rodrigues et al. 2022 (novelty effect in CS1) — https://doi.org/10.1186/s41239-021-00314-6
+- Costa 2023 (gamification in programming education) — https://doi.org/10.1002/cae.22630
+- Wouters et al. 2013 (serious games meta-analysis) — https://doi.org/10.1037/a0031311
+- Advent of Code 2025 leaderboard change — https://adventofcode.com/2025/about
+
+**Market and technology**
+- VisuAlgo — https://visualgo.net · Python Tutor — https://pythontutor.com · NeetCode Pro — https://neetcode.io/pro · Math Academy — https://www.mathacademy.com/courses
+- Distill hiatus — https://distill.pub/2021/distill-hiatus/
+- Judge0 sandbox-escape write-up — https://tantosec.com/blog/judge0/ · Piston API status — https://github.com/engineer-man/piston
+- Vercel Sandbox pricing — https://vercel.com/docs/vercel-sandbox/pricing
+- Next.js 16 upgrade guide — https://nextjs.org/docs/app/guides/upgrading/version-16
+- WebGPU implementation status — https://github.com/gpuweb/gpuweb/wiki/implementation-status
+
+> Some secondary details in the research (individual pricing figures, a few effect sizes) could not be checked against primary sources. None of the recommendations above depends on them.
