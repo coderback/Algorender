@@ -25,14 +25,24 @@ export function Narration({ note, live }: { note: string; live: boolean }) {
   );
 }
 
-export function CodePanel({ lines, current }: { lines: readonly string[]; current: number | null }) {
-  // Number only non-blank lines, like an editor gutter would for this pseudo-code.
+export function CodePanel({
+  lines,
+  current,
+  title = 'Pseudo-code',
+  numberAll = false,
+}: {
+  lines: readonly string[];
+  current: number | null;
+  title?: string;
+  /** Number every line like an editor (the learner's code), not just the non-blank ones (pseudo-code). */
+  numberAll?: boolean;
+}) {
   const numbers: (number | null)[] = [];
   let n = 0;
-  for (const line of lines) numbers.push(line.trim() === '' ? null : ++n);
+  for (const line of lines) numbers.push(!numberAll && line.trim() === '' ? null : ++n);
 
   return (
-    <Panel title="Pseudo-code">
+    <Panel title={title}>
       <ol className="py-2 font-mono text-[12.5px] leading-6">
         {lines.map((line, i) => {
           const blank = numbers[i] == null;
@@ -45,7 +55,7 @@ export function CodePanel({ lines, current }: { lines: readonly string[]; curren
                 active ? 'border-accent bg-accent-soft font-semibold text-ink' : 'border-transparent text-ink-soft'
               }`}
             >
-              <span className="w-4 shrink-0 text-right text-ink-muted select-none">{numbers[i] ?? ''}</span>
+              <span className="w-5 shrink-0 text-right text-ink-muted select-none">{numbers[i] ?? ''}</span>
               <span className="whitespace-pre-wrap">{blank ? ' ' : line}</span>
             </li>
           );

@@ -4,8 +4,11 @@ import { useState, type ReactNode } from 'react';
 import { FiChevronLeft, FiChevronRight, FiCode, FiLink, FiPause, FiPlay, FiRotateCcw, FiSkipBack, FiSkipForward } from 'react-icons/fi';
 import { DEFAULT_SPEED, SPEEDS, type TracePlayer } from '@/engine/useTracePlayer';
 
-/** Transport controls. `children` adds extra controls (e.g. the Watch/Predict switch) to the second row. */
-export function PlayerControls({ player, children }: { player: TracePlayer; children?: ReactNode }) {
+/**
+ * Transport controls. `children` adds extra controls (e.g. the Watch/Predict switch) to the second row.
+ * `share` shows the step-link and embed buttons; a learner's own run has no URL to share.
+ */
+export function PlayerControls({ player, children, share = true }: { player: TracePlayer; children?: ReactNode; share?: boolean }) {
   const { index, last, playing, speed, blocked } = player;
   const waiting = blocked ? 'Answer the question first' : null;
   const atStart = index === 0;
@@ -91,23 +94,25 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
         </label>
         {children}
         <span className="hidden xl:inline">← → step · Space play · Home/End jump</span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => copy('link')}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
-          >
-            <FiLink aria-hidden /> {copied === 'link' ? 'Link copied' : 'Copy link to this step'}
-          </button>
-          <button
-            type="button"
-            onClick={() => copy('embed')}
-            title="Copy an <iframe> snippet that embeds this visualiser at this step"
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
-          >
-            <FiCode aria-hidden /> {copied === 'embed' ? 'Embed copied' : 'Embed'}
-          </button>
-        </div>
+        {share && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => copy('link')}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
+            >
+              <FiLink aria-hidden /> {copied === 'link' ? 'Link copied' : 'Copy link to this step'}
+            </button>
+            <button
+              type="button"
+              onClick={() => copy('embed')}
+              title="Copy an <iframe> snippet that embeds this visualiser at this step"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
+            >
+              <FiCode aria-hidden /> {copied === 'embed' ? 'Embed copied' : 'Embed'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

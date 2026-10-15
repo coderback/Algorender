@@ -1,7 +1,7 @@
 'use client';
 
 import { MotionConfig } from 'motion/react';
-import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { LegendEntry, StatSpec, ViewKind } from '@/engine/module';
 import type { Trace } from '@/engine/types';
 import { usePlayerKeyboard, useTracePlayer } from '@/engine/useTracePlayer';
@@ -41,6 +41,9 @@ export function TraceStage<S>({
   keyboard = 'page',
   layout = 'wide',
   onPrediction,
+  code,
+  share = true,
+  onFrame,
 }: {
   trace: Trace<S>;
   view: ViewKind;
@@ -56,6 +59,12 @@ export function TraceStage<S>({
   layout?: 'wide' | 'stacked';
   /** Called once per answered prediction. */
   onPrediction?: (correct: boolean) => void;
+  /** How to title and number the code panel; defaults suit pseudo-code. */
+  code?: { title: string; numberAll?: boolean };
+  /** Show the copy-link and embed buttons (off for a learner's own run). */
+  share?: boolean;
+  /** Called with the frame index whenever it changes, e.g. to keep an editor's line highlight in step. */
+  onFrame?: (index: number) => void;
 }) {
   const View = VIEWS[view];
   const [answers, setAnswers] = useState<ReadonlyMap<number, number>>(new Map());
@@ -73,6 +82,9 @@ export function TraceStage<S>({
   const rootRef = useRef<HTMLDivElement>(null);
   usePlayerKeyboard(player, keyboard === 'local' ? rootRef : undefined);
   const frame = trace.frames[player.index];
+  useEffect(() => {
+    onFrame?.(player.index);
+  }, [onFrame, player.index]);
   const question = predicting && asked.has(player.index) ? frame.checkpoint : undefined;
 
   const answer = useCallback(
@@ -111,7 +123,7 @@ export function TraceStage<S>({
               scope={keyboard === 'local' ? rootRef : undefined}
             />
           )}
-          <PlayerControls player={player}>
+          <PlayerControls player={player} share={share}>
             <ModeSwitch predict={predict} hasQuestions={asked.size > 0} score={{ correct, total: answered.length }} />
           </PlayerControls>
           {trace.truncated && (
@@ -119,7 +131,7 @@ export function TraceStage<S>({
           )}
         </div>
         <aside className={layout === 'wide' ? 'min-w-0 space-y-3' : 'grid min-w-0 gap-3 md:grid-cols-2 md:items-start'}>
-          <CodePanel lines={pseudocode} current={frame.line} />
+          <CodePanel lines={pseudocode} current={frame.line} title={code?.title} numberAll={code?.numberAll} />
           {stats.length > 0 && <StatsPanel stats={stats} values={frame.stats} />}
           <VarsPanel vars={frame.vars} />
           <Legend entries={legend} />

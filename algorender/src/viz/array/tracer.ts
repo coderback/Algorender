@@ -47,6 +47,11 @@ export class ArrayTracer {
     return this.lane(MAIN).slots.length;
   }
 
+  /** Number of slots in a lane (filled or empty). */
+  laneLength(id: string): number {
+    return this.lane(id).slots.length;
+  }
+
   /** Value stored in a slot. Reading an empty slot is a bug in the algorithm. */
   value(ref: SlotRef): number {
     const [lane, index] = resolve(ref);
@@ -103,6 +108,37 @@ export class ArrayTracer {
       slots[j] = id;
     });
     if (count) this.count('writes');
+  }
+
+  /**
+   * Puts a new element holding `value` into a slot, replacing what was there:
+   * user code's `arr[i] = v`. A copy (`arr[j + 1] = arr[j]`) is a new element,
+   * not the old one moved, so two slots never share an id.
+   */
+  write(ref: SlotRef, value: number, { count = true }: { count?: boolean } = {}) {
+    const [lane, i] = resolve(ref);
+    const id = this.newItem(value);
+    this.editSlots(lane, (slots) => {
+      slots[i] = id;
+    });
+    if (count) this.count('writes');
+  }
+
+  /** Adds a new element at the end of a lane (`append` / `push`). */
+  append(lane: string, value: number) {
+    const id = this.newItem(value);
+    this.editSlots(lane, (slots) => {
+      slots.push(id);
+    });
+    this.count('writes');
+  }
+
+  /** Removes a slot, shifting the slots after it left (`pop`). */
+  removeAt(ref: SlotRef) {
+    const [lane, i] = resolve(ref);
+    this.editSlots(lane, (slots) => {
+      slots.splice(i, 1);
+    });
   }
 
   markSorted(...refs: SlotRef[]) {
@@ -196,6 +232,15 @@ export class ArrayTracer {
     const counter = this.counters.find((c) => c.id === id);
     if (!counter) throw new Error(`Unknown counter "${id}"`);
     return counter;
+  }
+
+  private created = 0;
+
+  /** A fresh element id. Values are fixed per id, so sharing `values` across frames stays safe. */
+  private newItem(value: number): ItemId {
+    const id = `w${++this.created}`;
+    this.values[id] = value;
+    return id;
   }
 
   /** Copy-on-write edit of one lane, so earlier frames keep their own slots. */
