@@ -2,6 +2,7 @@ import { backtracking } from '@/algorithms/backtracking';
 import { dynamicProgramming } from '@/algorithms/dp';
 import { graphAlgorithms } from '@/algorithms/graph';
 import { greedy } from '@/algorithms/greedy';
+import { patterns } from '@/algorithms/patterns';
 import { searching } from '@/algorithms/searching';
 import { sorting } from '@/algorithms/sorting';
 import { stringAlgorithms } from '@/algorithms/strings';
@@ -26,6 +27,7 @@ for (const m of [
   ...dynamicProgramming,
   ...backtracking,
   ...stringAlgorithms,
+  ...patterns,
   ...linearStructures,
   ...treeStructures,
   ...graphStructures,
