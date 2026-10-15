@@ -73,9 +73,11 @@ export type AlgorithmModule<I, S> = {
 
 // ──────────────────────────── structures ───────────────────────────
 
-export type ArgSpec =
+export type ArgSpec<M = unknown> =
   | { name: string; label: string; type: 'int'; min: number; max: number; default?: number }
-  | { name: string; label: string; type: 'text'; maxLength: number; placeholder?: string };
+  | { name: string; label: string; type: 'text'; maxLength: number; placeholder?: string }
+  /** Pick one of the model's current options (e.g. an existing vertex), shown as a dropdown. */
+  | { name: string; label: string; type: 'choice'; options: (model: M) => readonly string[] };
 
 export type Args = Record<string, number | string>;
 
@@ -83,10 +85,16 @@ export type Args = Record<string, number | string>;
 export type OperationSpec<M, S> = {
   id: string;
   label: string;
-  args: readonly ArgSpec[];
+  args: readonly ArgSpec<M>[];
   pseudocode: readonly string[];
-  /** Why the operation can't run right now (e.g. "The stack is empty"), or null if it can. */
-  disabledReason?: (model: M) => string | null;
+  /**
+   * Why the operation can't run (e.g. "The stack is empty", "There is no edge
+   * A–D"), or null if it can. `args` is undefined while the form's inputs don't
+   * parse yet, so checks that only need the model should not depend on it.
+   * Prefer a narrated run over disabling when the attempt itself teaches
+   * something (e.g. searching for a missing key).
+   */
+  disabledReason?: (model: M, args?: Args) => string | null;
   /** Must not mutate `model`: models are kept for undo and URL replay. */
   run: (model: M, args: Args) => Generator<Frame<S>, M>;
 };

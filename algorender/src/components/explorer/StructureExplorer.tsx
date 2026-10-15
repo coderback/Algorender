@@ -7,7 +7,8 @@ import type { AnyStructure, OperationSpec } from '@/engine/module';
 import { randomSeed } from '@/engine/random';
 import { recordOperation } from '@/engine/trace';
 import type { Trace } from '@/engine/types';
-import { parseArg, parseOps, replay, describeCall, serializeOps, type OpCall } from './operations';
+import { argError, blockedReason, describeCall, parseArg, parseArgs, parseOps, replay, serializeOps, type OpCall } from './operations';
+import { Experiments } from './Experiments';
 import { DEFAULT_SEED } from './source';
 import { TraceStage, type Density, type Mode } from './TraceStage';
 import { modeFromParams, writeUrl } from './url';
@@ -58,7 +59,7 @@ export function StructureExplorer({ module: ds }: { module: AnyStructure }) {
   };
 
   const run = (spec: Spec, call: OpCall) => {
-    if (spec.disabledReason?.(session.model)) return;
+    if (blockedReason(ds, session.model, call)) return;
     const rec = recordOperation(spec.run(session.model, call.args));
     sync({
       ...session,
@@ -141,6 +142,17 @@ export function StructureExplorer({ module: ds }: { module: AnyStructure }) {
           ))}
         </div>
       </div>
+      <Experiments
+        suffix=""
+        items={ds.content.experiments
+          .filter((x) => ds.initial.some((s) => s.id === x.example))
+          .map((x) => ({
+            key: x.example,
+            label: `Start from: ${ds.initial.find((s) => s.id === x.example)!.label}`,
+            prompt: x.prompt,
+            onTry: () => reset(x.example),
+          }))}
+      />
     </div>
   );
 }
@@ -151,32 +163,42 @@ function OperationsPanel({ ds, model, onRun }: { ds: AnyStructure; model: Model;
       <h2 className="mb-3 text-sm font-semibold text-gray-900">Operations</h2>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {ds.operations.map((spec) => (
-          <OperationForm key={spec.id} spec={spec} disabledReason={spec.disabledReason?.(model) ?? null} onRun={onRun} />
+          <OperationForm key={spec.id} spec={spec} model={model} onRun={onRun} />
         ))}
       </div>
     </section>
   );
 }
 
-function OperationForm({ spec, disabledReason, onRun }: { spec: Spec; disabledReason: string | null; onRun: (spec: Spec, call: OpCall) => void }) {
+function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun: (spec: Spec, call: OpCall) => void }) {
   const [raw, setRaw] = useState<Record<string, string>>(() =>
     Object.fromEntries(spec.args.map((a) => [a.name, a.type === 'int' ? String(a.default ?? a.min) : ''])),
   );
   const [error, setError] = useState<string | null>(null);
 
+  // A choice whose stored value no longer exists (or was never picked) shows its first option.
+  const values: Record<string, string> = Object.fromEntries(
+    spec.args.map((a) => {
+      if (a.type !== 'choice') return [a.name, raw[a.name] ?? ''];
+      const options = a.options(model);
+      return [a.name, options.includes(raw[a.name]) ? raw[a.name] : (options[0] ?? '')];
+    }),
+  );
+  const parsed = parseArgs(spec.args, values, model);
+  const emptyChoice = spec.args.find((a) => a.type === 'choice' && a.options(model).length === 0);
+  const disabledReason = emptyChoice
+    ? `Nothing to choose for ${emptyChoice.label.toLowerCase()} yet.`
+    : (spec.disabledReason?.(model, parsed ?? undefined) ?? null);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const args: Record<string, number | string> = {};
-    for (const a of spec.args) {
-      const value = parseArg(a, raw[a.name] ?? '');
-      if (value === null) {
-        setError(a.type === 'int' ? `${a.label}: a whole number from ${a.min} to ${a.max}.` : `${a.label}: 1–${a.maxLength} characters.`);
-        return;
-      }
-      args[a.name] = value;
+    if (!parsed) {
+      const bad = spec.args.find((a) => parseArg(a, values[a.name], model) === null)!;
+      setError(argError(bad));
+      return;
     }
     setError(null);
-    onRun(spec, { op: spec.id, args });
+    onRun(spec, { op: spec.id, args: parsed });
     // Suggest a fresh value for the next run, so repeated inserts aren't all the same.
     setRaw((prev) =>
       Object.fromEntries(
@@ -185,20 +207,37 @@ function OperationForm({ spec, disabledReason, onRun }: { spec: Spec; disabledRe
     );
   };
 
+  const field = 'w-20 min-w-0 flex-1 rounded-md border border-gray-200 px-2 py-1 font-mono text-sm focus:border-blue-500 focus:outline-none';
   return (
     <form onSubmit={submit} className="flex flex-col gap-1 rounded-lg border border-gray-200 p-2.5">
       <div className="flex items-center gap-2">
-        {spec.args.map((a) => (
-          <input
-            key={a.name}
-            aria-label={`${spec.label}: ${a.label}`}
-            value={raw[a.name] ?? ''}
-            onChange={(e) => setRaw((prev) => ({ ...prev, [a.name]: e.target.value }))}
-            inputMode={a.type === 'int' ? 'numeric' : 'text'}
-            placeholder={a.type === 'text' ? a.placeholder ?? a.label : a.label}
-            className="w-20 min-w-0 flex-1 rounded-md border border-gray-200 px-2 py-1 font-mono text-sm focus:border-blue-500 focus:outline-none"
-          />
-        ))}
+        {spec.args.map((a) =>
+          a.type === 'choice' ? (
+            <select
+              key={a.name}
+              aria-label={`${spec.label}: ${a.label}`}
+              value={values[a.name]}
+              onChange={(e) => setRaw((prev) => ({ ...prev, [a.name]: e.target.value }))}
+              className={`${field} bg-white`}
+            >
+              {a.options(model).map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              key={a.name}
+              aria-label={`${spec.label}: ${a.label}`}
+              value={values[a.name]}
+              onChange={(e) => setRaw((prev) => ({ ...prev, [a.name]: e.target.value }))}
+              inputMode={a.type === 'int' ? 'numeric' : 'text'}
+              placeholder={a.type === 'text' ? (a.placeholder ?? a.label) : a.label}
+              className={field}
+            />
+          ),
+        )}
         <button
           type="submit"
           disabled={disabledReason != null}
