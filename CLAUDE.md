@@ -51,6 +51,14 @@ The full e2e suite (~250 tests, including axe scans of every page in both themes
 - Visualisers inside lessons run with `variant="lesson"`: they start from their settings, never write the URL, keep keyboard shortcuts to the focused stage, stack their panels, and ask at every decision in Predict mode.
 - Progress (completed lessons, best quiz and prediction scores) lives in localStorage (`src/components/lesson/progress.ts`) until accounts arrive.
 
+### Code workspace (learner code drives the views)
+
+- `src/workspace/protocol.ts` is the contract: a `RunRequest` (language, code, entry function, args, limits) produces a `RunResult` whose `events` (array created, compare, write, append, pop, print — each with the learner's line and simple local `vars`) describe what the code did to its *visual collections*. `src/workspace/contract.ts` holds the shared cases every runtime must pass, with exact events; add a case there when you change semantics, never in one runtime only.
+- `trace.ts` turns events into the same `Trace<ArrayState>` the built-in visualisers play (two writes that exchange two cells on the same or the next line become a swap, keeping element identity, so bars slide). `runner.ts` owns the workers, kills one that overruns its time budget, and starts a fresh one next run.
+- **Python** runs in Pyodide 314 (CDN) in `public/workers/python.mjs`, a *static module worker*: Pyodide refuses classic workers, and Turbopack-bundled workers run classic. The Python-side logic is `HARNESS` in `python/harness.ts` (AST rewrite of comparisons, `VisualList`, a `sys.settrace` step counter, print capture), sent to the worker on init and unit-tested in Node with the npm `pyodide` build. **JS/TS** is stripped with sucrase, instrumented with acorn/astring and run by `js/runtime.ts` in a bundled worker; it is plain TS, tested directly in Node.
+- Exercises live in `src/content/exercises/index.ts` (task, starter and solution per language, examples to watch, judged tests, a `check` that explains failures, hints). `/code` lists them, `/code/[slug]` hosts `Workspace.tsx`, and a visualiser page links to its exercise. `exercises.test.ts` runs every solution and starter through both runtimes and checks the languages do the same things to the array. Verdicts are local practice feedback, labelled as such.
+- Learner code runs with the worker's same-origin privileges: fine with no accounts, but revisit (sandboxed iframe) before code sharing or auth lands.
+
 ### Registry
 
 `src/data/visualisers.js` is the single registry (name, slug, category, complexities, `hidden`) for the home page, search, and the new page headers. Complexities live only there; algorithm modules hold the teaching content.

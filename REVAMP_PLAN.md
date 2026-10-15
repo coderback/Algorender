@@ -748,6 +748,28 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 
 **Done when:** a learner writes bubble sort in Python or JS and watches *their* code drive `ArrayView`.
 
+**Status (2026-10-15, branch `revamp/phase-2`): the "done when" is met. This is Phase 2a.**
+- **Spike, resolved:**
+  - Pyodide 314 (Python 3.14) runs in a Web Worker, and `sys.settrace` and `ast` work there.
+  - Pyodide refuses classic workers, and Turbopack-bundled workers run classic. So the Python worker is a static module script (`public/workers/python.mjs`), loading Pyodide from the jsDelivr CDN.
+  - The cold load takes about 6 s, and the browser cache shortens later ones.
+- **Built:**
+  - **One event protocol and a shared contract** (`src/workspace/protocol.ts`, `contract.ts`). Both runtimes pass identical cases, with exact events, lines and variables.
+  - **Python runtime:** an AST rewrite records exact comparisons, a `VisualList` records writes, a step limit stops endless loops, and `print`/`input` are captured.
+  - **JS/TS runtime:** sucrase strips TypeScript, then acorn and astring instrument the code. It runs in strict mode, and a learner's try/catch can't swallow the limits.
+  - **Trace and editor:** events become the same trace the built-in visualisers play, with swaps recognised and index variables drawn as pointers. The editor is CodeMirror 6, themed by tokens; it highlights the run line and error line and has Ctrl/⌘+Enter to run.
+  - **Workspace pages:** `/code` and `/code/[slug]`. Four exercises (bubble, insertion and selection sort, and binary search) come with starters, solutions, examples, judged tests, explanatory checks and staged hints.
+- **Tests:**
+  - Unit tests cover the runtimes and trace conversion.
+  - Every exercise solution is checked in all three languages, and they must do the same things to the array.
+  - `e2e/workspace.spec.ts` covers JS and Python runs, errors, storage and axe in both themes.
+- **Phase 2b, still to do:**
+  - Exercise formats: Parsons, fill-in, faded worked examples, bug-hunt, and the PRIMM template as lesson widgets.
+  - Visual grids, graphs and trees for learner code.
+  - Python-Tutor-style generic tracing.
+  - A service worker that caches Pyodide.
+  - Sandboxing learner code in an iframe before code sharing or accounts.
+
 ### Phase 3 — Practice and progress
 
 **Work:**
