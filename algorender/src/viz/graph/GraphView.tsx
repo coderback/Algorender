@@ -1,7 +1,255 @@
 'use client';
 
-// Placeholder until the graph view is built. Replace with the real renderer;
-// its props must stay { state: <this view's state type> }.
-export function GraphView({ state }: { state: unknown }) {
-  return <pre className="overflow-auto text-xs text-gray-500">{JSON.stringify(state, null, 2)}</pre>;
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
+import { useId, type CSSProperties } from 'react';
+import { MARKS } from '@/viz/marks';
+import { GraphPanels, svgOnMark } from './GraphPanels';
+import { edgeGeometry, NODE_R, placeLabels, type Geometry } from './layout';
+import type { GraphEdge, GraphNode, GraphState, Mark } from './types';
+
+/** Space around the nodes for badges above and annotations below. */
+const PAD_X = NODE_R + 18;
+const PAD_TOP = NODE_R + 14;
+const PAD_BOTTOM = NODE_R + 24;
+const MIN_WIDTH = 240;
+/** Largest on-screen scale, so a small graph doesn't balloon on a wide screen. */
+const MAX_SCALE = 1.6;
+
+const TWEEN: CSSProperties = { transitionDuration: 'var(--tween, 300ms)' };
+
+/**
+ * Draws a graph as SVG with fixed node positions, scaled to the available
+ * width, plus the side panels the algorithm keeps in its state (queue, table,
+ * matrix…). Marks change colour by CSS transition; a relaxed edge pulses once.
+ */
+export function GraphView({ state }: { state: GraphState }) {
+  const groupId = useId();
+  const byId = new Map(state.nodes.map((n) => [n.id, n]));
+
+  let minX = Math.min(...state.nodes.map((n) => n.x));
+  let maxX = Math.max(...state.nodes.map((n) => n.x));
+  const minY = Math.min(...state.nodes.map((n) => n.y));
+  const maxY = Math.max(...state.nodes.map((n) => n.y));
+  if (maxX - minX + 2 * PAD_X < MIN_WIDTH) {
+    const grow = (MIN_WIDTH - (maxX - minX + 2 * PAD_X)) / 2;
+    minX -= grow;
+    maxX += grow;
+  }
+  const vb = { x: minX - PAD_X, y: minY - PAD_TOP, w: maxX - minX + 2 * PAD_X, h: maxY - minY + PAD_TOP + PAD_BOTTOM };
+
+  const edgeSet = new Set(state.edges.map((e) => `${e.from}>${e.to}`));
+  const geometry = new Map(
+    state.edges.flatMap((e) => {
+      const a = byId.get(e.from);
+      const b = byId.get(e.to);
+      if (!a || !b) return [];
+      const twoWay = state.directed && edgeSet.has(`${e.to}>${e.from}`);
+      return [[e.id, edgeGeometry(a, b, state.directed, twoWay)] as const];
+    }),
+  );
+  const labels = placeLabels(state.nodes, state.edges, state.directed);
+  const pulseEdge = state.pulse ? state.edges.find((e) => e.id === state.pulse!.edge) : undefined;
+  const pulseGeo = pulseEdge ? geometry.get(pulseEdge.id) : undefined;
+
+  return (
+    <LayoutGroup id={groupId}>
+      <div className="flex flex-col gap-4">
+        <p className="sr-only">{describe(state)}</p>
+        {state.nodes.length === 0 ? (
+          <p className="py-10 text-center text-sm text-gray-400">The graph is empty. Add a vertex to start.</p>
+        ) : (
+          <div aria-hidden>
+            {state.annotationLabel && (
+              <p className="mb-1 text-[11px] text-gray-500">
+                Under each node: <span className="font-mono font-semibold text-gray-700">{state.annotationLabel}</span>
+              </p>
+            )}
+            <svg
+              viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
+              className="mx-auto block h-auto w-full"
+              style={{ maxWidth: vb.w * MAX_SCALE, aspectRatio: `${vb.w} / ${vb.h}` }}
+            >
+              <AnimatePresence initial={false}>
+                {state.edges.map((e) => {
+                  const geo = geometry.get(e.id);
+                  return geo ? <EdgeLine key={e.id} edge={e} geo={geo} mark={state.edgeMarks[e.id]} directed={state.directed} /> : null;
+                })}
+              </AnimatePresence>
+              {pulseGeo && (
+                <motion.path
+                  key={`pulse-${state.pulse!.seq}`}
+                  d={pulseGeo.d}
+                  fill="none"
+                  strokeLinecap="round"
+                  className={MARKS[state.edgeMarks[pulseEdge!.id] ?? 'write'].stroke}
+                  initial={{ opacity: 0.7, strokeWidth: 4 }}
+                  animate={{ opacity: 0, strokeWidth: 16 }}
+                />
+              )}
+              {state.edges.map((e) => {
+                const geo = geometry.get(e.id);
+                return geo && labels.has(e.id) ? <EdgeLabel key={e.id} edge={e} at={labels.get(e.id)!} mark={state.edgeMarks[e.id]} weighted={state.weighted} /> : null;
+              })}
+              <AnimatePresence initial={false}>
+                {state.nodes.map((n) => (
+                  <NodeShape
+                    key={n.id}
+                    node={n}
+                    mark={state.nodeMarks[n.id]}
+                    annotation={state.annotations[n.id]}
+                    badge={state.badges[n.id]}
+                  />
+                ))}
+              </AnimatePresence>
+            </svg>
+          </div>
+        )}
+        <GraphPanels panels={state.panels} />
+      </div>
+    </LayoutGroup>
+  );
+}
+
+function EdgeLine({ edge, geo, mark, directed }: { edge: GraphEdge; geo: Geometry; mark: Mark | undefined; directed: boolean }) {
+  const stroke = mark ? MARKS[mark].stroke : 'stroke-gray-300';
+  const fill = mark ? MARKS[mark].fill : 'fill-gray-400';
+  return (
+    <motion.g data-edge={edge.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.path
+        initial={false}
+        animate={{ d: geo.d }}
+        fill="none"
+        strokeLinecap="round"
+        strokeWidth={mark ? (mark === 'path' ? 4.5 : 3.5) : 2}
+        strokeDasharray={mark === 'reject' ? '6 5' : undefined}
+        className={`transition-[stroke,stroke-width] ${stroke}`}
+        style={TWEEN}
+      />
+      {geo.arrow && directed && (
+        <motion.path initial={false} animate={{ d: geo.arrow }} className={`transition-colors ${fill}`} style={TWEEN} />
+      )}
+    </motion.g>
+  );
+}
+
+function EdgeLabel({ edge, at, mark, weighted }: { edge: GraphEdge; at: { x: number; y: number }; mark: Mark | undefined; weighted: boolean }) {
+  if (!weighted && !mark) return null;
+  return (
+    <text
+      x={at.x}
+      y={at.y}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={13}
+      paintOrder="stroke"
+      stroke="white"
+      strokeWidth={4}
+      strokeLinejoin="round"
+      className="fill-gray-700 font-mono font-semibold"
+    >
+      {weighted && <tspan>{edge.weight}</tspan>}
+      {mark && (
+        <tspan className={`fill-current ${MARKS[mark].text}`} dx={weighted ? 2 : 0} fontSize={11}>
+          {MARKS[mark].glyph}
+        </tspan>
+      )}
+    </text>
+  );
+}
+
+function NodeShape({ node, mark, annotation, badge }: { node: GraphNode; mark: Mark | undefined; annotation?: string; badge?: string }) {
+  const meta = mark ? MARKS[mark] : null;
+  const { x, y } = node;
+  const badgeWidth = badge ? badge.length * 7 + 8 : 0;
+  return (
+    <motion.g data-node={node.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <circle
+        cx={x}
+        cy={y}
+        r={NODE_R}
+        strokeWidth={2}
+        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-white stroke-bar'}`}
+        style={TWEEN}
+      />
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={node.id.length > 2 ? 12 : 15}
+        className={`font-semibold transition-colors ${mark ? svgOnMark(mark) : 'fill-gray-900'}`}
+        style={TWEEN}
+      >
+        {node.id}
+      </text>
+      {meta && (
+        <g>
+          <circle cx={x + NODE_R * 0.8} cy={y - NODE_R * 0.8} r={8} strokeWidth={1.5} className={`fill-white ${meta.stroke}`} />
+          <text
+            x={x + NODE_R * 0.8}
+            y={y - NODE_R * 0.8}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={meta.glyph.length > 1 ? 7 : 10}
+            className={`fill-current font-bold ${meta.text}`}
+          >
+            {meta.glyph}
+          </text>
+        </g>
+      )}
+      {badge && (
+        <g>
+          <rect
+            x={x - NODE_R * 0.7 - badgeWidth / 2}
+            y={y - NODE_R - 9}
+            width={badgeWidth}
+            height={15}
+            rx={4}
+            strokeWidth={1}
+            className="fill-gray-800 stroke-gray-800"
+          />
+          <text x={x - NODE_R * 0.7} y={y - NODE_R - 1.5} textAnchor="middle" dominantBaseline="central" fontSize={11} className="fill-white font-bold">
+            {badge}
+          </text>
+        </g>
+      )}
+      {annotation != null && (
+        <text
+          x={x}
+          y={y + NODE_R + 13}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={13}
+          paintOrder="stroke"
+          stroke="white"
+          strokeWidth={3}
+          className="fill-gray-800 font-mono font-semibold"
+        >
+          {annotation}
+        </text>
+      )}
+    </motion.g>
+  );
+}
+
+/** Screen-reader summary of the drawing: nodes by state, marked edges, values and labels. (The panels are real HTML already.) */
+function describe(state: GraphState): string {
+  const parts = [`${state.directed ? 'Directed' : 'Undirected'} graph with ${state.nodes.length} nodes and ${state.edges.length} edges.`];
+  const byMark = new Map<Mark, string[]>();
+  for (const n of state.nodes) {
+    const m = state.nodeMarks[n.id];
+    if (m) byMark.set(m, [...(byMark.get(m) ?? []), n.id]);
+  }
+  for (const [m, ids] of byMark) parts.push(`${MARKS[m].label}: ${ids.join(', ')}.`);
+  const edgeMarks = state.edges.filter((e) => state.edgeMarks[e.id]);
+  if (edgeMarks.length) {
+    parts.push(`Edges: ${edgeMarks.map((e) => `${e.from}${state.directed ? '→' : '–'}${e.to} ${MARKS[state.edgeMarks[e.id]].label.toLowerCase()}`).join(', ')}.`);
+  }
+  const notes = state.nodes.filter((n) => state.annotations[n.id] != null);
+  if (notes.length) {
+    parts.push(`${state.annotationLabel ?? 'Values'}: ${notes.map((n) => `${n.id} ${state.annotations[n.id]}`).join(', ')}.`);
+  }
+  const badged = state.nodes.filter((n) => state.badges[n.id]);
+  if (badged.length) parts.push(`Labels: ${badged.map((n) => `${n.id} ${state.badges[n.id]}`).join(', ')}.`);
+  return parts.join(' ');
 }
