@@ -1,0 +1,41 @@
+import { expect, test } from '@playwright/test';
+
+test('the sorting race runs to a winner', async ({ page }) => {
+  await page.goto('/compare');
+  await page.getByLabel('Speed').selectOption('250');
+  await page.getByRole('button', { name: 'Start the race' }).click();
+  await expect(page.getByText(/finished first with \d+ operations/)).toBeVisible({ timeout: 15_000 });
+});
+
+test('the growth chart has a legend, a keyboard-readable crosshair and a table view', async ({ page }) => {
+  await page.goto('/compare');
+  await expect(page.getByRole('list', { name: 'Legend' })).toContainText('Merge Sort');
+  await page.getByRole('img', { name: /against input size n/ }).locator('rect[tabindex="0"]').focus();
+  await expect(page.getByRole('status').filter({ hasText: 'n = 64' })).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('status').filter({ hasText: 'n = 60' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show as a table' }).click();
+  await expect(page.getByRole('table')).toContainText('64');
+});
+
+test('at most four algorithms can be compared at once', async ({ page }) => {
+  await page.goto('/compare');
+  await expect(page.getByRole('button', { name: 'Heap Sort' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Bubble Sort' }).click();
+  await expect(page.getByRole('button', { name: 'Heap Sort' })).toBeEnabled();
+});
+
+test('embeds render the visualiser without the site chrome', async ({ page }) => {
+  await page.goto('/embed/quick-sort?preset=sorted&n=6&seed=1&step=4');
+  await page.locator('[data-hydrated="true"]').waitFor();
+  await expect(page.getByRole('link', { name: /Open in Algorender/ })).toBeVisible();
+  await expect(page.getByPlaceholder('Search visualizers...')).toHaveCount(0);
+  await expect(page.getByText(/^5\/\d+$/)).toBeVisible();
+});
+
+test('the sitemap lists the visualisers', async ({ request }) => {
+  const xml = await (await request.get('/sitemap.xml')).text();
+  expect(xml).toContain('/visualisers/bubble-sort');
+  expect(xml).toContain('/compare');
+  expect(xml).toContain('/visualisers/bloom-filter');
+});
