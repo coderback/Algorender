@@ -40,7 +40,9 @@ export function InputPanel<I>({
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-xs lg:flex-row lg:items-end lg:gap-6">
+    <div className="@container rounded-xl border border-gray-100 bg-white p-4 shadow-xs">
+      {/* Lays out by the panel's own width, so it also fits inside a lesson's narrower column. */}
+      <div className="flex flex-col gap-4 @4xl:flex-row @4xl:items-end @4xl:gap-6">
       <fieldset className="min-w-0">
         <legend className="mb-1.5 text-xs font-medium text-gray-500">Input</legend>
         <div className="flex flex-wrap gap-1.5">
@@ -120,6 +122,7 @@ export function InputPanel<I>({
           )}
         </form>
       )}
+      </div>
     </div>
   );
 }

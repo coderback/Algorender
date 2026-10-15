@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 /** Playback speeds in steps per second. */
 export const SPEEDS = [0.5, 1, 2, 4, 8, 16, 32] as const;
@@ -131,8 +131,12 @@ export function useTracePlayer(
   return { index, last, playing, speed, blocked, tweenMs, play, pause, toggle, stepForward, stepBack, seek, setSpeed };
 }
 
-/** Keyboard shortcuts: ←/→ step, Space play/pause, Home/End jump. */
-export function usePlayerKeyboard(player: TracePlayer) {
+/**
+ * Keyboard shortcuts: ←/→ step, Space play/pause, Home/End jump. With `scope`,
+ * keys only act while focus is inside that element (several players on one
+ * page, e.g. a lesson); without it they are page-wide.
+ */
+export function usePlayerKeyboard(player: TracePlayer, scope?: RefObject<HTMLElement | null>) {
   const { stepForward, stepBack, toggle, seek, last } = player;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -164,9 +168,10 @@ export function usePlayerKeyboard(player: TracePlayer) {
       }
       e.preventDefault();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [stepForward, stepBack, toggle, seek, last]);
+    const target: HTMLElement | Window | null = scope ? scope.current : window;
+    target?.addEventListener('keydown', onKey as EventListener);
+    return () => target?.removeEventListener('keydown', onKey as EventListener);
+  }, [stepForward, stepBack, toggle, seek, last, scope]);
 }
 
 function clamp(n: number, lo: number, hi: number) {

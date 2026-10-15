@@ -1,7 +1,7 @@
 'use client';
 
 import { MotionConfig } from 'motion/react';
-import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { LegendEntry, StatSpec, ViewKind } from '@/engine/module';
 import type { Trace } from '@/engine/types';
 import { usePlayerKeyboard, useTracePlayer } from '@/engine/useTracePlayer';
@@ -38,6 +38,9 @@ export function TraceStage<S>({
   initialIndex = 0,
   predict,
   autoPlay = false,
+  keyboard = 'page',
+  layout = 'wide',
+  onPrediction,
 }: {
   trace: Trace<S>;
   view: ViewKind;
@@ -47,6 +50,12 @@ export function TraceStage<S>({
   initialIndex?: number;
   predict: PredictSettings;
   autoPlay?: boolean;
+  /** 'local': shortcuts only act while focus is inside this stage (several stages on one page). */
+  keyboard?: 'page' | 'local';
+  /** 'stacked' keeps one column at every width, for narrow containers such as lessons. */
+  layout?: 'wide' | 'stacked';
+  /** Called once per answered prediction. */
+  onPrediction?: (correct: boolean) => void;
 }) {
   const View = VIEWS[view];
   const [answers, setAnswers] = useState<ReadonlyMap<number, number>>(new Map());
@@ -61,20 +70,30 @@ export function TraceStage<S>({
   const predicting = predict.mode === 'predict';
   const gate = useCallback((i: number) => predicting && asked.has(i) && !answers.has(i), [predicting, asked, answers]);
   const player = useTracePlayer(trace.frames.length, { initialIndex, gate, autoPlay });
-  usePlayerKeyboard(player);
+  const rootRef = useRef<HTMLDivElement>(null);
+  usePlayerKeyboard(player, keyboard === 'local' ? rootRef : undefined);
   const frame = trace.frames[player.index];
   const question = predicting && asked.has(player.index) ? frame.checkpoint : undefined;
 
   const answer = useCallback(
-    (choice: number) => setAnswers((prev) => new Map(prev).set(player.index, choice)),
-    [player.index],
+    (choice: number) => {
+      if (answers.has(player.index)) return;
+      setAnswers((prev) => new Map(prev).set(player.index, choice));
+      onPrediction?.(choice === trace.frames[player.index].checkpoint?.answer);
+    },
+    [answers, player.index, onPrediction, trace],
   );
   const answered = [...answers].filter(([i]) => trace.frames[i].checkpoint);
   const correct = answered.filter(([i, c]) => trace.frames[i].checkpoint!.answer === c).length;
 
   return (
     <MotionConfig transition={{ duration: player.tweenMs / 1000, ease: [0.4, 0, 0.2, 1] }} reducedMotion="user">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+      <div
+        ref={rootRef}
+        // Focusable so that clicking anywhere in a local-keyboard stage makes its shortcuts active.
+        tabIndex={keyboard === 'local' ? -1 : undefined}
+        className={`grid gap-4 outline-none ${layout === 'wide' ? 'lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]' : ''}`}
+      >
         <div className="min-w-0 space-y-3">
           <div
             className="rounded-xl border border-gray-100 bg-white px-3 pt-4 pb-3 shadow-xs sm:px-6"
@@ -83,7 +102,15 @@ export function TraceStage<S>({
             <View state={frame.state} />
           </div>
           <Narration note={frame.note} live={!player.playing} />
-          {question && <PredictCard key={player.index} checkpoint={question} chosen={answers.get(player.index)} onAnswer={answer} />}
+          {question && (
+            <PredictCard
+              key={player.index}
+              checkpoint={question}
+              chosen={answers.get(player.index)}
+              onAnswer={answer}
+              scope={keyboard === 'local' ? rootRef : undefined}
+            />
+          )}
           <PlayerControls player={player}>
             <ModeSwitch predict={predict} hasQuestions={asked.size > 0} score={{ correct, total: answered.length }} />
           </PlayerControls>
@@ -91,7 +118,7 @@ export function TraceStage<S>({
             <p className="text-sm text-amber-700">This run was cut short because it produced too many steps. Try a smaller input.</p>
           )}
         </div>
-        <aside className="min-w-0 space-y-3">
+        <aside className={layout === 'wide' ? 'min-w-0 space-y-3' : 'grid min-w-0 gap-3 md:grid-cols-2 md:items-start'}>
           <CodePanel lines={pseudocode} current={frame.line} />
           {stats.length > 0 && <StatsPanel stats={stats} values={frame.stats} />}
           <VarsPanel vars={frame.vars} />

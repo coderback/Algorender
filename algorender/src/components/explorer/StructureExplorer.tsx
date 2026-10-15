@@ -1,6 +1,5 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { FiCornerUpLeft, FiPlay } from 'react-icons/fi';
 import type { AnyStructure, OperationSpec } from '@/engine/module';
@@ -9,6 +8,7 @@ import { recordOperation } from '@/engine/trace';
 import type { Trace } from '@/engine/types';
 import { argError, blockedReason, describeCall, parseArg, parseArgs, parseOps, replay, serializeOps, type OpCall } from './operations';
 import { Experiments } from './Experiments';
+import type { ExplorerOptions } from './options';
 import { DEFAULT_SEED } from './source';
 import { TraceStage, type Density, type Mode } from './TraceStage';
 import { modeFromParams, writeUrl } from './url';
@@ -38,24 +38,23 @@ const idle = (ds: AnyStructure, model: Model, note: string): Trace<unknown> => (
 const READY = 'Choose an operation below to see it step by step.';
 
 /** Lets the learner change a data structure with operations; each one is replayed as its own trace. */
-export function StructureExplorer({ module: ds }: { module: AnyStructure }) {
-  const params = useSearchParams();
+export function StructureExplorer({ module: ds, options }: { module: AnyStructure; options: ExplorerOptions }) {
   const [session, setSession] = useState<Session>(() => {
-    const p = new URLSearchParams(params.toString());
+    const p = options.params;
     const start = ds.initial.find((s) => s.id === p.get('start')) ?? ds.initial[0];
     const seedParam = Number(p.get('seed'));
     const seed = p.has('seed') && Number.isInteger(seedParam) && seedParam >= 0 ? seedParam : DEFAULT_SEED;
     const { model, applied } = replay(ds, start.make(seed), parseOps(p.get('ops') ?? '', ds));
     return { start: start.id, seed, model, history: applied, trace: idle(ds, model, READY), pseudocode: [], id: 0, animate: false };
   });
-  const [mode, setMode] = useState<Mode>(() => modeFromParams(new URLSearchParams(params.toString())));
-  const [density, setDensity] = useState<Density>('some');
+  const [mode, setMode] = useState<Mode>(() => modeFromParams(options.params));
+  const [density, setDensity] = useState<Density>(options.density);
 
   const sync = (next: Session, nextMode = mode) => {
     setSession(next);
     const p = new URLSearchParams({ start: next.start, seed: String(next.seed) });
     if (next.history.length) p.set('ops', serializeOps(next.history.map((h) => h.call), ds));
-    writeUrl(p, nextMode);
+    if (options.syncUrl) writeUrl(p, nextMode);
   };
 
   const run = (spec: Spec, call: OpCall) => {
@@ -109,6 +108,9 @@ export function StructureExplorer({ module: ds }: { module: AnyStructure }) {
         legend={ds.legend}
         autoPlay={session.animate}
         predict={{ mode, density, setMode: changeMode, setDensity }}
+        keyboard={options.keyboard}
+        layout={options.layout}
+        onPrediction={options.onPrediction}
       />
       <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
@@ -142,17 +144,19 @@ export function StructureExplorer({ module: ds }: { module: AnyStructure }) {
           ))}
         </div>
       </div>
+      {options.showExperiments && (
       <Experiments
         suffix=""
         items={ds.content.experiments
           .filter((x) => ds.initial.some((s) => s.id === x.example))
-          .map((x) => ({
-            key: x.example,
+          .map((x, i) => ({
+            key: `${x.example}-${i}`, // several experiments can start from one example
             label: `Start from: ${ds.initial.find((s) => s.id === x.example)!.label}`,
             prompt: x.prompt,
             onTry: () => reset(x.example),
           }))}
       />
+      )}
     </div>
   );
 }
@@ -176,12 +180,16 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
   );
   const [error, setError] = useState<string | null>(null);
 
-  // A choice whose stored value no longer exists (or was never picked) shows its first option.
+  // A choice whose stored value no longer exists (or was never picked) shows a
+  // default: the nth choice argument defaults to the nth option, so a pair like
+  // "Add edge: from, to" opens on two different vertices rather than a self-loop.
+  let choiceIndex = 0;
   const values: Record<string, string> = Object.fromEntries(
     spec.args.map((a) => {
       if (a.type !== 'choice') return [a.name, raw[a.name] ?? ''];
       const options = a.options(model);
-      return [a.name, options.includes(raw[a.name]) ? raw[a.name] : (options[0] ?? '')];
+      const fallback = options[Math.min(choiceIndex++, options.length - 1)] ?? '';
+      return [a.name, options.includes(raw[a.name]) ? raw[a.name] : fallback];
     }),
   );
   const parsed = parseArgs(spec.args, values, model);

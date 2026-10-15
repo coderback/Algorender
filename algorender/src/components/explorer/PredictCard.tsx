@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, type RefObject } from 'react';
 import { FiCheckCircle, FiHelpCircle, FiXCircle } from 'react-icons/fi';
 import type { Checkpoint } from '@/engine/types';
 
@@ -12,10 +12,13 @@ export function PredictCard({
   checkpoint,
   chosen,
   onAnswer,
+  scope,
 }: {
   checkpoint: Checkpoint;
   chosen: number | undefined;
   onAnswer: (choice: number) => void;
+  /** Only listen for number keys inside this element (several stages on one page). */
+  scope?: RefObject<HTMLElement | null>;
 }) {
   const answered = chosen !== undefined;
 
@@ -30,9 +33,10 @@ export function PredictCard({
         onAnswer(n - 1);
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [answered, checkpoint, onAnswer]);
+    const target: HTMLElement | Window | null = scope ? scope.current : window;
+    target?.addEventListener('keydown', onKey as EventListener);
+    return () => target?.removeEventListener('keydown', onKey as EventListener);
+  }, [answered, checkpoint, onAnswer, scope]);
 
   const correct = chosen === checkpoint.answer;
 
