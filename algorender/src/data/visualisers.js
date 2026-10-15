@@ -184,15 +184,15 @@ const algorithmEntries = [
     slug: 'counting-sort',
     category: 'Sorting',
     timeComplexity: { best: 'O(n + k)', average: 'O(n + k)', worst: 'O(n + k)' },
-    spaceComplexity: 'O(k)'
+    spaceComplexity: 'O(n + k)'
   },
   {
     name: 'Radix Sort',
     description: 'A non-comparative sorting algorithm that sorts data with integer keys.',
     slug: 'radix-sort',
     category: 'Sorting',
-    timeComplexity: { best: 'O(nk)', average: 'O(nk)', worst: 'O(nk)' },
-    spaceComplexity: 'O(n + k)'
+    timeComplexity: { best: 'O(d·(n + b))', average: 'O(d·(n + b))', worst: 'O(d·(n + b))' },
+    spaceComplexity: 'O(n + b)'
   },
   {
     name: 'Linear Search',
@@ -442,4 +442,8 @@ export const algorithms = visualisers.filter(v => v.type === 'algorithm' && !v.h
 export function getVisualiserByPath(pathname) {
   const path = (pathname || '').replace(/\/+$/, '');
   return visualisers.find(v => v.path === path);
+}
+
+export function getVisualiserBySlug(slug) {
+  return visualisers.find(v => v.slug === slug);
 }
