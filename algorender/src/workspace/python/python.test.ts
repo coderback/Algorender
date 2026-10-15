@@ -1,0 +1,444 @@
+// The Python runtime: the harness in real Pyodide (the npm build, which runs in
+// Node), called exactly as public/workers/python.mjs calls it.
+
+import { loadPyodide, type PyodideInterface } from 'pyodide';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { CONTRACT, entryFor } from '../contract';
+import { type Arg, DEFAULT_LIMITS, type Limits, type RunEvent, type RunResult } from '../protocol';
+import { HARNESS } from './harness';
+
+let pyodide: PyodideInterface;
+let runRequest: (json: string) => string;
+
+beforeAll(async () => {
+  // Loaded once for the whole file: Pyodide takes a few seconds and a few hundred MB.
+  pyodide = await loadPyodide();
+  pyodide.runPython(HARNESS);
+  runRequest = pyodide.globals.get('run_request');
+}, 120_000);
+
+function run(code: string, entry: string, args: Arg[] = [], limits: Partial<Limits> = {}): RunResult {
+  const request = { language: 'python' as const, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits } };
+  return JSON.parse(runRequest(JSON.stringify(request)));
+}
+
+const arr = (values: number[], name = 'arr'): Arg => ({ kind: 'array', name, values });
+const kinds = (r: RunResult) => r.events.map((e) => e.kind);
+const only = <K extends RunEvent['kind']>(r: RunResult, kind: K) =>
+  r.events.filter((e): e is Extract<RunEvent, { kind: K }> => e.kind === kind);
+
+describe('contract', () => {
+  for (const c of CONTRACT.filter((c) => c.code.python)) {
+    it(c.name, () => {
+      const r = run(c.code.python!, entryFor(c, 'python'), c.args, c.limits);
+      const want = c.expect;
+      if (want.events) expect(r.events).toEqual(want.events);
+      else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
+      if (want.count !== undefined) expect(r.events).toHaveLength(want.count);
+      if (want.arrays) expect(r.arrays).toEqual(want.arrays);
+      if ('returned' in want) expect(r.returned).toEqual(want.returned);
+      if (want.error) {
+        expect(r.error?.kind).toBe(want.error.kind);
+        if (want.error.line !== undefined) expect(r.error?.line).toBe(want.error.line);
+        if (want.error.message) expect(r.error?.message).toContain(want.error.message);
+        if (want.error.hasLine) expect(r.error?.line).toEqual(expect.any(Number));
+      } else {
+        expect(r.error).toBeNull();
+      }
+      expect(r.ms).toBeGreaterThanOrEqual(0);
+    });
+  }
+});
+
+describe('comparisons', () => {
+  it('reports either side as a cell or a value, and evaluates the index once', () => {
+    const r = run(
+      `calls = []
+def next_index():
+    calls.append(1)
+    return len(calls) - 1
+
+def f(arr):
+    key = 2
+    a = key < arr[1]
+    b = arr[0] != arr[-1]
+    c = arr[next_index()] >= arr[1] + 1
+    return [a, b, c, len(calls)]
+`,
+      'f',
+      [arr([1, 5, 3])],
+    );
+    expect(only(r, 'compare')).toEqual([
+      { kind: 'compare', op: '<', a: { value: 2 }, b: { array: 'arr', index: 1, value: 5 }, result: true, line: 8, vars: { key: 2 } },
+      {
+        kind: 'compare', op: '!=', a: { array: 'arr', index: 0, value: 1 }, b: { array: 'arr', index: 2, value: 3 },
+        result: true, line: 9, vars: { key: 2, a: true },
+      },
+      {
+        kind: 'compare', op: '>=', a: { array: 'arr', index: 0, value: 1 }, b: { value: 6 },
+        result: false, line: 10, vars: { key: 2, a: true, b: true },
+      },
+    ]);
+    expect(r.returned).toEqual([true, true, false, 1]);
+  });
+
+  it('leaves out comparisons without a cell, chained comparisons, in, is, and slices', () => {
+    const r = run(
+      `def f(arr):
+    x = 1 < 2
+    y = 0 < arr[0] < 9
+    z = 3 in arr
+    w = arr[0] is None
+    v = arr[0:2] == [4, 5]
+    return [x, y, z, w, v]
+`,
+      'f',
+      [arr([4, 5])],
+    );
+    expect(kinds(r)).toEqual(['array']);
+    expect(r.returned).toEqual([true, true, false, false, true]);
+  });
+
+  it('works on plain lists and dicts as normal Python', () => {
+    const r = run(
+      `def f(arr):
+    plain = [3, 1]
+    d = {"k": 2}
+    return [plain[0] > plain[1], d["k"] == 2, arr[0] > plain[1]]
+`,
+      'f',
+      [arr([7])],
+    );
+    expect(r.returned).toEqual([true, true, true]);
+    expect(only(r, 'compare')).toHaveLength(1);
+  });
+
+  it('records nothing when the comparison itself fails', () => {
+    const r = run(`def f(arr):\n    return arr[0] < "a"\n`, 'f', [arr([1])]);
+    expect(kinds(r)).toEqual(['array']);
+    expect(r.error).toEqual({ kind: 'runtime', line: 2, message: expect.stringContaining('TypeError') });
+  });
+});
+
+describe('lines and variables', () => {
+  it('takes them from the innermost learner frame, so a helper reports its own', () => {
+    const r = run(
+      `def swap(a, i, j):
+    a[i], a[j] = a[j], a[i]
+
+def f(arr):
+    total = 0
+    swap(arr, 0, 1)
+    return total
+`,
+      'f',
+      [arr([1, 2])],
+    );
+    expect(only(r, 'write')).toEqual([
+      { kind: 'write', array: 'arr', index: 0, value: 2, line: 2, vars: { i: 0, j: 1 } },
+      { kind: 'write', array: 'arr', index: 1, value: 1, line: 2, vars: { i: 0, j: 1 } },
+    ]);
+    expect(r.arrays).toEqual({ arr: [2, 1] });
+  });
+
+  it('shows numbers, booleans, None, short strings and short number lists, and skips the rest', () => {
+    const r = run(
+      `def f(arr):
+    n = 3
+    x = 2.5
+    ok = False
+    nothing = None
+    word = "hi"
+    long = "x" * 50
+    small = [3, 1, 2]
+    pair = (1, 2)
+    one = (7,)
+    big = list(range(20))
+    mixed = [1, "a"]
+    table = {"a": 1}
+    nan = float("nan")
+    _hidden = 1
+    alias = arr
+    print("here")
+`,
+      'f',
+      [arr([1])],
+    );
+    expect(only(r, 'print')[0].vars).toEqual({
+      n: 3,
+      x: 2.5,
+      ok: false,
+      nothing: null,
+      word: 'hi',
+      long: `${'x'.repeat(39)}…`,
+      small: '[3, 1, 2]',
+      pair: '(1, 2)',
+      one: '(7,)',
+      big: '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, …] (20 items)',
+    });
+  });
+
+  it('reports a while condition re-check on the while line', () => {
+    const r = run(
+      `def f(arr):
+    i = 0
+    while arr[i] < 3:
+        i += 1
+    return i
+`,
+      'f',
+      [arr([1, 2, 3])],
+    );
+    expect(only(r, 'compare').map((e) => [e.line, e.vars.i, e.result])).toEqual([
+      [3, 0, true],
+      [3, 1, true],
+      [3, 2, false],
+    ]);
+  });
+});
+
+describe('VisualList', () => {
+  it('normalises negative indices in reads, writes and pops', () => {
+    const r = run(
+      `def f(arr):
+    arr[-1] = arr[-3]
+    return arr.pop(-2)
+`,
+      'f',
+      [arr([1, 2, 3])],
+    );
+    expect(r.events.slice(1).map((e) => ({ ...e, vars: undefined }))).toEqual([
+      { kind: 'write', array: 'arr', index: 2, value: 1, line: 2, vars: undefined },
+      { kind: 'pop', array: 'arr', index: 1, line: 3, vars: undefined },
+    ]);
+    expect(r.arrays).toEqual({ arr: [1, 1] });
+    expect(r.returned).toBe(2);
+  });
+
+  it('behaves like a list for reading', () => {
+    const r = run(
+      `def f(arr):
+    copy = arr[1:]
+    copy[0] = 99
+    return [len(arr), list(arr), 5 in arr, arr.index(5), arr.count(4), arr == [4, 5, 6],
+            arr.copy(), sorted(arr, reverse=True), sum(arr), str(arr), copy, arr + [7]]
+`,
+      'f',
+      [arr([4, 5, 6])],
+    );
+    expect(r.error).toBeNull();
+    expect(r.returned).toEqual([3, [4, 5, 6], true, 1, 1, true, [4, 5, 6], [6, 5, 4], 15, '[4, 5, 6]', [99, 6], [4, 5, 6, 7]]);
+    expect(kinds(r)).toEqual(['array']);
+  });
+
+  it.each([
+    ['arr.sort()', 'arr.sort() would sort without showing the steps'],
+    ['arr.reverse()', 'arr.reverse()'],
+    ['arr.insert(0, 1)', 'arr.insert()'],
+    ['arr.extend([1])', 'arr.extend()'],
+    ['arr.remove(1)', 'arr.remove()'],
+    ['arr.clear()', 'arr.clear()'],
+    ['del arr[0]', 'arr.pop(i)'],
+    ['arr += [1]', 'arr.append()'],
+    ['arr[0:1] = [5]', 'one cell at a time'],
+  ])('refuses %s with a reason', (statement, reason) => {
+    const r = run(`def f(arr):\n    ${statement}\n`, 'f', [arr([1, 2])]);
+    expect(r.error).toEqual({ kind: 'runtime', line: 2, message: expect.stringContaining(reason) });
+    expect(r.error!.message).toMatch(/^TypeError: /);
+    expect(r.arrays).toEqual({ arr: [1, 2] });
+  });
+
+  it.each([
+    ['arr[0] = "x"', "TypeError: arr holds numbers, so arr[0] can't store 'x' (a str)."],
+    ['arr[0] = True', 'TypeError: arr holds numbers'],
+    ['arr.append(None)', 'TypeError: arr holds numbers'],
+    ['arr[0] = float("inf")', 'ValueError: arr holds finite numbers'],
+    ['arr[5] = 1', 'IndexError: list assignment index out of range'],
+    ['arr.pop(9)', 'IndexError: pop index out of range'],
+    ['arr["a"]', 'TypeError: list indices must be integers or slices, not str'],
+  ])('rejects %s', (statement, message) => {
+    const r = run(`def f(arr):\n    ${statement}\n`, 'f', [arr([1, 2])]);
+    expect(r.error).toEqual({ kind: 'runtime', line: 2, message: expect.stringContaining(message) });
+    expect(kinds(r)).toEqual(['array']);
+  });
+
+  it('pops from an empty array with the list error', () => {
+    const r = run(`def f(arr):\n    arr.pop()\n    arr.pop()\n`, 'f', [arr([1])]);
+    expect(kinds(r)).toEqual(['array', 'pop']);
+    expect(r.error).toEqual({ kind: 'runtime', line: 3, message: 'IndexError: pop from empty list' });
+  });
+
+  it('accepts floats and tracks several arrays by name', () => {
+    const r = run(
+      `def merge(left, right):
+    left.append(right.pop() / 2)
+`,
+      'merge',
+      [arr([1], 'left'), arr([2, 3], 'right')],
+    );
+    expect(r.events.map((e) => e.kind)).toEqual(['array', 'array', 'pop', 'append']);
+    expect(r.arrays).toEqual({ left: [1, 1.5], right: [2] });
+  });
+});
+
+describe('print', () => {
+  it('honours sep, ignores end, and prints arrays like lists', () => {
+    const r = run(
+      `def f(arr, label):
+    print(label, arr, sep=" | ", end="")
+    print()
+    print(1, None, [1.5], sep="")
+`,
+      'f',
+      [arr([1, 2]), { kind: 'value', name: 'label', value: 'arr' }],
+    );
+    expect(only(r, 'print').map((e) => e.text)).toEqual(['arr | [1, 2]', '', '1None[1.5]']);
+    expect(only(r, 'print')[0]).toMatchObject({ line: 2, vars: { label: 'arr' } });
+  });
+
+  it('records prints at module level, before the entry function runs', () => {
+    const r = run(`print("loading")\ndef f(arr):\n    return 1\n`, 'f', [arr([1])]);
+    expect(r.events[0]).toEqual({ kind: 'print', text: 'loading', line: 1, vars: {} });
+    expect(kinds(r)).toEqual(['print', 'array']);
+  });
+});
+
+describe('returned values', () => {
+  it.each([
+    ['return arr', [3, 4]],
+    ['return (1, (2, 3))', [1, [2, 3]]],
+    ['return {"a": [1], "b": None}', { a: [1], b: null }],
+    ['return {1: 2}', '{1: 2}'],
+    ['return {1, 2}', '{1, 2}'],
+    // Exact as text: as a JS number it would round.
+    ['return 2 ** 60', '1152921504606846976'],
+    ['return float("nan")', 'nan'],
+    ['return "text"', 'text'],
+    ['x = []\n    x.append(x)\n    return x', ['…']],
+  ])('%s', (body, expected) => {
+    const r = run(`def f(arr):\n    ${body}\n`, 'f', [arr([3, 4])]);
+    expect(r.error).toBeNull();
+    expect(r.returned).toEqual(expected);
+  });
+
+  it('passes value arguments through as plain Python values', () => {
+    const r = run(
+      `def f(n, opts, items):\n    return [n + 1, opts["deep"], items[::-1]]\n`,
+      'f',
+      [
+        { kind: 'value', name: 'n', value: 1 },
+        { kind: 'value', name: 'opts', value: { deep: true } },
+        { kind: 'value', name: 'items', value: [1, 'a'] },
+      ],
+    );
+    expect(kinds(r)).toEqual([]);
+    expect(r.returned).toEqual([2, true, ['a', 1]]);
+  });
+});
+
+describe('errors', () => {
+  it('reports a runtime error inside a helper on the helper’s line', () => {
+    const r = run(`def helper(x):\n    return 1 / x\n\ndef f(arr):\n    return helper(arr[0])\n`, 'f', [arr([0])]);
+    expect(r.error).toEqual({ kind: 'runtime', line: 2, message: 'ZeroDivisionError: division by zero' });
+  });
+
+  it('reports errors raised at module level', () => {
+    const r = run(`x = undefined_name\n`, 'f', [arr([1])]);
+    expect(r.error).toEqual({ kind: 'runtime', line: 1, message: expect.stringContaining('NameError') });
+    expect(r.events).toEqual([]);
+  });
+
+  it('asks for the entry function when the name is not callable', () => {
+    const r = run(`f = 5\n`, 'f', [arr([1])]);
+    expect(r).toMatchObject({ events: [], error: { kind: 'runtime', line: null, message: 'Define a function called f.' } });
+  });
+
+  it('names indentation errors', () => {
+    const r = run(`def f(arr):\nreturn 1\n`, 'f', [arr([1])]);
+    expect(r.error).toEqual({ kind: 'syntax', line: 2, message: expect.stringMatching(/^IndentationError: /) });
+  });
+
+  it('treats compile-time errors as syntax errors', () => {
+    const r = run(`def f(arr):\n    pass\nreturn 1\n`, 'f', [arr([1])]);
+    expect(r.error).toEqual({ kind: 'syntax', line: 3, message: "SyntaxError: 'return' outside function" });
+  });
+
+  it('reports a malformed request as an internal error', () => {
+    const out = JSON.parse(runRequest('{"code": "x = 1"}'));
+    expect(out.error).toMatchObject({ kind: 'internal', line: null });
+  });
+});
+
+describe('limits', () => {
+  it('stops at exactly maxEvents events, with the array matching them', () => {
+    const r = run(`def f(arr):\n    while True:\n        arr[0] = arr[0] + 1\n`, 'f', [arr([0])], { maxEvents: 10 });
+    expect(r.events).toHaveLength(10);
+    expect(r.arrays).toEqual({ arr: [9] });
+    expect(r.error).toEqual({
+      kind: 'limit',
+      line: 3,
+      message: 'Stopped after 10 events: the code changed the array more times than the visual can show.',
+    });
+  });
+
+  it('trips the default step limit well inside the default time budget', () => {
+    const r = run(`def f(arr):\n    i = 0\n    while i < len(arr):\n        i = i * 1\n`, 'f', [arr([0])]);
+    expect(r.error).toMatchObject({ kind: 'limit', message: expect.stringContaining('200,000 steps'), line: expect.any(Number) });
+    expect(r.ms).toBeLessThan(DEFAULT_LIMITS.timeoutMs / 4);
+  });
+
+  it('formats the step limit with separators', () => {
+    const r = run(`def f(arr):\n    while True:\n        pass\n`, 'f', [arr([0])], { maxSteps: 12_345 });
+    expect(r.error).toMatchObject({ kind: 'limit', message: 'Stopped after 12,345 steps: is there a loop that never ends?' });
+  });
+
+  it('can’t be swallowed by except Exception', () => {
+    const r = run(
+      `def f(arr):\n    while True:\n        try:\n            arr[0] = 1\n        except Exception:\n            pass\n`,
+      'f',
+      [arr([0])],
+      { maxEvents: 5 },
+    );
+    expect(r.error?.kind).toBe('limit');
+  });
+
+  it('still reports the limit when a bare except swallows it', () => {
+    const r = run(
+      `def f(arr):\n    try:\n        while True:\n            pass\n    except:\n        return "escaped"\n`,
+      'f',
+      [arr([0])],
+      { maxSteps: 1_000 },
+    );
+    expect(r.error?.kind).toBe('limit');
+    expect(r.returned).toBeNull();
+  });
+
+  it('stops an endless loop at module level', () => {
+    const r = run(`while True:\n    pass\n`, 'f', [], { maxSteps: 1_000 });
+    expect(r.error).toMatchObject({ kind: 'limit', line: expect.any(Number) });
+  });
+
+  it('counts steps inside helpers and recursion', () => {
+    const r = run(`def f(arr):\n    return f(arr) if arr else 0\n`, 'f', [arr([1])], { maxSteps: 50 });
+    expect(r.error?.kind).toBe('limit');
+  });
+});
+
+describe('isolation between runs', () => {
+  it('starts each run in a fresh namespace and puts print and the tracer back', () => {
+    run(`leaked = 1\ndef f():\n    print("x")\n`, 'f');
+    run(`def f():\n    while True:\n        pass\n`, 'f', [], { maxSteps: 100 });
+    const r = run(`def f():\n    return leaked\n`, 'f');
+    expect(r.error?.message).toContain("NameError: name 'leaked' is not defined");
+    const state = pyodide.runPython('import builtins, sys\n[type(builtins.print).__name__, sys.gettrace() is None]');
+    expect(state.toJs()).toEqual(['builtin_function_or_method', true]);
+  });
+});
+
+describe('input()', () => {
+  it('explains that values arrive as arguments', () => {
+    const r = run(`def f(arr):\n    x = input("n? ")\n`, 'f', [arr([1])]);
+    expect(r.error).toMatchObject({ kind: 'runtime', line: 2 });
+    expect(r.error?.message).toContain('arguments');
+  });
+});
