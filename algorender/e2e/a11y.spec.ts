@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { visualisers } from '../src/data/visualisers.js';
+import { exercises } from '../src/content/exercises';
 import { lessons } from '../src/content/lessons';
 
 // WCAG 2.2 A/AA plus axe's best practices, on every page, in both themes.
@@ -12,6 +13,8 @@ const pages = [
   '/learn',
   ...lessons.map((l) => `/learn/${l.slug}`),
   '/compare',
+  '/code',
+  ...exercises.map((e) => `/code/${e.slug}`),
   '/embed/bubble-sort',
   '/visualisers/bubble-sort?mode=predict',
   ...visualisers.filter((v: { hidden?: boolean }) => !v.hidden).map((v: { path: string }) => v.path),
