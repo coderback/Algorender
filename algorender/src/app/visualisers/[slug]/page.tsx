@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense, type ReactNode } from 'react';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiCode } from 'react-icons/fi';
 import Header from '@/components/Header';
 import { Visualiser } from '@/components/explorer/Visualiser';
+import { exerciseForVisualiser } from '@/content/exercises';
 import { getVisualiserBySlug } from '@/data/visualisers';
 import { getModule, modules } from '@/registry';
 
@@ -35,6 +36,7 @@ export default async function VisualiserPage({ params }: Props) {
   if (!visualiser || !meta) notFound();
   const { idea, invariant, whenToUse, traits } = visualiser.content;
   const isAlgorithm = meta.type === 'algorithm';
+  const exercise = exerciseForVisualiser(slug);
 
   return (
     <div className="min-h-screen bg-subtle">
@@ -52,6 +54,14 @@ export default async function VisualiserPage({ params }: Props) {
             <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent-ink">{meta.category}</div>
             <h1 className="text-3xl font-bold text-ink">{meta.name}</h1>
             <p className="mt-1 max-w-3xl text-ink-soft">{idea}</p>
+            {exercise && (
+              <Link
+                href={`/code/${exercise.slug}`}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent-line bg-surface px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-soft"
+              >
+                <FiCode aria-hidden /> Write it yourself in Python, JavaScript or TypeScript
+              </Link>
+            )}
           </div>
           <dl className="flex shrink-0 flex-wrap gap-2 text-sm">
             <Chip label={isAlgorithm ? 'Average time' : 'Typical operation'} value={meta.timeComplexity.average} />

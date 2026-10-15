@@ -22,6 +22,7 @@ export default function Header() {
             {/* Beside the brand from sm up; on phones it moves to its own row, after the search. */}
             <nav aria-label="Main" className="hidden items-center gap-5 sm:flex">
               <Link href="/learn" className={navLink}>Learn</Link>
+              <Link href="/code" className={navLink}>Code</Link>
               <Link href="/compare" className={navLink}>Compare sorts</Link>
             </nav>
           </div>
@@ -35,6 +36,7 @@ export default function Header() {
 
           <nav aria-label="Main" className="flex w-full items-center gap-5 sm:hidden">
             <Link href="/learn" className={navLink}>Learn</Link>
+            <Link href="/code" className={navLink}>Code</Link>
             <Link href="/compare" className={navLink}>Compare sorts</Link>
           </nav>
         </div>
