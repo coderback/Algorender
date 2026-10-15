@@ -54,6 +54,7 @@ export function stateProblems(state: GridState): string[] {
       check(inRange({ row: key.slice(0, split), col: Number(key.slice(split + 1)) }), `cell key ${key} out of range`);
     }
     for (const row of Object.keys(part.rowMarks)) check(rows.has(row), `row mark on missing row ${row}`);
+    for (const [row, scale] of Object.entries(part.scales ?? {})) check(rows.has(row) && scale > 0, `bar scale on missing row ${row} or not positive`);
     for (const col of Object.keys(part.colMarks)) check(Number(col) >= 0 && Number(col) < cols, `column mark on missing column ${col}`);
     for (const a of part.arrows) check(inRange(a.from) && inRange(a.to), `arrow ${a.id} out of range`);
     check(new Set(part.arrows.map((a) => a.id)).size === part.arrows.length, 'repeated arrow id');

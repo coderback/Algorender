@@ -1,5 +1,5 @@
 import { MARKS, type MarkKey } from '@/viz/marks';
-import type { ListPart, MeterPart, TablePart } from './types';
+import { cellKey, type ListPart, type MeterPart, type TablePart } from './types';
 
 // Plain-text descriptions of grid parts for screen readers (rendered sr-only
 // next to the visual, which is aria-hidden).
@@ -20,14 +20,17 @@ export function describeTable(t: TablePart): string {
   };
 
   const sentences: string[] = [];
-  if (t.look === 'timeline') {
+  if (t.rows.length === 0) {
+    sentences.push(t.empty ?? 'No rows yet');
+  } else if (t.look === 'timeline') {
     for (const row of t.rows) {
       const bars = t.bars.filter((b) => b.row === row.id);
       const spans = bars.map((b) => `${b.from} to ${b.to}${b.mark ? `, ${MARKS[b.mark].label.toLowerCase()}` : ''}`);
       sentences.push(`${rowName(row.id)}: ${spans.join('; ') || 'empty'}`);
     }
   } else {
-    for (const row of t.rows) sentences.push(`${rowName(row.id)}: ${t.cells[row.id].map((x) => x || 'blank').join(', ')}`);
+    const text = (row: string, c: number, x: string) => (t.styles[cellKey(row, c)] === 'block' ? 'wall' : x || 'blank');
+    for (const row of t.rows) sentences.push(`${rowName(row.id)}: ${t.cells[row.id].map((x, c) => text(row.id, c, x)).join(', ')}`);
   }
   if (t.pieces.length > 0) {
     sentences.push(

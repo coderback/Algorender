@@ -32,12 +32,17 @@ const TEXT_BY_LENGTH = [
  */
 export function GridView({ state }: { state: GridState }) {
   const id = useId();
+  // Tables in one group (e.g. meetings and rooms over the same time axis) share the widest row-header column.
+  const groupWidth = new Map<string, number>();
+  for (const part of state.parts) {
+    if (part.kind === 'table' && part.group != null) groupWidth.set(part.group, Math.max(groupWidth.get(part.group) ?? 0, rowHeaderWidth(part.rows)));
+  }
   return (
     <LayoutGroup id={id}>
       <div className="flex flex-col gap-5">
         {state.parts.map((part) =>
           part.kind === 'table' ? (
-            <TableView key={part.id} table={part} />
+            <TableView key={part.id} table={part} headerWidth={part.group != null ? groupWidth.get(part.group) : undefined} />
           ) : part.kind === 'list' ? (
             <ListView key={part.id} list={part} />
           ) : (
@@ -55,11 +60,11 @@ function PartLabel({ children }: { children: ReactNode }) {
 
 // ───────────────────────────── tables ─────────────────────────────
 
-function TableView({ table }: { table: TablePart }) {
+function TableView({ table, headerWidth }: { table: TablePart; headerWidth?: number }) {
   const { min, max } = CELL[table.look];
   const cols = table.cols.length;
   const timeline = table.look === 'timeline';
-  const hw = table.rows.some((r) => r.label || r.sub) ? headerWidth(table.rows) : 0;
+  const hw = headerWidth ?? rowHeaderWidth(table.rows);
   const showCols = timeline || table.cols.some((c) => c.label || c.sub);
   const [scrollRef, overflowing] = useOverflow<HTMLDivElement>();
   const index = new Map(table.rows.map((r, i) => [r.id, i]));
@@ -88,6 +93,11 @@ function TableView({ table }: { table: TablePart }) {
             </div>
           )}
           <div className="relative">
+            {table.rows.length === 0 && (
+              <div className="flex h-8 items-center text-sm text-gray-400" style={{ paddingLeft: hw }}>
+                {table.empty ?? 'None yet'}
+              </div>
+            )}
             {table.rows.map((row, r) => (
               <motion.div key={row.id} layout="position" className="flex">
                 {hw > 0 && <RowHeader row={row} mark={table.rowMarks[row.id]} width={hw} />}
@@ -106,6 +116,7 @@ function TableView({ table }: { table: TablePart }) {
                           style={table.styles[key]}
                           look={table.look}
                           dark={table.checkered && (r + c) % 2 === 1}
+                          fill={barFill(text, table.scales?.[row.id])}
                         />
                       );
                     })}
@@ -123,11 +134,21 @@ function TableView({ table }: { table: TablePart }) {
   );
 }
 
-/** Width of the row-header column, from its longest label (mono 11px ≈ 6.7px per character). */
-function headerWidth(rows: readonly Row[]): number {
+/** Width of the row-header column, from its longest label (mono 11px ≈ 6.7px per character); 0 when no row has a label. */
+function rowHeaderWidth(rows: readonly Row[]): number {
+  if (!rows.some((r) => r.label || r.sub)) return 0;
   const widest = Math.max(...rows.map((r) => r.label.length * 7 + (r.sub ? 4 + r.sub.length * 6.2 : 0)));
   // + glyph column (12), gap, padding (≈20): leave room so short labels never truncate.
   return Math.min(140, Math.max(32, Math.ceil(widest + 34)));
+}
+
+/** Height of a bar-row cell's bar as a fraction of the cell, or null for an ordinary cell. */
+function barFill(text: string, scale: number | undefined): number | null {
+  if (scale == null) return null;
+  const n = Number(text);
+  if (text === '' || !Number.isFinite(n) || n <= 0 || scale <= 0) return 0;
+  // Small values still show a sliver, so a bar is never mistaken for an empty cell.
+  return Math.max(0.08, Math.min(1, n / scale));
 }
 
 function ColumnHeaders({ table, template }: { table: TablePart; template: CSSProperties }) {
@@ -206,7 +227,9 @@ function RowHeader({ row, mark, width }: { row: Row; mark: MarkKey | undefined; 
 /**
  * One square cell. A mark draws a coloured frame, a pale wash of the same
  * colour and the mark's glyph in the corner (when the cell is big enough), so
- * the value inside stays readable and colour is never the only cue.
+ * the value inside stays readable and colour is never the only cue. In a bar
+ * row (`fill` set) the wash rises from the bottom to the value's height; a
+ * `block` cell is a solid wall.
  */
 function Cell({
   text,
@@ -215,6 +238,7 @@ function Cell({
   style,
   look,
   dark,
+  fill,
 }: {
   text: string;
   mark: MarkKey | undefined;
@@ -222,28 +246,38 @@ function Cell({
   style: CellStyle | undefined;
   look: Look;
   dark: boolean;
+  fill: number | null;
 }) {
   const meta = mark ? MARKS[mark] : null;
   const board = look === 'board';
+  const bar = fill != null;
   const frame = meta ? `p-[2px] ${meta.bg}` : board ? 'p-px bg-gray-200' : 'p-[2px] bg-gray-100';
   const wash = meta
-    ? `${meta.bg} opacity-25`
-    : tint
-      ? `${MARKS[tint].bg} opacity-15`
-      : style === 'shade'
+    ? `${meta.bg} ${bar ? 'opacity-40' : 'opacity-25'}`
+    : style === 'block'
+      ? NEUTRAL.bg
+      : bar
         ? `${NEUTRAL.bg} opacity-45`
-        : style === 'given'
-          ? `${NEUTRAL.bg} opacity-30`
-          : text !== '' && style !== 'plain' && !board
-            ? `${NEUTRAL.bg} opacity-20`
-            : 'opacity-0';
+        : tint
+          ? `${MARKS[tint].bg} opacity-15`
+          : style === 'shade'
+            ? `${NEUTRAL.bg} opacity-45`
+            : style === 'given'
+              ? `${NEUTRAL.bg} opacity-30`
+              : text !== '' && style !== 'plain' && !board
+                ? `${NEUTRAL.bg} opacity-20`
+                : 'opacity-0';
   const weight = style === 'given' ? 'font-bold text-gray-900' : style === 'plain' ? 'font-medium text-gray-700' : 'font-semibold text-gray-800';
   const tween = { transitionDuration: 'var(--tween, 300ms)' };
   return (
     <div className={`@container aspect-square min-w-0 ${board ? '' : 'p-px'}`}>
       <div className={`h-full transition ${board ? 'rounded-none' : 'rounded-md'} ${frame}`} style={tween}>
         <div className={`relative flex h-full items-center justify-center overflow-hidden ${board ? '' : 'rounded-[4px]'} ${dark ? 'bg-gray-100' : 'bg-white'}`}>
-          <div className={`absolute inset-0 transition ${wash}`} style={tween} />
+          {bar ? (
+            <div className={`absolute inset-x-0 bottom-0 transition ${wash}`} style={{ ...tween, height: `${fill * 100}%` }} />
+          ) : (
+            <div className={`absolute inset-0 transition ${wash}`} style={tween} />
+          )}
           <span className={`relative font-mono leading-none tabular-nums ${weight} ${TEXT_BY_LENGTH[Math.min(text.length, 4)]}`}>{text}</span>
           {meta && (
             <span className={`absolute top-px right-0.5 hidden text-[clamp(7px,22cqw,11px)] leading-none font-bold @min-[30px]:block ${meta.text}`}>
@@ -288,7 +322,7 @@ function Overlay({ table, index, left }: { table: TablePart; index: Map<string, 
   const reduce = useReducedMotion();
   const cols = table.cols.length;
   const rows = table.rows.length;
-  if (table.arrows.length === 0 && table.guides.length === 0 && table.box == null) return null;
+  if (rows === 0 || (table.arrows.length === 0 && table.guides.length === 0 && table.box == null)) return null;
   const boxLines =
     table.box == null
       ? []
@@ -364,7 +398,7 @@ function ArrowShape({ arrow, index, animate }: { arrow: Arrow; index: Map<string
 
 /** Pieces sit on top of the cells and slide when they move to another square. */
 function Pieces({ table, index, left }: { table: TablePart; index: Map<string, number>; left: number }) {
-  if (table.pieces.length === 0) return null;
+  if (table.pieces.length === 0 || table.rows.length === 0) return null;
   const cols = table.cols.length;
   const rows = table.rows.length;
   return (

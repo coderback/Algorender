@@ -4,6 +4,30 @@ import { createRng } from '@/engine/random';
 export const CELLS: StatSpec = { key: 'cells', label: 'Cells computed' };
 
 /**
+ * Bend for an arrow between two cells of one row that are `span` columns
+ * apart: neighbours get a straight arrow, longer jumps arc over the cells in
+ * between, higher the further they reach (capped so the arc stays near its
+ * row). A positive bend arcs up for a left-to-right arrow; negate it for a
+ * right-to-left arrow that should also arc up.
+ */
+export const arcBend = (span: number) => (Math.abs(span) <= 1 ? 0 : Math.min(1.1, 0.4 + 0.25 * Math.log2(Math.abs(span))));
+
+/** "a, b and c" / "a or b". */
+export function joinWords(words: readonly string[], last = 'and'): string {
+  if (words.length <= 1) return words.join('');
+  return `${words.slice(0, -1).join(', ')} ${last} ${words.at(-1)}`;
+}
+
+/** Reproducible integers in [min, max]. */
+export function randomInts(seed: number, count: number, min: number, max: number): number[] {
+  const rng = createRng(seed);
+  return Array.from({ length: count }, () => min + Math.floor(rng() * (max - min + 1)));
+}
+
+/** Clamps a size-slider value (examples are also built with size 0 by tests). */
+export const clampSize = (size: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(size) || min));
+
+/**
  * Choices for "what value goes here?": the answer plus plausible wrong values
  * (given first, then answer ± 1, ± 2), in ascending order, so the answer's
  * position varies with the numbers rather than being fixed.

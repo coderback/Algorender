@@ -1,9 +1,10 @@
 import type { MarkKey } from '@/viz/marks';
 
-// State for the grid view: DP tables, boards (N-Queens, Sudoku) and timelines
-// (activity selection), plus small side parts (a call stack, the chosen items,
-// a capacity meter). Everything is keyed by stable ids so rows can reorder and
-// pieces can slide without being re-created.
+// State for the grid view: DP tables, boards (N-Queens, Sudoku, grid paths) and
+// timelines (activity selection, intervals), plus small side parts (a call
+// stack, the chosen items, a heap, a capacity meter). Everything is keyed by
+// stable ids so rows can reorder or appear and pieces can slide without being
+// re-created.
 
 /** Stable identity of a table row. Rows are keyed by id, never by position, so they can reorder. */
 export type RowId = string;
@@ -17,9 +18,10 @@ export type CellAt = { row: RowId; col: number };
 /**
  * How a cell's content reads, independent of marks: `given` is fixed input
  * (a Sudoku clue), `plain` is filled but untinted (a digit the solver placed),
- * `shade` is a neutral tint (a square under attack).
+ * `shade` is a neutral tint (a square under attack), `block` is a solid wall
+ * that nothing may enter (an obstacle on a grid of paths).
  */
-export type CellStyle = 'given' | 'plain' | 'shade';
+export type CellStyle = 'given' | 'plain' | 'shade' | 'block';
 
 /**
  * `table`: square cells holding values (DP tables). `board`: a game board,
@@ -64,6 +66,15 @@ export type TablePart = {
   /** Draw a heavy line every `box` cells (Sudoku boxes). */
   box: number | null;
   checkered: boolean;
+  /**
+   * Rows drawn as a small bar chart: each cell's number fills a bar from the
+   * bottom, up to this maximum (e.g. the input values of LIS or House Robber).
+   */
+  scales?: Readonly<Record<RowId, number>>;
+  /** Tables in the same group share one row-header width, so timelines over the same axis line up. */
+  group?: string;
+  /** Shown while the table has no rows (rows can be added later, e.g. rooms as they open). */
+  empty?: string;
 };
 
 export type ListItem = { id: string; text: string; mark: MarkKey | null };

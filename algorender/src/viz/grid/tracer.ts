@@ -48,15 +48,22 @@ export type FrameOptions = {
   checkpoint?: Checkpoint;
 };
 
+/** A row as authored: its id defaults to `r${index}`; `scale` draws it as bars up to that maximum. */
+export type RowSpec = Header & { id?: string; scale?: number };
+
 export type TableSpec = {
   id?: string;
   label: string;
   look?: Look;
   corner?: string;
-  rows: readonly (Header & { id?: string })[];
+  rows: readonly RowSpec[];
   cols: readonly Header[];
   box?: number;
   checkered?: boolean;
+  /** Tables sharing a group share their row-header width, so their columns line up. */
+  group?: string;
+  /** Shown while the table has no rows. */
+  empty?: string;
 };
 
 type Overlay = {
@@ -94,6 +101,7 @@ export class GridTracer {
   addTable(spec: TableSpec) {
     const id = spec.id ?? MAIN;
     const rows = spec.rows.map((r, i) => ({ id: r.id ?? `r${i}`, label: r.label, ...(r.sub != null && { sub: r.sub }) }));
+    const scales = Object.fromEntries(spec.rows.flatMap((r, i) => (r.scale != null ? [[rows[i].id, r.scale]] : [])));
     const table: TablePart = {
       kind: 'table',
       id,
@@ -114,8 +122,25 @@ export class GridTracer {
       guides: [],
       box: spec.box ?? null,
       checkered: spec.checkered ?? false,
+      ...(Object.keys(scales).length > 0 && { scales }),
+      ...(spec.group != null && { group: spec.group }),
+      ...(spec.empty != null && { empty: spec.empty }),
     };
     this.parts = [...this.parts, table];
+  }
+
+  /** Appends a row of empty cells, e.g. a room that has just been opened. */
+  addRow(row: RowSpec & { id: string }, table = MAIN) {
+    this.edit(table, (t) => {
+      if (t.rows.some((r) => r.id === row.id)) throw new Error(`Row "${row.id}" is already in table "${table}"`);
+      const { id, label, sub, scale } = row;
+      return {
+        ...t,
+        rows: [...t.rows, { id, label, ...(sub != null && { sub }) }],
+        cells: { ...t.cells, [id]: Array<string>(t.cols.length).fill('') },
+        ...(scale != null && { scales: { ...t.scales, [id]: scale } }),
+      };
+    });
   }
 
   addList(spec: { id: string; label: string; empty: string }) {
@@ -265,6 +290,15 @@ export class GridTracer {
 
   removeItem(list: string, id: string) {
     this.editList(list, (l) => ({ ...l, items: l.items.filter((it) => it.id !== id) }));
+  }
+
+  /** Puts a list's items in a new order, given as item ids (e.g. a heap kept smallest first). Chips slide to their places. */
+  reorderItems(list: string, order: readonly string[]) {
+    this.editList(list, (l) => {
+      const byId = new Map(l.items.map((it) => [it.id, it]));
+      if (order.length !== l.items.length || order.some((id) => !byId.has(id))) throw new Error('reorderItems needs every item id once');
+      return { ...l, items: order.map((id) => byId.get(id)!) };
+    });
   }
 
   addSegment(meter: string, seg: { id: string; label: string; amount: number; mark?: MarkKey | null }) {
