@@ -1,7 +1,10 @@
 'use client';
 
-// Placeholder until the hash view is built. Replace with the real renderer;
-// its props must stay { state: <this view's state type> }.
-export function HashView({ state }: { state: unknown }) {
-  return <pre className="overflow-auto text-xs text-gray-500">{JSON.stringify(state, null, 2)}</pre>;
+import { BloomView } from './BloomView';
+import { TableView } from './TableView';
+import type { HashState } from './types';
+
+/** Hash structures: chained hash tables (maps and sets) and Bloom filters. */
+export function HashView({ state }: { state: HashState }) {
+  return state.type === 'bloom' ? <BloomView state={state} /> : <TableView state={state} />;
 }
