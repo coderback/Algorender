@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { SITE_URL } from "@/lib/site";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -25,7 +26,8 @@ export default function RootLayout({ children }) {
     // The theme script may stamp data-theme before React hydrates.
     <html lang="en-GB" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* beforeInteractive runs in <head> ahead of hydration, so a saved theme never flashes. */}
+        <Script id="theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
       </head>
       <body className="antialiased">
         {children}
