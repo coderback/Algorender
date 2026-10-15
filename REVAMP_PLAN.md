@@ -665,6 +665,30 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 - The old `/visualisers/*` URLs redirect.
 - Every concept has hook → see → predict.
 
+**Status (2026-10-15, branch `revamp/phase-1`):**
+- **Done:**
+  - **Engine generalised:**
+    - `AlgorithmModule` / `StructureModule` with typed inputs, so data structures are changed by operations, with undo and `?ops=` links.
+    - One renderer per view kind.
+    - A shared mark vocabulary.
+  - **Predict mode:** checkpoint questions gate the player, with a score.
+  - **All 52 visualisers ported:** URLs unchanged, so no redirects are needed. That's 39 algorithms plus 13 data structures, on five new views (grid, graph, tree, linear/hash, text), with the audit's bugs fixed.
+  - **Bloom filter:** working again and unhidden.
+  - **New pattern visualisers:** two pointers, sliding window, monotonic stack.
+  - **New pages and features:**
+    - `/compare`: a sorting race on a shared work clock, plus a growth chart with n²/2 and n log₂ n references, a table view and keyboard access.
+    - `/embed/[slug]`, with an embed-snippet button.
+    - Sitemap, robots, `metadataBase`.
+  - **Tests:** 714 unit/property tests (713 pass, 1 skipped) and 80 Playwright tests, including a smoke test of every visualiser. The registry test checks every module against the shared rules.
+  - **Cleanup:** legacy components, hooks and empty folders removed. Lint has 0 warnings.
+- **Not done:**
+  - The lesson template and `concepts.yaml`.
+  - Union-find, intervals, the backtracking decision tree and the extra DP family.
+  - OG images.
+  - Letting `disabledReason` see an operation's arguments. For now, an invalid argument gets a narrated explanation frame instead.
+  - A choice-type argument (pick an existing vertex).
+- **Carried to Phase 1b, before Phase 2.**
+
 ### Phase 2 — Code workspace
 
 **Work:**

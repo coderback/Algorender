@@ -1,5 +1,8 @@
 # Algorender Visualizer Development Guide
 
+> **Obsolete (2026-10-15).** This guide describes the original per-page pattern (async loops with sleeps, index-keyed elements), which has been removed. Every visualiser now runs on the record → replay trace engine: see **CLAUDE.md → Architecture → Porting a visualiser** and `REVAMP_PLAN.md`. Kept for history only.
+
+
 ## Overview
 
 This guide provides comprehensive instructions for adding new algorithm and data structure visualizers to the Algorender platform. Follow these patterns to ensure consistency with the existing codebase and maintain the high-quality user experience.

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Algorender is a Next.js 16 app for learning algorithms and data structures visually, and is being rebuilt into a broader platform (DS&A → math → ML → systems). `REVAMP_PLAN.md` at the repo root is the plan: read its roadmap and decisions before proposing architecture. Visualisers are mid-migration: the 8 sorting algorithms run on the new trace engine; the other 44 are legacy pages still to be ported.
+Algorender is a Next.js 16 app for learning algorithms and data structures visually, and is being rebuilt into a broader platform (DS&A → math → ML → systems). `REVAMP_PLAN.md` at the repo root is the plan: read its roadmap and decisions before proposing architecture. Every visualiser now runs on the trace engine (one dynamic route, `app/visualisers/[slug]`); there are no legacy per-page visualisers left. Other routes: `/compare` (sorting race + growth chart), `/embed/[slug]` (chrome-less iframe embeds), `sitemap.xml`, `robots.txt`.
 
 ## Development Commands
 
@@ -25,14 +25,16 @@ The user's global `~/.npmrc` sets `os=linux`, which makes npm skip Windows nativ
 
 ### Trace engine (record → replay): how all new visualisers work
 
-1. An algorithm is a **pure generator** in `src/algorithms/<group>/<slug>.ts` that yields one `Frame` per meaningful step (`src/engine/types.ts`): a state snapshot, the pseudo-code `line`, a one-sentence `note` (narration), `vars` and running `stats`.
-2. Array algorithms author frames through `ArrayTracer` (`src/viz/array/tracer.ts`): `swap`, `move` (between lanes, e.g. a merge buffer), `markSorted`, counters, then `t.frame({...})`. Snapshots are copy-on-write, so frames share unchanged lanes.
-3. `recordTrace()` runs the generator to completion (`src/engine/trace.ts`, capped at 20k frames).
-4. `useTracePlayer()` (`src/engine/useTracePlayer.ts`) holds only an index on a requestAnimationFrame clock, so stepping back, scrubbing and `?step=` deep links are array lookups. Tween length is derived from playback speed.
-5. `ArrayView` (`src/viz/array/ArrayView.tsx`) keys every element by **stable id** with a Motion `layoutId`, so swaps and lane moves animate as real movement. `MotionConfig reducedMotion="user"` respects reduced-motion settings.
-6. `app/visualisers/[slug]/page.tsx` serves every ported algorithm (static params from `src/algorithms/index.ts`); `src/components/explorer/` holds the controls, synced pseudo-code, variables, stats, legend, input panel and "Try this" experiments.
+1. Each step is a `Frame` (`src/engine/types.ts`): a state snapshot, the pseudo-code `line`, a one-sentence `note` (narration that says *why*), `vars`, running `stats`, and optionally a `checkpoint` (a Predict-mode question about the *next* frame; the frame's own note must not reveal the answer).
+2. Two module kinds (`src/engine/module.ts`):
+   - **`AlgorithmModule<I, S>`** (`defineAlgorithm`): a pure generator `run(input)` over an `InputSpec<I>` (named examples taking `{seed, size}`, an optional size slider, optional custom text with `parse`/`format`). Lives in `src/algorithms/<family>/<slug>.ts`.
+   - **`StructureModule<M, S>`** (`defineStructure`): an immutable model `M` changed by operations (`run(model, args)` is a generator that yields frames and **returns the new model**; it must never mutate `model`). Lives in `src/structures/<family>/<slug>.ts`. The explorer keeps history/undo and encodes operations in the URL (`?start=&seed=&ops=push:5;pop`).
+3. Each module names a `view` kind; `src/viz/views.tsx` maps kinds to renderers (`array`, `grid`, `graph`, `tree`, `linear`, `hash`, `text`). A view gets `{ state }` and owns its tracer/types under `src/viz/<kind>/`. `ArrayTracer` (`src/viz/array/tracer.ts`) is the reference pattern: mutate through methods, `t.frame({...})` returns a copy-on-write snapshot.
+4. `recordTrace()` / `recordOperation()` (`src/engine/trace.ts`) record a run; `useTracePlayer()` holds only an index on a requestAnimationFrame clock (step back, scrub, `?step=` deep links), and gates forward motion on unanswered Predict questions.
+5. Views key every element by **stable id** and animate with Motion (`layout`/`layoutId` for HTML, `motion.*` SVG elements animating attributes). Motion components inherit the stage's `MotionConfig` (tween length from playback speed; `reducedMotion="user"`).
+6. `src/registry.ts` merges the per-family registries (`src/algorithms/<family>/index.ts`, `src/structures/<family>/index.ts`); `app/visualisers/[slug]/page.tsx` serves every registered module. `src/components/explorer/` holds the shared UI: `TraceStage` (view, narration, predict card, controls, pseudo-code, stats, variables, legend), `AlgorithmExplorer`, `StructureExplorer`, `InputPanel`.
 
-**Porting a visualiser:** write the generator plus `ArrayAlgorithm` metadata (input spec, pseudo-code, stats, legend, content), register it in `src/algorithms/index.ts`, and delete the legacy `app/visualisers/<slug>/` folder (static folders take precedence over `[slug]`). New view types (graph, tree, grid…) get their own tracer + view under `src/viz/`. Property tests in `src/algorithms/**.test.ts` must keep passing: sorted output, no element lost or duplicated in any frame, valid pseudo-code lines, monotonic stats, stability where claimed.
+**Porting a visualiser:** write the module (generator, pseudo-code, stats, legend with a `{ neutral: … }` row, `content` with idea/invariant/whenToUse/traits/experiments, checkpoints at real decisions), add it to its family's `index.ts`, delete the legacy `app/visualisers/<slug>/` folder (static folders take precedence over `[slug]`), and add property tests next to it (correct result vs a reference implementation on random inputs, every frame narrated, valid pseudo-code lines, well-formed checkpoints, monotonic stats, and for structures: operations never mutate their input model).
 
 **Never** animate by mutating React state inside async loops with sleeps, and never key moving elements by array index: that is what made the legacy pages choppy.
 
@@ -40,13 +42,19 @@ The user's global `~/.npmrc` sets `os=linux`, which makes npm skip Windows nativ
 
 `src/data/visualisers.js` is the single registry (name, slug, category, complexities, `hidden`) for the home page, search, and the new page headers. Complexities live only there; algorithm modules hold the teaching content.
 
-### Legacy pages (until ported)
+### Remaining JavaScript
 
-`app/visualisers/<slug>/page.jsx` pages use the old pattern: async loops waiting via `wait(ms)` from `useCancellableWait()` (never a raw `setTimeout` promise), with `sortingRef`-style cancellation, and shared controls in `components/VisualizerControls.jsx`. ESLint reports React Compiler hook rules as warnings for legacy `.js/.jsx` and as errors for TypeScript.
+The home page (`app/page.jsx`), root layout, `Header.jsx`, `SearchBar.jsx`, `ui/tabs.jsx` and `src/data/visualisers.js` are still JavaScript. ESLint reports React Compiler hook rules as warnings for `.js/.jsx` and as errors for TypeScript; new code is TypeScript. `VISUALIZER_GUIDE.md` describes the removed async-loop pattern and is kept only for history.
+
+### Tests that guard every module
+
+- `src/registry.test.ts`: every module is listed in `src/data/visualisers.js`, no legacy folder shadows its route, pseudo-code lines are ≤ 42 characters (the code panel width), and teaching content is complete.
+- Per-family property tests next to the modules (results vs reference implementations, frames, checkpoints, immutability).
+- `e2e/all-visualisers.spec.ts` opens and runs every visualiser listed in the registry with no console errors.
 
 ### Design system
 
-State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-safe): `bar`, `mark-compare`, `mark-swap`, `mark-write`, `mark-focus`, `mark-sorted`. Each mark also has a glyph (`src/viz/array/marks.ts`), so colour is never the only cue. The UI is light-only until the legacy pages are ported.
+State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-safe): `bar`, `mark-compare`, `mark-swap`, `mark-write`, `mark-focus`, `mark-frontier`, `mark-done`. `src/viz/marks.ts` is the one shared vocabulary (`compare`, `swap`, `write`, `pivot`, `min`, `key`, `frontier`, `sorted`, `visited`, `found`, `path`, `reject`), each with a glyph and `bg`/`fill`/`stroke`/`text` classes, so colour is never the only cue and a colour means the same thing in every view. Modules relabel marks in their legend rather than inventing colours. The UI is light-only until the legacy pages are ported.
 
 ## Naming Conventions
 
