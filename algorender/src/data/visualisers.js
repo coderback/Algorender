@@ -79,6 +79,14 @@ const dataStructureEntries = [
     spaceComplexity: 'O(n)'
   },
   {
+    name: 'Union-Find',
+    description: 'Disjoint sets as a forest: union joins two trees, find walks to the root, and path compression flattens the way.',
+    slug: 'union-find',
+    category: 'Hierarchical',
+    timeComplexity: { best: 'O(1)', average: 'O(α(n))', worst: 'O(log n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
     name: 'Trie (Prefix Matching)',
     description: 'A tree data structure used for efficient prefix matching.',
     slug: 'trie',
@@ -378,6 +386,38 @@ const algorithmEntries = [
     spaceComplexity: 'O(mn)'
   },
   {
+    name: 'Coin Change',
+    description: 'The fewest coins that add up to an amount, built up from every smaller amount.',
+    slug: 'coin-change',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(nA)', average: 'O(nA)', worst: 'O(nA)' },
+    spaceComplexity: 'O(A)'
+  },
+  {
+    name: 'Longest Increasing Subsequence',
+    description: 'The longest run of values that rises from left to right, not necessarily adjacent.',
+    slug: 'longest-increasing-subsequence',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(n²)', average: 'O(n²)', worst: 'O(n²)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Grid Paths',
+    description: 'Count the paths across a grid moving only right or down, around obstacles.',
+    slug: 'unique-paths',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(mn)', average: 'O(mn)', worst: 'O(mn)' },
+    spaceComplexity: 'O(mn)'
+  },
+  {
+    name: 'House Robber',
+    description: 'The largest total from values where no two chosen ones are neighbours.',
+    slug: 'house-robber',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
     name: 'N-Queens Problem',
     description: 'A backtracking algorithm to place N queens on an N×N chessboard.',
     slug: 'n-queens',
@@ -392,6 +432,22 @@ const algorithmEntries = [
     category: 'Backtracking',
     timeComplexity: { best: 'O(1)', average: 'O(9^m)', worst: 'O(9^m)' },
     spaceComplexity: 'O(n²)'
+  },
+  {
+    name: 'Subsets',
+    description: 'List every subset by deciding, for each item in turn, to include it or leave it out.',
+    slug: 'subsets',
+    category: 'Backtracking',
+    timeComplexity: { best: 'O(n·2ⁿ)', average: 'O(n·2ⁿ)', worst: 'O(n·2ⁿ)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Permutations',
+    description: 'List every ordering by choosing an unused item for each position, then undoing the choice.',
+    slug: 'permutations',
+    category: 'Backtracking',
+    timeComplexity: { best: 'O(n·n!)', average: 'O(n·n!)', worst: 'O(n·n!)' },
+    spaceComplexity: 'O(n)'
   },
   {
     name: 'Rabin-Karp Algorithm',
@@ -448,6 +504,22 @@ const algorithmEntries = [
     slug: 'monotonic-stack',
     category: 'Patterns',
     timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Merge Intervals',
+    description: 'Sort intervals by start, then sweep once, merging each one that overlaps the last.',
+    slug: 'merge-intervals',
+    category: 'Patterns',
+    timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Meeting Rooms',
+    description: 'The fewest rooms that fit every meeting: sweep by start time and reuse rooms as they free up.',
+    slug: 'meeting-rooms',
+    category: 'Patterns',
+    timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
     spaceComplexity: 'O(n)'
   }
 ];

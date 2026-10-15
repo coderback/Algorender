@@ -2,6 +2,7 @@ import { backtracking } from '@/algorithms/backtracking';
 import { dynamicProgramming } from '@/algorithms/dp';
 import { graphAlgorithms } from '@/algorithms/graph';
 import { greedy } from '@/algorithms/greedy';
+import { intervals } from '@/algorithms/intervals';
 import { patterns } from '@/algorithms/patterns';
 import { searching } from '@/algorithms/searching';
 import { sorting } from '@/algorithms/sorting';
@@ -10,6 +11,7 @@ import type { AnyVisualiser } from '@/engine/module';
 import { graphStructures } from '@/structures/graphs';
 import { hashStructures } from '@/structures/hashing';
 import { linearStructures } from '@/structures/linear';
+import { setStructures } from '@/structures/sets';
 import { treeStructures } from '@/structures/trees';
 
 /**
@@ -28,10 +30,12 @@ for (const m of [
   ...backtracking,
   ...stringAlgorithms,
   ...patterns,
+  ...intervals,
   ...linearStructures,
   ...treeStructures,
   ...graphStructures,
   ...hashStructures,
+  ...setStructures,
 ]) {
   if (modules[m.slug]) throw new Error(`Duplicate visualiser slug "${m.slug}"`);
   modules[m.slug] = m;
