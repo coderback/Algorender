@@ -74,7 +74,7 @@ export function TraceStage<S>({
 
   return (
     <MotionConfig transition={{ duration: player.tweenMs / 1000, ease: [0.4, 0, 0.2, 1] }} reducedMotion="user">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,360px)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
         <div className="min-w-0 space-y-3">
           <div
             className="rounded-xl border border-gray-100 bg-white px-3 pt-4 pb-3 shadow-xs sm:px-6"

@@ -33,7 +33,7 @@ export function CodePanel({ lines, current }: { lines: readonly string[]; curren
 
   return (
     <Panel title="Pseudo-code">
-      <ol className="py-2 font-mono text-[13px] leading-6">
+      <ol className="py-2 font-mono text-[12.5px] leading-6">
         {lines.map((line, i) => {
           const blank = numbers[i] == null;
           const active = i === current;

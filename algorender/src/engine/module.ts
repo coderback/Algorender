@@ -14,12 +14,14 @@ export type InputExample<I> = {
   id: string;
   label: string;
   make: (opts: { seed: number; size: number }) => I;
+  /** False for fixed examples (e.g. a hand-placed graph) that ignore the size slider; the slider hides for them. */
+  sized?: boolean;
 };
 
 /**
  * Everything the input panel needs. The first example is the default. When
- * `size` is set, examples receive the chosen size (and every example should
- * honour it); otherwise examples ignore it.
+ * `size` is set, examples receive the chosen size and should honour it, unless
+ * they set `sized: false`; otherwise examples ignore it.
  */
 export type InputSpec<I> = {
   examples: readonly [InputExample<I>, ...InputExample<I>[]];

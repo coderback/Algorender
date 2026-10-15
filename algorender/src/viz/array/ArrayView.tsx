@@ -1,7 +1,7 @@
 'use client';
 
 import { LayoutGroup, motion } from 'motion/react';
-import type { CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import { MARKS, NEUTRAL } from '@/viz/marks';
 import { RANGE_TONES } from './marks';
 import type { ArrayState, Counter, ItemId, Lane, Mark } from './types';
@@ -15,26 +15,36 @@ type Scale = { maxValue: number; digits: number; labelSize: string | null; barHe
 /**
  * Renders array lanes as bars. Elements are keyed by identity and share a
  * layoutId, so a swap physically moves both bars and a move between lanes
- * (into a merge buffer, up to a "key" slot) flies the bar across.
+ * (into a merge buffer, up to a "key" slot) flies the bar across. `compact`
+ * (side-by-side races) drops value labels and counters and shortens the bars.
  */
-export function ArrayView({ state }: { state: ArrayState }) {
+export function ArrayView({ state, compact = false }: { state: ArrayState; compact?: boolean }) {
+  const groupId = useId();
   const maxValue = Math.max(1, ...Object.values(state.values));
   const columns = Math.max(1, ...state.lanes.map((l) => l.slots.length));
   const scale: Scale = {
     maxValue,
     digits: String(maxValue).length,
-    labelSize: columns <= 12 ? 'text-sm' : columns <= 24 ? 'text-xs' : null,
-    barHeight: state.lanes.length === 1 ? 'h-48 sm:h-60' : 'h-24 sm:h-28',
+    labelSize: compact ? null : columns <= 12 ? 'text-sm' : columns <= 24 ? 'text-xs' : null,
+    barHeight: compact
+      ? state.lanes.length === 1
+        ? 'h-24'
+        : 'h-14'
+      : state.lanes.length === 1
+        ? 'h-48 sm:h-60'
+        : 'h-24 sm:h-28',
   };
 
   return (
-    <LayoutGroup>
+    // layoutIds are global unless namespaced: without an id, two views on one page
+    // (e.g. a race) would animate elements with the same id into each other.
+    <LayoutGroup id={groupId}>
       <div className="mx-auto flex w-full flex-col gap-4" style={{ maxWidth: columns * SLOT_MAX_PX }}>
         {state.lanes.map((lane) => (
           <LaneView key={lane.id} lane={lane} state={state} columns={columns} scale={scale} />
         ))}
       </div>
-      {state.counters.length > 0 && (
+      {!compact && state.counters.length > 0 && (
         <div className="mt-5 flex flex-col gap-4">
           {state.counters.map((counter) => (
             <CounterView key={counter.id} counter={counter} />

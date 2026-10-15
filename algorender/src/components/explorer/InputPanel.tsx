@@ -18,6 +18,8 @@ export function InputPanel<I>({
   const [text, setText] = useState(source.kind === 'custom' ? source.text : '');
   const [error, setError] = useState<string | null>(null);
   const activeExample = source.kind === 'example' ? source.example : null;
+  // Fixed examples (sized: false) ignore the size, so the slider only shows for ones that use it.
+  const showSize = spec.size != null && spec.examples.find((e) => e.id === activeExample)?.sized !== false && activeExample != null;
   const size = source.kind === 'example' ? source.size : (spec.size?.default ?? 0);
   // Keep the current values' seed when only the shape or size changes.
   const keepSeed = () => (source.kind === 'example' ? source.seed : randomSeed());
@@ -69,7 +71,7 @@ export function InputPanel<I>({
         </div>
       </fieldset>
 
-      {spec.size && (
+      {spec.size && showSize && (
         <label className="flex shrink-0 flex-col gap-1.5 text-xs font-medium text-gray-500">
           <span>
             {spec.size.label} <span className="font-mono text-gray-800">{size}</span>
