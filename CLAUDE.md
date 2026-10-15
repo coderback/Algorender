@@ -38,6 +38,17 @@ The user's global `~/.npmrc` sets `os=linux`, which makes npm skip Windows nativ
 
 **Never** animate by mutating React state inside async loops with sleeps, and never key moving elements by array index: that is what made the legacy pages choppy.
 
+**Reuse a view before writing one.** `GridView` (`src/viz/grid/types.ts`) composes parts: tables (look `table`/`board`/`timeline`, cell styles incl. `block` walls, arrows, pieces, interval `bars`, `guides`, per-row `scales`, a `group` to sit parts side by side), lists and meters. `TreeView` (`src/viz/tree/types.ts`) draws one tree or a forest (`roots`, `parentArrows`, an aligned `table` of rows), and with `search: true` a recursion/decision tree; build those from a list of calls with `src/viz/tree/search.ts`, which lays out the whole tree up front so nodes never move as it is revealed and turns sideways on narrow screens.
+
+**Operations:** `disabledReason(model, args?)` blocks an operation with a reason (the form disables itself as the learner types; replay and the run button use `blockedReason()`). Use `type: 'choice'` args (options from the model) for references that must exist. Prefer a narrated run over disabling when the attempt itself teaches (searching for a missing key).
+
+### Lessons and the concept graph
+
+- `src/content/concepts.yaml` (validated by Zod in `concepts.ts`) is the concept graph: tracks, concepts with prerequisites, the visualisers that teach each, an optional lesson, and planned concepts for the roadmap. `src/content/content.test.ts` rejects unknown ids, cycles, untaught visualisers, and planned concepts that link anywhere.
+- Lessons are MDX in `src/content/lessons/<slug>.mdx`, listed with their metadata in `src/content/lessons/index.ts`, served by `app/learn/[lesson]`. Every lesson follows the learning loop with `<Section step="hook|parts|see|predict|do|check|recap">`, and uses the widgets registered in `src/mdx-components.tsx`: `Terms`/`Term` (pre-training), `Explore` (a visualiser; `settings` take the same keys as the page URL), `PredictChallenge` (predict mode with a goal; make sure the run has at least that many questions), `Quiz` (retrieval practice with explanations), `KeyIdea`, `Misconception`. Math uses `$…$` (KaTeX).
+- Visualisers inside lessons run with `variant="lesson"`: they start from their settings, never write the URL, keep keyboard shortcuts to the focused stage, stack their panels, and ask at every decision in Predict mode.
+- Progress (completed lessons, best quiz and prediction scores) lives in localStorage (`src/components/lesson/progress.ts`) until accounts arrive.
+
 ### Registry
 
 `src/data/visualisers.js` is the single registry (name, slug, category, complexities, `hidden`) for the home page, search, and the new page headers. Complexities live only there; algorithm modules hold the teaching content.

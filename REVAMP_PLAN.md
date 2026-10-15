@@ -689,6 +689,30 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
   - A choice-type argument (pick an existing vertex).
 - **Carried to Phase 1b, before Phase 2.**
 
+**Phase 1b status (2026-10-15, branch `revamp/phase-1b`):**
+- **Done:**
+  - **Lessons:**
+    - `concepts.yaml` concept graph, validated by Zod.
+    - A `/learn` concept map.
+    - Four MDX lessons: binary search, two pointers, memoization and Dijkstra. Each follows hook → parts → see → predict → check → recap, with KaTeX math.
+    - Embedded visualisers in a `lesson` variant, prediction challenges, quizzes, and progress kept in localStorage.
+  - **New visualisers (9, so 64 in total):**
+    - DP: coin change, longest increasing subsequence (with a patience-sorting mode), unique paths, house robber.
+    - Intervals: merge intervals, meeting rooms.
+    - Backtracking: subsets and permutations, drawn as decision trees.
+    - Union-find, with union by rank and path compression.
+  - **View extensions:** grid bars, walls, groups and empty states; tree forests and search trees with a sideways layout on phones.
+  - **Operations:**
+    - `disabledReason` sees an operation's arguments, so forms block bad input as you type.
+    - Choice arguments let you pick an existing vertex, edge or key, and replace the error frames.
+  - **OG images:** for the site, every visualiser and every lesson.
+  - **Home page:** links to Learn and Compare.
+  - **Tests:** 943 unit/property tests (942 pass, 1 skipped) and 97 Playwright tests, covering the lessons and every visualiser.
+- **Not done:**
+  - Lessons for the remaining concepts. The map lists them as planned.
+  - The Lighthouse accessibility audit.
+  - Dark theme.
+
 ### Phase 2 — Code workspace
 
 **Work:**
