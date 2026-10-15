@@ -64,7 +64,7 @@ export default function FibonacciMemoVisualiser() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
               {calls.map((k, i) => (
-                <Card key={i} className="p-2 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white shadow-sm hover:shadow-md transition-all">
+                <Card key={i} className="p-2 border-2 border-blue-100 bg-linear-to-br from-blue-50 to-white shadow-xs hover:shadow-md transition-all">
                   <div className="text-center">
                     <div className="text-blue-700 font-bold text-sm">fib({k})</div>
                   </div>
@@ -141,7 +141,7 @@ export default function FibonacciMemoVisualiser() {
             {Object.keys(memo).length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
                 {Object.entries(memo).map(([k, v]) => (
-                  <Card key={k} className="p-2 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white shadow-sm hover:shadow-md transition-all">
+                  <Card key={k} className="p-2 border-2 border-green-100 bg-linear-to-br from-green-50 to-white shadow-xs hover:shadow-md transition-all">
                     <div className="text-center">
                       <div className="text-green-700 font-bold text-sm">fib({k}) = {v}</div>
                     </div>
@@ -161,7 +161,7 @@ export default function FibonacciMemoVisualiser() {
                   <FaCalculator className="text-blue-400" />
                   Final Result:
                 </p>
-                <Card className="p-3 border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-white">
+                <Card className="p-3 border-2 border-blue-200 bg-linear-to-br from-blue-100 to-white">
                   <span className="text-blue-900 text-xl font-bold">fib({n}) = {result}</span>
                 </Card>
               </div>

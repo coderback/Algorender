@@ -15,10 +15,10 @@ function Home() {
   const categories = [...new Set(items.map(item => item.category))];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 text-gray-800">
+    <div className="min-h-screen bg-linear-to-b from-white to-blue-50 text-gray-800">
       <main className="max-w-7xl mx-auto px-4 py-10">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold mb-4 bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Data Structure & Algorithm Visualizer
           </h1>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
@@ -70,7 +70,7 @@ function Home() {
                       href={item.path}
                       className="group block"
                     >
-                      <div className="h-full bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
+                      <div className="h-full bg-white rounded-xl shadow-xs hover:shadow-md transition-shadow p-6 border border-gray-100">
                         <div className="flex items-start justify-between mb-4">
                           <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                             {item.name}

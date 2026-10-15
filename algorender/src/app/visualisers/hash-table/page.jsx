@@ -172,14 +172,14 @@ export default function HashTableVisualiser() {
           <div className="space-y-3">
             {table.map((slot, index) => (
               <div key={index} className="flex items-start space-x-3">
-                <div className="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center font-semibold text-gray-700">
+                <div className="w-12 h-12 bg-white rounded-lg shadow-xs flex items-center justify-center font-semibold text-gray-700">
                   {index}
                 </div>
                 <div className="flex-1">
                   {slot ? (
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
-                        <div className="px-4 py-2 bg-white rounded-lg shadow-sm text-gray-800">
+                        <div className="px-4 py-2 bg-white rounded-lg shadow-xs text-gray-800">
                           {slot.key} → {slot.value}
                         </div>
                         <button
@@ -200,7 +200,7 @@ export default function HashTableVisualiser() {
                             while (current) {
                               chain.push(
                                 <div key={chainIndex} className="flex items-center space-x-2">
-                                  <div className="px-4 py-2 bg-white rounded-lg shadow-sm text-gray-800">
+                                  <div className="px-4 py-2 bg-white rounded-lg shadow-xs text-gray-800">
                                     {current.key} → {current.value}
                                   </div>
                                   <button
@@ -222,7 +222,7 @@ export default function HashTableVisualiser() {
                       )}
                     </div>
                   ) : (
-                    <div className="px-4 py-2 bg-white rounded-lg shadow-sm text-gray-500">
+                    <div className="px-4 py-2 bg-white rounded-lg shadow-xs text-gray-500">
                       Empty
                     </div>
                   )}
@@ -266,7 +266,7 @@ export default function HashTableVisualiser() {
           />
 
           {collisions.length > 0 && (
-            <Card className="p-6 border-2 border-yellow-100 bg-gradient-to-br from-yellow-50 to-white">
+            <Card className="p-6 border-2 border-yellow-100 bg-linear-to-br from-yellow-50 to-white">
               <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
                 <FaExclamationTriangle className="text-yellow-500" />
                 Collisions

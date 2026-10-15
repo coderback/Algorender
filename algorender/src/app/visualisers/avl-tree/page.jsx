@@ -189,10 +189,10 @@ export default function AVLTreeVisualiser() {
         )}
         <div
           className={`w-24 h-24 rounded-2xl flex flex-col items-center justify-center transition-all duration-300
-            relative group cursor-pointer backdrop-blur-sm
+            relative group cursor-pointer backdrop-blur-xs
             ${isSelected || isRotating
-              ? `bg-gradient-to-br ${balanceGradient} text-white shadow-lg shadow-${balanceColor}/20 scale-110 ring-4 ring-${balanceColor}/30`
-              : 'bg-gradient-to-br from-white to-gray-50 shadow-lg shadow-gray-200/50 hover:shadow-xl hover:scale-105'
+              ? `bg-linear-to-br ${balanceGradient} text-white shadow-lg shadow-${balanceColor}/20 scale-110 ring-4 ring-${balanceColor}/30`
+              : 'bg-linear-to-br from-white to-gray-50 shadow-lg shadow-gray-200/50 hover:shadow-xl hover:scale-105'
             }`}
         >
           <span className={`text-2xl font-bold ${isSelected || isRotating ? 'text-white' : 'text-gray-700'}`}>
@@ -237,7 +237,7 @@ export default function AVLTreeVisualiser() {
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 overflow-x-auto">
+          <div className="bg-linear-to-br from-gray-50 to-gray-100 rounded-xl p-6 overflow-x-auto">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">AVL Tree</h2>
             <div className="flex justify-center min-w-[800px] p-8">
               {tree ? renderNode(tree) : (

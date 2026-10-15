@@ -190,7 +190,7 @@ const ZAlgorithmVisualizer = () => {
                 <div className="space-y-4">
                   <div className="font-mono text-lg">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Original Text:</h3>
-                    <div className="flex flex-wrap gap-1 p-3 bg-white rounded border">
+                    <div className="flex flex-wrap gap-1 p-3 bg-white rounded-sm border">
                       {text.split('').map((char, i) => {
                         const isMatch = matches.some(matchIndex => 
                           i >= matchIndex && i < matchIndex + pattern.length
@@ -216,7 +216,7 @@ const ZAlgorithmVisualizer = () => {
                   {pattern && (
                     <div className="font-mono text-lg">
                       <h3 className="text-sm font-medium text-gray-700 mb-2">Pattern:</h3>
-                      <div className="flex flex-wrap gap-1 p-3 bg-purple-50 rounded border">
+                      <div className="flex flex-wrap gap-1 p-3 bg-purple-50 rounded-sm border">
                         {pattern.split('').map((char, i) => (
                           <span
                             key={i}
@@ -233,7 +233,7 @@ const ZAlgorithmVisualizer = () => {
                   {concatenatedString && (
                     <div className="font-mono text-lg">
                       <h3 className="text-sm font-medium text-gray-700 mb-2">Concatenated String (Pattern + $ + Text):</h3>
-                      <div className="flex flex-wrap gap-1 p-3 bg-blue-50 rounded border">
+                      <div className="flex flex-wrap gap-1 p-3 bg-blue-50 rounded-sm border">
                         {concatenatedString.split('').map((char, i) => {
                           const isCurrent = currentPosition === i;
                           const isPattern = i < pattern.length;

@@ -28,12 +28,12 @@ export default function InputControl({
           disabled={disabled}
           placeholder={placeholder}
           className={`
-            w-full h-11 px-4 py-2.5 bg-white border-2 rounded-xl shadow-sm
+            w-full h-11 px-4 py-2.5 bg-white border-2 rounded-xl shadow-xs
             text-sm font-medium text-gray-900 transition-all duration-200
             placeholder:text-gray-400
             hover:border-gray-300 hover:shadow-md
-            focus:border-blue-500 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20
-            disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:shadow-sm
+            focus:border-blue-500 focus:shadow-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20
+            disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:shadow-xs
             ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'}
           `}
         />

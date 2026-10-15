@@ -160,7 +160,7 @@ export default function BFSVisualiser() {
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  className="w-full h-2 bg-linear-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-hidden focus:ring-2 focus:ring-blue-400/30 transition-all"
                   style={{ accentColor: '#2563eb' }}
                 />
               </div>
@@ -189,11 +189,11 @@ export default function BFSVisualiser() {
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Statistics</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="bg-white rounded-lg p-4 shadow-xs">
                 <p className="text-sm text-gray-500">Nodes Visited</p>
                 <p className="text-2xl font-semibold text-blue-600">{visited.length}</p>
               </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="bg-white rounded-lg p-4 shadow-xs">
                 <p className="text-sm text-gray-500">Queue Size</p>
                 <p className="text-2xl font-semibold text-gray-600">{queue.length}</p>
               </div>
@@ -202,7 +202,7 @@ export default function BFSVisualiser() {
               <p className="text-sm text-gray-500 mb-1">Traversal Order:</p>
               <div className="flex flex-wrap gap-2">
                 {visited.map((node, i) => (
-                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">{node}</span>
+                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-sm text-xs font-semibold">{node}</span>
                 ))}
               </div>
             </div>
@@ -210,7 +210,7 @@ export default function BFSVisualiser() {
               <p className="text-sm text-gray-500 mb-1">Queue:</p>
               <div className="flex flex-wrap gap-2">
                 {queue.map((node, i) => (
-                  <span key={i} className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold">{node}</span>
+                  <span key={i} className="bg-gray-200 text-gray-700 px-2 py-1 rounded-sm text-xs font-semibold">{node}</span>
                 ))}
               </div>
             </div>

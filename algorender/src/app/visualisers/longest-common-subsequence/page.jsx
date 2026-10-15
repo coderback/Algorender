@@ -169,7 +169,7 @@ export default function LCSVisualiser() {
             </div>
             <div className="mt-4">
               <p className="text-sm text-gray-500 mb-1">LCS:</p>
-              <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">{lcs}</span>
+              <span className="bg-green-100 text-green-700 px-2 py-1 rounded-sm text-xs font-semibold">{lcs}</span>
             </div>
           </div>
         </div>

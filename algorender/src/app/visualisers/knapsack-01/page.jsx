@@ -92,7 +92,7 @@ export default function Knapsack01Visualiser() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Items</h2>
             <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {items.map((item, idx) => (
-                <Card key={idx} className="flex items-center gap-4 p-4 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white shadow hover:shadow-lg transition-all">
+                <Card key={idx} className="flex items-center gap-4 p-4 border-2 border-blue-100 bg-linear-to-br from-blue-50 to-white shadow-sm hover:shadow-lg transition-all">
                   <div className="flex-1 flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-blue-700 font-bold text-lg">
                       <FaWeightHanging className="text-blue-400" /> W: {item.weight}
@@ -226,12 +226,12 @@ export default function Knapsack01Visualiser() {
                 <p className="text-sm text-gray-500 mb-2">Selected Items:</p>
                 <div className="flex flex-wrap gap-2">
                   {selected.map((idx, i) => (
-                    <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                    <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded-sm text-xs font-semibold">
                       {i + 1}: W:{items[idx].weight}, V:{items[idx].value}
                     </span>
                   ))}
                 </div>
-                <div className="mt-2 p-2 bg-blue-50 rounded">
+                <div className="mt-2 p-2 bg-blue-50 rounded-sm">
                   <span className="text-blue-700 font-semibold text-sm">
                     Total Value: {selected.reduce((sum, idx) => sum + items[idx].value, 0)} | 
                     Total Weight: {selected.reduce((sum, idx) => sum + items[idx].weight, 0)}/{capacity}

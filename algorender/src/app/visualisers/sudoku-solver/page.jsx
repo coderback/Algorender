@@ -238,16 +238,16 @@ export default function SudokuVisualizer() {
                   h-10
                   px-4
                   bg-white border border-gray-200
-                  rounded-xl shadow-sm
+                  rounded-xl shadow-xs
                   text-gray-900 text-base
-                  focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
+                  focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
                   hover:border-gray-300
                   transition-all duration-200
                   cursor-pointer
                   appearance-none
                   bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22%236B7280%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20d%3D%22M10%203a1%201%200%2001.707.293l3%203a1%201%200%2001-1.414%201.414L10%205.414%207.707%207.707a1%201%200%2001-1.414-1.414l3-3A1%201%200%200110%203zm-3.707%209.293a1%201%200%20011.414%200L10%2014.586l2.293-2.293a1%201%200%20011.414%201.414l-3%203a1%201%200%2001-1.414%200l-3-3a1%201%200%20010-1.414z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')]
-                  bg-[length:1.5em_1.5em]
-                  bg-[right_0.75rem_center]
+                  bg-size-[1.5em_1.5em]
+                  bg-position-[right_0.75rem_center]
                   bg-no-repeat
                   pr-10
                   disabled:opacity-50 disabled:cursor-not-allowed
@@ -263,7 +263,7 @@ export default function SudokuVisualizer() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 shadow-xl">
+          <div className="lg:col-span-2 bg-linear-to-br from-slate-50 to-slate-100 rounded-3xl p-8 shadow-xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               Sudoku Board
             </h2>
@@ -298,12 +298,12 @@ export default function SudokuVisualizer() {
                               className={`
                                 w-full h-full text-center text-xl font-bold
                                 transition-all duration-300
-                                focus:outline-none focus:ring-3 focus:ring-blue-400/50
+                                focus:outline-hidden focus:ring-3 focus:ring-blue-400/50
                                 rounded-md border-2
                                 ${isOriginal
                                   ? 'bg-blue-50 text-blue-900 border-blue-200 font-black shadow-inner'
                                   : cell 
-                                    ? 'bg-green-50 text-green-800 border-green-200 shadow-sm hover:shadow-md'
+                                    ? 'bg-green-50 text-green-800 border-green-200 shadow-xs hover:shadow-md'
                                     : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300 hover:bg-blue-50/50'
                                 }
                                 ${isSolving ? 'cursor-not-allowed animate-pulse' : 'cursor-pointer'}
@@ -337,17 +337,17 @@ export default function SudokuVisualizer() {
               {/* Board Legend */}
               <div className="mt-4 flex items-center justify-center gap-6 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-blue-50 border-2 border-blue-200 rounded relative">
+                  <div className="w-4 h-4 bg-blue-50 border-2 border-blue-200 rounded-sm relative">
                     <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                   </div>
                   <span>Given numbers</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-green-50 border-2 border-green-200 rounded"></div>
+                  <div className="w-4 h-4 bg-green-50 border-2 border-green-200 rounded-sm"></div>
                   <span>Your input</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded"></div>
+                  <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded-sm"></div>
                   <span>Empty cells</span>
                 </div>
               </div>

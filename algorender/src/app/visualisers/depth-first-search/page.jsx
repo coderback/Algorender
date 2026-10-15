@@ -170,7 +170,7 @@ export default function DFSVisualiser() {
                 <div className="flex flex-wrap gap-2">
                   {visited.length > 0 ? (
                     visited.map((node, i) => (
-                      <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                      <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-sm text-xs font-semibold">
                         {i + 1}: {node}
                       </span>
                     ))
@@ -184,7 +184,7 @@ export default function DFSVisualiser() {
                 <div className="flex flex-wrap gap-2">
                   {stack.length > 0 ? (
                     stack.map((node, i) => (
-                      <span key={i} className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold">{node}</span>
+                      <span key={i} className="bg-gray-200 text-gray-700 px-2 py-1 rounded-sm text-xs font-semibold">{node}</span>
                     ))
                   ) : (
                     <span className="text-gray-500 text-sm">Stack is empty</span>

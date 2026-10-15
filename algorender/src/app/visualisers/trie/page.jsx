@@ -217,7 +217,7 @@ export default function TrieVisualiser() {
                   <span className="text-gray-400">No words inserted yet.</span>
                 ) : (
                   words.map((w) => (
-                    <span key={w} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm font-mono">
+                    <span key={w} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-sm text-sm font-mono">
                       {w}
                     </span>
                   ))

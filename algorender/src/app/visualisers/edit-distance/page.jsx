@@ -66,7 +66,7 @@ export default function EditDistanceVisualiser() {
               Input Strings
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <Card className="p-4 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+              <Card className="p-4 border-2 border-blue-100 bg-linear-to-br from-blue-50 to-white">
                 <InputControl
                   type="text"
                   label="String 1"
@@ -77,7 +77,7 @@ export default function EditDistanceVisualiser() {
                   className="mb-0"
                 />
               </Card>
-              <Card className="p-4 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white">
+              <Card className="p-4 border-2 border-green-100 bg-linear-to-br from-green-50 to-white">
                 <InputControl
                   type="text"
                   label="String 2"
@@ -180,7 +180,7 @@ export default function EditDistanceVisualiser() {
                   <FaCalculator className="text-green-400" />
                   Final Edit Distance:
                 </p>
-                <Card className="p-3 border-2 border-green-200 bg-gradient-to-br from-green-100 to-white">
+                <Card className="p-3 border-2 border-green-200 bg-linear-to-br from-green-100 to-white">
                   <span className="text-green-700 text-lg font-bold">{distance}</span>
                 </Card>
               </div>

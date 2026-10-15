@@ -96,7 +96,7 @@ export default function BellmanFordVisualiser() {
             </div>
             <div className="flex flex-wrap gap-2 justify-center">
               {graph.edges.map(({ from, to, weight }, i) => (
-                <span key={i} className={`text-xs px-2 py-1 rounded ${updatedEdge && updatedEdge[0] === from && updatedEdge[1] === to ? 'bg-blue-200 text-blue-800' : 'text-gray-500'}`}>
+                <span key={i} className={`text-xs px-2 py-1 rounded-sm ${updatedEdge && updatedEdge[0] === from && updatedEdge[1] === to ? 'bg-blue-200 text-blue-800' : 'text-gray-500'}`}>
                   ({from}, {to}, w={weight})
                 </span>
               ))}

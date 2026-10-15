@@ -215,7 +215,7 @@ const RabinKarpVisualizer = () => {
               {pattern && (
                 <div className="mt-4">
                   <h3 className="text-md font-medium text-gray-700 mb-2">Pattern:</h3>
-                  <div className="p-2 bg-blue-100 rounded font-mono text-lg text-blue-800 font-bold">
+                  <div className="p-2 bg-blue-100 rounded-sm font-mono text-lg text-blue-800 font-bold">
                     {pattern}
                   </div>
                 </div>

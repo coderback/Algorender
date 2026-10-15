@@ -84,7 +84,7 @@ export default function ActivitySelectionVisualiser() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Activities</h2>
             <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {activities.map((act, idx) => (
-                <Card key={idx} className="flex items-center gap-4 p-4 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white shadow hover:shadow-lg transition-all">
+                <Card key={idx} className="flex items-center gap-4 p-4 border-2 border-blue-100 bg-linear-to-br from-blue-50 to-white shadow-sm hover:shadow-lg transition-all">
                   <div className="flex-1 flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-blue-700 font-bold text-lg">
                       <FaRegClock className="text-blue-400" /> Start: {act.start}
@@ -185,7 +185,7 @@ export default function ActivitySelectionVisualiser() {
             <div className="flex flex-wrap gap-2">
               {selected.length > 0 ? (
                 selected.map((act, i) => (
-                  <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                  <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded-sm text-xs font-semibold">
                     {i + 1}: [{act.start}, {act.end}]
                   </span>
                 ))

@@ -104,7 +104,7 @@ export default function KruskalVisualiser() {
             </div>
             <div className="flex flex-wrap gap-2 justify-center">
               {graph.edges.map(({ from, to, weight }, i) => (
-                <span key={i} className={`text-xs px-2 py-1 rounded ${mstEdges.find(e => (e.from === from && e.to === to) || (e.from === to && e.to === from)) ? 'bg-green-200 text-green-800' : 'text-gray-500'}`}>
+                <span key={i} className={`text-xs px-2 py-1 rounded-sm ${mstEdges.find(e => (e.from === from && e.to === to) || (e.from === to && e.to === from)) ? 'bg-green-200 text-green-800' : 'text-gray-500'}`}>
                   ({from}, {to}, w={weight})
                 </span>
               ))}
@@ -167,7 +167,7 @@ export default function KruskalVisualiser() {
             <div className="flex flex-wrap gap-2">
               {mstEdges.length > 0 ? (
                 mstEdges.map((edge, i) => (
-                  <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                  <span key={i} className="bg-green-100 text-green-700 px-2 py-1 rounded-sm text-xs font-semibold">
                     ({edge.from}, {edge.to}, w={edge.weight})
                   </span>
                 ))

@@ -133,15 +133,15 @@ export default function BinarySearchVisualiser() {
             </div>
             <div className="flex justify-center space-x-8 text-sm">
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
                 <span className="text-gray-700 font-medium">Mid</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+                <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-400 rounded-sm"></div>
                 <span className="text-gray-700 font-medium">Search Range</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <div className="w-4 h-4 bg-green-500 rounded-sm"></div>
                 <span className="text-gray-700 font-medium">Found</span>
               </div>
             </div>

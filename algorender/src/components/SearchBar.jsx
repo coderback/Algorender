@@ -35,7 +35,7 @@ export default function SearchBar({ dataStructures, algorithms }) {
           }}
           onFocus={() => setShowSuggestions(true)}
           placeholder="Search visualizers..."
-          className="w-full px-4 py-2 text-gray-700 bg-white border rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          className="w-full px-4 py-2 text-gray-700 bg-white border rounded-lg focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-200"
         />
         <button
           onClick={() => setSearchQuery('')}

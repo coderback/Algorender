@@ -1,6 +1,63 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --color-background: #fff;
+  --color-foreground: #111827;
+
+  --color-card: #fff;
+  --color-card-foreground: #111827;
+
+  --color-muted: #f3f4f6;
+  --color-muted-foreground: #6b7280;
+
+  --color-ring: #3b82f6;
+
+  --color-forest-50: #f1f8f4;
+  --color-forest-100: #daf0e4;
+  --color-forest-200: #b4e2c8;
+  --color-forest-300: #82cea4;
+  --color-forest-400: #55b67e;
+  --color-forest-500: #339b61;
+  --color-forest-600: #277b4d;
+  --color-forest-700: #20613e;
+  --color-forest-800: #1a4d32;
+  --color-forest-900: #153f29;
+
+  /* Visualiser state colours: one meaning per colour across every view.
+     Okabe–Ito hues, distinguishable with the common colour-vision deficiencies;
+     every mark also has a glyph, so colour is never the only cue. */
+  --color-bar: #9aa5b4;
+  --color-mark-compare: #0072b2;
+  --color-mark-swap: #d55e00;
+  --color-mark-write: #cc79a7;
+  --color-mark-focus: #e69f00;
+  --color-mark-sorted: #009e73;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* The UI is light-only: every page uses light Tailwind colours, so these
    must not switch with prefers-color-scheme. */

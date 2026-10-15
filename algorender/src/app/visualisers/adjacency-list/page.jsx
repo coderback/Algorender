@@ -200,7 +200,7 @@ export default function AdjacencyListVisualiser() {
                         {graph.edges[index].map(neighbor => (
                           <div
                             key={neighbor}
-                            className="px-2 py-1 bg-gray-100 rounded text-sm text-gray-900 font-medium"
+                            className="px-2 py-1 bg-gray-100 rounded-sm text-sm text-gray-900 font-medium"
                           >
                             {neighbor}
                           </div>

@@ -9,13 +9,13 @@ export default function Button({
   fullWidth = false,
   size = 'default'
 }) {
-  const baseClasses = 'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.98]';
+  const baseClasses = 'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-offset-2 active:scale-[0.98]';
   
   const variantClasses = {
-    primary: 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg hover:from-blue-500 hover:to-blue-600 focus:ring-blue-500',
-    success: 'bg-gradient-to-br from-green-600 to-green-700 text-white shadow-md hover:shadow-lg hover:from-green-500 hover:to-green-600 focus:ring-green-500',
-    danger: 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-md hover:shadow-lg hover:from-red-500 hover:to-red-600 focus:ring-red-500',
-    secondary: 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 shadow-sm hover:shadow-md hover:from-gray-200 hover:to-gray-300 focus:ring-gray-500'
+    primary: 'bg-linear-to-br from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg hover:from-blue-500 hover:to-blue-600 focus:ring-blue-500',
+    success: 'bg-linear-to-br from-green-600 to-green-700 text-white shadow-md hover:shadow-lg hover:from-green-500 hover:to-green-600 focus:ring-green-500',
+    danger: 'bg-linear-to-br from-red-600 to-red-700 text-white shadow-md hover:shadow-lg hover:from-red-500 hover:to-red-600 focus:ring-red-500',
+    secondary: 'bg-linear-to-br from-gray-100 to-gray-200 text-gray-700 shadow-xs hover:shadow-md hover:from-gray-200 hover:to-gray-300 focus:ring-gray-500'
   };
 
   const sizeClasses = {

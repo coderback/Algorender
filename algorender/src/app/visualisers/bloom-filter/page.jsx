@@ -93,7 +93,7 @@ export default function BloomFilterVisualiser() {
               <div
                 key={index}
                 className={`w-10 h-10 rounded-lg flex items-center justify-center font-semibold transition-colors ${
-                  bit ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-500 shadow-sm'
+                  bit ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-500 shadow-xs'
                 }`}
               >
                 {bit}
@@ -102,18 +102,18 @@ export default function BloomFilterVisualiser() {
           </div>
 
           <div className="mt-6 space-y-4">
-            <div className="bg-white rounded-xl p-4 shadow-sm">
+            <div className="bg-white rounded-xl p-4 shadow-xs">
               <h3 className="text-sm font-medium text-gray-700 mb-2">False Positive Rate</h3>
               <p className="text-2xl font-semibold text-blue-600">
                 {totalChecks > 0 ? ((falsePositives / totalChecks) * 100).toFixed(2) : 0}%
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
+              <div className="bg-white rounded-xl p-4 shadow-xs">
                 <h3 className="text-sm font-medium text-gray-700 mb-1">Total Checks</h3>
                 <p className="text-xl font-semibold text-gray-900">{totalChecks}</p>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
+              <div className="bg-white rounded-xl p-4 shadow-xs">
                 <h3 className="text-sm font-medium text-gray-700 mb-1">False Positives</h3>
                 <p className="text-xl font-semibold text-gray-900">{falsePositives}</p>
               </div>
@@ -122,7 +122,7 @@ export default function BloomFilterVisualiser() {
         </div>
 
         <div className="space-y-6">
-          <Card className="p-6 border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+          <Card className="p-6 border-2 border-blue-100 bg-linear-to-br from-blue-50 to-white">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <FaFilter className="text-blue-500" />
               Operations
@@ -159,7 +159,7 @@ export default function BloomFilterVisualiser() {
             </div>
           </Card>
 
-          <Card className="p-6 border-2 border-green-100 bg-gradient-to-br from-green-50 to-white">
+          <Card className="p-6 border-2 border-green-100 bg-linear-to-br from-green-50 to-white">
             <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
               <FaHashtag className="text-green-500" />
               How it Works

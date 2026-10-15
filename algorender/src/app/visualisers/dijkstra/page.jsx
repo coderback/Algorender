@@ -179,7 +179,7 @@ export default function DijkstraVisualiser() {
                   value={1000 - speed}
                   onChange={handleSpeedChange}
                   disabled={isRunning}
-                  className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+                  className="w-full h-2 bg-linear-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-hidden focus:ring-2 focus:ring-blue-400/30 transition-all"
                   style={{ accentColor: '#2563eb' }}
                 />
               </div>

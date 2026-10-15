@@ -181,7 +181,7 @@ export default function KosarajuVisualiser() {
             <div className="flex flex-wrap gap-2">
               {sccs.length > 0 ? (
                 sccs.map((scc, i) => (
-                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-sm text-xs font-semibold">
                     [{scc.join(', ')}]
                   </span>
                 ))

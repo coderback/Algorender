@@ -160,7 +160,7 @@ export default function TopologicalSortVisualiser() {
             <div className="flex flex-wrap gap-2">
               {order.length > 0 ? (
                 order.map((node, i) => (
-                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                  <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-sm text-xs font-semibold">
                     {i + 1}: {node}
                   </span>
                 ))

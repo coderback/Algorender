@@ -221,7 +221,7 @@ const ManacherVisualizer = () => {
                 <div className="space-y-4">
                   <div className="font-mono text-lg">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Original Text:</h3>
-                    <div className="flex flex-wrap gap-1 p-3 bg-white rounded border">
+                    <div className="flex flex-wrap gap-1 p-3 bg-white rounded-sm border">
                       {text.split('').map((char, i) => {
                         // Find all palindromes that include this position
                         const overlappingPalindromes = palindromes.filter(p => 
@@ -253,7 +253,7 @@ const ManacherVisualizer = () => {
                   {transformedString && (
                     <div className="font-mono text-lg">
                       <h3 className="text-sm font-medium text-gray-700 mb-2">Transformed String (with separators):</h3>
-                      <div className="flex flex-wrap gap-1 p-3 bg-blue-50 rounded border">
+                      <div className="flex flex-wrap gap-1 p-3 bg-blue-50 rounded-sm border">
                         {transformedString.split('').map((char, i) => {
                           const isCenterWindow = currentCenter !== -1 && 
                             i >= Math.max(0, currentCenter - 3) && 

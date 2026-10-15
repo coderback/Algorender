@@ -19,7 +19,7 @@ export function SpeedControl({ speed, onSpeedChange, disabled = false, label = "
         value={1000 - speed}
         onChange={onSpeedChange}
         disabled={disabled}
-        className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all"
+        className="w-full h-2 bg-linear-to-r from-blue-200 to-blue-500 rounded-lg appearance-none focus:outline-hidden focus:ring-2 focus:ring-blue-400/30 transition-all"
         style={{ accentColor: '#2563eb' }}
       />
     </div>
@@ -92,7 +92,7 @@ export function StatisticsDisplay({ title = "Statistics", stats = [], columns = 
       <h3 className="text-lg font-medium text-gray-900 mb-3">{title}</h3>
       <div className={`grid ${gridColsClass} gap-4`}>
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl p-4 shadow-sm">
+          <div key={index} className="bg-white rounded-xl p-4 shadow-xs">
             <h4 className="text-sm font-medium text-gray-700 mb-1">{stat.label}</h4>
             <p className={`text-2xl font-semibold ${stat.color || 'text-gray-900'}`}>
               {stat.value}
@@ -207,7 +207,7 @@ export function GraphVisualizerButtonGrid({
             value={startNode}
             onChange={(e) => onStartNodeChange(Number(e.target.value))}
             disabled={isRunning || disabled}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium bg-white"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium bg-white"
           >
             {nodeOptions.map(node => (
               <option key={node} value={node}>{node}</option>
@@ -305,7 +305,7 @@ export function EnhancedStatisticsDisplay({
       {stats.length > 0 && (
         <div className={`grid ${gridColsClass} gap-4 mb-4`}>
           {stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl p-4 shadow-sm">
+            <div key={index} className="bg-white rounded-xl p-4 shadow-xs">
               <h4 className="text-sm font-medium text-gray-700 mb-1">{stat.label}</h4>
               <p className={`text-2xl font-semibold ${stat.color || 'text-gray-900'}`}>
                 {stat.value}
@@ -317,7 +317,7 @@ export function EnhancedStatisticsDisplay({
 
       {/* Table-based statistics for graph algorithms */}
       {tableData && (
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-xl p-4 shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
