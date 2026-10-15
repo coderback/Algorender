@@ -68,8 +68,8 @@ function RowView({
   const span = (from: number, to: number) => `${row.offset + from + 1} / ${Math.min(cols, row.offset + to + 1) + 1}`;
 
   return (
-    <section>
-      <div className="mb-0.5 truncate text-[11px] font-semibold tracking-wider text-gray-500 uppercase">{row.label}</div>
+    <div>
+      <div className="mb-0.5 truncate text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{row.label}</div>
       <div className="relative">
         <div className={`pointer-events-none absolute inset-0 grid ${gap}`} style={grid}>
           {ranges.map((r, k) => (
@@ -99,7 +99,7 @@ function RowView({
                 key={labels.join(',')}
                 layout="position"
                 initial={false}
-                className="justify-self-center font-mono leading-4 font-semibold whitespace-nowrap text-gray-700"
+                className="justify-self-center font-mono leading-4 font-semibold whitespace-nowrap text-ink-soft"
                 style={{ gridColumn: row.offset + index + 1, gridRow: 1, fontSize: sizes.small }}
               >
                 ▲{labels.join(',')}
@@ -126,7 +126,7 @@ function RowView({
             ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -147,18 +147,18 @@ function Cell({
 }) {
   const meta = mark ? MARKS[mark] : null;
   // Dark text reads on every mark colour except the deep blue of "compare".
-  const ink = mark === 'compare' ? 'text-white' : 'text-gray-900';
+  const ink = mark === 'compare' ? 'text-white' : 'text-on-mark';
   let box: string;
   if (kind === 'chars') {
     box = meta
       ? `${meta.bg} ${ink} ring-black/10`
       : cell.faint
-        ? 'bg-white text-gray-400 ring-gray-200'
-        : 'bg-bar/30 text-gray-900 ring-black/5';
+        ? 'bg-surface text-ink-muted ring-line'
+        : 'bg-bar/30 text-ink ring-black/5';
   } else if (cell.text === '') {
-    box = 'border border-dashed border-gray-300 bg-white';
+    box = 'border border-dashed border-line-strong bg-surface';
   } else {
-    box = meta ? `${meta.bg} ${ink} ring-black/10` : 'bg-white text-gray-800 ring-gray-200';
+    box = meta ? `${meta.bg} ${ink} ring-black/10` : 'bg-surface text-ink ring-line';
   }
 
   return (
@@ -178,7 +178,7 @@ function Cell({
         {cell.text}
       </div>
       {kind === 'chars' && (
-        <span className="mt-px leading-none text-gray-400 tabular-nums" style={{ fontSize: sizes.small }}>
+        <span className="mt-px leading-none text-ink-muted tabular-nums" style={{ fontSize: sizes.small }}>
           {index}
         </span>
       )}
@@ -195,7 +195,7 @@ function Readouts({ state }: { state: TextState }) {
           <div
             key={r.id}
             className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs ring-1 ring-inset transition-colors ${
-              meta ? `${meta.bg} ring-black/10 ${r.mark === 'compare' ? 'text-white' : 'text-gray-900'}` : 'bg-white text-gray-700 ring-gray-200'
+              meta ? `${meta.bg} ring-black/10 ${r.mark === 'compare' ? 'text-white' : 'text-on-mark'}` : 'bg-surface text-ink-soft ring-line'
             }`}
             style={{ transitionDuration: 'var(--tween, 300ms)' }}
           >
@@ -212,12 +212,12 @@ function Readouts({ state }: { state: TextState }) {
 function Results({ results }: { results: TextState['results'] }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-      <span className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">{results.label}</span>
+      <span className="text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{results.label}</span>
       {results.items.length === 0 ? (
-        <span className="text-gray-400">{results.empty}</span>
+        <span className="text-ink-muted">{results.empty}</span>
       ) : (
         results.items.map((item, k) => (
-          <span key={k} className={`rounded-md px-1.5 py-0.5 font-mono text-gray-900 ${MARKS.found.bg}`}>
+          <span key={k} className={`rounded-md px-1.5 py-0.5 font-mono text-on-mark ${MARKS.found.bg}`}>
             {MARKS.found.glyph} {item}
           </span>
         ))

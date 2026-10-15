@@ -65,8 +65,8 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
   const description = lane.slots.map((id) => (id == null ? 'empty' : state.values[id])).join(', ');
 
   return (
-    <section aria-label={lane.label}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{lane.label}</div>
+    <div role="group" aria-label={lane.label}>
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{lane.label}</div>
       <p className="sr-only">
         {lane.label}: {description}
       </p>
@@ -98,7 +98,7 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
             key={labels.join(',')}
             layout="position"
             layoutId={`${lane.id}-ptr-${labels.join(',')}`}
-            className="truncate text-center font-mono text-[11px] leading-5 font-semibold text-gray-700"
+            className="truncate text-center font-mono text-[11px] leading-5 font-semibold text-ink-soft"
             style={{ gridColumn: index + 1, gridRow: 1 }}
           >
             ▲{labels.join(',')}
@@ -119,7 +119,7 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -159,7 +159,7 @@ function Hole() {
     <div className="flex h-full min-w-0 flex-col items-center">
       <span className="h-4 shrink-0" />
       <div className="flex w-full flex-1 items-end">
-        <div className="h-3 w-full rounded-sm border border-dashed border-gray-300" />
+        <div className="h-3 w-full rounded-sm border border-dashed border-line-strong" />
       </div>
       <span className="h-5 shrink-0" />
     </div>
@@ -168,7 +168,7 @@ function Hole() {
 
 function ValueLabel({ value, size, digits, digitPlace }: { value: number; size: string; digits: number; digitPlace: number | null }) {
   const base = `h-5 shrink-0 font-mono leading-5 tabular-nums ${size}`;
-  if (digitPlace == null) return <span className={`${base} text-gray-700`}>{value}</span>;
+  if (digitPlace == null) return <span className={`${base} text-ink-soft`}>{value}</span>;
 
   // Radix sort: pad with faint zeros and underline the digit for this pass.
   const raw = String(value);
@@ -180,7 +180,7 @@ function ValueLabel({ value, size, digits, digitPlace }: { value: number; size: 
         <span
           key={k}
           className={
-            k === focus ? 'font-bold text-mark-compare underline' : k < digits - raw.length ? 'text-gray-300' : 'text-gray-500'
+            k === focus ? 'font-bold text-mark-compare underline' : k < digits - raw.length ? 'text-ink-muted' : 'text-ink-muted'
           }
         >
           {ch}
@@ -193,22 +193,22 @@ function ValueLabel({ value, size, digits, digitPlace }: { value: number; size: 
 function CounterView({ counter }: { counter: Counter }) {
   const n = counter.values.length;
   return (
-    <section aria-label={counter.label} className="mx-auto w-full" style={{ maxWidth: n * COUNTER_MAX_PX }}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{counter.label}</div>
+    <div role="group" aria-label={counter.label} className="mx-auto w-full" style={{ maxWidth: n * COUNTER_MAX_PX }}>
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{counter.label}</div>
       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
         {counter.values.map((v, i) => (
           <div
             key={i}
             className={`flex min-w-0 flex-col items-center rounded-md border py-1 transition-colors ${
-              i === counter.highlight ? 'border-mark-compare bg-blue-50 ring-1 ring-mark-compare' : 'border-gray-200 bg-white'
+              i === counter.highlight ? 'border-mark-compare bg-accent-soft ring-1 ring-mark-compare' : 'border-line bg-surface'
             }`}
             style={{ transitionDuration: 'var(--tween, 300ms)' }}
           >
-            <span className="font-mono text-[10px] text-gray-400">{counter.indexLabels[i]}</span>
-            <span className="font-mono text-sm font-semibold tabular-nums text-gray-800">{v}</span>
+            <span className="font-mono text-[10px] text-ink-muted">{counter.indexLabels[i]}</span>
+            <span className="font-mono text-sm font-semibold tabular-nums text-ink">{v}</span>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

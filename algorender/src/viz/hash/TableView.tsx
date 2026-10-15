@@ -54,7 +54,7 @@ function HolderSpot({ holder, state }: { holder: Holder | undefined; state: Tabl
     <div className="flex h-[3.75rem] w-24 shrink-0 flex-col items-center justify-end gap-1">
       {holder?.item && (
         <>
-          <span className="max-w-full truncate font-mono text-[11px] text-gray-500">{holder.label}</span>
+          <span className="max-w-full truncate font-mono text-[11px] text-ink-muted">{holder.label}</span>
           <ValueBox id={holder.item} label={entryLabel(state.entries[holder.item])} mark={state.marks[holder.item]} className="h-9 min-w-10 px-1.5 text-xs" />
         </>
       )}
@@ -67,19 +67,19 @@ function LoadMeter({ size, buckets, max }: { size: number; buckets: number; max:
   const over = load > max;
   return (
     <div className="mb-2 min-w-0 flex-1">
-      <div className="flex flex-wrap justify-between gap-x-2 font-mono text-[11px] text-gray-600">
+      <div className="flex flex-wrap justify-between gap-x-2 font-mono text-[11px] text-ink-soft">
         <span>
           load {size}/{buckets} = {load.toFixed(2)}
           {over ? ` > ${max}` : ''}
         </span>
-        <span className="text-gray-400">resize above {max}</span>
+        <span className="text-ink-muted">resize above {max}</span>
       </div>
-      <div className="relative mt-1 h-2 rounded-full bg-gray-100">
+      <div className="relative mt-1 h-2 rounded-full bg-sunken">
         <div
           className={`h-full rounded-full transition-[width,background-color] ${over ? MARKS.reject.bg : NEUTRAL.bg}`}
           style={{ width: `${Math.min(1, load) * 100}%`, transitionDuration: 'var(--tween, 300ms)' }}
         />
-        <div className="absolute -top-1 h-4 w-0.5 rounded bg-gray-500" style={{ left: `${max * 100}%` }} />
+        <div className="absolute -top-1 h-4 w-0.5 rounded bg-ink-muted" style={{ left: `${max * 100}%` }} />
       </div>
     </div>
   );
@@ -88,15 +88,15 @@ function LoadMeter({ size, buckets, max }: { size: number; buckets: number; max:
 function Buckets({ table, state, twoColumns }: { table: BucketTable; state: TableState; twoColumns: boolean }) {
   const rows = Math.ceil(table.buckets.length / 2);
   return (
-    <section aria-label={table.label} className="min-w-0">
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{table.label}</div>
+    <div role="group" aria-label={table.label} className="min-w-0">
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{table.label}</div>
       <ol
         className={`grid gap-x-4 gap-y-1 ${twoColumns ? 'grid-flow-col grid-cols-2' : 'grid-cols-1'}`}
         style={twoColumns ? { gridTemplateRows: `repeat(${rows}, auto)` } : undefined}
       >
         {table.buckets.map((chain, b) => (
           <li key={b} className="flex min-h-9 min-w-0 items-center gap-2">
-            <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white font-mono text-xs text-gray-600 ring-1 ring-gray-300 ring-inset">
+            <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-md bg-surface font-mono text-xs text-ink-soft ring-1 ring-line-strong ring-inset">
               <MarkSkin mark={state.bucketMarks[`${table.id}:${b}`]}>
                 <span className="relative">{b}</span>
               </MarkSkin>
@@ -104,16 +104,16 @@ function Buckets({ table, state, twoColumns }: { table: BucketTable; state: Tabl
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
               {chain.map((id, k) => (
                 <Fragment key={id}>
-                  {k > 0 && <span className="text-xs text-gray-400">→</span>}
+                  {k > 0 && <span className="text-xs text-ink-muted">→</span>}
                   <ValueBox id={id} label={entryLabel(state.entries[id])} mark={state.marks[id]} className="h-8 min-w-9 px-1.5 text-xs" />
                 </Fragment>
               ))}
-              {chain.length === 0 && <span className="font-mono text-xs text-gray-300">empty</span>}
+              {chain.length === 0 && <span className="font-mono text-xs text-ink-muted">empty</span>}
             </div>
           </li>
         ))}
       </ol>
-    </section>
+    </div>
   );
 }
 

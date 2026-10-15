@@ -3,32 +3,40 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import SearchBar from './SearchBar';
+import { ThemeToggle } from './ThemeToggle';
 import { dataStructures, algorithms } from '@/data/visualisers';
+
+const navLink = 'text-sm font-medium text-ink-soft hover:text-accent-ink';
 
 export default function Header() {
   return (
-    <header className="w-full bg-white shadow-xs sticky top-0 z-10">
-      <div className="max-w-6xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between gap-4">
+    <header className="w-full bg-surface shadow-xs sticky top-0 z-10">
+      <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex items-center gap-6 shrink-0">
             {/* The brand is not the page's heading: each page has its own <h1>. */}
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/logo.svg" alt="" width={48} height={48} className="object-contain" />
-              <span className="text-2xl font-bold text-gray-900 tracking-tight">Algorender</span>
+              <Image src="/logo.svg" alt="" width={48} height={48} className="h-10 w-10 object-contain sm:h-12 sm:w-12" />
+              <span className="text-2xl font-bold text-ink tracking-tight">Algorender</span>
             </Link>
+            {/* Beside the brand from sm up; on phones it moves to its own row, after the search. */}
             <nav aria-label="Main" className="hidden items-center gap-5 sm:flex">
-              <Link href="/learn" className="text-sm font-medium text-gray-600 hover:text-blue-700">
-                Learn
-              </Link>
-              <Link href="/compare" className="text-sm font-medium text-gray-600 hover:text-blue-700">
-                Compare sorts
-              </Link>
+              <Link href="/learn" className={navLink}>Learn</Link>
+              <Link href="/compare" className={navLink}>Compare sorts</Link>
             </nav>
           </div>
 
-          <div className="grow max-w-md">
-            <SearchBar dataStructures={dataStructures} algorithms={algorithms} />
+          <div className="flex grow items-center gap-2 sm:max-w-md">
+            <div className="grow">
+              <SearchBar dataStructures={dataStructures} algorithms={algorithms} />
+            </div>
+            <ThemeToggle />
           </div>
+
+          <nav aria-label="Main" className="flex w-full items-center gap-5 sm:hidden">
+            <Link href="/learn" className={navLink}>Learn</Link>
+            <Link href="/compare" className={navLink}>Compare sorts</Link>
+          </nav>
         </div>
       </div>
     </header>

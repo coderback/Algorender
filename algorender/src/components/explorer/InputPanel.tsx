@@ -40,11 +40,11 @@ export function InputPanel<I>({
   };
 
   return (
-    <div className="@container rounded-xl border border-gray-100 bg-white p-4 shadow-xs">
+    <div className="@container rounded-xl border border-line-soft bg-surface p-4 shadow-xs">
       {/* Lays out by the panel's own width, so it also fits inside a lesson's narrower column. */}
       <div className="flex flex-col gap-4 @4xl:flex-row @4xl:items-end @4xl:gap-6">
       <fieldset className="min-w-0">
-        <legend className="mb-1.5 text-xs font-medium text-gray-500">Input</legend>
+        <legend className="mb-1.5 text-xs font-medium text-ink-muted">Input</legend>
         <div className="flex flex-wrap gap-1.5">
           {spec.examples.map((example) => (
             <button
@@ -54,8 +54,8 @@ export function InputPanel<I>({
               onClick={() => onChange({ kind: 'example', example: example.id, size, seed: keepSeed() })}
               className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                 activeExample === example.id
-                  ? 'border-blue-600 bg-blue-600 text-white'
-                  : 'border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-line text-ink-soft hover:border-accent-line hover:bg-accent-soft'
               }`}
             >
               {example.label}
@@ -66,7 +66,7 @@ export function InputPanel<I>({
             onClick={() =>
               onChange({ kind: 'example', example: activeExample ?? spec.examples[0].id, size, seed: randomSeed() })
             }
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+            className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-sm text-ink-soft hover:border-accent-line hover:bg-accent-soft"
           >
             <FiShuffle aria-hidden /> New values
           </button>
@@ -74,9 +74,9 @@ export function InputPanel<I>({
       </fieldset>
 
       {spec.size && showSize && (
-        <label className="flex shrink-0 flex-col gap-1.5 text-xs font-medium text-gray-500">
+        <label className="flex shrink-0 flex-col gap-1.5 text-xs font-medium text-ink-muted">
           <span>
-            {spec.size.label} <span className="font-mono text-gray-800">{size}</span>
+            {spec.size.label} <span className="font-mono text-ink">{size}</span>
           </span>
           <input
             type="range"
@@ -91,14 +91,14 @@ export function InputPanel<I>({
                 seed: keepSeed(),
               })
             }
-            className="w-40 accent-blue-600"
+            className="w-40 accent-accent"
           />
         </label>
       )}
 
       {spec.custom && (
         <form onSubmit={apply} className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <label htmlFor="custom-input" className="text-xs font-medium text-gray-500">
+          <label htmlFor="custom-input" className="text-xs font-medium text-ink-muted">
             {spec.custom.label}
           </label>
           <div className="flex gap-2">
@@ -109,14 +109,14 @@ export function InputPanel<I>({
               placeholder={spec.custom.placeholder}
               aria-invalid={error != null}
               aria-describedby={error ? 'custom-input-error' : undefined}
-              className="min-w-0 flex-1 rounded-md border border-gray-200 px-3 py-1.5 font-mono text-sm focus:border-blue-500 focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-line px-3 py-1.5 font-mono text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line"
             />
-            <button type="submit" className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700">
+            <button type="submit" className="rounded-md bg-ink px-3 py-1.5 text-sm text-surface hover:bg-ink-soft">
               Run
             </button>
           </div>
           {error && (
-            <p id="custom-input-error" role="alert" className="text-xs text-red-600">
+            <p id="custom-input-error" role="alert" className="text-xs text-bad-ink">
               {error}
             </p>
           )}

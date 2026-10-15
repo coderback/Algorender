@@ -62,12 +62,17 @@ export function Visualiser({ slug, variant = 'page', settings, showInput = false
   );
 
   return (
-    <div ref={rootRef} data-hydrated={hydrated} className="scroll-mt-24">
+    <div ref={rootRef} data-hydrated={hydrated}>
       {visualiser.kind === 'algorithm' ? (
         <AlgorithmExplorer
           module={visualiser}
           options={options}
-          onScrollTop={() => rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          onScrollTop={() =>
+            rootRef.current?.scrollIntoView({
+              behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+              block: 'start',
+            })
+          }
         />
       ) : (
         <StructureExplorer module={visualiser} options={options} />

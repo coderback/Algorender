@@ -35,16 +35,16 @@ export default async function LessonPage({ params }: Props) {
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <nav aria-label="Breadcrumb" className="mb-4 text-sm">
-        <Link href="/learn" className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-900">
+        <Link href="/learn" className="inline-flex items-center gap-1.5 text-accent-ink hover:underline">
           <FiArrowLeft aria-hidden /> Concept map
         </Link>
-        {track && <span className="text-gray-400"> / {track.title}</span>}
+        {track && <span className="text-ink-muted"> / {track.title}</span>}
       </nav>
 
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">{lesson.title}</h1>
-        <p className="mt-2 text-lg text-gray-600">{lesson.summary}</p>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold text-ink sm:text-4xl">{lesson.title}</h1>
+        <p className="mt-2 text-lg text-ink-soft">{lesson.summary}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-muted">
           <span className="inline-flex items-center gap-1.5">
             <FiClock aria-hidden /> About {lesson.minutes} minutes
           </span>
@@ -54,7 +54,7 @@ export default async function LessonPage({ params }: Props) {
               {prereqs.map((p, i) => (
                 <span key={p.id}>
                   {i > 0 && ', '}
-                  <Link href={href(p)} className="text-gray-700 underline decoration-gray-300 underline-offset-2 hover:text-blue-700">
+                  <Link href={href(p)} className="text-ink-soft underline decoration-line-strong underline-offset-2 hover:text-accent-ink">
                     {p.title}
                   </Link>
                 </span>
@@ -70,23 +70,23 @@ export default async function LessonPage({ params }: Props) {
         </article>
       </LessonProvider>
 
-      <footer className="mt-12 space-y-6 border-t border-gray-200 pt-8">
+      <footer className="mt-12 space-y-6 border-t border-line pt-8">
         <LessonComplete slug={slug} />
         {next.length > 0 && (
           <div>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">What this unlocks</h2>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-muted">What this unlocks</h2>
             <ul className="grid gap-3 sm:grid-cols-2">
               {next.map((c) => (
                 <li key={c.id}>
                   <Link
                     href={href(c)}
-                    className="flex h-full items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-xs hover:border-blue-200"
+                    className="flex h-full items-start justify-between gap-3 rounded-xl border border-line-soft bg-surface p-4 shadow-xs hover:border-accent-line"
                   >
                     <span>
-                      <span className="block font-medium text-gray-900">{c.title}</span>
-                      <span className="text-sm text-gray-600">{c.summary}</span>
+                      <span className="block font-medium text-ink">{c.title}</span>
+                      <span className="text-sm text-ink-soft">{c.summary}</span>
                     </span>
-                    <FiArrowRight aria-hidden className="mt-1 shrink-0 text-blue-600" />
+                    <FiArrowRight aria-hidden className="mt-1 shrink-0 text-accent-ink" />
                   </Link>
                 </li>
               ))}

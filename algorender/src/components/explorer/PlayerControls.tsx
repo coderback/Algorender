@@ -30,7 +30,7 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
   };
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xs">
+    <div className="rounded-xl border border-line-soft bg-surface p-3 shadow-xs">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
           <IconButton label="Go to start (Home)" onClick={() => player.seek(0)} disabled={atStart}>
@@ -45,7 +45,7 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
             disabled={last === 0 || blocked}
             aria-label={playing ? 'Pause (Space)' : atEnd ? 'Replay (Space)' : 'Play (Space)'}
             title={waiting ?? (playing ? 'Pause (Space)' : atEnd ? 'Replay (Space)' : 'Play (Space)')}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-lg text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-40"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-lg text-white shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40"
           >
             {playing ? <FiPause /> : atEnd ? <FiRotateCcw /> : <FiPlay className="translate-x-px" />}
           </button>
@@ -66,21 +66,21 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
             onChange={(e) => player.seek(Number(e.target.value))}
             aria-label="Step"
             aria-valuetext={`Step ${index + 1} of ${last + 1}`}
-            className="w-full accent-blue-600"
+            className="w-full accent-accent"
           />
-          <span className="shrink-0 font-mono text-sm tabular-nums text-gray-600">
+          <span className="shrink-0 font-mono text-sm tabular-nums text-ink-soft">
             {index + 1}/{last + 1}
           </span>
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
         <label className="flex items-center gap-2">
           Speed
           <select
             value={speed}
             onChange={(e) => player.setSpeed(Number(e.target.value))}
-            className="rounded-md border border-gray-200 bg-white px-2 py-1 text-gray-700"
+            className="rounded-md border border-line bg-surface px-2 py-1 text-ink-soft"
           >
             {SPEEDS.map((s) => (
               <option key={s} value={s}>
@@ -95,7 +95,7 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
           <button
             type="button"
             onClick={() => copy('link')}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-700 hover:bg-blue-50"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
           >
             <FiLink aria-hidden /> {copied === 'link' ? 'Link copied' : 'Copy link to this step'}
           </button>
@@ -103,7 +103,7 @@ export function PlayerControls({ player, children }: { player: TracePlayer; chil
             type="button"
             onClick={() => copy('embed')}
             title="Copy an <iframe> snippet that embeds this visualiser at this step"
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-700 hover:bg-blue-50"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
           >
             <FiCode aria-hidden /> {copied === 'embed' ? 'Embed copied' : 'Embed'}
           </button>
@@ -121,7 +121,7 @@ function IconButton({ label, onClick, disabled, children }: { label: string; onC
       disabled={disabled}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-30 disabled:hover:bg-transparent"
+      className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-ink-soft transition-colors hover:bg-sunken focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-30 disabled:hover:bg-transparent"
     >
       {children}
     </button>

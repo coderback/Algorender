@@ -55,7 +55,7 @@ export function GridView({ state }: { state: GridState }) {
 }
 
 function PartLabel({ children }: { children: ReactNode }) {
-  return <div className="mb-1 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">{children}</div>;
+  return <div className="mb-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{children}</div>;
 }
 
 // ───────────────────────────── tables ─────────────────────────────
@@ -71,7 +71,7 @@ function TableView({ table, headerWidth }: { table: TablePart; headerWidth?: num
   const template: CSSProperties = { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` };
 
   return (
-    <section aria-label={table.label}>
+    <div role="group" aria-label={table.label}>
       <PartLabel>{table.label}</PartLabel>
       <p className="sr-only">{describeTable(table)}</p>
       <div
@@ -85,7 +85,7 @@ function TableView({ table, headerWidth }: { table: TablePart; headerWidth?: num
           {showCols && (
             <div className="flex items-end">
               {hw > 0 && (
-                <div className="shrink-0 truncate pr-1.5 pb-0.5 text-right font-mono text-[10px] text-gray-400" style={{ width: hw }}>
+                <div className="shrink-0 truncate pr-1.5 pb-0.5 text-right font-mono text-[10px] text-ink-muted" style={{ width: hw }}>
                   {table.corner}
                 </div>
               )}
@@ -94,7 +94,7 @@ function TableView({ table, headerWidth }: { table: TablePart; headerWidth?: num
           )}
           <div className="relative">
             {table.rows.length === 0 && (
-              <div className="flex h-8 items-center text-sm text-gray-400" style={{ paddingLeft: hw }}>
+              <div className="flex h-8 items-center text-sm text-ink-muted" style={{ paddingLeft: hw }}>
                 {table.empty ?? 'None yet'}
               </div>
             )}
@@ -129,8 +129,8 @@ function TableView({ table, headerWidth }: { table: TablePart; headerWidth?: num
           </div>
         </div>
       </div>
-      {overflowing && <p className="mt-1 text-[11px] text-gray-500">Scroll sideways to see the whole table →</p>}
-    </section>
+      {overflowing && <p className="mt-1 text-[11px] text-ink-muted">Scroll sideways to see the whole table →</p>}
+    </div>
   );
 }
 
@@ -164,9 +164,9 @@ function ColumnHeaders({ table, template }: { table: TablePart; template: CSSPro
                 className={`absolute inset-0 rounded transition ${meta ? `${meta.bg} opacity-25` : 'opacity-0'}`}
                 style={{ transitionDuration: 'var(--tween, 300ms)' }}
               />
-              <span className="relative block truncate font-mono text-xs font-semibold text-gray-800">{col.label}</span>
+              <span className="relative block truncate font-mono text-xs font-semibold text-ink">{col.label}</span>
             </span>
-            {col.sub != null && <span className="font-mono text-[9px] leading-3 text-gray-400">{col.sub}</span>}
+            {col.sub != null && <span className="font-mono text-[9px] leading-3 text-ink-muted">{col.sub}</span>}
           </div>
         );
       })}
@@ -197,7 +197,7 @@ function Ticks({ cols, guides }: { cols: number; guides: TablePart['guides'] }) 
         <span
           key={t}
           // The end ticks align inside the timeline so they never push it wider than its box.
-          className="absolute bottom-0 font-mono text-[10px] leading-4 text-gray-500 tabular-nums"
+          className="absolute bottom-0 font-mono text-[10px] leading-4 text-ink-muted tabular-nums"
           style={{ left: `${(t / cols) * 100}%`, transform: `translateX(${t === 0 ? '-25%' : t === cols ? '-100%' : '-50%'})` }}
         >
           {t}
@@ -217,8 +217,8 @@ function RowHeader({ row, mark, width }: { row: Row; mark: MarkKey | undefined; 
           className={`absolute inset-0 rounded transition ${meta ? `${meta.bg} opacity-25` : 'opacity-0'}`}
           style={{ transitionDuration: 'var(--tween, 300ms)' }}
         />
-        <span className="relative font-mono text-[11px] font-semibold text-gray-800">{row.label}</span>
-        {row.sub && <span className="relative ml-1 font-mono text-[10px] text-gray-500">{row.sub}</span>}
+        <span className="relative font-mono text-[11px] font-semibold text-ink">{row.label}</span>
+        {row.sub && <span className="relative ml-1 font-mono text-[10px] text-ink-soft">{row.sub}</span>}
       </span>
     </div>
   );
@@ -251,7 +251,7 @@ function Cell({
   const meta = mark ? MARKS[mark] : null;
   const board = look === 'board';
   const bar = fill != null;
-  const frame = meta ? `p-[2px] ${meta.bg}` : board ? 'p-px bg-gray-200' : 'p-[2px] bg-gray-100';
+  const frame = meta ? `p-[2px] ${meta.bg}` : board ? 'p-px bg-line' : 'p-[2px] bg-sunken';
   const wash = meta
     ? `${meta.bg} ${bar ? 'opacity-40' : 'opacity-25'}`
     : style === 'block'
@@ -267,12 +267,12 @@ function Cell({
               : text !== '' && style !== 'plain' && !board
                 ? `${NEUTRAL.bg} opacity-20`
                 : 'opacity-0';
-  const weight = style === 'given' ? 'font-bold text-gray-900' : style === 'plain' ? 'font-medium text-gray-700' : 'font-semibold text-gray-800';
+  const weight = style === 'given' ? 'font-bold text-ink' : style === 'plain' ? 'font-medium text-ink-soft' : 'font-semibold text-ink';
   const tween = { transitionDuration: 'var(--tween, 300ms)' };
   return (
     <div className={`@container aspect-square min-w-0 ${board ? '' : 'p-px'}`}>
       <div className={`h-full transition ${board ? 'rounded-none' : 'rounded-md'} ${frame}`} style={tween}>
-        <div className={`relative flex h-full items-center justify-center overflow-hidden ${board ? '' : 'rounded-[4px]'} ${dark ? 'bg-gray-100' : 'bg-white'}`}>
+        <div className={`relative flex h-full items-center justify-center overflow-hidden ${board ? '' : 'rounded-[4px]'} ${dark ? 'bg-sunken' : 'bg-surface'}`}>
           {bar ? (
             <div className={`absolute inset-x-0 bottom-0 transition ${wash}`} style={{ ...tween, height: `${fill * 100}%` }} />
           ) : (
@@ -296,7 +296,7 @@ function TimelineRow({ table, row, template }: { table: TablePart; row: Row; tem
     <div className="relative min-w-0 flex-1" style={{ aspectRatio: `${cols} / 1` }}>
       <div className="absolute inset-0 grid" style={template}>
         {table.cols.map((_, c) => (
-          <div key={c} className={`border-l border-gray-100 ${c === cols - 1 ? 'border-r' : ''}`} />
+          <div key={c} className={`border-l border-line-soft ${c === cols - 1 ? 'border-r' : ''}`} />
         ))}
       </div>
       {table.bars
@@ -343,7 +343,7 @@ function Overlay({ table, index, left }: { table: TablePart; index: Map<string, 
       preserveAspectRatio="none"
     >
       {table.box != null && (
-        <g className="stroke-gray-500" strokeWidth={0.05}>
+        <g className="stroke-ink-muted" strokeWidth={0.05}>
           {boxLines.map((l, k) => (
             <line key={k} {...l} />
           ))}
@@ -413,7 +413,7 @@ function Pieces({ table, index, left }: { table: TablePart; index: Map<string, n
             initial={false}
             animate={{ left: `${(p.at.col / cols) * 100}%`, top: `${(index.get(p.at.row)! / rows) * 100}%` }}
           >
-            <span className={`text-[60cqw] leading-none transition ${meta ? meta.text : 'text-gray-900'}`}>{p.glyph}</span>
+            <span className={`text-[60cqw] leading-none transition ${meta ? meta.text : 'text-ink'}`}>{p.glyph}</span>
           </motion.div>
         );
       })}
@@ -425,40 +425,40 @@ function Pieces({ table, index, left }: { table: TablePart; index: Map<string, n
 
 function ListView({ list }: { list: ListPart }) {
   return (
-    <section aria-label={list.label}>
+    <div role="group" aria-label={list.label}>
       <PartLabel>{list.label}</PartLabel>
       <p className="sr-only">{describeList(list)}</p>
       <ul className="flex min-h-8 flex-wrap items-center gap-1.5" aria-hidden>
-        {list.items.length === 0 && <li className="text-sm text-gray-400">{list.empty}</li>}
+        {list.items.length === 0 && <li className="text-sm text-ink-muted">{list.empty}</li>}
         {list.items.map((it) => {
           const meta = it.mark ? MARKS[it.mark] : null;
           return (
-            <motion.li key={it.id} layout="position" initial={false} className={`rounded-md transition ${meta ? `p-[2px] ${meta.bg}` : 'p-px bg-gray-200'}`}>
-              <span className="relative flex items-center gap-1 rounded-[4px] bg-white px-2 py-0.5">
+            <motion.li key={it.id} layout="position" initial={false} className={`rounded-md transition ${meta ? `p-[2px] ${meta.bg}` : 'p-px bg-line'}`}>
+              <span className="relative flex items-center gap-1 rounded-[4px] bg-surface px-2 py-0.5">
                 <span className={`absolute inset-0 rounded-[4px] ${meta ? `${meta.bg} opacity-25` : `${NEUTRAL.bg} opacity-15`}`} />
                 {meta && <span className={`relative text-[10px] font-bold ${meta.text}`}>{meta.glyph}</span>}
-                <span className="relative font-mono text-sm whitespace-nowrap text-gray-800">{it.text}</span>
+                <span className="relative font-mono text-sm whitespace-nowrap text-ink">{it.text}</span>
               </span>
             </motion.li>
           );
         })}
       </ul>
-    </section>
+    </div>
   );
 }
 
 function MeterView({ meter }: { meter: MeterPart }) {
   const used = meter.segments.reduce((s, x) => s + x.amount, 0);
   return (
-    <section aria-label={meter.label}>
+    <div role="group" aria-label={meter.label}>
       <div className="flex items-baseline justify-between gap-2">
         <PartLabel>{meter.label}</PartLabel>
-        <span className="font-mono text-xs text-gray-600 tabular-nums">
+        <span className="font-mono text-xs text-ink-soft tabular-nums">
           {formatAmount(used)} / {formatAmount(meter.total)} {meter.unit}
         </span>
       </div>
       <p className="sr-only">{describeMeter(meter)}</p>
-      <div className="flex h-9 w-full overflow-hidden rounded-md border border-gray-200 bg-white" aria-hidden>
+      <div className="flex h-9 w-full overflow-hidden rounded-md border border-line bg-surface" aria-hidden>
         {meter.segments.map((s) => {
           const meta = s.mark ? MARKS[s.mark] : null;
           return (
@@ -466,17 +466,17 @@ function MeterView({ meter }: { meter: MeterPart }) {
               key={s.id}
               initial={false}
               animate={{ width: `${(s.amount / meter.total) * 100}%` }}
-              className={`@container h-full min-w-0 shrink-0 transition ${meta ? `p-[2px] ${meta.bg}` : 'p-px bg-gray-200'}`}
+              className={`@container h-full min-w-0 shrink-0 transition ${meta ? `p-[2px] ${meta.bg}` : 'p-px bg-line'}`}
             >
-              <div className="relative flex h-full items-center justify-center overflow-hidden rounded-[3px] bg-white">
+              <div className="relative flex h-full items-center justify-center overflow-hidden rounded-[3px] bg-surface">
                 <div className={`absolute inset-0 ${meta ? `${meta.bg} opacity-25` : `${NEUTRAL.bg} opacity-20`}`} />
-                <span className="relative hidden truncate px-1 font-mono text-xs text-gray-800 @min-[24px]:block">{s.label}</span>
+                <span className="relative hidden truncate px-1 font-mono text-xs text-ink @min-[24px]:block">{s.label}</span>
               </div>
             </motion.div>
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }
 

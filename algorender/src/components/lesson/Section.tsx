@@ -21,11 +21,11 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
 export function Section({ step, title, children }: { step: Step; title: string; children: ReactNode }) {
   const { label, icon: Icon } = STEPS[step];
   return (
-    <section className="scroll-mt-24 border-t border-gray-100 pt-8 first:border-t-0 first:pt-0" id={slug(title)}>
-      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-700">
+    <section className="border-t border-line-soft pt-8 first:border-t-0 first:pt-0" id={slug(title)}>
+      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent-ink">
         <Icon aria-hidden /> {label}
       </div>
-      <h2 className="mb-4 text-2xl font-bold text-gray-900">{title}</h2>
+      <h2 className="mb-4 text-2xl font-bold text-ink">{title}</h2>
       <div className="space-y-4">{children}</div>
     </section>
   );
@@ -38,9 +38,9 @@ export function Terms({ children }: { children: ReactNode }) {
 
 export function Term({ name, children }: { name: string; children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <dt className="mb-1 font-mono text-sm font-semibold text-gray-900">{name}</dt>
-      <dd className="text-sm leading-relaxed text-gray-600 [&>p]:m-0">{children}</dd>
+    <div className="rounded-xl border border-line bg-surface p-4">
+      <dt className="mb-1 font-mono text-sm font-semibold text-ink">{name}</dt>
+      <dd className="text-sm leading-relaxed text-ink-soft [&>p]:m-0">{children}</dd>
     </div>
   );
 }
@@ -48,8 +48,8 @@ export function Term({ name, children }: { name: string; children: ReactNode }) 
 /** The one idea to keep if you forget everything else. */
 export function KeyIdea({ children }: { children: ReactNode }) {
   return (
-    <aside className="rounded-xl border-l-4 border-blue-600 bg-blue-50 px-5 py-4 text-gray-800 [&>p]:m-0">
-      <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-blue-800">
+    <aside className="rounded-xl border-l-4 border-accent bg-accent-soft px-5 py-4 text-ink [&>p]:m-0">
+      <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-accent-ink">
         <FiKey aria-hidden /> Key idea
       </div>
       {children}
@@ -60,8 +60,8 @@ export function KeyIdea({ children }: { children: ReactNode }) {
 /** A common wrong belief, named and corrected. */
 export function Misconception({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <aside className="rounded-xl border-l-4 border-amber-500 bg-amber-50 px-5 py-4 text-gray-800 [&>p]:m-0">
-      <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-amber-900">
+    <aside className="rounded-xl border-l-4 border-warn-line bg-warn-soft px-5 py-4 text-ink [&>p]:m-0">
+      <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-warn-ink">
         <FiAlertTriangle aria-hidden /> Common mistake: {title}
       </div>
       {children}

@@ -1,5 +1,22 @@
 @import 'tailwindcss';
 
+/* Dark mode follows the OS unless the reader picks a theme: the toggle (or an
+   embed's ?theme=) stamps data-theme on <html>, which wins in both directions. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
+/* Colours are semantic tokens: components say what a colour is for (surface,
+   ink, line, accent...) and the dark theme redefines the token, so pages never
+   need dark: variants. Light values below; dark values in the base layer.
+   Every ink clears 4.5:1 on page, surface and sunken in both themes. */
 @theme {
   --font-sans:
     var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
@@ -8,31 +25,64 @@
     var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-  --color-background: #fff;
-  --color-foreground: #111827;
+  /* Planes, back to front: the page, cards on it, faint fills, insets. */
+  --color-page: #f9fafb;
+  --color-surface: #ffffff;
+  --color-subtle: #f9fafb;
+  --color-sunken: #f3f4f6;
 
-  --color-card: #fff;
-  --color-card-foreground: #111827;
+  /* Hairlines, faint to firm. */
+  --color-line-soft: #f3f4f6;
+  --color-line: #e5e7eb;
+  --color-line-strong: #d1d5db;
 
-  --color-muted: #f3f4f6;
-  --color-muted-foreground: #6b7280;
+  /* Text, strongest to weakest. ink-faint is for decoration only (icons,
+     dividers, disabled); it does not meet text contrast. */
+  --color-ink: #111827;
+  --color-ink-soft: #374151;
+  --color-ink-muted: #5f6774;
+  --color-ink-faint: #9ca3af;
 
+  /* Actions and links. White text sits on accent and accent-strong. */
+  --color-accent: #2563eb;
+  --color-accent-strong: #1d4ed8;
+  --color-accent-ink: #1d4ed8;
+  --color-accent-soft: #eff6ff;
+  --color-accent-line: #93c5fd;
+
+  /* Feedback: right / careful / wrong. Each has a fill (white text), an ink,
+     a soft background and a line. */
+  --color-good: #047857;
+  --color-good-strong: #065f46;
+  --color-good-ink: #047857;
+  --color-good-soft: #ecfdf5;
+  --color-good-line: #34d399;
+  --color-warn-ink: #a14a06;
+  --color-warn-soft: #fffbeb;
+  --color-warn-line: #fcd34d;
+  --color-bad-ink: #b91c1c;
+  --color-bad-soft: #fef2f2;
+  --color-bad-line: #fca5a5;
+
+  /* shadcn/ui names, kept for components/ui. */
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-ink);
+  --color-muted: var(--color-sunken);
+  --color-muted-foreground: var(--color-ink-muted);
   --color-ring: #3b82f6;
-
-  --color-forest-50: #f1f8f4;
-  --color-forest-100: #daf0e4;
-  --color-forest-200: #b4e2c8;
-  --color-forest-300: #82cea4;
-  --color-forest-400: #55b67e;
-  --color-forest-500: #339b61;
-  --color-forest-600: #277b4d;
-  --color-forest-700: #20613e;
-  --color-forest-800: #1a4d32;
-  --color-forest-900: #153f29;
 
   /* Visualiser state colours: one meaning per colour across every view.
      Okabe–Ito hues, distinguishable with the common colour-vision deficiencies;
-     every mark also has a glyph, so colour is never the only cue. */
+     every mark also has a glyph, so colour is never the only cue. Text on a fill
+     is white on compare and on-mark everywhere else (each ≥ 4.5:1).
+     The fills are the same in both themes. On the dark surface they pass
+     contrast (≥ 3:1) and the normal-vision floor, but write, focus and frontier
+     sit above the dataviz dark lightness band (L ≤ 0.67). That is deliberate:
+     on-mark text needs L ≥ ~0.6, and squeezing five hues into L 0.6–0.67 puts
+     amber on top of orange (ΔE 9 normal, 3.5 deutan). Brightness is the lesser
+     cost, and the glyphs carry the meaning either way. */
   --color-bar: #9aa5b4;
   --color-mark-compare: #0072b2;
   --color-mark-swap: #d55e00;
@@ -40,35 +90,107 @@
   --color-mark-focus: #e69f00;
   --color-mark-frontier: #56b4e9;
   --color-mark-done: #009e73;
+  --color-on-mark: #111827;
+
+  /* The same hues as text on the page (legend glyphs, chips). */
+  --color-mark-compare-ink: #0072b2;
+  --color-mark-swap-ink: #a84a00;
+  --color-mark-write-ink: #9c3f74;
+  --color-mark-focus-ink: #a14a06;
+  --color-mark-frontier-ink: #03679e;
+  --color-mark-done-ink: #047857;
+
+  /* Compare-page chart series (dataviz reference palette, slots 1–4). */
+  --color-series-1: #2a78d6;
+  --color-series-2: #eb6834;
+  --color-series-3: #1baf7a;
+  --color-series-4: #eda100;
 }
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
+  :root {
+    color-scheme: light;
+
+    @variant dark {
+      color-scheme: dark;
+
+      --color-page: #0e1116;
+      --color-surface: #161b22;
+      --color-subtle: #1a2029;
+      --color-sunken: #1f2631;
+
+      --color-line-soft: #222a35;
+      --color-line: #2d3643;
+      --color-line-strong: #3d4755;
+
+      --color-ink: #e6edf3;
+      --color-ink-soft: #c4cdd8;
+      --color-ink-muted: #9aa6b4;
+      --color-ink-faint: #6b7686;
+
+      --color-accent-ink: #7cb4ff;
+      --color-accent-soft: #15243d;
+      --color-accent-line: #2c548a;
+
+      --color-good-ink: #4cd4a0;
+      --color-good-soft: #0f2a22;
+      --color-good-line: #1f8a66;
+      --color-warn-ink: #f0b45a;
+      --color-warn-soft: #2b2210;
+      --color-warn-line: #6b5216;
+      --color-bad-ink: #ff8f8f;
+      --color-bad-soft: #331617;
+      --color-bad-line: #7a2a2a;
+
+      --color-bar: #7d8896;
+
+      --color-mark-compare-ink: #5aa9e6;
+      --color-mark-swap-ink: #f08a4b;
+      --color-mark-write-ink: #e3a3c7;
+      --color-mark-focus-ink: #f2b630;
+      --color-mark-frontier-ink: #8fd0f5;
+      --color-mark-done-ink: #3fcf9f;
+
+      --color-series-1: #3987e5;
+      --color-series-2: #d95926;
+      --color-series-3: #199e70;
+      --color-series-4: #c98500;
+    }
+  }
+
+  /* Tailwind v4 borders default to currentcolor; keep the v3 hairline. */
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+    border-color: var(--color-line, currentcolor);
   }
-}
 
-/* The UI is light-only: every page uses light Tailwind colours, so these
-   must not switch with prefers-color-scheme. */
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  color-scheme: light;
-}
+  /* Keep anchors and keyboard focus clear of the sticky header (WCAG 2.4.11).
+     The header wraps to two or three rows below lg, up to ~142px. */
+  html {
+    scroll-padding-top: 9.5rem;
+    @variant lg {
+      scroll-padding-top: 6rem;
+    }
+  }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+  body {
+    background: var(--color-page);
+    color: var(--color-ink);
+  }
+
+  /* Motion's animations already follow the OS setting (reducedMotion="user");
+     this stops the CSS tweens on bars, cells and nodes too. Steps still change,
+     they just don't slide. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

@@ -40,9 +40,9 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
         {questions.map((question, qi) => {
           const choice = picked[qi];
           return (
-            <li key={qi} className="rounded-xl border border-gray-200 bg-white p-4">
-              <p className="mb-3 font-medium text-gray-900">
-                <span className="mr-2 font-mono text-sm text-gray-400">{qi + 1}.</span>
+            <li key={qi} className="rounded-xl border border-line bg-surface p-4">
+              <p className="mb-3 font-medium text-ink">
+                <span className="mr-2 font-mono text-sm text-ink-muted">{qi + 1}.</span>
                 {question.q}
               </p>
               <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={`Question ${qi + 1}`}>
@@ -50,12 +50,12 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
                   const isAnswer = ci === question.answer;
                   const style =
                     choice === null
-                      ? 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                      ? 'border-line-strong hover:border-accent-line hover:bg-accent-soft'
                       : isAnswer
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
+                        ? 'border-good-line bg-good-soft text-good-ink'
                         : ci === choice
-                          ? 'border-red-300 bg-red-50 text-red-800'
-                          : 'border-gray-200 text-gray-400';
+                          ? 'border-bad-line bg-bad-soft text-bad-ink'
+                          : 'border-line text-ink-muted';
                   return (
                     <button
                       key={ci}
@@ -70,11 +70,11 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
                 })}
               </div>
               {choice !== null && (
-                <p className="mt-3 flex gap-2 text-sm text-gray-700">
+                <p className="mt-3 flex gap-2 text-sm text-ink-soft">
                   {choice === question.answer ? (
-                    <FiCheckCircle aria-hidden className="mt-0.5 shrink-0 text-emerald-600" />
+                    <FiCheckCircle aria-hidden className="mt-0.5 shrink-0 text-good-ink" />
                   ) : (
-                    <FiXCircle aria-hidden className="mt-0.5 shrink-0 text-red-600" />
+                    <FiXCircle aria-hidden className="mt-0.5 shrink-0 text-bad-ink" />
                   )}
                   <span>
                     <span className="font-medium">{choice === question.answer ? 'Right. ' : 'Not quite. '}</span>
@@ -87,11 +87,11 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
         })}
       </ol>
       {finished && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-sm" aria-live="polite">
-          <span className="font-medium text-gray-900">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-subtle px-4 py-3 text-sm" aria-live="polite">
+          <span className="font-medium text-ink">
             {correct} of {questions.length} right.
           </span>
-          <span className="text-gray-600">
+          <span className="text-ink-soft">
             {correct === questions.length
               ? 'Come back in a few days and try again: remembering it later is what makes it stick.'
               : 'Reread the explanations above, then try again.'}
@@ -99,7 +99,7 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
           <button
             type="button"
             onClick={() => setPicked(questions.map(() => null))}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-blue-700 hover:bg-blue-100"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
           >
             <FiRotateCcw aria-hidden /> Try again
           </button>

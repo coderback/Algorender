@@ -26,19 +26,19 @@ export default async function EmbedPage({ params }: Props) {
   if (!getModule(slug) || !meta) notFound();
 
   return (
-    <main className="min-h-screen bg-gray-50 p-3 sm:p-4">
+    <main className="min-h-screen bg-subtle p-3 sm:p-4">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h1 className="text-base font-semibold text-gray-900">{meta.name}</h1>
+        <h1 className="text-base font-semibold text-ink">{meta.name}</h1>
         <a
           href={`/visualisers/${slug}`}
           target="_blank"
           rel="noopener"
-          className="text-xs text-blue-700 hover:text-blue-900"
+          className="text-xs text-accent-ink hover:underline"
         >
           Open in Algorender ↗
         </a>
       </div>
-      <Suspense fallback={<div className="h-[520px] animate-pulse rounded-xl bg-white" aria-label="Loading visualiser" />}>
+      <Suspense fallback={<div className="h-[520px] animate-pulse rounded-xl bg-surface" aria-label="Loading visualiser" />}>
         <Visualiser slug={slug} variant="embed" />
       </Suspense>
     </main>

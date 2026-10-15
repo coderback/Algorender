@@ -112,32 +112,32 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
         layout={options.layout}
         onPrediction={options.onPrediction}
       />
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-line-soft bg-surface p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
-          <span className="mr-1 text-xs font-medium text-gray-500">History</span>
+          <span className="mr-1 text-xs font-medium text-ink-muted">History</span>
           {session.history.length === 0 ? (
-            <span className="text-gray-400">No operations yet.</span>
+            <span className="text-ink-muted">No operations yet.</span>
           ) : (
             session.history.map((h, i) => (
-              <span key={i} className="rounded-full bg-gray-100 px-2.5 py-0.5 font-mono text-xs text-gray-700">
+              <span key={i} className="rounded-full bg-sunken px-2.5 py-0.5 font-mono text-xs text-ink-soft">
                 {describeCall(h.call, ds)}
               </span>
             ))
           )}
           {session.history.length > 0 && (
-            <button type="button" onClick={undo} className="ml-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-50">
+            <button type="button" onClick={undo} className="ml-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs text-accent-ink hover:bg-accent-soft">
               <FiCornerUpLeft aria-hidden /> Undo
             </button>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-medium text-gray-500">Start over with</span>
+          <span className="text-xs font-medium text-ink-muted">Start over with</span>
           {ds.initial.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => reset(s.id)}
-              className="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+              className="rounded-full border border-line px-3 py-1 text-sm text-ink-soft hover:border-accent-line hover:bg-accent-soft"
             >
               {s.label}
             </button>
@@ -163,8 +163,8 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
 
 function OperationsPanel({ ds, model, onRun }: { ds: AnyStructure; model: Model; onRun: (spec: Spec, call: OpCall) => void }) {
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-xs" aria-label="Operations">
-      <h2 className="mb-3 text-sm font-semibold text-gray-900">Operations</h2>
+    <section className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs" aria-label="Operations">
+      <h2 className="mb-3 text-sm font-semibold text-ink">Operations</h2>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {ds.operations.map((spec) => (
           <OperationForm key={spec.id} spec={spec} model={model} onRun={onRun} />
@@ -215,9 +215,9 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
     );
   };
 
-  const field = 'w-20 min-w-0 flex-1 rounded-md border border-gray-200 px-2 py-1 font-mono text-sm focus:border-blue-500 focus:outline-none';
+  const field = 'w-20 min-w-0 flex-1 rounded-md border border-line px-2 py-1 font-mono text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line';
   return (
-    <form onSubmit={submit} className="flex flex-col gap-1 rounded-lg border border-gray-200 p-2.5">
+    <form onSubmit={submit} className="flex flex-col gap-1 rounded-lg border border-line p-2.5">
       <div className="flex items-center gap-2">
         {spec.args.map((a) =>
           a.type === 'choice' ? (
@@ -226,7 +226,7 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
               aria-label={`${spec.label}: ${a.label}`}
               value={values[a.name]}
               onChange={(e) => setRaw((prev) => ({ ...prev, [a.name]: e.target.value }))}
-              className={`${field} bg-white`}
+              className={`${field} bg-surface`}
             >
               {a.options(model).map((o) => (
                 <option key={o} value={o}>
@@ -250,12 +250,12 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
           type="submit"
           disabled={disabledReason != null}
           title={disabledReason ?? undefined}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:bg-gray-300"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-sm text-white hover:bg-accent-strong disabled:bg-line-strong"
         >
           <FiPlay aria-hidden className="text-xs" /> {spec.label}
         </button>
       </div>
-      {(error || disabledReason) && <p className="text-xs text-gray-500" role={error ? 'alert' : undefined}>{error ?? disabledReason}</p>}
+      {(error || disabledReason) && <p className="text-xs text-ink-muted" role={error ? 'alert' : undefined}>{error ?? disabledReason}</p>}
     </form>
   );
 }

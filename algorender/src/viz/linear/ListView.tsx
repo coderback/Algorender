@@ -71,23 +71,23 @@ export function ListView({ state }: { state: ListState }) {
       {/* Drawn once the width is known (before the first paint), so nodes don't animate in from a provisional layout. */}
       {width > 0 && (
         <div aria-hidden>
-          <p className="text-center font-mono text-xs text-gray-600">{state.summary}</p>
-          <div className="flex h-6 flex-wrap items-center gap-x-4 font-mono text-[11px] text-gray-500">
+          <p className="text-center font-mono text-xs text-ink-soft">{state.summary}</p>
+          <div className="flex h-6 flex-wrap items-center gap-x-4 font-mono text-[11px] text-ink-muted">
             {nullPointers.map((p) => (
               <span key={p.label}>
-                <span className="font-semibold text-gray-700">{p.label}</span> = null
+                <span className="font-semibold text-ink-soft">{p.label}</span> = null
               </span>
             ))}
           </div>
           <div className="relative w-full overflow-hidden" style={{ height }}>
             {state.order.length === 0 && state.detached.length === 0 && (
-              <div className="absolute inset-x-0 grid place-items-center text-sm text-gray-400" style={{ top: LABELS_H, height: NODE_H }}>
+              <div className="absolute inset-x-0 grid place-items-center text-sm text-ink-muted" style={{ top: LABELS_H, height: NODE_H }}>
                 empty list
               </div>
             )}
             <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
               <defs>
-                <Arrowhead id={`${uid}-neutral`} className="fill-gray-500" />
+                <Arrowhead id={`${uid}-neutral`} className="fill-ink-muted" />
                 {linkMarks.map((m) => (
                   <Arrowhead key={m} id={`${uid}-${m}`} className={MARKS[m].fill} />
                 ))}
@@ -105,7 +105,7 @@ export function ListView({ state }: { state: ListState }) {
                       strokeWidth={mark ? 2.5 : 1.5}
                       strokeLinejoin="round"
                       markerEnd={`url(#${uid}-${mark ?? 'neutral'})`}
-                      className={`transition-colors ${mark ? MARKS[mark].stroke : 'stroke-gray-500'}`}
+                      className={`transition-colors ${mark ? MARKS[mark].stroke : 'stroke-ink-muted'}`}
                     />
                   );
                 })}
@@ -129,7 +129,7 @@ export function ListView({ state }: { state: ListState }) {
               {labels.map((l) => (
                 <motion.div
                   key={`ptr-${l.label}`}
-                  className="absolute top-0 left-0 text-center font-mono text-[11px] leading-[14px] font-semibold whitespace-nowrap text-gray-700"
+                  className="absolute top-0 left-0 text-center font-mono text-[11px] leading-[14px] font-semibold whitespace-nowrap text-ink-soft"
                   style={{ width: VALUE_W }}
                   initial={{ opacity: 0, x: l.x, y: l.y }}
                   animate={{ opacity: 1, x: l.x, y: l.y }}
@@ -149,18 +149,18 @@ export function ListView({ state }: { state: ListState }) {
 function NodeBox({ node, mark, linkMark }: { node: ListNode; mark: MarkKey | undefined; linkMark: MarkKey | undefined }) {
   return (
     <div
-      className={`relative flex rounded-md bg-white font-mono text-gray-900 shadow-xs ring-1 ring-inset ${mark ? 'ring-gray-400' : 'ring-gray-300'}`}
+      className={`relative flex rounded-md bg-surface font-mono text-ink shadow-xs ring-1 ring-inset ${mark ? 'ring-ink-faint' : 'ring-line-strong'}`}
       style={{ width: NODE_W, height: NODE_H }}
     >
       <MarkSkin mark={mark}>
         <span className="relative grid place-items-center text-sm font-semibold tabular-nums" style={{ width: VALUE_W }}>
           {node.value}
         </span>
-        <span className="relative grid flex-1 place-items-center border-l border-gray-300">
+        <span className="relative grid flex-1 place-items-center border-l border-line-strong">
           {node.next ? (
-            <span className={`h-2 w-2 rounded-full ${linkMark ? MARKS[linkMark].bg : 'bg-gray-600'}`} />
+            <span className={`h-2 w-2 rounded-full ${linkMark ? MARKS[linkMark].bg : 'bg-ink-soft'}`} />
           ) : (
-            <span className="text-xs text-gray-400">∅</span>
+            <span className="text-xs text-ink-muted">∅</span>
           )}
         </span>
       </MarkSkin>

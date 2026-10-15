@@ -30,9 +30,10 @@ const MIN_SEARCH_SCALE = 0.8;
 
 const TWEEN: CSSProperties = { transitionDuration: 'var(--tween, 300ms)' };
 
-/** Marks dark enough to need white text on top of them; the rest take dark text. */
-const DARK: ReadonlySet<MarkKey> = new Set<MarkKey>(['compare', 'swap', 'sorted', 'visited', 'found', 'path', 'reject']);
-const ink = (mark: MarkKey | undefined) => (mark && DARK.has(mark) ? 'fill-white' : 'fill-gray-900');
+/** Marks dark enough to need white text: white clears 4.5:1 only on the deep blue of compare. */
+const DARK: ReadonlySet<MarkKey> = new Set<MarkKey>(['compare']);
+// Unmarked labels sit on the surface and take the theme's ink; marked ones sit on a fill.
+const ink = (mark: MarkKey | undefined) => (!mark ? 'fill-ink' : DARK.has(mark) ? 'fill-white' : 'fill-on-mark');
 
 type Placed = { id: NodeId; node: TreeNode; box: Box; x: number; y: number };
 type Point = { x: number; y: number };
@@ -103,7 +104,7 @@ function chooseLayout(state: TreeState, width: number): TreeLayout {
 export function TreeView({ state }: { state: TreeState }) {
   const reduce = useReducedMotion();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  const [ref, width] = useWidth<HTMLElement>();
+  const [ref, width] = useWidth<HTMLDivElement>();
   const layout = chooseLayout(state, width);
   const m = layout.metrics;
   const { W, H, padTop, stripTop, stripCell, tableTop, table, hasTree } = frameOf(state, layout);
@@ -172,10 +173,10 @@ export function TreeView({ state }: { state: TreeState }) {
   const glyphR = search ? 5 : 7.5;
 
   return (
-    <section ref={ref} aria-label="Tree" className="flex flex-col gap-3">
+    <div ref={ref} role="group" aria-label="Tree" className="flex flex-col gap-3">
       <p className="sr-only">{state.description}</p>
       {!hasTree && (
-        <p className="rounded-lg border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400" aria-hidden>
+        <p className="rounded-lg border border-dashed border-line py-10 text-center text-sm text-ink-muted" aria-hidden>
           {state.emptyLabel}
         </p>
       )}
@@ -188,7 +189,7 @@ export function TreeView({ state }: { state: TreeState }) {
         >
           {state.parentArrows && (
             <defs>
-              <Arrowhead id={`${uid}-up`} className="fill-gray-400" />
+              <Arrowhead id={`${uid}-up`} className="fill-ink-faint" />
               <Arrowhead id={`${uid}-up-hot`} className="fill-mark-done" />
             </defs>
           )}
@@ -207,7 +208,7 @@ export function TreeView({ state }: { state: TreeState }) {
                     transition={instant}
                     strokeLinecap="round"
                     markerEnd={state.parentArrows ? `url(#${uid}-${hot ? 'up-hot' : 'up'})` : undefined}
-                    className={`transition-colors ${hot ? 'stroke-mark-done' : state.parentArrows ? 'stroke-gray-400' : 'stroke-gray-300'}`}
+                    className={`transition-colors ${hot ? 'stroke-mark-done' : state.parentArrows ? 'stroke-ink-faint' : 'stroke-line-strong'}`}
                     style={TWEEN}
                   />
                 );
@@ -265,20 +266,20 @@ export function TreeView({ state }: { state: TreeState }) {
       )}
       {state.output && (
         <div className="flex flex-wrap items-center gap-1.5 text-sm" aria-label={state.output.label}>
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{state.output.label}</span>
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{state.output.label}</span>
           {state.output.items.length === 0 ? (
-            <span className="text-xs text-gray-400">none yet</span>
+            <span className="text-xs text-ink-muted">none yet</span>
           ) : (
             state.output.items.map((item, i) => (
               // The list only grows at the end, so positions are stable keys.
-              <span key={i} className="rounded-full bg-emerald-50 px-2 py-0.5 font-mono text-xs text-emerald-800 ring-1 ring-emerald-200">
+              <span key={i} className="rounded-full bg-good-soft px-2 py-0.5 font-mono text-xs text-good-ink ring-1 ring-good-line">
                 {item}
               </span>
             ))
           )}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -338,7 +339,7 @@ function Glyph({ mark, x, y, r = 7.5 }: { mark: MarkKey; x: number; y: number; r
   const meta = MARKS[mark];
   return (
     <g>
-      <circle cx={x} cy={y} r={r} strokeWidth={r > 6 ? 1.5 : 1.2} className={`fill-white ${meta.stroke}`} />
+      <circle cx={x} cy={y} r={r} strokeWidth={r > 6 ? 1.5 : 1.2} className={`fill-surface ${meta.stroke}`} />
       <text
         x={x}
         y={y}
@@ -371,11 +372,11 @@ function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: 
   const inside = glyphR <= 6 && p.node.cells.length === 0;
   return (
     <motion.g initial={{ opacity: 0, x: from.x, y: from.y }} animate={{ opacity: 1, x: p.x, y: p.y }} exit={{ opacity: 0 }}>
-      {p.node.terminal && <circle r={r + 4} fill="none" strokeWidth={2} className="stroke-gray-700" />}
+      {p.node.terminal && <circle r={r + 4} fill="none" strokeWidth={2} className="stroke-ink-soft" />}
       <circle
         r={r}
         strokeWidth={meta ? 2.5 : 2}
-        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-white stroke-bar'}`}
+        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-bar'}`}
         style={TWEEN}
       />
       {badges?.top && (
@@ -384,13 +385,13 @@ function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: 
           y={-r + 5}
           fontSize={10}
           dominantBaseline="central"
-          className={`font-mono ${badges.alert ? 'fill-mark-swap font-bold' : 'fill-gray-600'}`}
+          className={`font-mono ${badges.alert ? 'fill-mark-swap font-bold' : 'fill-ink-soft'}`}
         >
           {badges.top}
         </text>
       )}
       {badges?.bottom && (
-        <text x={r + 2} y={r - 4} fontSize={10} dominantBaseline="central" className="fill-gray-400 font-mono">
+        <text x={r + 2} y={r - 4} fontSize={10} dominantBaseline="central" className="fill-ink-faint font-mono">
           {badges.bottom}
         </text>
       )}
@@ -417,7 +418,7 @@ function BoxNode({ p, mark, instant }: { p: Placed; mark: MarkKey | undefined; i
         height={p.box.h}
         rx={6}
         strokeWidth={meta ? 3 : 1.5}
-        className={`fill-white transition-colors ${meta ? meta.stroke : 'stroke-gray-400'}`}
+        className={`fill-surface transition-colors ${meta ? meta.stroke : 'stroke-ink-faint'}`}
         style={TWEEN}
       />
       {mark && <Glyph mark={mark} x={-3} y={-3} />}
@@ -455,7 +456,7 @@ function KeyCell({
           height={m.cellH}
           rx={4}
           strokeWidth={1}
-          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-white stroke-gray-300'}`}
+          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
           style={TWEEN}
         />
       )}
@@ -503,10 +504,10 @@ function EdgeLabel({
         height={h}
         rx={4}
         strokeWidth={hot ? 2 : 1}
-        className={`fill-white transition-colors ${hot ? 'stroke-mark-done' : 'stroke-gray-300'}`}
+        className={`fill-surface transition-colors ${hot ? 'stroke-mark-done' : 'stroke-line-strong'}`}
         style={TWEEN}
       />
-      <text textAnchor="middle" dominantBaseline="central" fontSize={font} className={`font-mono font-bold ${hot ? 'fill-emerald-800' : 'fill-gray-700'}`}>
+      <text textAnchor="middle" dominantBaseline="central" fontSize={font} className={`font-mono font-bold ${hot ? 'fill-mark-done-ink' : 'fill-ink-soft'}`}>
         {label}
       </text>
     </motion.g>
@@ -540,8 +541,8 @@ function probeSpot(p: Placed, placed: readonly Placed[], label: string, W: numbe
 function Probe({ label, left, y, width }: { label: string; left: number; y: number; width: number }) {
   return (
     <motion.g initial={{ opacity: 0, x: left, y }} animate={{ opacity: 1, x: left, y }} exit={{ opacity: 0 }}>
-      <rect y={-10} width={width} height={20} rx={10} strokeWidth={2} className={`fill-white ${MARKS.key.stroke}`} />
-      <text x={width / 2} textAnchor="middle" dominantBaseline="central" fontSize={12} className="fill-gray-900 font-mono font-bold">
+      <rect y={-10} width={width} height={20} rx={10} strokeWidth={2} className={`fill-surface ${MARKS.key.stroke}`} />
+      <text x={width / 2} textAnchor="middle" dominantBaseline="central" fontSize={12} className="fill-ink font-mono font-bold">
         {label}
       </text>
     </motion.g>
@@ -554,7 +555,7 @@ function Strip({ state, ids, label, top, cell }: { state: TreeState; ids: readon
   const labelOf = (id: NodeId) => state.nodes[id]?.cells[0]?.label ?? '';
   return (
     <g>
-      <text x={left} y={top - 8} fontSize={10} className="fill-gray-500 font-semibold uppercase" letterSpacing={1}>
+      <text x={left} y={top - 8} fontSize={10} className="fill-ink-muted font-semibold uppercase" letterSpacing={1}>
         {label}
       </text>
       <AnimatePresence initial={false}>
@@ -572,7 +573,7 @@ function Strip({ state, ids, label, top, cell }: { state: TreeState; ids: readon
                 height={cell}
                 rx={4}
                 strokeWidth={meta ? 2 : 1}
-                className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-white stroke-gray-300'}`}
+                className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
                 style={TWEEN}
               />
               <text textAnchor="middle" dominantBaseline="central" fontSize={12} className={`font-mono font-semibold ${ink(mark)}`}>
@@ -584,7 +585,7 @@ function Strip({ state, ids, label, top, cell }: { state: TreeState; ids: readon
       </AnimatePresence>
       {ids.map((_, i) => (
         // Index labels are fixed positions under the array, so the index is their identity.
-        <text key={i} x={left + (i + 0.5) * cell} y={top + cell + 11} textAnchor="middle" fontSize={10} className="fill-gray-400 font-mono">
+        <text key={i} x={left + (i + 0.5) * cell} y={top + cell + 11} textAnchor="middle" fontSize={10} className="fill-ink-faint font-mono">
           {i}
         </text>
       ))}
@@ -609,7 +610,7 @@ function Table({ state, rows, top, geometry }: { state: TreeState; rows: readonl
         const y = top + r * (TABLE_CELL + TABLE_ROW_GAP) + TABLE_CELL / 2;
         return (
           <g key={row.id}>
-            <text x={left + geometry.labelW - 6} y={y} textAnchor="end" dominantBaseline="central" fontSize={10} className="fill-gray-500 font-mono font-semibold">
+            <text x={left + geometry.labelW - 6} y={y} textAnchor="end" dominantBaseline="central" fontSize={10} className="fill-ink-muted font-mono font-semibold">
               {row.label}
             </text>
             <AnimatePresence initial={false}>
@@ -628,7 +629,7 @@ function Table({ state, rows, top, geometry }: { state: TreeState; rows: readonl
                       rx={4}
                       strokeWidth={meta ? 2 : 1}
                       strokeDasharray={empty && !meta ? '3 2' : undefined}
-                      className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-white stroke-gray-300'}`}
+                      className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
                       style={TWEEN}
                     />
                     <text textAnchor="middle" dominantBaseline="central" fontSize={12} className={`font-mono font-semibold ${ink(mark)}`}>

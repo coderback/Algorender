@@ -30,7 +30,7 @@ export function SlotsView({ state }: { state: SlotsState }) {
         {/* Drawn once the width is known (before the first paint), so nothing animates in from a provisional layout. */}
         {width > 0 && (
           <div aria-hidden className="flex flex-col gap-2">
-            <p className="text-center font-mono text-xs text-gray-600">{state.summary}</p>
+            <p className="text-center font-mono text-xs text-ink-soft">{state.summary}</p>
             <Holders holders={state.holders} state={state} centered={stack} />
             {stack ? (
               <StackColumn row={state.rows[0]} state={state} />
@@ -52,8 +52,8 @@ function Holders({ holders, state, centered }: { holders: readonly Holder[]; sta
         <div key={h.id} className="flex w-24 flex-col items-center gap-1">
           {h.item && (
             <>
-              <span className="max-w-full truncate font-mono text-[11px] text-gray-500">{h.label}</span>
-              <div className="relative h-10 w-12 rounded-md border border-dashed border-gray-300">
+              <span className="max-w-full truncate font-mono text-[11px] text-ink-muted">{h.label}</span>
+              <div className="relative h-10 w-12 rounded-md border border-dashed border-line-strong">
                 <ValueBox id={h.item} label={state.values[h.item]} mark={state.marks[h.item]} className="absolute inset-0" />
               </div>
             </>
@@ -79,13 +79,13 @@ function RowView({ row, state, width }: { row: SlotRow; state: SlotsState; width
   const labels = pointerLabels(state, row);
 
   return (
-    <section aria-label={row.label}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{row.label}</div>
+    <div role="group" aria-label={row.label}>
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{row.label}</div>
       <div className="mx-auto" style={{ maxWidth: cols * MAX_CELL_PX }}>
         <div className="grid gap-x-1 gap-y-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
           {row.slots.map((id, i) => (
             <div key={i} className="flex min-w-0 flex-col items-center gap-0.5">
-              <span className="font-mono text-[10px] leading-3 text-gray-400">{i}</span>
+              <span className="font-mono text-[10px] leading-3 text-ink-muted">{i}</span>
               <Slot id={id} stale={row.stale?.[i] ?? null} state={state} className="h-10 w-full" />
               <div className="flex h-7 flex-col items-center">
                 {(labels.get(i) ?? []).map((label) => (
@@ -93,7 +93,7 @@ function RowView({ row, state, width }: { row: SlotRow; state: SlotsState; width
                     key={label}
                     layout="position"
                     layoutId={`ptr-${row.id}-${label}`}
-                    className="font-mono text-[10px] leading-3.5 font-semibold whitespace-nowrap text-gray-700"
+                    className="font-mono text-[10px] leading-3.5 font-semibold whitespace-nowrap text-ink-soft"
                   >
                     ▲{label}
                   </motion.span>
@@ -104,7 +104,7 @@ function RowView({ row, state, width }: { row: SlotRow; state: SlotsState; width
         </div>
         {state.ring && <WrapArrow n={n} />}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -112,9 +112,9 @@ function RowView({ row, state, width }: { row: SlotRow; state: SlotsState; width
 function Slot({ id, stale, state, className }: { id: string | null; stale: number | null; state: SlotsState; className: string }) {
   return (
     <div className={`relative ${className}`}>
-      <div className="absolute inset-0 rounded-md border border-dashed border-gray-300 bg-gray-50" />
+      <div className="absolute inset-0 rounded-md border border-dashed border-line-strong bg-subtle" />
       {id == null && stale != null && (
-        <span className="absolute inset-0 grid place-items-center font-mono text-sm text-gray-300" title="old copy">
+        <span className="absolute inset-0 grid place-items-center font-mono text-sm text-ink-muted" title="old copy">
           {stale}
         </span>
       )}
@@ -128,11 +128,11 @@ function WrapArrow({ n }: { n: number }) {
   const inset = `calc(${50 / n}% - 1px)`;
   return (
     <div className="relative h-6" aria-hidden>
-      <div className="absolute top-0 h-3.5 rounded-b-xl border-x-2 border-b-2 border-dashed border-gray-300" style={{ left: inset, right: inset }} />
-      <span className="absolute -top-2 -translate-x-1/2 text-[10px] leading-none text-gray-400" style={{ left: `${50 / n}%` }}>
+      <div className="absolute top-0 h-3.5 rounded-b-xl border-x-2 border-b-2 border-dashed border-line-strong" style={{ left: inset, right: inset }} />
+      <span className="absolute -top-2 -translate-x-1/2 text-[10px] leading-none text-ink-muted" style={{ left: `${50 / n}%` }}>
         ▲
       </span>
-      <span className="absolute top-1.5 left-1/2 -translate-x-1/2 bg-white px-1.5 font-mono text-[10px] whitespace-nowrap text-gray-500">
+      <span className="absolute top-1.5 left-1/2 -translate-x-1/2 bg-surface px-1.5 font-mono text-[10px] whitespace-nowrap text-ink-muted">
         after slot {n - 1} comes slot 0
       </span>
     </div>
@@ -142,12 +142,12 @@ function WrapArrow({ n }: { n: number }) {
 function StackColumn({ row, state }: { row: SlotRow; state: SlotsState }) {
   const labels = pointerLabels(state, row);
   return (
-    <section aria-label={row.label} className="mx-auto w-full max-w-64">
-      <div className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wider text-gray-500">{row.label}</div>
+    <div role="group" aria-label={row.label} className="mx-auto w-full max-w-64">
+      <div className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{row.label}</div>
       <div className="flex flex-col-reverse gap-1">
         {row.slots.map((id, i) => (
           <div key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)_3.5rem] items-center gap-2">
-            <span className="text-right font-mono text-[10px] text-gray-400">{i}</span>
+            <span className="text-right font-mono text-[10px] text-ink-muted">{i}</span>
             <Slot id={id} stale={null} state={state} className="h-9" />
             <div className="flex flex-col">
               {(labels.get(i) ?? []).map((label) => (
@@ -155,7 +155,7 @@ function StackColumn({ row, state }: { row: SlotRow; state: SlotsState }) {
                   key={label}
                   layout="position"
                   layoutId={`ptr-${row.id}-${label}`}
-                  className="font-mono text-[11px] font-semibold whitespace-nowrap text-gray-700"
+                  className="font-mono text-[11px] font-semibold whitespace-nowrap text-ink-soft"
                 >
                   ◀ {label}
                 </motion.span>
@@ -166,13 +166,13 @@ function StackColumn({ row, state }: { row: SlotRow; state: SlotsState }) {
       </div>
       <div className="mt-1 grid grid-cols-[1.25rem_minmax(0,1fr)_3.5rem] gap-2">
         <span />
-        <div className="h-1.5 rounded-full bg-gray-300" />
+        <div className="h-1.5 rounded-full bg-line-strong" />
       </div>
-      <div className="grid grid-cols-[1.25rem_minmax(0,1fr)_3.5rem] gap-2 text-center text-[10px] text-gray-400">
+      <div className="grid grid-cols-[1.25rem_minmax(0,1fr)_3.5rem] gap-2 text-center text-[10px] text-ink-muted">
         <span />
         <span>bottom</span>
       </div>
-    </section>
+    </div>
   );
 }
 

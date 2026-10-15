@@ -1,9 +1,10 @@
 // Series colours for the compare page: categorical slots 1–4 of the validated
-// reference palette (dataviz skill; checked against the white card surface:
-// adjacent CVD ΔE ≥ 9.1, normal-vision ΔE ≥ 22.9). Aqua and yellow sit below
-// 3:1 contrast, so every chart that uses them also has direct labels and a
-// table view. Never more than four series at once.
-export const SERIES_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'] as const;
+// reference palette (dataviz skill), as theme tokens in globals.css with a light
+// and a dark step each (checked against both card surfaces). Aqua and yellow
+// sit below 3:1 contrast on the light surface, so every chart that uses them
+// also has direct labels and a table view. Never more than four series at once.
+// Use these in style props (background, fill, stroke), not SVG attributes.
+export const SERIES_COLORS = ['var(--color-series-1)', 'var(--color-series-2)', 'var(--color-series-3)', 'var(--color-series-4)'] as const;
 export const MAX_SERIES = SERIES_COLORS.length;
 
 /**

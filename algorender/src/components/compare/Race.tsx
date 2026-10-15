@@ -62,7 +62,7 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
   const tween = Math.min(0.25, 2 / rate);
 
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-xs" aria-label="Race">
+    <section className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs" aria-label="Race">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <button
           type="button"
@@ -73,7 +73,7 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             }
             setPlaying((p) => !p);
           }}
-          className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
         >
           {playing ? <FiPause aria-hidden /> : done ? <FiRotateCcw aria-hidden /> : <FiPlay aria-hidden />}
           {playing ? 'Pause' : done ? 'Race again' : work > 0 ? 'Resume' : 'Start the race'}
@@ -86,16 +86,16 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             setWork(0);
           }}
           disabled={work === 0}
-          className="rounded-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+          className="rounded-full px-3 py-2 text-sm text-ink-soft hover:bg-sunken disabled:opacity-40"
         >
           Reset
         </button>
-        <label className="flex items-center gap-2 text-xs text-gray-500">
+        <label className="flex items-center gap-2 text-xs text-ink-muted">
           Speed
           <select
             value={rate}
             onChange={(e) => setRate(Number(e.target.value))}
-            className="rounded-md border border-gray-200 bg-white px-2 py-1 text-gray-700"
+            className="rounded-md border border-line bg-surface px-2 py-1 text-ink-soft"
           >
             {RATES.map((r) => (
               <option key={r} value={r}>
@@ -104,7 +104,7 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             ))}
           </select>
         </label>
-        <span className="ml-auto font-mono text-sm tabular-nums text-gray-600">{Math.floor(work)} operations</span>
+        <span className="ml-auto font-mono text-sm tabular-nums text-ink-soft">{Math.floor(work)} operations</span>
       </div>
 
       <MotionConfig transition={{ duration: tween }} reducedMotion="user">
@@ -114,18 +114,18 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             const finished = work >= lane.total;
             const place = order.indexOf(lane.slug) + 1;
             return (
-              <div key={lane.slug} className="min-w-0 rounded-lg border border-gray-100 p-3">
+              <div key={lane.slug} className="min-w-0 rounded-lg border border-line-soft p-3">
                 <div className="mb-2 flex items-center justify-between gap-2 text-sm">
-                  <span className="flex items-center gap-2 font-medium text-gray-900">
+                  <span className="flex items-center gap-2 font-medium text-ink">
                     <span className="h-0.5 w-4 rounded-full" style={{ background: SERIES_COLORS[lane.slot] }} aria-hidden />
                     {lane.name}
                   </span>
-                  <span className="font-mono text-xs tabular-nums text-gray-600">
+                  <span className="font-mono text-xs tabular-nums text-ink-soft">
                     {finished ? `${ordinal(place)} · ${lane.total} ops` : `${lane.cost[index]} / ${lane.total} ops`}
                   </span>
                 </div>
                 <ArrayView state={lane.trace.frames[index].state} compact />
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-gray-100" aria-hidden>
+                <div className="mt-2 h-1 overflow-hidden rounded-full bg-sunken" aria-hidden>
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${Math.min(100, (work / Math.max(1, lane.total)) * 100)}%`, background: SERIES_COLORS[lane.slot] }}
@@ -137,7 +137,7 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
         </div>
       </MotionConfig>
       {done && (
-        <p className="mt-4 text-sm text-gray-700" aria-live="polite">
+        <p className="mt-4 text-sm text-ink-soft" aria-live="polite">
           {lanes.find((l) => l.slug === order[0])?.name} finished first with {lanes.find((l) => l.slug === order[0])?.total} operations.
           {lanes.length > 1 &&
             ` ${lanes.find((l) => l.slug === order.at(-1))?.name} needed ${lanes.find((l) => l.slug === order.at(-1))?.total}.`}

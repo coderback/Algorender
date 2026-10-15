@@ -10,7 +10,7 @@ type Settings = Record<string, string | number>;
 const asParams = (s: Settings = {}) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, String(v)]));
 
 function Fallback() {
-  return <div className="h-[480px] animate-pulse rounded-xl bg-white" aria-label="Loading visualiser" />;
+  return <div className="h-[480px] animate-pulse rounded-xl bg-surface" aria-label="Loading visualiser" />;
 }
 
 /**
@@ -35,7 +35,7 @@ export function Explore({
       <Suspense fallback={<Fallback />}>
         <Visualiser slug={slug} variant="lesson" settings={asParams(settings)} showInput={input} />
       </Suspense>
-      {caption && <figcaption className="mt-2 text-sm text-gray-500">{caption}</figcaption>}
+      {caption && <figcaption className="mt-2 text-sm text-ink-muted">{caption}</figcaption>}
     </figure>
   );
 }
@@ -63,16 +63,16 @@ export function PredictChallenge({ slug, settings, goal = 5 }: { slug: string; s
   return (
     <div className="not-prose space-y-3">
       <div
-        className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm ${done ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}
+        className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm ${done ? 'border-good-line bg-good-soft' : 'border-warn-line bg-warn-soft'}`}
         aria-live="polite"
       >
-        {done ? <FiCheckCircle aria-hidden className="text-emerald-600" /> : <FiTarget aria-hidden className="text-amber-600" />}
-        <span className="font-medium text-gray-900">
+        {done ? <FiCheckCircle aria-hidden className="text-good-ink" /> : <FiTarget aria-hidden className="text-warn-ink" />}
+        <span className="font-medium text-ink">
           {done
             ? `Done: ${score.correct} of ${score.total} predictions right.`
             : `Make ${goal} predictions: step forward and answer each question before the next step plays.`}
         </span>
-        <span className="ml-auto font-mono text-gray-600">
+        <span className="ml-auto font-mono text-ink-soft">
           {Math.min(score.total, goal)}/{goal}
         </span>
       </div>

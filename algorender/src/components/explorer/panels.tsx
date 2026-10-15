@@ -5,8 +5,8 @@ import { MARKS, NEUTRAL } from '@/viz/marks';
 
 export function Panel({ title, children, className = '' }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <section className={`overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xs ${className}`}>
-      <h2 className="border-b border-gray-100 px-4 py-2 text-sm font-semibold text-gray-900">{title}</h2>
+    <section className={`overflow-hidden rounded-xl border border-line-soft bg-surface shadow-xs ${className}`}>
+      <h2 className="border-b border-line-soft px-4 py-2 text-sm font-semibold text-ink">{title}</h2>
       {children}
     </section>
   );
@@ -18,7 +18,7 @@ export function Narration({ note, live }: { note: string; live: boolean }) {
     <div
       data-testid="narration"
       aria-live={live ? 'polite' : 'off'}
-      className="min-h-14 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-[15px] leading-relaxed text-gray-800"
+      className="min-h-14 rounded-xl border border-accent-line bg-accent-soft/60 px-4 py-3 text-[15px] leading-relaxed text-ink"
     >
       {note}
     </div>
@@ -42,10 +42,10 @@ export function CodePanel({ lines, current }: { lines: readonly string[]; curren
               key={i}
               aria-current={active ? 'step' : undefined}
               className={`flex gap-3 border-l-4 pr-3 pl-3 transition-colors ${
-                active ? 'border-blue-600 bg-blue-50 font-semibold text-gray-900' : 'border-transparent text-gray-600'
+                active ? 'border-accent bg-accent-soft font-semibold text-ink' : 'border-transparent text-ink-soft'
               }`}
             >
-              <span className="w-4 shrink-0 text-right text-gray-400 select-none">{numbers[i] ?? ''}</span>
+              <span className="w-4 shrink-0 text-right text-ink-muted select-none">{numbers[i] ?? ''}</span>
               <span className="whitespace-pre-wrap">{blank ? ' ' : line}</span>
             </li>
           );
@@ -59,9 +59,9 @@ export function StatsPanel({ stats, values }: { stats: readonly { key: string; l
   return (
     <div className="grid grid-cols-2 gap-3">
       {stats.map((s) => (
-        <div key={s.key} className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-xs">
-          <div className="text-xs text-gray-500">{s.label}</div>
-          <div className="font-mono text-2xl font-semibold tabular-nums text-gray-900">{values[s.key] ?? 0}</div>
+        <div key={s.key} className="rounded-xl border border-line-soft bg-surface px-4 py-3 shadow-xs">
+          <div className="text-xs text-ink-muted">{s.label}</div>
+          <div className="font-mono text-2xl font-semibold tabular-nums text-ink">{values[s.key] ?? 0}</div>
         </div>
       ))}
     </div>
@@ -73,13 +73,13 @@ export function VarsPanel({ vars }: { vars: Record<string, VarValue> }) {
   return (
     <Panel title="Variables">
       {entries.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-gray-400">None in this step.</p>
+        <p className="px-4 py-3 text-sm text-ink-muted">None in this step.</p>
       ) : (
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 px-4 py-3 font-mono text-sm">
           {entries.map(([name, value]) => (
             <div key={name} className="contents">
-              <dt className="text-gray-500">{name}</dt>
-              <dd className="text-gray-900">{String(value)}</dd>
+              <dt className="text-ink-muted">{name}</dt>
+              <dd className="text-ink">{String(value)}</dd>
             </div>
           ))}
         </dl>
@@ -91,7 +91,7 @@ export function VarsPanel({ vars }: { vars: Record<string, VarValue> }) {
 export function Legend({ entries }: { entries: readonly LegendEntry[] }) {
   return (
     <Panel title="Legend">
-      <ul className="grid grid-cols-2 gap-x-3 gap-y-2 px-4 py-3 text-sm text-gray-700">
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-2 px-4 py-3 text-sm text-ink-soft">
         {entries.map((entry) => {
           if (typeof entry === 'object' && 'neutral' in entry) {
             return (

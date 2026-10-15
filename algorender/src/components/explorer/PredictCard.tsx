@@ -41,9 +41,9 @@ export function PredictCard({
   const correct = chosen === checkpoint.answer;
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3" role="group" aria-label="Predict the next step">
-      <p className="mb-2 flex items-center gap-2 text-[15px] font-medium text-gray-900">
-        <FiHelpCircle aria-hidden className="shrink-0 text-amber-600" />
+    <div className="rounded-xl border border-warn-line bg-warn-soft/70 px-4 py-3" role="group" aria-label="Predict the next step">
+      <p className="mb-2 flex items-center gap-2 text-[15px] font-medium text-ink">
+        <FiHelpCircle aria-hidden className="shrink-0 text-warn-ink" />
         {checkpoint.question}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -51,12 +51,12 @@ export function PredictCard({
           const isAnswer = i === checkpoint.answer;
           const isChosen = i === chosen;
           const style = !answered
-            ? 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50'
+            ? 'border-line-strong bg-surface hover:border-accent-line hover:bg-accent-soft'
             : isAnswer
-              ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
+              ? 'border-good-line bg-good-soft text-good-ink'
               : isChosen
-                ? 'border-red-300 bg-red-50 text-red-800'
-                : 'border-gray-200 bg-white text-gray-400';
+                ? 'border-bad-line bg-bad-soft text-bad-ink'
+                : 'border-line bg-surface text-ink-muted';
           return (
             <button
               key={i}
@@ -65,7 +65,7 @@ export function PredictCard({
               onClick={() => onAnswer(i)}
               className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${style}`}
             >
-              <span className="mr-1.5 font-mono text-xs text-gray-400">{i + 1}</span>
+              <span className="mr-1.5 font-mono text-xs text-ink-muted">{i + 1}</span>
               {choice}
             </button>
           );
@@ -74,11 +74,11 @@ export function PredictCard({
       <p aria-live="polite" className="mt-2 min-h-5 text-sm">
         {answered &&
           (correct ? (
-            <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 text-good-ink">
               <FiCheckCircle aria-hidden /> Right. Step forward to see it happen.
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-red-700">
+            <span className="inline-flex items-center gap-1.5 text-bad-ink">
               <FiXCircle aria-hidden /> Not quite: it&apos;s &ldquo;{checkpoint.choices[checkpoint.answer]}&rdquo;. Step forward to see why.
             </span>
           ))}

@@ -22,7 +22,7 @@ export function MarkSkin({ mark, children }: { mark: MarkKey | undefined; childr
       {meta && (
         <span
           aria-hidden
-          className={`absolute -top-2 -right-1.5 z-10 grid h-4 min-w-4 place-items-center rounded-full bg-white px-0.5 text-[10px] leading-none font-bold shadow-sm ring-1 ring-gray-200 ${meta.text}`}
+          className={`absolute -top-2 -right-1.5 z-10 grid h-4 min-w-4 place-items-center rounded-full bg-surface px-0.5 text-[10px] leading-none font-bold shadow-sm ring-1 ring-line ${meta.text}`}
         >
           {meta.glyph}
         </span>
@@ -43,8 +43,8 @@ export function ValueBox({ id, label, mark, className = '' }: { id: string; labe
     <motion.div
       layout="position"
       layoutId={id}
-      className={`${position} flex items-center justify-center rounded-md bg-white font-mono font-semibold tabular-nums text-gray-900 shadow-xs ring-1 ring-inset ${
-        mark ? 'ring-gray-400' : 'ring-gray-300'
+      className={`${position} flex items-center justify-center rounded-md bg-surface font-mono font-semibold tabular-nums text-ink shadow-xs ring-1 ring-inset ${
+        mark ? 'ring-ink-faint' : 'ring-line-strong'
       } ${className}`}
     >
       <MarkSkin mark={mark}>

@@ -96,7 +96,7 @@ export function TraceStage<S>({
       >
         <div className="min-w-0 space-y-3">
           <div
-            className="rounded-xl border border-gray-100 bg-white px-3 pt-4 pb-3 shadow-xs sm:px-6"
+            className="rounded-xl border border-line-soft bg-surface px-3 pt-4 pb-3 shadow-xs sm:px-6"
             style={{ '--tween': `${player.tweenMs}ms` } as CSSProperties}
           >
             <View state={frame.state} />
@@ -115,7 +115,7 @@ export function TraceStage<S>({
             <ModeSwitch predict={predict} hasQuestions={asked.size > 0} score={{ correct, total: answered.length }} />
           </PlayerControls>
           {trace.truncated && (
-            <p className="text-sm text-amber-700">This run was cut short because it produced too many steps. Try a smaller input.</p>
+            <p className="text-sm text-warn-ink">This run was cut short because it produced too many steps. Try a smaller input.</p>
           )}
         </div>
         <aside className={layout === 'wide' ? 'min-w-0 space-y-3' : 'grid min-w-0 gap-3 md:grid-cols-2 md:items-start'}>
@@ -145,7 +145,7 @@ function ModeSwitch({
       aria-pressed={predict.mode === mode}
       onClick={() => predict.setMode(mode)}
       className={`px-2.5 py-1 text-xs transition-colors ${
-        predict.mode === mode ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+        predict.mode === mode ? 'bg-ink text-surface' : 'bg-surface text-ink-soft hover:bg-sunken'
       }`}
     >
       {label}
@@ -153,7 +153,7 @@ function ModeSwitch({
   );
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="inline-flex overflow-hidden rounded-md border border-gray-200" role="group" aria-label="Mode">
+      <div className="inline-flex overflow-hidden rounded-md border border-line" role="group" aria-label="Mode">
         {option('watch', 'Watch')}
         {option('predict', 'Predict')}
       </div>
@@ -163,12 +163,12 @@ function ModeSwitch({
             value={predict.density}
             onChange={(e) => predict.setDensity(e.target.value as Density)}
             aria-label="How often to ask"
-            className="rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-700"
+            className="rounded-md border border-line bg-surface px-1.5 py-1 text-xs text-ink-soft"
           >
             <option value="some">Ask sometimes</option>
             <option value="all">Ask at every decision</option>
           </select>
-          <span className="font-mono text-xs text-gray-600" aria-label="Predictions correct">
+          <span className="font-mono text-xs text-ink-soft" aria-label="Predictions correct">
             {score.correct}/{score.total} right
           </span>
         </>

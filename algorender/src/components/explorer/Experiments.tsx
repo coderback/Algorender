@@ -13,9 +13,9 @@ export function Experiments({
 }) {
   if (items.length === 0) return null;
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-xs">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
-        <FiZap aria-hidden className="text-amber-500" /> Try this
+    <section className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+        <FiZap aria-hidden className="text-warn-ink" /> Try this
       </h2>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((x) => (
@@ -23,13 +23,13 @@ export function Experiments({
             <button
               type="button"
               onClick={x.onTry}
-              className="h-full w-full rounded-lg border border-gray-200 p-3 text-left text-sm transition-colors hover:border-blue-300 hover:bg-blue-50"
+              className="h-full w-full rounded-lg border border-line p-3 text-left text-sm transition-colors hover:border-accent-line hover:bg-accent-soft"
             >
-              <span className="mb-1 block font-medium text-blue-700">
+              <span className="mb-1 block font-medium text-accent-ink">
                 {x.label}
                 {suffix && ` ${suffix}`} →
               </span>
-              <span className="text-gray-600">{x.prompt}</span>
+              <span className="text-ink-soft">{x.prompt}</span>
             </button>
           </li>
         ))}

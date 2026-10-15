@@ -79,7 +79,7 @@ export function GrowthChart({
 
   return (
     <div>
-      <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700" aria-label="Legend">
+      <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft" aria-label="Legend">
         {series.map((s) => (
           <li key={s.slug} className="flex items-center gap-2">
             <span className="h-0.5 w-4 rounded-full" style={{ background: SERIES_COLORS[s.slot] }} aria-hidden />
@@ -87,43 +87,43 @@ export function GrowthChart({
           </li>
         ))}
         {references.map((r) => (
-          <li key={r.label} className="flex items-center gap-2 text-gray-500">
-            <span className="h-px w-4 bg-gray-400" aria-hidden />
+          <li key={r.label} className="flex items-center gap-2 text-ink-muted">
+            <span className="h-px w-4 bg-ink-faint" aria-hidden />
             {r.label} (reference)
           </li>
         ))}
       </ul>
 
       <div ref={boxRef} className="relative">
-        <svg width={width} height={HEIGHT} role="img" aria-label={`${metric} against input size n, for ${series.map((s) => s.name).join(', ')}`}>
+        <svg width={width} height={HEIGHT} role="group" aria-label={`${metric} against input size n, for ${series.map((s) => s.name).join(', ')}`}>
           <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
             {ticks.map((t) => (
               <g key={t}>
-                <line x1={0} x2={innerW} y1={y(t)} y2={y(t)} className="stroke-gray-200" strokeWidth={1} />
-                <text x={-8} y={y(t)} dy="0.32em" textAnchor="end" className="fill-gray-500 text-[11px] tabular-nums">
+                <line x1={0} x2={innerW} y1={y(t)} y2={y(t)} className="stroke-line" strokeWidth={1} />
+                <text x={-8} y={y(t)} dy="0.32em" textAnchor="end" className="fill-ink-muted text-[11px] tabular-nums">
                   {compact(t)}
                 </text>
               </g>
             ))}
             {ns.filter((n, i) => i % Math.ceil(ns.length / 8) === 0 || n === nMax).map((n) => (
-              <text key={n} x={x(n)} y={innerH + 18} textAnchor="middle" className="fill-gray-500 text-[11px] tabular-nums">
+              <text key={n} x={x(n)} y={innerH + 18} textAnchor="middle" className="fill-ink-muted text-[11px] tabular-nums">
                 {n}
               </text>
             ))}
-            <text x={innerW / 2} y={innerH + 34} textAnchor="middle" className="fill-gray-500 text-[11px]">
+            <text x={innerW / 2} y={innerH + 34} textAnchor="middle" className="fill-ink-muted text-[11px]">
               input size n
             </text>
-            <line x1={0} x2={innerW} y1={innerH} y2={innerH} className="stroke-gray-300" strokeWidth={1} />
+            <line x1={0} x2={innerW} y1={innerH} y2={innerH} className="stroke-line-strong" strokeWidth={1} />
 
             {references.map((r) => (
-              <path key={r.label} d={path(r.values)} fill="none" className="stroke-gray-400" strokeWidth={1} />
+              <path key={r.label} d={path(r.values)} fill="none" className="stroke-ink-faint" strokeWidth={1} />
             ))}
             {series.map((s) => (
               <path
                 key={s.slug}
                 d={path(s.values)}
                 fill="none"
-                stroke={SERIES_COLORS[s.slot]}
+                style={{ stroke: SERIES_COLORS[s.slot] }}
                 strokeWidth={2}
                 strokeLinejoin="round"
                 strokeLinecap="round"
@@ -135,8 +135,8 @@ export function GrowthChart({
                 cx={x(nMax)}
                 cy={y(s.values.at(-1) ?? 0)}
                 r={4}
-                fill={SERIES_COLORS[s.slot]}
-                className="stroke-white"
+                style={{ fill: SERIES_COLORS[s.slot] }}
+                className="stroke-surface"
                 strokeWidth={2}
               />
             ))}
@@ -148,7 +148,7 @@ export function GrowthChart({
                   x={innerW + 10}
                   y={e.y}
                   dy="0.32em"
-                  className={`text-[12px] ${e.muted ? 'fill-gray-500' : 'fill-gray-800'}`}
+                  className={`text-[12px] ${e.muted ? 'fill-ink-muted' : 'fill-ink'}`}
                 >
                   {e.text}
                 </text>
@@ -156,15 +156,15 @@ export function GrowthChart({
 
             {hover != null && (
               <>
-                <line x1={x(ns[hover])} x2={x(ns[hover])} y1={0} y2={innerH} className="stroke-gray-400" strokeWidth={1} />
+                <line x1={x(ns[hover])} x2={x(ns[hover])} y1={0} y2={innerH} className="stroke-ink-faint" strokeWidth={1} />
                 {series.map((s) => (
                   <circle
                     key={s.slug}
                     cx={x(ns[hover])}
                     cy={y(s.values[hover])}
                     r={4}
-                    fill={SERIES_COLORS[s.slot]}
-                    className="stroke-white"
+                    style={{ fill: SERIES_COLORS[s.slot] }}
+                    className="stroke-surface"
                     strokeWidth={2}
                   />
                 ))}
@@ -175,8 +175,13 @@ export function GrowthChart({
               height={innerH}
               fill="transparent"
               tabIndex={0}
-              aria-label="Chart values: use the left and right arrow keys to read each input size"
-              className="cursor-crosshair outline-none focus-visible:outline-2 focus-visible:outline-blue-600"
+              role="slider"
+              aria-label="Input size: use the left and right arrow keys to read each value"
+              aria-valuemin={nMin}
+              aria-valuemax={nMax}
+              aria-valuenow={ns[hover ?? ns.length - 1]}
+              aria-valuetext={`n = ${ns[hover ?? ns.length - 1]}`}
+              className="cursor-crosshair outline-none focus-visible:outline-2 focus-visible:outline-accent"
               onPointerMove={onPointer}
               onPointerLeave={() => setHover(null)}
               onFocus={() => setHover((h) => h ?? ns.length - 1)}
@@ -188,23 +193,23 @@ export function GrowthChart({
 
         {hover != null && (
           <div
-            className="pointer-events-none absolute z-10 min-w-40 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-md"
+            className="pointer-events-none absolute z-10 min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm shadow-md"
             style={{ top: MARGIN.top, left: flip ? undefined : tipLeft + 12, right: flip ? width - tipLeft + 12 : undefined }}
             role="status"
           >
-            <div className="mb-1 text-xs text-gray-500">n = {ns[hover]}</div>
+            <div className="mb-1 text-xs text-ink-muted">n = {ns[hover]}</div>
             {[...series]
               .sort((a, b) => b.values[hover] - a.values[hover])
               .map((s) => (
                 <div key={s.slug} className="flex items-center gap-2">
                   <span className="h-0.5 w-3 rounded-full" style={{ background: SERIES_COLORS[s.slot] }} aria-hidden />
-                  <span className="font-semibold tabular-nums text-gray-900">{s.values[hover].toLocaleString()}</span>
-                  <span className="text-gray-500">{s.name}</span>
+                  <span className="font-semibold tabular-nums text-ink">{s.values[hover].toLocaleString()}</span>
+                  <span className="text-ink-muted">{s.name}</span>
                 </div>
               ))}
             {references.map((r) => (
-              <div key={r.label} className="flex items-center gap-2 text-gray-500">
-                <span className="h-px w-3 bg-gray-400" aria-hidden />
+              <div key={r.label} className="flex items-center gap-2 text-ink-muted">
+                <span className="h-px w-3 bg-ink-faint" aria-hidden />
                 <span className="tabular-nums">{Math.round(r.values[hover]).toLocaleString()}</span>
                 <span>{r.label}</span>
               </div>
@@ -217,15 +222,15 @@ export function GrowthChart({
         type="button"
         onClick={() => setShowTable((v) => !v)}
         aria-expanded={showTable}
-        className="mt-2 text-xs text-blue-700 hover:text-blue-900"
+        className="mt-2 text-xs text-accent-ink hover:underline"
       >
         {showTable ? 'Hide table' : 'Show as a table'}
       </button>
       {showTable && (
-        <div className="mt-2 max-h-80 overflow-auto rounded-lg border border-gray-100">
+        <div className="mt-2 max-h-80 overflow-auto rounded-lg border border-line-soft">
           <table className="w-full text-right text-sm tabular-nums">
             <caption className="sr-only">{metric} by input size</caption>
-            <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500">
+            <thead className="sticky top-0 bg-subtle text-xs text-ink-muted">
               <tr>
                 <th scope="col" className="px-3 py-2 text-left font-medium">n</th>
                 {series.map((s) => (
@@ -238,13 +243,13 @@ export function GrowthChart({
             </thead>
             <tbody>
               {ns.map((n, i) => (
-                <tr key={n} className="border-t border-gray-100">
-                  <th scope="row" className="px-3 py-1.5 text-left font-medium text-gray-700">{n}</th>
+                <tr key={n} className="border-t border-line-soft">
+                  <th scope="row" className="px-3 py-1.5 text-left font-medium text-ink-soft">{n}</th>
                   {series.map((s) => (
-                    <td key={s.slug} className="px-3 py-1.5 text-gray-900">{s.values[i].toLocaleString()}</td>
+                    <td key={s.slug} className="px-3 py-1.5 text-ink">{s.values[i].toLocaleString()}</td>
                   ))}
                   {references.map((r) => (
-                    <td key={r.label} className="px-3 py-1.5 text-gray-500">{Math.round(r.values[i]).toLocaleString()}</td>
+                    <td key={r.label} className="px-3 py-1.5 text-ink-muted">{Math.round(r.values[i]).toLocaleString()}</td>
                   ))}
                 </tr>
               ))}

@@ -7,13 +7,13 @@
  */
 export function Calc({ lines, rule }: { lines: readonly string[]; rule: string }) {
   return (
-    <div className="min-h-[4.25rem] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-[13px] leading-5">
-      <div className="mb-0.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-gray-500">Hash</div>
+    <div className="min-h-[4.25rem] rounded-lg border border-line bg-subtle px-3 py-2 font-mono text-[13px] leading-5">
+      <div className="mb-0.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Hash</div>
       {lines.length === 0 ? (
-        <div className="text-gray-400">{rule}</div>
+        <div className="text-ink-muted">{rule}</div>
       ) : (
         lines.map((line, i) => (
-          <div key={i} className={`break-words ${i === lines.length - 1 ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+          <div key={i} className={`break-words ${i === lines.length - 1 ? 'font-semibold text-ink' : 'text-ink-soft'}`}>
             {line}
           </div>
         ))

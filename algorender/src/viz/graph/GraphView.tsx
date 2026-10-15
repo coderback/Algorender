@@ -56,12 +56,12 @@ export function GraphView({ state }: { state: GraphState }) {
       <div className="flex flex-col gap-4">
         <p className="sr-only">{describe(state)}</p>
         {state.nodes.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-400">The graph is empty. Add a vertex to start.</p>
+          <p className="py-10 text-center text-sm text-ink-muted">The graph is empty. Add a vertex to start.</p>
         ) : (
           <div aria-hidden>
             {state.annotationLabel && (
-              <p className="mb-1 text-[11px] text-gray-500">
-                Under each node: <span className="font-mono font-semibold text-gray-700">{state.annotationLabel}</span>
+              <p className="mb-1 text-[11px] text-ink-muted">
+                Under each node: <span className="font-mono font-semibold text-ink-soft">{state.annotationLabel}</span>
               </p>
             )}
             <svg
@@ -111,8 +111,8 @@ export function GraphView({ state }: { state: GraphState }) {
 }
 
 function EdgeLine({ edge, geo, mark, directed }: { edge: GraphEdge; geo: Geometry; mark: Mark | undefined; directed: boolean }) {
-  const stroke = mark ? MARKS[mark].stroke : 'stroke-gray-300';
-  const fill = mark ? MARKS[mark].fill : 'fill-gray-400';
+  const stroke = mark ? MARKS[mark].stroke : 'stroke-line-strong';
+  const fill = mark ? MARKS[mark].fill : 'fill-ink-faint';
   return (
     <motion.g data-edge={edge.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.path
@@ -142,10 +142,9 @@ function EdgeLabel({ edge, at, mark, weighted }: { edge: GraphEdge; at: { x: num
       dominantBaseline="central"
       fontSize={13}
       paintOrder="stroke"
-      stroke="white"
       strokeWidth={4}
       strokeLinejoin="round"
-      className="fill-gray-700 font-mono font-semibold"
+      className="fill-ink-soft stroke-surface font-mono font-semibold"
     >
       {weighted && <tspan>{edge.weight}</tspan>}
       {mark && (
@@ -168,7 +167,7 @@ function NodeShape({ node, mark, annotation, badge }: { node: GraphNode; mark: M
         cy={y}
         r={NODE_R}
         strokeWidth={2}
-        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-white stroke-bar'}`}
+        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-bar'}`}
         style={TWEEN}
       />
       <text
@@ -177,14 +176,14 @@ function NodeShape({ node, mark, annotation, badge }: { node: GraphNode; mark: M
         textAnchor="middle"
         dominantBaseline="central"
         fontSize={node.id.length > 2 ? 12 : 15}
-        className={`font-semibold transition-colors ${mark ? svgOnMark(mark) : 'fill-gray-900'}`}
+        className={`font-semibold transition-colors ${mark ? svgOnMark(mark) : 'fill-ink'}`}
         style={TWEEN}
       >
         {node.id}
       </text>
       {meta && (
         <g>
-          <circle cx={x + NODE_R * 0.8} cy={y - NODE_R * 0.8} r={8} strokeWidth={1.5} className={`fill-white ${meta.stroke}`} />
+          <circle cx={x + NODE_R * 0.8} cy={y - NODE_R * 0.8} r={8} strokeWidth={1.5} className={`fill-surface ${meta.stroke}`} />
           <text
             x={x + NODE_R * 0.8}
             y={y - NODE_R * 0.8}
@@ -206,9 +205,9 @@ function NodeShape({ node, mark, annotation, badge }: { node: GraphNode; mark: M
             height={15}
             rx={4}
             strokeWidth={1}
-            className="fill-gray-800 stroke-gray-800"
+            className="fill-ink stroke-ink"
           />
-          <text x={x - NODE_R * 0.7} y={y - NODE_R - 1.5} textAnchor="middle" dominantBaseline="central" fontSize={11} className="fill-white font-bold">
+          <text x={x - NODE_R * 0.7} y={y - NODE_R - 1.5} textAnchor="middle" dominantBaseline="central" fontSize={11} className="fill-surface font-bold">
             {badge}
           </text>
         </g>
@@ -221,9 +220,8 @@ function NodeShape({ node, mark, annotation, badge }: { node: GraphNode; mark: M
           dominantBaseline="central"
           fontSize={13}
           paintOrder="stroke"
-          stroke="white"
           strokeWidth={3}
-          className="fill-gray-800 font-mono font-semibold"
+          className="fill-ink stroke-surface font-mono font-semibold"
         >
           {annotation}
         </text>
