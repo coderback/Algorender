@@ -21,6 +21,8 @@ npm run e2e          # Playwright (e2e/); reuses a dev server on E2E_PORT (defau
 
 The user's global `~/.npmrc` sets `os=linux`, which makes npm skip Windows native binaries (Tailwind's oxide, lightningcss, Next's SWC). Run installs with `npm_config_os=win32` set in the environment; don't add that to a project `.npmrc` (Vercel builds on Linux).
 
+The full e2e suite (~250 tests, including axe scans of every page in both themes) is heavy next to `next dev`. On a low-memory machine, run it against a production build instead: `npm run build`, `npx next start -p 3100`, then `npm run e2e -- --workers=2`. Playwright reuses whatever already listens on the port, so stop any stale server first.
+
 ## Architecture
 
 ### Trace engine (record → replay): how all new visualisers work
@@ -62,10 +64,17 @@ The home page (`app/page.jsx`), root layout, `Header.jsx`, `SearchBar.jsx`, `ui/
 - `src/registry.test.ts`: every module is listed in `src/data/visualisers.js`, no legacy folder shadows its route, pseudo-code lines are ≤ 42 characters (the code panel width), and teaching content is complete.
 - Per-family property tests next to the modules (results vs reference implementations, frames, checkpoints, immutability).
 - `e2e/all-visualisers.spec.ts` opens and runs every visualiser listed in the registry with no console errors.
+- `e2e/a11y.spec.ts` runs axe (WCAG 2.2 A/AA + best practice) on every page in both themes, a few steps into each run, and checks the theme toggle and embed override.
 
 ### Design system
 
-State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-safe): `bar`, `mark-compare`, `mark-swap`, `mark-write`, `mark-focus`, `mark-frontier`, `mark-done`. `src/viz/marks.ts` is the one shared vocabulary (`compare`, `swap`, `write`, `pivot`, `min`, `key`, `frontier`, `sorted`, `visited`, `found`, `path`, `reject`), each with a glyph and `bg`/`fill`/`stroke`/`text` classes, so colour is never the only cue and a colour means the same thing in every view. Modules relabel marks in their legend rather than inventing colours. The UI is light-only until the legacy pages are ported.
+State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-safe): `bar`, `mark-compare`, `mark-swap`, `mark-write`, `mark-focus`, `mark-frontier`, `mark-done`. `src/viz/marks.ts` is the one shared vocabulary (`compare`, `swap`, `write`, `pivot`, `min`, `key`, `frontier`, `sorted`, `visited`, `found`, `path`, `reject`), each with a glyph and `bg`/`fill`/`stroke`/`text` classes, so colour is never the only cue and a colour means the same thing in every view. Modules relabel marks in their legend rather than inventing colours.
+
+**Colours are semantic tokens, never palette classes.** `globals.css` defines what a colour is *for*: planes `page`, `surface`, `subtle`, `sunken`; hairlines `line-soft`, `line`, `line-strong`; text `ink`, `ink-soft`, `ink-muted` (and `ink-faint`, decoration only, below text contrast); `accent`/`accent-strong` (white text on them), `accent-ink`, `accent-soft`, `accent-line`; feedback `good`/`warn`/`bad` with `-ink`, `-soft`, `-line`; `mark-*-ink` for mark hues as text; `series-1..4` for chart series. Write `bg-surface text-ink border-line`, not `bg-white text-gray-900 border-gray-200`; every ink clears 4.5:1 on page, surface and sunken in both themes. Text on a mark *fill* is `text-white` on `compare` and `text-on-mark` (dark in both themes) on every other mark; unmarked text takes the theme's `ink`. Tints of a fill (`bg-mark-done/25`, `opacity-25` overlays) work in both themes.
+
+**Dark mode** redefines the tokens, so components need no `dark:` variants. It follows the OS by default; the header's `ThemeToggle` (System → Light → Dark) stamps `data-theme` on `<html>`, saved in localStorage and applied before paint by `THEME_SCRIPT` (`src/lib/theme.ts`), and an embed can pass `?theme=light|dark`. The custom `dark:` variant covers both the OS and the stamp, for the rare one-off (the home-page gradient). Mark fills are the same in both themes (see the note in `globals.css` on why they sit above the dataviz dark lightness band). Colours that end up in style props (chart series) are `var(--color-…)` strings, set via `style`, not SVG attributes.
+
+**Accessibility conventions:** a view's panels are `role="group"` with a label, not `<section>` landmarks or headings (a page can hold several visualisers, and panel titles don't belong in its outline). Narration is a polite live region while stepping and silent during playback. Keyboard-readable charts are sliders with `aria-valuetext`. `html` has `scroll-padding-top` so anchors and focus clear the sticky header, and `prefers-reduced-motion` stops CSS tweens as well as Motion's.
 
 ## Naming Conventions
 
@@ -77,5 +86,5 @@ State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-s
 
 - Next.js 16.4, React 19.3, Tailwind CSS 4.3, TypeScript 6.0 (pinned below 6.1: typescript-eslint doesn't support 7 yet, and TS 7 drops the JS compiler API Next uses)
 - Motion 14 (`motion/react`) for layout animation
-- Vitest 5 + fast-check (property tests), Playwright 1.64 (e2e)
+- Vitest 5 + fast-check (property tests), Playwright 1.64 (e2e), @axe-core/playwright 4.13 (accessibility scans)
 - react-icons, Radix UI (tabs), Vercel Analytics

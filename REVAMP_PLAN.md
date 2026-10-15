@@ -710,8 +710,34 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
   - **Tests:** 943 unit/property tests (942 pass, 1 skipped) and 97 Playwright tests, covering the lessons and every visualiser.
 - **Not done:**
   - Lessons for the remaining concepts. The map lists them as planned.
-  - The Lighthouse accessibility audit.
-  - Dark theme.
+  - ~~The Lighthouse accessibility audit~~ and ~~dark theme~~: done on `revamp/a11y-dark`, below.
+
+**Accessibility and dark mode (2026-10-15, branch `revamp/a11y-dark`):**
+- **Audit:**
+  - axe-core (WCAG 2.2 A/AA plus best practice) ran over all 74 pages. Run in place of Lighthouse, which uses the same engine on fewer rules.
+  - The baseline found five rules failing.
+    - Colour contrast: 272 elements, mostly `gray-400` text at about 2.5:1, and white on the green and orange mark fills.
+    - Tabs whose `aria-controls` pointed nowhere.
+    - Duplicate landmarks when a page holds two visualisers.
+    - Heading order in the view panels.
+    - An unroled chart element with an `aria-label`.
+  - All are fixed. `e2e/a11y.spec.ts` now scans every page in both themes on every run.
+  - Manual checks:
+    - A keyboard walk: every focus visible and clear of the sticky header (`scroll-padding-top`).
+    - 320px reflow with no horizontal scroll.
+    - Reduced motion now also stops CSS tweens.
+    - Narration as a polite live region.
+    - The mobile header now shows Learn and Compare, which phones could not reach before.
+- **Dark mode:**
+  - Semantic colour tokens replace ~600 palette classes.
+  - Follows the OS, with a System/Light/Dark toggle in the header, applied before paint so it never flashes.
+  - `?theme=` for embeds.
+  - Compare-page series use the dataviz dark steps, validated against the dark card.
+  - Mark fills stay Okabe–Ito. The validator flags three as bright for the dark band, but stepping them down merges amber into orange, so that is a recorded trade-off.
+- **Tests:**
+  - 943 unit tests (942 pass, 1 skipped).
+  - 247 Playwright tests, including 150 axe scans, all passing against a production build.
+  - The suite can now run on `next start` as well as `next dev`.
 
 ### Phase 2 — Code workspace
 
