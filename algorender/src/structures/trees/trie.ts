@@ -1,4 +1,4 @@
-import { defineStructure, type OperationSpec } from '@/engine/module';
+import { defineStructure, type Args, type OperationSpec } from '@/engine/module';
 import { createRng } from '@/engine/random';
 import type { Frame } from '@/engine/types';
 import { TreeTracer, treeSnapshot, type TreeDrawing } from '@/viz/tree/tracer';
@@ -97,9 +97,20 @@ function pathOf(trie: Trie, word: string): NodeId[] {
   return path;
 }
 
-function* invalid(t: TreeTracer<Trie>, raw: string, error: string): Generator<F, void> {
-  yield t.frame({ line: 0, note: `Can't use ${q(raw)}: ${error}. Nothing changed.`, vars: {} });
+/** Why the text in `field` can't be used as a word, or null (also while the form's input doesn't parse yet). */
+function badWord(args: Args | undefined, field: string): string | null {
+  if (!args) return null;
+  const raw = String(args[field]).trim();
+  const read = readWord(raw);
+  return 'error' in read ? `Can't use ${q(raw)}: ${read.error}` : null;
 }
+
+const tooBig = (trie: Trie) =>
+  Object.keys(trie.nodes).length > MAX_TRIE_NODES ? `The trie is full (over ${MAX_TRIE_NODES} nodes), the most this view draws clearly` : null;
+const noWords = (trie: Trie) => (wordsOf(trie).length === 0 ? NO_WORDS : null);
+
+// The `'error' in read` returns below are unreachable from the explorer and
+// URL replay, which check disabledReason (badWord) first.
 
 // ───────────────────────────── insert ─────────────────────────────
 
@@ -116,15 +127,11 @@ const insert: Op = {
     '    node ← node.child[c]',
     '  mark node as the end of a word',
   ],
-  disabledReason: (trie) =>
-    Object.keys(trie.nodes).length > MAX_TRIE_NODES ? `The trie is full (over ${MAX_TRIE_NODES} nodes), the most this view draws clearly` : null,
+  disabledReason: (trie, args) => tooBig(trie) ?? badWord(args, 'word'),
   *run(model, args) {
     const t = new TreeTracer(model, drawing, STATS);
     const read = readWord(String(args.word));
-    if ('error' in read) {
-      yield* invalid(t, String(args.word), read.error);
-      return model;
-    }
+    if ('error' in read) return model;
     const { word } = read;
     yield t.frame({
       line: 1,
@@ -214,14 +221,11 @@ const search: Op = {
     '    node ← node.child[c]',
     '  return node is the end of a word',
   ],
-  disabledReason: (trie) => (wordsOf(trie).length === 0 ? NO_WORDS : null),
+  disabledReason: (trie, args) => noWords(trie) ?? badWord(args, 'word'),
   *run(model, args) {
     const t = new TreeTracer(model, drawing, STATS);
     const read = readWord(String(args.word));
-    if ('error' in read) {
-      yield* invalid(t, String(args.word), read.error);
-      return model;
-    }
+    if ('error' in read) return model;
     const { word } = read;
     const path = [ROOT];
     for (let i = 0; i < word.length; i++) {
@@ -296,14 +300,11 @@ const autocomplete: Op = {
     '  for each child c, in a–z order:',
     '    collect(node.child[c], s + c)',
   ],
-  disabledReason: (trie) => (wordsOf(trie).length === 0 ? NO_WORDS : null),
+  disabledReason: (trie, args) => noWords(trie) ?? badWord(args, 'prefix'),
   *run(model, args) {
     const t = new TreeTracer(model, drawing, STATS);
     const read = readWord(String(args.prefix));
-    if ('error' in read) {
-      yield* invalid(t, String(args.prefix), read.error);
-      return model;
-    }
+    if ('error' in read) return model;
     const p = read.word;
     const found: string[] = [];
     const output = () => ({ label: `Words starting with ${q(p)}`, items: [...found] });
@@ -392,25 +393,22 @@ const autocomplete: Op = {
 const remove: Op = {
   id: 'delete',
   label: 'Delete',
-  args: [{ name: 'word', label: 'Word', type: 'text', maxLength: MAX_WORD, placeholder: 'e.g. card' }],
+  // Only stored words: Search shows how a missing word or a bare prefix is ruled out.
+  args: [{ name: 'word', label: 'Word', type: 'choice', options: (trie) => wordsOf(trie) }],
   pseudocode: [
     'delete(word):',
     '  node ← end of word’s path',
-    '  if missing or not node.end: stop',
     '  node.end ← false',
     '  while node ≠ root and node is unused:',
     '    remove node;  node ← its parent',
   ],
-  disabledReason: (trie) => (wordsOf(trie).length === 0 ? NO_WORDS : null),
+  disabledReason: noWords,
   *run(model, args) {
     const t = new TreeTracer(model, drawing, STATS);
-    const read = readWord(String(args.word));
-    if ('error' in read) {
-      yield* invalid(t, String(args.word), read.error);
-      return model;
-    }
-    const { word } = read;
+    const word = String(args.word);
     const full = pathOf(model, word);
+    const endId = full[full.length - 1];
+    if (full.length <= word.length || !model.nodes[endId].end) return model; // unreachable: the word is a choice
     for (let i = 1; i < full.length; i++) {
       t.count('lookups');
       const path = full.slice(0, i + 1);
@@ -423,34 +421,11 @@ const remove: Op = {
         vars: { word },
       });
     }
-    if (full.length <= word.length) {
-      t.count('lookups');
-      const at = full[full.length - 1];
-      yield t.frame({
-        line: 2,
-        note: `${nodeName(prefixOf(at), true)} has no child for ${q(word[full.length - 1])}, so ${q(word)} is not stored. Nothing to delete.`,
-        marks: { visited: full.slice(0, -1), reject: [at] },
-        path: full,
-        vars: { word, found: false },
-      });
-      return model;
-    }
-    const endId = full[full.length - 1];
-    if (!model.nodes[endId].end) {
-      yield t.frame({
-        line: 2,
-        note: `The path for ${q(word)} exists, but its node is not marked as a word end: it is only a prefix of ${sample(model, endId)}. Nothing to delete.`,
-        marks: { visited: full.slice(0, -1), reject: [endId] },
-        path: full,
-        vars: { word, found: false },
-      });
-      return model;
-    }
 
     t.model = { nodes: { ...model.nodes, [endId]: { ...model.nodes[endId], end: false } } };
     const hasKids = letters(model.nodes[endId]).length > 0;
     yield t.frame({
-      line: 3,
+      line: 2,
       note: `Unmark ${q(word)} as a word end: its double ring goes. Nodes that no other word needs can now be removed too.`,
       marks: { visited: full.slice(0, -1), key: [endId] },
       path: full,
@@ -469,7 +444,7 @@ const remove: Op = {
       const kids = letters(n);
       if (id === ROOT || kids.length > 0 || n.end) {
         yield t.frame({
-          line: 4,
+          line: 3,
           note:
             id === ROOT
               ? 'Back at the root, which always stays. Done.'
@@ -493,7 +468,7 @@ const remove: Op = {
       t.count('removed');
       depth -= 1;
       yield t.frame({
-        line: 5,
+        line: 4,
         note: `${q(prefixOf(id))} has no children and ends no word, so nothing needs it: remove it and step up to ${nodeName(prefixOf(parentId))}.`,
         marks: { visited: full.slice(0, depth), key: [parentId] },
         path: full.slice(0, depth + 1),

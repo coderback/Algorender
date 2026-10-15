@@ -3,19 +3,20 @@ import type { Frame } from '@/engine/types';
 import { GraphTracer } from '@/viz/graph/tracer';
 import type { GraphState, Mark, NodeId } from '@/viz/graph/types';
 import {
-  badLabel,
+  addEdgeReason,
+  addVertexReason,
+  EDGE_ARG,
   empty,
+  endpoints,
   findEdge,
   FROM_ARG,
-  full,
   hasVertex,
   idOf,
   makeModel,
   matrixPanel,
-  missing,
+  NEW_VERTEX_ARG,
   noEdges,
   TO_ARG,
-  tooFew,
   VERTEX_ARG,
   withEdge,
   withoutEdge,
@@ -52,13 +53,13 @@ const rowAndColumn = (m: GraphModel, x: NodeId, mark: Mark): CellMark[] =>
     { row: n.id, col: x, mark },
   ]);
 
+// The early returns below are unreachable from the explorer and URL replay,
+// which check choices and disabledReason first; they keep a direct call with
+// bad arguments from corrupting the model.
+
 function* addVertex(m: GraphModel, args: Args): Op {
   const x = String(args.v);
-  const problem = badLabel(x) ?? (hasVertex(m, x) ? `${x} already has a row and a column: vertex names must be unique. Nothing changes.` : null);
-  if (problem) {
-    yield view(m, 0).frame({ line: 1, note: problem, vars: { x } });
-    return m;
-  }
+  if (addVertexReason(m, args)) return m;
   const V = m.nodes.length;
   const next = withVertex(m, x);
   const cells = V * V + (2 * V + 1);
@@ -74,11 +75,7 @@ function* addVertex(m: GraphModel, args: Args): Op {
 
 function* removeVertex(m: GraphModel, args: Args): Op {
   const x = String(args.v);
-  const problem = missing(m, x);
-  if (problem) {
-    yield view(m, 0).frame({ line: 0, note: `${problem} Nothing to remove.`, vars: { x } });
-    return m;
-  }
+  if (!hasVertex(m, x)) return m;
   const V = m.nodes.length;
   const t = view(m, 0, rowAndColumn(m, x, 'reject'));
   t.mark(x, 'reject');
@@ -98,30 +95,10 @@ function* removeVertex(m: GraphModel, args: Args): Op {
   return next;
 }
 
-function* setEdge(m: GraphModel, args: Args, on: boolean): Op {
-  const [u, v] = [String(args.u), String(args.v)];
-  const problem = missing(m, u, v) ?? (on && u === v ? `M[${u}][${u}] would be a self-loop, which this graph doesn't allow.` : null);
-  if (problem) {
-    yield view(m, 0).frame({ line: 1, note: `${problem} Nothing changes.`, vars: { u, v } });
-    return m;
-  }
-  const exists = findEdge(m, u, v) != null;
-  if (!on && !exists) {
-    yield view(m, 1, [{ row: u, col: v, mark: 'key' }]).frame({
-      line: 1,
-      note: `M[${u}][${v}] is already 0: there is no edge ${u}${m.directed ? '→' : '–'}${v} to remove. Checking took one cell read.`,
-      vars: { u, v },
-    });
-    return m;
-  }
-  if (on && exists) {
-    yield view(m, 1, [{ row: u, col: v, mark: 'found' }]).frame({
-      line: 2,
-      note: `M[${u}][${v}] is already 1: the edge exists, and a matrix has room for only one edge per pair. Nothing changes.`,
-      vars: { u, v },
-    });
-    return m;
-  }
+/** Sets M[u][v] (and its mirror when undirected) to 1 or 0: add-edge passes u and v, remove-edge an existing edge. */
+function* setEdge(m: GraphModel, u: NodeId, v: NodeId, on: boolean): Op {
+  // Add edge only offers two different vertices that aren't joined; remove edge only existing edges.
+  if (!hasVertex(m, u) || !hasVertex(m, v) || u === v || (findEdge(m, u, v) != null) === on) return m;
   const next = on ? withEdge(m, u, v, 1) : withoutEdge(m, u, v);
   const edgeId = idOf(m, on ? { from: u, to: v } : findEdge(m, u, v)!);
   const sep = m.directed ? '→' : '–';
@@ -129,7 +106,7 @@ function* setEdge(m: GraphModel, args: Args, on: boolean): Op {
     const t = view(next, 1, [{ row: u, col: v, mark: 'write' }]);
     if (on) t.markEdge(edgeId, 'write');
     yield t.frame({
-      line: 2,
+      line: 1,
       note: on
         ? `Set M[${u}][${v}] ← 1. One write, O(1): the row and column numbers lead straight to the cell, whatever the size of the graph.`
         : `Set M[${u}][${v}] ← 0: the edge ${u} → ${v} is gone. One write, O(1).`,
@@ -148,7 +125,7 @@ function* setEdge(m: GraphModel, args: Args, on: boolean): Op {
   t1.setPanel({ ...panel, cells: panel.cells.map((row, i) => (i === r ? row.map((x, k) => (k === c ? '0' : x)) : row)) });
   t1.markEdge(edgeId, on ? 'write' : 'reject');
   yield t1.frame({
-    line: 2,
+    line: 1,
     note: on
       ? `Set M[${u}][${v}] ← 1. One write, O(1): the row and column numbers lead straight to the cell, whatever the size of the graph.`
       : `Set M[${u}][${v}] ← 0. One write, O(1).`,
@@ -161,7 +138,7 @@ function* setEdge(m: GraphModel, args: Args, on: boolean): Op {
   ]);
   if (on) t2.markEdge(edgeId, 'write');
   yield t2.frame({
-    line: 3,
+    line: 2,
     note: on
       ? `Undirected, so mirror it: M[${v}][${u}] ← 1 too. The matrix of an undirected graph is symmetric about its diagonal.`
       : `Undirected, so clear the mirror cell M[${v}][${u}] as well: ${u}${sep}${v} is gone.`,
@@ -172,11 +149,7 @@ function* setEdge(m: GraphModel, args: Args, on: boolean): Op {
 
 function* hasEdge(m: GraphModel, args: Args): Op {
   const [u, v] = [String(args.u), String(args.v)];
-  const problem = missing(m, u, v);
-  if (problem) {
-    yield view(m, 0).frame({ line: 0, note: problem, vars: { u, v } });
-    return m;
-  }
+  if (!hasVertex(m, u) || !hasVertex(m, v)) return m;
   const yes = findEdge(m, u, v) != null;
   const t = view(m, 1, [{ row: u, col: v, mark: yes ? 'found' : 'key' }]);
   t.mark(u, 'key');
@@ -192,11 +165,7 @@ function* hasEdge(m: GraphModel, args: Args): Op {
 
 function* neighbours(m: GraphModel, args: Args): Op {
   const u = String(args.v);
-  const problem = missing(m, u);
-  if (problem) {
-    yield view(m, 0).frame({ line: 0, note: problem, vars: { u } });
-    return m;
-  }
+  if (!hasVertex(m, u)) return m;
   const found: NodeId[] = [];
   const marks: CellMark[] = [];
   let reads = 0;
@@ -245,9 +214,9 @@ export const adjacencyMatrix = defineStructure<GraphModel, GraphState>({
     {
       id: 'add-vertex',
       label: 'Add vertex',
-      args: [VERTEX_ARG],
+      args: [NEW_VERTEX_ARG],
       pseudocode: ['addVertex(x):', '  if x already exists: stop', '  allocate a (V+1) × (V+1) matrix', '  copy the old cells; fill x with 0s'],
-      disabledReason: full,
+      disabledReason: addVertexReason,
       run: addVertex,
     },
     {
@@ -262,17 +231,17 @@ export const adjacencyMatrix = defineStructure<GraphModel, GraphState>({
       id: 'add-edge',
       label: 'Add edge',
       args: [FROM_ARG, TO_ARG],
-      pseudocode: ['addEdge(u, v):', '  if u or v is missing: stop', '  M[u][v] ← 1', '  if undirected: M[v][u] ← 1'],
-      disabledReason: tooFew,
-      run: (m, a) => setEdge(m, a, true),
+      pseudocode: ['addEdge(u, v):', '  M[u][v] ← 1', '  if undirected: M[v][u] ← 1'],
+      disabledReason: addEdgeReason,
+      run: (m, a) => setEdge(m, String(a.u), String(a.v), true),
     },
     {
       id: 'remove-edge',
       label: 'Remove edge',
-      args: [FROM_ARG, TO_ARG],
-      pseudocode: ['removeEdge(u, v):', '  if M[u][v] = 0: stop', '  M[u][v] ← 0', '  if undirected: M[v][u] ← 0'],
+      args: [EDGE_ARG],
+      pseudocode: ['removeEdge(u, v):', '  M[u][v] ← 0', '  if undirected: M[v][u] ← 0'],
       disabledReason: noEdges,
-      run: (m, a) => setEdge(m, a, false),
+      run: (m, a) => setEdge(m, ...endpoints(String(a.e)), false),
     },
     {
       id: 'has-edge',

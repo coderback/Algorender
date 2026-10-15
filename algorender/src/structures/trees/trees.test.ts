@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { Args, StructureModule } from '@/engine/module';
+import { blockedReason, parseOps, replay } from '@/components/explorer/operations';
+import type { AnyStructure, Args, StructureModule } from '@/engine/module';
 import { recordOperation } from '@/engine/trace';
 import type { Frame } from '@/engine/types';
 import { layoutTree } from '@/viz/tree/layout';
@@ -122,6 +123,30 @@ const lastOutput = <M>(run: Run<M>) => run.frames[run.frames.length - 1].state.o
 
 const keys = fc.integer({ min: 1, max: 40 });
 
+/**
+ * The arguments a learner could give `op` right now: a choice argument takes
+ * one of the model's current options (picked by `pick`), anything else `free`.
+ */
+function offered<M>(ds: StructureModule<M, TreeState>, op: string, model: M, free: Args, pick: number): Args {
+  const spec = ds.operations.find((o) => o.id === op)!;
+  return Object.fromEntries(
+    spec.args.map((a) => {
+      if (a.type !== 'choice') return [a.name, free[a.name]];
+      const options = a.options(model);
+      return [a.name, options.length ? options[pick % options.length] : ''];
+    }),
+  );
+}
+
+/** Runs a call the explorer allows (asserting it is allowed), with every check runOp makes. */
+function runAllowed<M>(ds: StructureModule<M, TreeState>, op: string, model: M, args: Args): Run<M> {
+  expect(blockedReason(ds as AnyStructure, model, { op, args })).toBeNull();
+  return runOp(ds, op, model, args);
+}
+
+/** What a narration says when an operation found nothing to do: allowed calls must never end like this. */
+const NOTHING_TO_DO = /nothing to delete|is not in the tree and nothing changes|Nothing changed|is not stored/i;
+
 // ───────────────────────────── invariants ─────────────────────────────
 
 function expectBst(tree: BinTree<BinNode>, expected: Set<number>) {
@@ -221,37 +246,81 @@ describe.each(treeStructures.map((ds) => [ds.slug, ds] as const))('%s', (_, ds) 
   it('keeps pseudo-code lines short enough for the side panel', () => {
     for (const op of ds.operations) for (const line of op.pseudocode) expect(line.length, line).toBeLessThanOrEqual(40);
   });
+
+  it('offers exactly the stored keys as choices, and blocks anything else, even from a URL', () => {
+    for (const example of ds.initial) {
+      for (const seed of [1, 7]) {
+        const model = example.make(seed);
+        for (const op of ds.operations) {
+          for (const a of op.args) {
+            if (a.type !== 'choice') continue;
+            expect(a.options(model), `${op.id} on ${example.id}`).toEqual(stored(ds.slug, model));
+            for (const bogus of ['0', '100', 'zzz', 'CAR']) {
+              expect(blockedReason(ds, model, { op: op.id, args: { [a.name]: bogus } })).toMatch(/pick one/);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('URL replay stops at a delete of something already gone', () => {
+    const del = ds.operations.find((o) => o.id === 'delete');
+    if (!del) return; // the heap has no keyed delete
+    const model = ds.initial[0].make(1);
+    const first = stored(ds.slug, model)[0];
+    const { applied, model: after } = replay(ds, model, parseOps(`delete:${first};delete:${first};delete:${stored(ds.slug, model)[1]}`, ds));
+    expect(applied).toHaveLength(1);
+    expect(stored(ds.slug, after)).not.toContain(first);
+  });
 });
+
+/** What a structure stores, as its delete dropdown lists it. */
+function stored(slug: string, model: unknown): string[] {
+  if (slug === 'b-tree') return allKeys(model as BTree).map(String);
+  if (slug === 'trie') return wordsOf(model as Trie);
+  if (slug === 'heap') return [];
+  return inorder(model as BinTree<BinNode>).map(String);
+}
 
 // ───────────────────────────── binary search tree ─────────────────────────────
 
-const bstOps = fc.array(
-  fc.oneof(
-    fc.record({ op: fc.constant('insert' as const), key: keys }),
-    fc.record({ op: fc.constant('delete' as const), key: keys }),
-    fc.record({ op: fc.constant('search' as const), key: keys }),
-  ),
-  { minLength: 1, maxLength: 30 },
-);
+/** Insert and search take any key (a missing or duplicate one is narrated); delete picks one of the stored keys. */
+const bstOps = fc.array(fc.record({ op: fc.constantFrom('insert', 'delete', 'search'), key: keys, pick: fc.nat() }), { minLength: 1, maxLength: 30 });
+
+/**
+ * Checks the call against the explorer's rules: a delete is allowed exactly
+ * when its key is stored. Returns the allowed call's arguments, or null.
+ */
+function allowedKeyCall<M>(ds: StructureModule<M, TreeState>, model: M, ref: ReadonlySet<number>, op: string, key: number, pick: number): Args | null {
+  const deleting = blockedReason(ds as AnyStructure, model, { op: 'delete', args: { key } });
+  expect(deleting == null).toBe(ref.has(key));
+  const args = offered(ds, op, model, { key }, pick);
+  return blockedReason(ds as AnyStructure, model, { op, args }) ? null : args;
+}
 
 describe('binary-tree', () => {
   const ds = binaryTree as StructureModule<BinTree<BinNode>, TreeState>;
   const start = (id: string) => ds.initial.find((s) => s.id === id)!.make(3);
 
-  it('matches a sorted set under random inserts, deletes and searches', () => {
+  it('matches a sorted set under random inserts, deletes and searches, allowing exactly the deletes of stored keys', () => {
     fc.assert(
       fc.property(fc.constantFrom('balanced', 'empty', 'sorted', 'random'), bstOps, (init, ops) => {
         let model = start(init);
         const ref = new Set(inorder(model));
-        for (const { op, key } of ops) {
-          const spec = ds.operations.find((o) => o.id === op)!;
-          if (spec.disabledReason?.(model)) {
+        for (const { op, key: k, pick } of ops) {
+          const args = allowedKeyCall(ds, model, ref, op, k, pick);
+          if (!args) {
             expect(op === 'insert' ? ref.size >= MAX_NODES : ref.size === 0).toBe(true);
             continue;
           }
-          const run = runOp(ds, op, model, { key });
+          const key = Number(args.key);
+          const run = runAllowed(ds, op, model, args);
           if (op === 'insert') ref.add(key);
-          if (op === 'delete') ref.delete(key);
+          if (op === 'delete') {
+            for (const f of run.frames) expect(f.note).not.toMatch(NOTHING_TO_DO);
+            ref.delete(key);
+          }
           if (op === 'search') {
             expect(lastVars(run).found).toBe(ref.has(key));
             expect(run.result).toBe(model);
@@ -317,9 +386,20 @@ describe('binary-tree', () => {
     expect(ds.operations.find((o) => o.id === 'insert')!.disabledReason?.(start('balanced'))).toBeNull();
   });
 
-  it('leaves the tree alone on a duplicate insert', () => {
+  it('still runs a duplicate insert and a search for a missing key: each walk shows why', () => {
     const model = start('balanced');
-    expect(runOp(ds, 'insert', model, { key: 40 }).result).toBe(model);
+    const dup = runAllowed(ds, 'insert', model, { key: 40 });
+    expect(dup.result).toBe(model);
+    expect(dup.frames.at(-1)!.note).toMatch(/already in the tree/);
+    const missing = runAllowed(ds, 'search', model, { key: 45 });
+    expect(lastVars(missing).found).toBe(false);
+    expect(missing.frames.length).toBeGreaterThan(2); // root, 30's subtree, 40's: one comparison per level
+  });
+
+  it('only offers stored keys to delete', () => {
+    const model = start('balanced');
+    expect(blockedReason(ds as AnyStructure, model, { op: 'delete', args: { key: 45 } })).toMatch(/pick one/);
+    expect(blockedReason(ds as AnyStructure, model, { op: 'delete', args: { key: 40 } })).toBeNull();
   });
 });
 
@@ -335,12 +415,16 @@ describe('avl-tree', () => {
         let model = start(init);
         const ref = new Set(inorder(model));
         expectAvl(model, ref);
-        for (const { op, key } of ops) {
-          const spec = ds.operations.find((o) => o.id === op)!;
-          if (spec.disabledReason?.(model)) continue;
-          const run = runOp(ds, op, model, { key });
+        for (const { op, key: k, pick } of ops) {
+          const args = allowedKeyCall(ds, model, ref, op, k, pick);
+          if (!args) continue;
+          const key = Number(args.key);
+          const run = runAllowed(ds, op, model, args);
           if (op === 'insert') ref.add(key);
-          if (op === 'delete') ref.delete(key);
+          if (op === 'delete') {
+            for (const f of run.frames) expect(f.note).not.toMatch(NOTHING_TO_DO);
+            ref.delete(key);
+          }
           if (op === 'search') expect(lastVars(run).found).toBe(ref.has(key));
           model = run.result;
           expectAvl(model, ref);
@@ -428,7 +512,7 @@ describe('heap', () => {
             expect(lastVars(run)['A[0]']).toBe(best());
             expect(run.result).toBe(model);
           } else {
-            const run = runOp(ds, 'heapify', model, { values: step.values.join(', ') });
+            const run = runAllowed(ds, 'heapify', model, { values: step.values.join(', ') });
             ref = [...step.values];
             model = run.result;
           }
@@ -457,10 +541,15 @@ describe('heap', () => {
     expect(asks.length).toBeGreaterThan(0);
   });
 
-  it('rejects a malformed array without changing anything', () => {
+  it('blocks a malformed array with the reason, and replay stops there', () => {
     const model = ds.initial[0].make(2);
-    expect(runOp(ds, 'heapify', model, { values: '4, x, 9' }).result).toBe(model);
-    expect(runOp(ds, 'heapify', model, { values: '4, 200' }).result).toBe(model);
+    const why = (values: string) => blockedReason(ds as AnyStructure, model, { op: 'heapify', args: { values } });
+    expect(why('4, x, 9')).toBe('Can\'t build a heap from "4, x, 9": "x" is not a whole number from 1 to 99');
+    expect(why('4, 200')).toMatch(/"200" is not a whole number from 1 to 99/);
+    expect(why(Array.from({ length: 32 }, () => '1').join(','))).toMatch(/at most 31 numbers/);
+    expect(why('9 4 7')).toBeNull();
+    expect(ds.operations.find((o) => o.id === 'heapify')!.disabledReason!(model)).toBeNull(); // nothing to judge until something is typed
+    expect(replay(ds as AnyStructure, model, parseOps('insert:5;heapify:4%2C%20x;insert:6', ds as AnyStructure)).applied).toHaveLength(1);
   });
 });
 
@@ -475,12 +564,16 @@ describe('b-tree', () => {
         let model = ds.initial.find((s) => s.id === init)!.make(seed);
         const ref = new Set(allKeys(model));
         expectBTree(model, ref);
-        for (const { op, key } of ops) {
-          const spec = ds.operations.find((o) => o.id === op)!;
-          if (spec.disabledReason?.(model)) continue;
-          const run = runOp(ds, op, model, { key });
+        for (const { op, key: k, pick } of ops) {
+          const args = allowedKeyCall(ds, model, ref, op, k, pick);
+          if (!args) continue;
+          const key = Number(args.key);
+          const run = runAllowed(ds, op, model, args);
           if (op === 'insert') ref.add(key);
-          if (op === 'delete') ref.delete(key);
+          if (op === 'delete') {
+            for (const f of run.frames) expect(f.note).not.toMatch(NOTHING_TO_DO);
+            ref.delete(key);
+          }
           if (op === 'search') expect(lastVars(run).found).toBe(ref.has(key));
           model = run.result;
           expectBTree(model, ref);
@@ -511,7 +604,7 @@ describe('b-tree', () => {
     for (let seed = 0; seed < 30; seed++) {
       let model = ds.initial.find((s) => s.id === 'random')!.make(seed);
       for (const key of allKeys(model)) {
-        const run = runOp(ds, 'delete', model, { key });
+        const run = runAllowed(ds, 'delete', model, { key });
         const notes = run.frames.map((f) => f.note).join(' ');
         if (notes.includes('borrow it through the parent')) borrows++;
         if (notes.includes('merge the short node')) merges++;
@@ -529,28 +622,33 @@ describe('b-tree', () => {
 describe('trie', () => {
   const ds = trie as StructureModule<Trie, TreeState>;
   const word = fc.string({ unit: fc.constantFrom('a', 'b', 'c', 'd'), minLength: 1, maxLength: 5 });
-  type TrieOp = { op: 'insert' | 'search' | 'prefix' | 'delete'; w: string };
+  type TrieOp = { op: 'insert' | 'search' | 'prefix' | 'delete'; w: string; pick: number };
   const trieOps = fc.array(
-    fc.record({ op: fc.constantFrom<TrieOp['op']>('insert', 'insert', 'search', 'prefix', 'delete'), w: word }),
+    fc.record({ op: fc.constantFrom<TrieOp['op']>('insert', 'insert', 'search', 'prefix', 'delete'), w: word, pick: fc.nat() }),
     { minLength: 1, maxLength: 30 },
   );
 
-  it('matches a set of words and answers prefix queries after every operation', () => {
+  it('matches a set of words and answers prefix queries after every operation, deleting only stored words', () => {
     fc.assert(
       fc.property(fc.constantFrom('dictionary', 'empty', 'shared', 'random'), trieOps, (init, ops) => {
         let model = ds.initial.find((s) => s.id === init)!.make(4);
         const ref = new Set(wordsOf(model));
         expectTrie(model, ref);
-        for (const { op, w } of ops) {
-          const spec = ds.operations.find((o) => o.id === op)!;
-          if (spec.disabledReason?.(model)) {
+        for (const { op, w: typed, pick } of ops) {
+          // Deleting a word is allowed exactly when it is stored.
+          expect(blockedReason(ds as AnyStructure, model, { op: 'delete', args: { word: typed } }) == null).toBe(ref.has(typed));
+          const args = offered(ds, op, model, { word: typed, prefix: typed }, pick);
+          if (blockedReason(ds as AnyStructure, model, { op, args })) {
             if (op !== 'insert') expect(ref.size).toBe(0);
             continue;
           }
-          const args: Args = op === 'prefix' ? { prefix: w } : { word: w };
-          const run = runOp(ds, op, model, args);
+          const w = String(args.word ?? args.prefix);
+          const run = runAllowed(ds, op, model, args);
           if (op === 'insert') ref.add(w);
-          if (op === 'delete') ref.delete(w);
+          if (op === 'delete') {
+            for (const f of run.frames) expect(f.note).not.toMatch(NOTHING_TO_DO);
+            ref.delete(w);
+          }
           if (op === 'search') expect(lastVars(run).found).toBe(ref.has(w));
           if (op === 'prefix') expect(lastOutput(run)).toEqual([...ref].filter((x) => x.startsWith(w)).sort());
           model = run.result;
@@ -570,9 +668,19 @@ describe('trie', () => {
     expect(ask(word).choices[ask(word).answer]).toBe('A stored word');
   });
 
-  it('rejects words with other characters, and normalises case', () => {
+  it('blocks words with other characters before they run, and normalises case', () => {
     const model = ds.initial[0].make(1);
-    expect(runOp(ds, 'insert', model, { word: 'c4t' }).result).toBe(model);
-    expect(wordsOf(runOp(ds, 'insert', model, { word: 'Cab' }).result)).toContain('cab');
+    for (const [op, field] of [['insert', 'word'], ['search', 'word'], ['prefix', 'prefix']] as const) {
+      expect(blockedReason(ds as AnyStructure, model, { op, args: { [field]: 'c4t' } })).toBe('Can\'t use "c4t": use only the letters a–z');
+      expect(blockedReason(ds as AnyStructure, model, { op, args: { [field]: 'Ca' } })).toBeNull();
+    }
+    expect(wordsOf(runAllowed(ds, 'insert', model, { word: 'Cab' }).result)).toContain('cab');
+  });
+
+  it('still runs a search for a missing word or a bare prefix: the walk shows where it fails', () => {
+    const model = ds.initial[0].make(1); // car, card, care, cat, do, dog, dot
+    expect(lastVars(runAllowed(ds, 'search', model, { word: 'cab' })).found).toBe(false);
+    expect(lastVars(runAllowed(ds, 'search', model, { word: 'ca' })).found).toBe(false);
+    expect(blockedReason(ds as AnyStructure, model, { op: 'delete', args: { word: 'ca' } })).toMatch(/pick one/);
   });
 });

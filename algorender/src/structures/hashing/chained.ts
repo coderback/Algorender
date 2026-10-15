@@ -115,14 +115,24 @@ function* scan(t: HashTracer, f: Flavor, key: string, b: number, line: number, e
   return null;
 }
 
+export const hasKey = (m: ChainedModel, key: string) => m.buckets.flat().some((e) => e.key === key);
+
+/**
+ * Why a key can't be put or added, or null. Only a new key needs room: one
+ * already stored is updated (map) or found already present (set) in place, so
+ * that still runs on a full table. `key` is null while the form's input
+ * doesn't parse; a full table then reports `full` until a stored key is typed.
+ */
+export function noRoom(m: ChainedModel, key: string | null, full: string): string | null {
+  return m.size >= MAX_KEYS && (key == null || !hasKey(m, key)) ? full : null;
+}
+
 /** Adds or updates a key: hash, scan the chain, append, then resize if the load factor is exceeded. */
 export function* insert(f: Flavor, model: ChainedModel, key: string, value: number | null): Gen {
   const t = tracerFor(model, { in: f.kind === 'map' ? `put(${key}, ${value})` : `add(${key})`, out: 'removed' });
   const m = model.buckets.length;
-  if (model.size >= MAX_KEYS && !model.buckets.flat().some((e) => e.key === key)) {
-    yield t.frame({ line: 0, note: `The demo table already holds ${MAX_KEYS} keys, the most it shows.`, vars: { result: 'error' } });
-    return model;
-  }
+  // Unreachable from the explorer (disabledReason uses noRoom); keeps a direct call from overfilling the demo.
+  if (model.size >= MAX_KEYS && !hasKey(model, key)) return model;
   const item: EntryItem = { id: `e${model.nextId}`, key, value };
   t.place(item, IN);
   const h = f.hash(key);

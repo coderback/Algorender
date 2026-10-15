@@ -3,7 +3,7 @@ import { createRng } from '@/engine/random';
 import type { Frame } from '@/engine/types';
 import { ListTracer, listSnapshot, type Item } from '@/viz/linear/tracer';
 import type { LinearState } from '@/viz/linear/types';
-import { VALUE_ARG, YES_NO, arrange, indexArg, intArg, numberChoices, plural } from './shared';
+import { VALUE_ARG, YES_NO, arrange, indexArg, indexPastEnd, intArg, numberChoices, plural } from './shared';
 
 /** A singly linked list with head and tail pointers; `items` is the order you'd meet walking from head. */
 export type ListModel = { items: readonly Item[]; nextId: number };
@@ -153,14 +153,8 @@ function* insertAt(m: ListModel, args: Args): Gen {
     yield fullError(t);
     return m;
   }
-  if (!(i >= 0 && i <= n)) {
-    yield t.frame({
-      line: 1,
-      note: `Index ${i} is out of range: an insert may go anywhere from 0 to ${n} (just after the last node).`,
-      vars: { i, length: n, result: 'error' },
-    });
-    return m;
-  }
+  // disabledReason blocks an index past the end; this only keeps a direct call from walking off the list.
+  if (!(i >= 0 && i <= n)) return m;
   const item = { id: `n${m.nextId}`, value: x };
   t.create(item, i === 0 || i === n ? i : i - 0.5);
   t.setPointer('new', item.id);
@@ -397,14 +391,8 @@ function* deleteAt(m: ListModel, args: Args): Gen {
   const i = intArg(args, 'index');
   const n = m.items.length;
   const t = tracerFor(m);
-  if (!(i >= 0 && i < n)) {
-    yield t.frame({
-      line: 1,
-      note: `Index ${i} is out of range: ${n === 0 ? 'the list is empty' : `valid indices are 0–${n - 1}`}.`,
-      vars: { i, length: n, result: 'error' },
-    });
-    return m;
-  }
+  // disabledReason blocks an index past the end; this only keeps a direct call from walking off the list.
+  if (!(i >= 0 && i < n)) return m;
   const question = {
     question: 'Which pointer has to change to unlink the node?',
     ...arrange(i === 0 ? 'The head pointer' : "The previous node's next", [i === 0 ? "The previous node's next" : 'The head pointer', "The removed node's next"], i + n),
@@ -560,6 +548,10 @@ const makeList = (values: readonly number[]): ListModel => ({
 
 const isEmpty = (m: ListModel) => (m.items.length === 0 ? 'The list is empty' : null);
 const isFull = (m: ListModel) => (m.items.length >= LIST_MAX ? `The list is full: this demo shows at most ${LIST_MAX} nodes` : null);
+/** insertAt may go anywhere from 0 to length (just after the last node). */
+const insertable = (m: ListModel, args?: Args) => isFull(m) ?? indexPastEnd(args, m.items.length, 'list', 'node', true);
+/** deleteAt needs a node at the index: 0 to length − 1. */
+const existing = (m: ListModel, args?: Args) => isEmpty(m) ?? indexPastEnd(args, m.items.length, 'list', 'node');
 
 export const linkedListStructure = defineStructure<ListModel, LinearState>({
   kind: 'structure',
@@ -582,9 +574,10 @@ export const linkedListStructure = defineStructure<ListModel, LinearState>({
   operations: [
     { id: 'insert-head', label: 'Insert at head', args: [VALUE_ARG], pseudocode: insertHeadCode, disabledReason: isFull, run: insertHead },
     { id: 'insert-tail', label: 'Insert at tail', args: [VALUE_ARG], pseudocode: insertTailCode, disabledReason: isFull, run: insertTail },
-    { id: 'insert-at', label: 'Insert at', args: [indexArg(LIST_MAX), VALUE_ARG], pseudocode: insertAtCode, disabledReason: isFull, run: insertAt },
+    { id: 'insert-at', label: 'Insert at', args: [indexArg(LIST_MAX), VALUE_ARG], pseudocode: insertAtCode, disabledReason: insertable, run: insertAt },
+    // Deleting a value that isn't there still runs: walking every node to find that out is the O(n) lesson.
     { id: 'delete-value', label: 'Delete value', args: [VALUE_ARG], pseudocode: deleteValueCode, disabledReason: isEmpty, run: deleteValue },
-    { id: 'delete-at', label: 'Delete at', args: [indexArg(LIST_MAX - 1)], pseudocode: deleteAtCode, disabledReason: isEmpty, run: deleteAt },
+    { id: 'delete-at', label: 'Delete at', args: [indexArg(LIST_MAX - 1)], pseudocode: deleteAtCode, disabledReason: existing, run: deleteAt },
     { id: 'search', label: 'Search', args: [VALUE_ARG], pseudocode: searchCode, disabledReason: isEmpty, run: search },
   ],
   stats: [

@@ -2,12 +2,12 @@ import { defineStructure, type Args, type ArgSpec, type OperationSpec } from '@/
 import { createRng } from '@/engine/random';
 import type { HashState } from '@/viz/hash/types';
 import {
-  tracerFor,
   MAX_KEYS,
   build,
   emptyChained,
   insert,
   lookup,
+  noRoom,
   removeKey,
   snapshotChained,
   type ChainedModel,
@@ -33,13 +33,13 @@ const flavor: Flavor = {
 const KEY_ARG: ArgSpec = { name: 'key', label: 'Key', type: 'text', maxLength: KEY_MAX_LENGTH, placeholder: 'key, e.g. cat' };
 const VALUE_ARG: ArgSpec = { name: 'value', label: 'Value', type: 'int', min: 0, max: 99, default: 5 };
 
-/** Text keys are trimmed and must be 1–6 characters; anything else gets an error frame rather than a crash. */
+/**
+ * Text keys are trimmed and must be 1–6 characters. The key argument's own
+ * limits enforce that before an operation runs, so a bad key here can only
+ * come from a direct call, which then changes nothing.
+ */
 const keyOf = (args: Args) => String(args.key ?? '').trim();
 const badKey = (key: string) => key.length === 0 || key.length > KEY_MAX_LENGTH;
-
-function* keyError(m: ChainedModel, key: string) {
-  yield tracerFor(m).frame({ line: 0, note: `Keys must be 1–${KEY_MAX_LENGTH} characters long; "${key}" isn't.`, vars: { result: 'error' } });
-}
 
 const putCode = [
   'put(k, v):',
@@ -73,13 +73,10 @@ const put: OperationSpec<ChainedModel, HashState> = {
   label: 'Put',
   args: [KEY_ARG, VALUE_ARG],
   pseudocode: putCode,
-  disabledReason: (m) => (m.size >= MAX_KEYS ? `The demo table holds at most ${MAX_KEYS} keys` : null),
+  disabledReason: (m, args) => noRoom(m, args ? keyOf(args) : null, `The demo table holds at most ${MAX_KEYS} keys: put a key it already has to update its value`),
   *run(m, args) {
     const key = keyOf(args);
-    if (badKey(key)) {
-      yield* keyError(m, key);
-      return m;
-    }
+    if (badKey(key)) return m;
     return yield* insert(flavor, m, key, Number(args.value));
   },
 };
@@ -126,10 +123,7 @@ export const hashTableStructure = defineStructure<ChainedModel, HashState>({
       disabledReason: isEmpty,
       *run(m, args) {
         const key = keyOf(args);
-        if (badKey(key)) {
-          yield* keyError(m, key);
-          return m;
-        }
+        if (badKey(key)) return m;
         return yield* lookup(flavor, m, key);
       },
     },
@@ -141,10 +135,7 @@ export const hashTableStructure = defineStructure<ChainedModel, HashState>({
       disabledReason: isEmpty,
       *run(m, args) {
         const key = keyOf(args);
-        if (badKey(key)) {
-          yield* keyError(m, key);
-          return m;
-        }
+        if (badKey(key)) return m;
         return yield* removeKey(flavor, m, key);
       },
     },

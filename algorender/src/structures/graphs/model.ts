@@ -1,4 +1,4 @@
-import type { ArgSpec, StatSpec } from '@/engine/module';
+import type { Args, ArgSpec, StatSpec } from '@/engine/module';
 import { circleLayout } from '@/viz/graph/layout';
 import { edgeKey } from '@/viz/graph/tracer';
 import type { AdjacencyPanel, Chip, EdgeId, Graph, Mark, MatrixPanel, NodeId } from '@/viz/graph/types';
@@ -61,16 +61,36 @@ export function listOf(m: GraphModel, u: NodeId): NodeId[] {
 
 export const degree = (m: GraphModel, u: NodeId) => listOf(m, u).length;
 
+/** "–" between the ends of an undirected edge, "→" for a directed one. */
+export const sep = (m: GraphModel) => (m.directed ? '→' : '–');
+
+/** Natural order for vertex names: A, B, …, 2, 10. */
+const byLabel = (a: string, b: string) => a.localeCompare(b, 'en', { numeric: true });
+
+/** The vertex names, sorted: the options of every vertex dropdown. */
+export const vertexLabels = (m: GraphModel): string[] => m.nodes.map((n) => n.id).sort(byLabel);
+
+/** An edge's ends as the dropdown shows them: from then to, or in name order when undirected. */
+const ends = (m: GraphModel, e: { from: NodeId; to: NodeId }): [NodeId, NodeId] =>
+  m.directed || byLabel(e.from, e.to) <= 0 ? [e.from, e.to] : [e.to, e.from];
+
+/** Every existing edge as "A–B" (or "A→B" when directed), sorted: the options of the edge dropdown. */
+export function edgeLabels(m: GraphModel): string[] {
+  return m.edges
+    .map((e) => ends(m, e))
+    .sort(([a, b], [c, d]) => byLabel(a, c) || byLabel(b, d))
+    .map(([u, v]) => `${u}${sep(m)}${v}`);
+}
+
+/** The two vertices an edge label names. */
+export function endpoints(label: string): [NodeId, NodeId] {
+  const [u = '', v = ''] = label.split(/[–→]/);
+  return [u, v];
+}
+
 /** Why a label can't name a vertex, or null. */
 export function badLabel(label: string): string | null {
   return LABEL.test(label) ? null : `"${label}" isn't a valid vertex name: use 1–3 letters or digits.`;
-}
-
-export function missing(m: GraphModel, ...ids: NodeId[]): string | null {
-  const absent = ids.filter((id) => !hasVertex(m, id));
-  if (absent.length === 0) return null;
-  const names = m.nodes.map((n) => n.id).join(', ');
-  return `There is no vertex ${absent.map((a) => `"${a}"`).join(' or ')}. ${names ? `The vertices are ${names}.` : 'The graph is empty.'}`;
 }
 
 // ───────────────────────────── changes (pure) ─────────────────────────────
@@ -135,14 +155,49 @@ export function matrixPanel(m: GraphModel, marks: { row: NodeId; col: NodeId; ma
 
 // ───────────────────────────── shared specs ─────────────────────────────
 
-export const VERTEX_ARG: ArgSpec = { name: 'v', label: 'Vertex', type: 'text', maxLength: 3, placeholder: 'e.g. G' };
-export const FROM_ARG: ArgSpec = { name: 'u', label: 'From', type: 'text', maxLength: 3, placeholder: 'from' };
-export const TO_ARG: ArgSpec = { name: 'v', label: 'To', type: 'text', maxLength: 3, placeholder: 'to' };
-export const WEIGHT_ARG: ArgSpec = { name: 'w', label: 'Weight', type: 'int', min: 1, max: 99, default: 1 };
+type ChoiceArg = Extract<ArgSpec<GraphModel>, { type: 'choice' }>;
+
+/** A new vertex's name: free text, checked by addVertexReason. */
+export const NEW_VERTEX_ARG: ArgSpec<GraphModel> = { name: 'v', label: 'Vertex', type: 'text', maxLength: 3, placeholder: 'e.g. G' };
+/** Existing vertices only, so no operation can name a vertex that isn't there. */
+export const VERTEX_ARG: ChoiceArg = { name: 'v', label: 'Vertex', type: 'choice', options: vertexLabels };
+export const FROM_ARG: ChoiceArg = { name: 'u', label: 'From', type: 'choice', options: vertexLabels };
+export const TO_ARG: ChoiceArg = { name: 'v', label: 'To', type: 'choice', options: vertexLabels };
+/** Existing edges only, e.g. "A–B"; endpoints() turns one back into its two vertices. */
+export const EDGE_ARG: ChoiceArg = { name: 'e', label: 'Edge', type: 'choice', options: edgeLabels };
+export const WEIGHT_ARG: ArgSpec<GraphModel> = { name: 'w', label: 'Weight', type: 'int', min: 1, max: 99, default: 1 };
 
 export const full = (m: GraphModel) => (m.nodes.length >= MAX_VERTICES ? `The graph is full (${MAX_VERTICES} vertices). Remove one first.` : null);
 export const empty = (m: GraphModel) => (m.nodes.length === 0 ? 'The graph has no vertices yet.' : null);
 export const noEdges = (m: GraphModel) => (m.edges.length === 0 ? 'The graph has no edges to remove.' : null);
 export const tooFew = (m: GraphModel) => (m.nodes.length < 2 ? 'An edge needs two vertices: add another vertex first.' : null);
+
+/** A simple graph with every pair already joined has no edge left to add. */
+export function complete(m: GraphModel): string | null {
+  const V = m.nodes.length;
+  const pairs = m.directed ? V * (V - 1) : (V * (V - 1)) / 2;
+  return V >= 2 && m.edges.length >= pairs
+    ? `Every ${m.directed ? 'ordered ' : ''}pair of vertices is already joined: there is no edge left to add.`
+    : null;
+}
+
+export const selfLoop = (m: GraphModel, u: NodeId, v: NodeId) =>
+  u === v ? `${u}${sep(m)}${u} would be a self-loop, which this graph doesn't allow.` : null;
+
+/** Add vertex: there is room, and the name is valid and not taken. */
+export function addVertexReason(m: GraphModel, args?: Args): string | null {
+  const room = full(m);
+  if (room || !args) return room;
+  const x = String(args.v);
+  return badLabel(x) ?? (hasVertex(m, x) ? `There is already a vertex ${x}: vertex names must be unique.` : null);
+}
+
+/** Add edge, in an unweighted graph: two different vertices that aren't joined yet. */
+export function addEdgeReason(m: GraphModel, args?: Args): string | null {
+  const shape = tooFew(m) ?? complete(m);
+  if (shape || !args) return shape;
+  const [u, v] = [String(args.u), String(args.v)];
+  return selfLoop(m, u, v) ?? (findEdge(m, u, v) ? `There is already an edge ${u}${sep(m)}${v}.` : null);
+}
 
 export const ENTRIES: StatSpec = { key: 'scanned', label: 'Entries scanned' };

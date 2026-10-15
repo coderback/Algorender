@@ -3,22 +3,23 @@ import type { Frame } from '@/engine/types';
 import { GraphTracer } from '@/viz/graph/tracer';
 import type { GraphState, Mark, NodeId } from '@/viz/graph/types';
 import {
+  addEdgeReason,
+  addVertexReason,
   adjacencyPanel,
-  badLabel,
+  EDGE_ARG,
   empty,
+  endpoints,
   ENTRIES,
   entryId,
   findEdge,
   FROM_ARG,
-  full,
   hasVertex,
   idOf,
   listOf,
   makeModel,
-  missing,
+  NEW_VERTEX_ARG,
   noEdges,
   TO_ARG,
-  tooFew,
   VERTEX_ARG,
   withEdge,
   withoutEdge,
@@ -50,14 +51,14 @@ function view(m: GraphModel, stats: Record<string, number>, marks: Marks = {}) {
   return t;
 }
 
+// The early returns below are unreachable from the explorer and URL replay,
+// which check choices and disabledReason first; they keep a direct call with
+// bad arguments from corrupting the model.
+
 function* addVertex(m: GraphModel, args: Args): Op {
   const stats = { scanned: 0, changed: 0 };
   const x = String(args.v);
-  const problem = badLabel(x) ?? (hasVertex(m, x) ? `adj[${x}] already exists: vertex names must be unique. Nothing changes.` : null);
-  if (problem) {
-    yield view(m, stats).frame({ line: 1, note: problem, vars: { x } });
-    return m;
-  }
+  if (addVertexReason(m, args)) return m;
   const next = withVertex(m, x);
   stats.changed++;
   const t = view(next, stats, { rows: { [x]: 'write' } });
@@ -73,11 +74,7 @@ function* addVertex(m: GraphModel, args: Args): Op {
 function* removeVertex(m: GraphModel, args: Args): Op {
   const stats = { scanned: 0, changed: 0 };
   const x = String(args.v);
-  const problem = missing(m, x);
-  if (problem) {
-    yield view(m, stats).frame({ line: 0, note: `${problem} Nothing to remove.`, vars: { x } });
-    return m;
-  }
+  if (!hasVertex(m, x)) return m;
   const own = listOf(m, x);
   const ownMarks = Object.fromEntries(own.map((v) => [entryId(x, v), 'reject' as Mark]));
   let t = view(m, stats, { rows: { [x]: 'reject' }, entries: ownMarks });
@@ -134,18 +131,10 @@ function scanFrame(m: GraphModel, u: NodeId, v: NodeId, stats: Record<string, nu
 function* addEdge(m: GraphModel, args: Args): Op {
   const stats = { scanned: 0, changed: 0 };
   const [u, v] = [String(args.u), String(args.v)];
-  const problem = missing(m, u, v) ?? (u === v ? `${u}–${u} would be a self-loop, which this graph doesn't allow.` : null);
-  if (problem) {
-    yield view(m, stats).frame({ line: 1, note: `${problem} Nothing changes.`, vars: { u, v } });
-    return m;
-  }
-  const scan = scanFrame(m, u, v, stats, 2);
-  if (scan.at >= 0) {
-    yield scan.t.frame({ line: 2, note: `${v} is already in adj[${u}] (found after ${scan.read} entr${scan.read === 1 ? 'y' : 'ies'}), so the edge exists: stop.`, vars: { u, v } });
-    return m;
-  }
+  if (!hasVertex(m, u) || !hasVertex(m, v) || addEdgeReason(m, args)) return m;
+  const scan = scanFrame(m, u, v, stats, 1);
   yield scan.t.frame({
-    line: 2,
+    line: 1,
     note: `Scan adj[${u}] for ${v} first, so the edge isn't added twice: ${scan.list.length} entr${scan.list.length === 1 ? 'y' : 'ies'} read, O(deg(${u})). Not there.`,
     vars: { u, v, 'deg(u)': scan.list.length },
   });
@@ -159,13 +148,13 @@ function* addEdge(m: GraphModel, args: Args): Op {
     t.setPanel({ ...panel, rows: panel.rows.map((r) => (r.id === v ? { ...r, entries: r.entries.filter((c) => c.id !== entryId(v, u)) } : r)) });
   }
   t.markEdge(id, 'write');
-  yield t.frame({ line: 3, note: `Append ${v} to the end of adj[${u}]: O(1).`, pulse: id, vars: { u, v } });
+  yield t.frame({ line: 2, note: `Append ${v} to the end of adj[${u}]: O(1).`, pulse: id, vars: { u, v } });
   if (!m.directed) {
     stats.changed++;
     const t2 = view(next, stats, { entries: { [entryId(u, v)]: 'write', [entryId(v, u)]: 'write' } });
     t2.markEdge(id, 'write');
     yield t2.frame({
-      line: 4,
+      line: 3,
       note: `The graph is undirected, so the edge is stored twice: also append ${u} to adj[${v}]. Each undirected edge costs two list entries.`,
       vars: { u, v },
     });
@@ -175,21 +164,9 @@ function* addEdge(m: GraphModel, args: Args): Op {
 
 function* removeEdge(m: GraphModel, args: Args): Op {
   const stats = { scanned: 0, changed: 0 };
-  const [u, v] = [String(args.u), String(args.v)];
-  const problem = missing(m, u, v);
-  if (problem) {
-    yield view(m, stats).frame({ line: 1, note: `${problem} Nothing to remove.`, vars: { u, v } });
-    return m;
-  }
+  const [u, v] = endpoints(String(args.e));
   const scan = scanFrame(m, u, v, stats, 1);
-  if (scan.at < 0) {
-    yield scan.t.frame({
-      line: 1,
-      note: `Scanned all ${scan.list.length} entr${scan.list.length === 1 ? 'y' : 'ies'} of adj[${u}]: no ${v}, so there is no edge to remove.${m.directed && findEdge(m, v, u) ? ` (${v} → ${u} exists, but that is a different edge.)` : ''}`,
-      vars: { u, v },
-    });
-    return m;
-  }
+  if (scan.at < 0) return m;
   const id = idOf(m, findEdge(m, u, v)!);
   scan.t.markEdge(id, 'reject');
   stats.changed++;
@@ -208,11 +185,7 @@ function* removeEdge(m: GraphModel, args: Args): Op {
 function* hasEdge(m: GraphModel, args: Args): Op {
   const stats = { scanned: 0, changed: 0 };
   const [u, v] = [String(args.u), String(args.v)];
-  const problem = missing(m, u, v);
-  if (problem) {
-    yield view(m, stats).frame({ line: 0, note: problem, vars: { u, v } });
-    return m;
-  }
+  if (!hasVertex(m, u) || !hasVertex(m, v)) return m;
   const list = listOf(m, u);
   if (list.length === 0) {
     yield view(m, stats, { rows: { [u]: 'key' } }).frame({ line: 3, note: `adj[${u}] is empty: return false straight away.`, vars: { u, v } });
@@ -243,11 +216,7 @@ function* hasEdge(m: GraphModel, args: Args): Op {
 function* neighbours(m: GraphModel, args: Args): Op {
   const stats = { scanned: 0, changed: 0 };
   const u = String(args.v);
-  const problem = missing(m, u);
-  if (problem) {
-    yield view(m, stats).frame({ line: 0, note: problem, vars: { u } });
-    return m;
-  }
+  if (!hasVertex(m, u)) return m;
   const list = listOf(m, u);
   const entries: Record<string, Mark> = {};
   const seen: NodeId[] = [];
@@ -292,9 +261,9 @@ export const adjacencyList = defineStructure<GraphModel, GraphState>({
     {
       id: 'add-vertex',
       label: 'Add vertex',
-      args: [VERTEX_ARG],
+      args: [NEW_VERTEX_ARG],
       pseudocode: ['addVertex(x):', '  if adj[x] exists: stop', '  adj[x] ← empty list'],
-      disabledReason: full,
+      disabledReason: addVertexReason,
       run: addVertex,
     },
     {
@@ -309,14 +278,14 @@ export const adjacencyList = defineStructure<GraphModel, GraphState>({
       id: 'add-edge',
       label: 'Add edge',
       args: [FROM_ARG, TO_ARG],
-      pseudocode: ['addEdge(u, v):', '  if u or v is missing: stop', '  if v is in adj[u]: stop', '  append v to adj[u]', '  if undirected: append u to adj[v]'],
-      disabledReason: tooFew,
+      pseudocode: ['addEdge(u, v):', '  if v is in adj[u]: stop', '  append v to adj[u]', '  if undirected: append u to adj[v]'],
+      disabledReason: addEdgeReason,
       run: addEdge,
     },
     {
       id: 'remove-edge',
       label: 'Remove edge',
-      args: [FROM_ARG, TO_ARG],
+      args: [EDGE_ARG],
       pseudocode: ['removeEdge(u, v):', '  find v in adj[u]; unlink it', '  if undirected: unlink u in adj[v]'],
       disabledReason: noEdges,
       run: removeEdge,

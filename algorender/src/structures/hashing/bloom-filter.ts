@@ -47,19 +47,16 @@ const positionsNote = (ps: readonly number[]) => {
     : `The ${BLOOM_K} hash functions give positions ${listText(ps)}.`;
 };
 
+/** Items are trimmed and 1–6 characters: the item argument's own limits enforce it, so a bad one can only come from a direct call, which changes nothing. */
 const itemOf = (args: Args) => String(args.item ?? '').trim();
+const badItem = (item: string) => !item || item.length > ITEM_MAX_LENGTH;
 const ITEM_ARG: ArgSpec = { name: 'item', label: 'Item', type: 'text', maxLength: ITEM_MAX_LENGTH, placeholder: 'item, e.g. cat' };
-
-function* badItem(m: BloomModel, item: string): Gen {
-  yield tracerFor(m).frame({ line: 0, note: `Items must be 1–${ITEM_MAX_LENGTH} characters long; "${item}" isn't.`, vars: { result: 'error' } });
-  return m;
-}
 
 const addCode = ['add(x):', '  P ← { hᵢ(x) mod m : i = 1 … k }', '  for each p in P:', '    bits[p] ← 1'];
 
 function* add(m: BloomModel, args: Args): Gen {
   const item = itemOf(args);
-  if (!item || item.length > ITEM_MAX_LENGTH) return yield* badItem(m, item);
+  if (badItem(item)) return m;
   const t = tracerFor(m);
   const ps = positionsOf(item);
   t.setItem(item);
@@ -115,7 +112,7 @@ const testCode = [
 
 function* test(m: BloomModel, args: Args): Gen {
   const item = itemOf(args);
-  if (!item || item.length > ITEM_MAX_LENGTH) return yield* badItem(m, item);
+  if (badItem(item)) return m;
   const t = tracerFor(m);
   const ps = positionsOf(item);
   const ds = distinct(ps);

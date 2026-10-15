@@ -1,7 +1,7 @@
 import { defineStructure, type Args, type ArgSpec, type OperationSpec } from '@/engine/module';
 import { createRng } from '@/engine/random';
 import type { HashState } from '@/viz/hash/types';
-import { MAX_KEYS, build, emptyChained, insert, lookup, removeKey, snapshotChained, type ChainedModel, type Flavor } from './chained';
+import { MAX_KEYS, build, emptyChained, insert, lookup, noRoom, removeKey, snapshotChained, type ChainedModel, type Flavor } from './chained';
 
 const flavor: Flavor = {
   kind: 'set',
@@ -48,7 +48,8 @@ const add: OperationSpec<ChainedModel, HashState> = {
   label: 'Add',
   args: [KEY_ARG],
   pseudocode: addCode,
-  disabledReason: (m) => (m.size >= MAX_KEYS ? `The demo set holds at most ${MAX_KEYS} values` : null),
+  // Adding a value that is already in a full set still runs: the walk finds it and adds nothing.
+  disabledReason: (m, args) => noRoom(m, args ? keyOf(args) : null, `The demo set holds at most ${MAX_KEYS} values`),
   run: (m, args) => insert(flavor, m, keyOf(args), null),
 };
 

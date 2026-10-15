@@ -1,4 +1,4 @@
-import type { OperationSpec } from '@/engine/module';
+import type { ArgSpec, OperationSpec } from '@/engine/module';
 import type { Checkpoint } from '@/engine/types';
 import { TreeTracer, type TreeDrawing } from '@/viz/tree/tracer';
 import type { Cell, NodeId, TreeNode, TreeShape, TreeState } from '@/viz/tree/types';
@@ -60,6 +60,14 @@ export function inorder(tree: BinTree<BinNode>): number[] {
   walk(tree.root);
   return out;
 }
+
+/** A key already in the tree, picked from a dropdown in sorted order: what delete needs. */
+export const storedKeyArg = <N extends BinNode>(label = 'Key'): Extract<ArgSpec<BinTree<N>>, { type: 'choice' }> => ({
+  name: 'key',
+  label,
+  type: 'choice',
+  options: (tree) => inorder(tree).map(String),
+});
 
 /** Height counting nodes: an empty tree has height 0, a single node 1. */
 export function heightOf(tree: BinTree<BinNode>, id: NodeId | null): number {

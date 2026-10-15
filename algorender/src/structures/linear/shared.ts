@@ -11,11 +11,23 @@ export const indexArg = (max: number): ArgSpec => ({ name: 'index', label: 'Inde
 
 export const TOUCHED: StatSpec = { key: 'touched', label: 'Cells read or written' };
 
-/** Integer argument; operations validate ranges themselves and narrate an error frame for bad ones. */
+/** Integer argument. Index ranges depend on the model, so each operation's disabledReason checks them (see indexPastEnd). */
 export const intArg = (args: Record<string, number | string>, name: string): number => {
   const n = Number(args[name]);
   return Number.isInteger(n) ? n : NaN;
 };
+
+/**
+ * Why `index` can't be used on a sequence of `n` elements, or null. Reads,
+ * writes and deletes need an existing element (0 to n − 1); an insert may also
+ * go just past the end (0 to n). No reason while the form's index doesn't parse.
+ */
+export function indexPastEnd(args: Record<string, number | string> | undefined, n: number, what: string, noun: string, insert = false): string | null {
+  if (!args) return null;
+  const i = intArg(args, 'index');
+  if (i <= (insert ? n : n - 1)) return null;
+  return `Index ${i} is past the end: the ${what} has ${plural(n, noun)}${insert ? `, so an insert can go at 0–${n}` : ''}`;
+}
 
 /**
  * A numeric multiple-choice question: the correct number plus distinct

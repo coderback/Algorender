@@ -1,5 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { blockedReason, parseOps, replay } from '@/components/explorer/operations';
 import type { AnyStructure, Args } from '@/engine/module';
 import { recordOperation } from '@/engine/trace';
 import type { Frame } from '@/engine/types';
@@ -21,8 +22,12 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-/** What the reference implementation says an operation does. */
-type Expect = { values: number[]; result?: number | string; disabled?: boolean; error?: boolean };
+/**
+ * What the reference implementation says an operation does. `disabled`: the
+ * model alone rules it out (empty, full). `blocked`: these arguments do (an
+ * index past the end).
+ */
+type Expect = { values: number[]; result?: number | string; disabled?: boolean; blocked?: boolean };
 
 type Adapter = {
   values: (m: Model) => number[];
@@ -43,18 +48,18 @@ const adapters: Record<string, Adapter> = {
       switch (op) {
         case 'get':
           if (n === 0) return { values: v, disabled: true };
-          return i < n ? { values: v, result: v[i] } : { values: v, error: true };
+          return i < n ? { values: v, result: v[i] } : { values: v, blocked: true };
         case 'set':
           if (n === 0) return { values: v, disabled: true };
-          return i < n ? { values: v.map((x, k) => (k === i ? val(args) : x)) } : { values: v, error: true };
+          return i < n ? { values: v.map((x, k) => (k === i ? val(args) : x)) } : { values: v, blocked: true };
         case 'append':
           return n >= ARRAY_MAX ? { values: v, disabled: true } : { values: [...v, val(args)] };
         case 'insert':
           if (n >= ARRAY_MAX) return { values: v, disabled: true };
-          return i <= n ? { values: [...v.slice(0, i), val(args), ...v.slice(i)] } : { values: v, error: true };
+          return i <= n ? { values: [...v.slice(0, i), val(args), ...v.slice(i)] } : { values: v, blocked: true };
         case 'delete':
           if (n === 0) return { values: v, disabled: true };
-          return i < n ? { values: v.filter((_, k) => k !== i), result: v[i] } : { values: v, error: true };
+          return i < n ? { values: v.filter((_, k) => k !== i), result: v[i] } : { values: v, blocked: true };
       }
       throw new Error(op);
     },
@@ -128,7 +133,7 @@ const adapters: Record<string, Adapter> = {
           return n >= LIST_MAX ? { values: v, disabled: true } : { values: [...v, x] };
         case 'insert-at':
           if (n >= LIST_MAX) return { values: v, disabled: true };
-          return i <= n ? { values: [...v.slice(0, i), x, ...v.slice(i)] } : { values: v, error: true };
+          return i <= n ? { values: [...v.slice(0, i), x, ...v.slice(i)] } : { values: v, blocked: true };
         case 'delete-value': {
           if (n === 0) return { values: v, disabled: true };
           const k = v.indexOf(x);
@@ -136,7 +141,7 @@ const adapters: Record<string, Adapter> = {
         }
         case 'delete-at':
           if (n === 0) return { values: v, disabled: true };
-          return i < n ? { values: v.filter((_, k) => k !== i), result: v[i] } : { values: v, error: true };
+          return i < n ? { values: v.filter((_, k) => k !== i), result: v[i] } : { values: v, blocked: true };
         case 'search':
           return n === 0 ? { values: v, disabled: true } : { values: v, result: v.indexOf(x) };
       }
@@ -285,8 +290,10 @@ describe.each(linearStructures)('$slug', (ds) => {
         for (const { op, raw } of ops) {
           const { spec, args } = argsFor(ds, op, raw);
           const expected = adapter.step(spec.id, args, values);
-          const reason = spec.disabledReason?.(model) ?? null;
-          expect(reason != null).toBe(expected.disabled === true);
+          // The model-only check (args unknown) catches empty/full; the explorer's full check also catches bad indices.
+          expect(spec.disabledReason?.(model) != null).toBe(expected.disabled === true);
+          const reason = blockedReason(ds, model, { op: spec.id, args });
+          expect(reason != null).toBe(expected.disabled === true || expected.blocked === true);
           if (reason) continue;
 
           const before = JSON.stringify(model);
@@ -295,10 +302,7 @@ describe.each(linearStructures)('$slug', (ds) => {
           checkFrames(ds, spec.id, frames as Frame<LinearState>[]);
 
           const last = frames.at(-1)!;
-          if (expected.error) {
-            expect(result).toBe(model);
-            expect(last.vars.result).toBe('error');
-          }
+          for (const f of frames) expect(f.vars.result).not.toBe('error');
           if (expected.result !== undefined) expect(last.vars.result).toBe(expected.result);
           expect(adapter.values(result)).toEqual(expected.values);
           adapter.check(result);
@@ -313,6 +317,31 @@ describe.each(linearStructures)('$slug', (ds) => {
         }
       }),
       { numRuns: 120 },
+    );
+  });
+
+  it('allowed calls never reach an error path', () => {
+    // Indices are drawn from 0…length (the widest range any operation accepts), so nearly every call is allowed.
+    const allowedArb = fc.record({ op: fc.nat(), index: fc.nat(), value: fc.nat({ max: 99 }) });
+    fc.assert(
+      fc.property(fc.nat({ max: ds.initial.length - 1 }), fc.nat({ max: 10_000 }), fc.array(allowedArb, { maxLength: 30 }), (startIndex, seed, ops) => {
+        let model = ds.initial[startIndex].make(seed);
+        let values = adapter.values(model);
+        for (const { op, index, value } of ops) {
+          const spec = ds.operations[op % ds.operations.length];
+          const args: Args = Object.fromEntries(spec.args.map((a) => [a.name, a.name === 'index' ? index % (values.length + 1) : value]));
+          if (blockedReason(ds, model, { op: spec.id, args })) continue;
+          const { frames, result } = recordOperation(spec.run(model, args));
+          expect(frames.length).toBeGreaterThan(0);
+          for (const f of frames) expect(f.vars.result, f.note).not.toBe('error');
+          const expected = adapter.step(spec.id, args, values);
+          expect(expected.disabled || expected.blocked).toBeFalsy();
+          expect(adapter.values(result)).toEqual(expected.values);
+          model = result;
+          values = expected.values;
+        }
+      }),
+      { numRuns: 150 },
     );
   });
 
@@ -338,10 +367,11 @@ describe.each(linearStructures)('$slug', (ds) => {
     for (const start of ds.initial) {
       const model = start.make(2);
       for (const spec of ds.operations) {
-        if (spec.disabledReason?.(model)) continue;
         for (const index of [0, 1, 2]) {
           for (const value of [42, 23, 7]) {
-            for (const frame of recordOperation(spec.run(model, { index, value })).frames) {
+            const args = Object.fromEntries(spec.args.map((a) => [a.name, a.name === 'index' ? index : value]));
+            if (blockedReason(ds, model, { op: spec.id, args })) continue;
+            for (const frame of recordOperation(spec.run(model, args)).frames) {
               const s = frame.state as LinearState;
               for (const m of Object.values(s.marks)) used.add(m);
               if (s.layout === 'list') for (const m of Object.values(s.linkMarks)) used.add(m);
@@ -395,5 +425,43 @@ describe('specific behaviour', () => {
     const m = list.initial[0].make(0) as ListModel;
     const { frames } = recordOperation(op(list, 'insert-tail').run(m, { value: 99 }));
     expect(frames.at(-1)!.stats.hops).toBe(0);
+  });
+
+  it('array: an index past the end is blocked with the reason, as soon as it is typed', () => {
+    const m = array.initial[0].make(0) as DynamicArray; // 5 elements
+    const why = (id: string, index: number) => blockedReason(array, m, { op: id, args: { index, value: 1 } });
+    for (const id of ['get', 'set', 'delete']) {
+      expect(op(array, id).disabledReason!(m)).toBeNull(); // nothing to say until there is an index
+      expect(why(id, 7)).toBe('Index 7 is past the end: the array has 5 elements');
+      expect(why(id, 5)).toMatch(/past the end/);
+      expect(why(id, 4)).toBeNull();
+    }
+    expect(why('insert', 5)).toBeNull(); // just past the end: an append
+    expect(why('insert', 6)).toBe('Index 6 is past the end: the array has 5 elements, so an insert can go at 0–5');
+    const empty = array.initial.find((s) => s.id === 'empty')!.make(0);
+    expect(blockedReason(array, empty, { op: 'get', args: { index: 0 } })).toBe('The array is empty');
+    expect(blockedReason(array, empty, { op: 'insert', args: { index: 0, value: 1 } })).toBeNull();
+    expect(blockedReason(array, empty, { op: 'insert', args: { index: 1, value: 1 } })).toMatch(/has 0 elements, so an insert can go at 0–0/);
+  });
+
+  it('linked list: index operations are blocked past the end, but deleting a missing value still walks the list', () => {
+    const m = list.initial[0].make(0) as ListModel; // 7, 23, 42, 15
+    expect(blockedReason(list, m, { op: 'delete-at', args: { index: 4 } })).toBe('Index 4 is past the end: the list has 4 nodes');
+    expect(blockedReason(list, m, { op: 'delete-at', args: { index: 3 } })).toBeNull();
+    expect(blockedReason(list, m, { op: 'insert-at', args: { index: 4, value: 1 } })).toBeNull();
+    expect(blockedReason(list, m, { op: 'insert-at', args: { index: 5, value: 1 } })).toMatch(/the list has 4 nodes, so an insert can go at 0–4/);
+
+    expect(blockedReason(list, m, { op: 'delete-value', args: { value: 99 } })).toBeNull();
+    const { frames, result } = recordOperation(op(list, 'delete-value').run(m, { value: 99 }));
+    expect(result).toBe(m);
+    expect(frames.at(-1)!.vars.result).toBe('not found');
+    expect(frames.at(-1)!.stats.hops).toBe(m.items.length); // it had to look at every node
+  });
+
+  it('URL replay stops at the first index that is past the end', () => {
+    const m = array.initial[0].make(0) as DynamicArray; // 5 elements
+    const { model, applied } = replay(array, m, parseOps('delete:4;delete:4;append:9', array));
+    expect(applied).toHaveLength(1); // after one delete only indices 0–3 exist
+    expect((model as DynamicArray).items.map((i) => i.value)).toEqual([7, 23, 4, 42]);
   });
 });

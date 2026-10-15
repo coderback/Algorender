@@ -5,16 +5,20 @@ import type { Frame } from '@/engine/types';
 import { GraphTracer } from '@/viz/graph/tracer';
 import type { GraphState } from '@/viz/graph/types';
 import {
-  badLabel,
+  addEdgeReason as newEdgeReason,
+  addVertexReason,
+  EDGE_ARG,
   empty,
+  endpoints,
   findEdge,
   FROM_ARG,
-  full,
   hasVertex,
   idOf,
   makeModel,
-  missing,
+  NEW_VERTEX_ARG,
   noEdges,
+  selfLoop,
+  sep,
   TO_ARG,
   tooFew,
   VERTEX_ARG,
@@ -44,16 +48,26 @@ function tracer(m: GraphModel) {
   return t;
 }
 
-const sep = (m: GraphModel) => (m.directed ? '→' : '–');
+/**
+ * Add edge: two different vertices. In a weighted graph an existing edge may
+ * be added again to change its weight, so only the same weight is blocked.
+ */
+function addEdgeReason(m: GraphModel, args?: Args): string | null {
+  if (!m.weighted) return newEdgeReason(m, args);
+  const shape = tooFew(m);
+  if (shape || !args) return shape;
+  const [u, v, w] = [String(args.u), String(args.v), Number(args.w ?? 1)];
+  return selfLoop(m, u, v) ?? (findEdge(m, u, v)?.weight === w ? `${u}${sep(m)}${v} already has weight ${w}: pick another weight to change it.` : null);
+}
+
+// The early returns below are unreachable from the explorer and URL replay,
+// which check choices and disabledReason first; they keep a direct call with
+// bad arguments from corrupting the model.
 
 function* addVertex(m: GraphModel, args: Args): Op {
   const t = tracer(m);
   const x = String(args.v);
-  const problem = badLabel(x) ?? (hasVertex(m, x) ? `Vertex ${x} already exists, and vertex names must be unique. Nothing changes.` : null);
-  if (problem) {
-    yield t.frame({ line: 1, note: problem, vars: { x } });
-    return m;
-  }
+  if (addVertexReason(m, args)) return m;
   yield t.frame({ line: 0, note: `Add a vertex called ${x}.`, vars: { x } });
   const next = withVertex(m, x);
   const t2 = tracer(next);
@@ -65,11 +79,7 @@ function* addVertex(m: GraphModel, args: Args): Op {
 function* removeVertex(m: GraphModel, args: Args): Op {
   const t = tracer(m);
   const x = String(args.v);
-  const problem = missing(m, x);
-  if (problem) {
-    yield t.frame({ line: 0, note: `${problem} Nothing to remove.`, vars: { x } });
-    return m;
-  }
+  if (!hasVertex(m, x)) return m;
   const touching = m.edges.filter((e) => e.from === x || e.to === x);
   t.count('edges', m.edges.length);
   t.mark(x, 'reject');
@@ -89,13 +99,8 @@ function* removeVertex(m: GraphModel, args: Args): Op {
 }
 
 function* addEdge(m: GraphModel, args: Args): Op {
-  const t = tracer(m);
   const [u, v, w] = [String(args.u), String(args.v), Number(args.w ?? 1)];
-  const problem = missing(m, u, v) ?? (u === v ? `${u}${sep(m)}${u} would be a self-loop, which this graph doesn't allow.` : null);
-  if (problem) {
-    yield t.frame({ line: 1, note: `${problem} Nothing changes.`, vars: { u, v } });
-    return m;
-  }
+  if (!hasVertex(m, u) || !hasVertex(m, v) || addEdgeReason(m, args)) return m;
   const existing = findEdge(m, u, v);
   const next = withEdge(m, u, v, w);
   const t2 = tracer(next);
@@ -105,19 +110,15 @@ function* addEdge(m: GraphModel, args: Args): Op {
   t2.mark(v, 'key');
   if (existing) {
     yield t2.frame({
-      line: 2,
-      note: m.weighted
-        ? existing.weight === w
-          ? `${u}${sep(m)}${v} already exists with weight ${w}: nothing changes.`
-          : `${u}${sep(m)}${v} already exists, so update its weight from ${existing.weight} to ${w} rather than adding a second edge.`
-        : `${u}${sep(m)}${v} already exists: a simple graph has at most one edge per pair.`,
+      line: 1,
+      note: `${u}${sep(m)}${v} already exists, so update its weight from ${existing.weight} to ${w} rather than adding a second edge.`,
       pulse: id,
       vars: { u, v, w },
     });
     return next;
   }
   yield t2.frame({
-    line: 3,
+    line: 2,
     note: m.directed
       ? `Add the one-way edge ${u} → ${v}${m.weighted ? ` with weight ${w}` : ''}. ${v} can't use it to reach ${u}.`
       : `Connect ${u} and ${v}${m.weighted ? ` with weight ${w}` : ''}. The edge works both ways.`,
@@ -129,30 +130,19 @@ function* addEdge(m: GraphModel, args: Args): Op {
 
 function* removeEdge(m: GraphModel, args: Args): Op {
   const t = tracer(m);
-  const [u, v] = [String(args.u), String(args.v)];
-  const existing = missing(m, u, v) ? null : findEdge(m, u, v);
-  if (!existing) {
-    yield t.frame({
-      line: 1,
-      note: `${missing(m, u, v) ?? `There is no edge ${u}${sep(m)}${v}${m.directed && findEdge(m, v, u) ? ` (only ${v} → ${u}, which is a different edge in a directed graph)` : ''}.`} Nothing to remove.`,
-      vars: { u, v },
-    });
-    return m;
-  }
+  const [u, v] = endpoints(String(args.e));
+  const existing = findEdge(m, u, v);
+  if (!existing) return m;
   t.markEdge(idOf(m, existing), 'reject');
-  yield t.frame({ line: 2, note: `Remove the edge ${u}${sep(m)}${v}. Both vertices stay.`, vars: { u, v } });
+  yield t.frame({ line: 1, note: `Remove the edge ${u}${sep(m)}${v}. Both vertices stay.`, vars: { u, v } });
   const next = withoutEdge(m, u, v);
-  yield tracer(next).frame({ line: 2, note: `${u}${sep(m)}${v} is gone. The graph has ${next.edges.length} edges now.`, vars: { E: next.edges.length } });
+  yield tracer(next).frame({ line: 1, note: `${u}${sep(m)}${v} is gone. The graph has ${next.edges.length} edges now.`, vars: { E: next.edges.length } });
   return next;
 }
 
 function* traversal(m: GraphModel, args: Args, kind: 'bfs' | 'dfs'): Op {
   const s = String(args.v);
-  const problem = missing(m, s);
-  if (problem) {
-    yield tracer(m).frame({ line: 0, note: `${problem} Pick a start vertex that exists.`, vars: { s } });
-    return m;
-  }
+  if (!hasVertex(m, s)) return m;
   yield* (kind === 'bfs' ? bfs : dfs)({ ...m, start: s, target: null });
   return m;
 }
@@ -175,9 +165,9 @@ export const graph = defineStructure<GraphModel, GraphState>({
     {
       id: 'add-vertex',
       label: 'Add vertex',
-      args: [VERTEX_ARG],
+      args: [NEW_VERTEX_ARG],
       pseudocode: ['addVertex(x):', '  if x already exists: stop', '  create x with no edges'],
-      disabledReason: full,
+      disabledReason: addVertexReason,
       run: addVertex,
     },
     {
@@ -192,15 +182,15 @@ export const graph = defineStructure<GraphModel, GraphState>({
       id: 'add-edge',
       label: 'Add edge',
       args: [FROM_ARG, TO_ARG, WEIGHT_ARG],
-      pseudocode: ['addEdge(u, v, w):', '  if u or v is missing: stop', '  if u–v exists: update its weight', '  else: connect u and v (weight w)'],
-      disabledReason: tooFew,
+      pseudocode: ['addEdge(u, v, w):', '  if u–v exists: update its weight', '  else: connect u and v (weight w)'],
+      disabledReason: addEdgeReason,
       run: addEdge,
     },
     {
       id: 'remove-edge',
       label: 'Remove edge',
-      args: [FROM_ARG, TO_ARG],
-      pseudocode: ['removeEdge(u, v):', '  if there is no edge u–v: stop', '  delete the edge u–v'],
+      args: [EDGE_ARG],
+      pseudocode: ['removeEdge(u, v):', '  delete the edge u–v'],
       disabledReason: noEdges,
       run: removeEdge,
     },

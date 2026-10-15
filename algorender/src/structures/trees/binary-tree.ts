@@ -17,6 +17,7 @@ import {
   sideQuestion,
   sideWord,
   size,
+  storedKeyArg,
   type BinNode,
   type BinTree,
   type Side,
@@ -147,11 +148,11 @@ function successorQuestion(tree: Bst, id: NodeId, successor: number): Checkpoint
 const remove: Op = {
   id: 'delete',
   label: 'Delete',
-  args: [keyArg('Key', 30)],
+  // Only keys in the tree: searching shows how a missing key is ruled out.
+  args: [storedKeyArg()],
   pseudocode: [
     'delete(key):',
     '  n ← the node holding key',
-    '  if there is none: stop',
     '  if n is a leaf: remove n',
     '  else if n has one child:',
     '    replace n with that child',
@@ -200,10 +201,7 @@ const remove: Op = {
       cur = next;
     }
 
-    if (cur == null) {
-      yield t.frame({ line: 2, note: `${key} is not in the tree, so there is nothing to delete.`, marks: { visited: path }, path, vars: { key, found: false } });
-      return model;
-    }
+    if (cur == null) return model; // unreachable: the key is one of the tree's own (a choice)
 
     const n = model.nodes[cur];
     const above = path.slice(0, -1);
@@ -220,7 +218,7 @@ const remove: Op = {
     if (kids.length === 0) {
       t.model = drop(link(model, parent, side, null), cur);
       yield t.frame({
-        line: 3,
+        line: 2,
         note: `${key} is a leaf: no other key hangs below it, so it can simply be removed.`,
         marks: { visited: above },
         path: above,
@@ -234,7 +232,7 @@ const remove: Op = {
       t.model = drop(link(model, parent, side, child), cur);
       const parentKey = parent == null ? null : model.nodes[parent].key;
       yield t.frame({
-        line: 5,
+        line: 4,
         note: `${key} has one child, ${model.nodes[child].key}, which moves up into its place with its whole subtree. ${
           parentKey == null
             ? 'It becomes the new root.'
@@ -251,7 +249,7 @@ const remove: Op = {
     const s = walk[walk.length - 1];
     const sNode = model.nodes[s];
     yield t.frame({
-      line: 6,
+      line: 5,
       note: `${key} has two children, so removing its node would leave two subtrees and only one slot. Instead, give the node another key that keeps everything in order: the next larger key.`,
       marks: { visited: above, reject: [cur] },
       path,
@@ -259,7 +257,7 @@ const remove: Op = {
       checkpoint: successorQuestion(model, cur, sNode.key),
     });
     yield t.frame({
-      line: 7,
+      line: 6,
       note:
         walk.length === 1
           ? `Go right once, to ${sNode.key}. It has no left child, so it is the smallest key in ${key}'s right subtree: the in-order successor.`
@@ -271,7 +269,7 @@ const remove: Op = {
 
     t.model = put(model, cur, { ...n, key: sNode.key });
     yield t.frame({
-      line: 8,
+      line: 7,
       note: `Copy ${sNode.key} into ${key}'s node, replacing ${key}. Everything on its left is smaller than ${key}, so smaller than ${sNode.key}, and ${sNode.key} was the smallest key on its right.`,
       marks: { write: [cur], min: [s] },
       path: [...path, ...walk],
@@ -282,7 +280,7 @@ const remove: Op = {
     const sSide: Side = walk.length === 1 ? 'right' : 'left';
     t.model = drop(link(t.model, sParent, sSide, sNode.right), s);
     yield t.frame({
-      line: 9,
+      line: 8,
       note:
         sNode.right == null
           ? `Now remove the old ${sNode.key} node. It was a leaf, so nothing else moves.`

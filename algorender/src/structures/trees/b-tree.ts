@@ -359,11 +359,11 @@ const search: Op = {
 const remove: Op = {
   id: 'delete',
   label: 'Delete',
-  args: [keyArg('Key', 20)],
+  // Only keys in the tree: searching shows how a missing key is ruled out.
+  args: [{ name: 'key', label: 'Key', type: 'choice', options: (tree) => allKeys(tree).map(String) }],
   pseudocode: [
     'delete(key):',
     '  find the node holding key',
-    '  if key is not there: stop',
     '  if node is internal:',
     '    replace key with its predecessor',
     '    node ← the predecessor’s leaf',
@@ -402,16 +402,7 @@ const remove: Op = {
         });
         break;
       }
-      if (isLeaf(node)) {
-        yield t.frame({
-          line: 2,
-          note: `${scanPhrase(node.keys, key)}, and ${show(node.keys)} is a leaf: ${key} is not in the tree, so nothing changes.`,
-          marks: { visited: path.slice(0, -1), compare: node.keys.slice(0, i + 1).map(cell) },
-          path,
-          vars: { key, found: false },
-        });
-        return model;
-      }
+      if (isLeaf(node)) return model; // unreachable: the key is one of the tree's own (a choice)
       const child = node.children[i];
       yield t.frame({
         line: 1,
@@ -441,7 +432,7 @@ const remove: Op = {
       t.model = tree;
       path.push(...walk);
       yield t.frame({
-        line: 4,
+        line: 3,
         note: `${key} separates two children here, so it can't simply vanish. Replace it with its predecessor, ${pred}: the largest key to its left, which always sits in a leaf. ${pred} still separates the two sides correctly, and its leaf is now ${show(leaf.keys.slice(0, -1))}.`,
         marks: { visited: path.slice(0, -1), write: [cell(pred)] },
         path,
@@ -453,11 +444,11 @@ const remove: Op = {
       t.model = setNode(model, cur, { ...found, keys });
       if (cur === model.root && keys.length === 0) {
         t.model = { ...dropNode(t.model, cur), root: null };
-        yield t.frame({ line: 14, note: `${key} was the last key, so the root is empty and the tree is now empty.`, vars: { key } });
+        yield t.frame({ line: 13, note: `${key} was the last key, so the root is empty and the tree is now empty.`, vars: { key } });
         return t.model;
       }
       yield t.frame({
-        line: 6,
+        line: 5,
         note: keys.length ? `Remove ${key} from the leaf: ${show(keys)}.` : `Remove ${key} from the leaf, which leaves it empty.`,
         marks: { visited: path.slice(0, -1) },
         path,
@@ -470,7 +461,7 @@ const remove: Op = {
       const n = t.model.nodes[cur];
       if (cur === t.model.root || n.keys.length >= min) {
         yield t.frame({
-          line: 7,
+          line: 6,
           note:
             cur === t.model.root
               ? `${show(n.keys)} is the root, which may hold as few as one key, so nothing more needs fixing.`
@@ -493,7 +484,7 @@ const remove: Op = {
       const canRight = right != null && right.keys.length > min;
       const siblings = [left && `left sibling is ${show(left.keys)}`, right && `right sibling is ${show(right.keys)}`].filter(Boolean).join(' and its ');
       yield t.frame({
-        line: 7,
+        line: 6,
         note: `${n.keys.length ? `${show(n.keys)} has ${plural(n.keys.length, 'key')}` : 'The node is empty'}, fewer than the minimum of ${min}. Its ${siblings}.`,
         marks: { visited: path.slice(0, -2), reject: [cur], compare: [leftId, rightId] },
         path,
@@ -525,7 +516,7 @@ const remove: Op = {
         t.model = tree;
         t.count('merges');
         yield t.frame({
-          line: 9,
+          line: 8,
           note: `The ${fromLeft ? 'left' : 'right'} sibling has a key to spare, so borrow it through the parent: ${sep} comes down into the short node and ${up}, the sibling's ${fromLeft ? 'largest' : 'smallest'} key, goes up to replace it. The keys stay in order${movedChild ? ', and the child beside ' + up + ' moves across with ' + sep : ''}.`,
           marks: { write: [cell(sep), cell(up)] },
           path,
@@ -551,7 +542,7 @@ const remove: Op = {
       t.count('merges');
       path.pop();
       yield t.frame({
-        line: 11,
+        line: 10,
         note: `${left && right ? `Neither sibling can spare a key (each has only ${min})` : `The only sibling can't spare a key (it has only ${min})`}, so merge the short node with its ${mergeLeft ? 'left' : 'right'} sibling, pulling the parent's ${sep} down between them: ${show(merged.keys)}. The parent loses a key.`,
         marks: { visited: path.slice(0, -1), write: [cell(sep)] },
         path: [...path, keepId],
@@ -561,7 +552,7 @@ const remove: Op = {
       if (parentId === t.model.root && pKeys.length === 0) {
         t.model = { ...dropNode(t.model, parentId), root: keepId };
         yield t.frame({
-          line: 14,
+          line: 13,
           note: `The root gave its only key to the merge and is now empty, so drop it: ${show(merged.keys)} becomes the root. The tree loses a level at the top, so every leaf stays at the same depth.`,
           vars: { height: heightOf(t.model) },
         });

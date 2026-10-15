@@ -3,7 +3,7 @@ import { createRng } from '@/engine/random';
 import type { Frame } from '@/engine/types';
 import { LinearTracer, MAIN, slotsSnapshot, type Item } from '@/viz/linear/tracer';
 import type { LinearState } from '@/viz/linear/types';
-import { TOUCHED, VALUE_ARG, YES_NO, indexArg, intArg, numberChoices, plural } from './shared';
+import { TOUCHED, VALUE_ARG, YES_NO, indexArg, indexPastEnd, intArg, numberChoices, plural } from './shared';
 
 /** A growable array: `items` fill slots 0…length − 1 of a block of `capacity` cells. */
 export type DynamicArray = {
@@ -40,15 +40,9 @@ function tracerFor(m: DynamicArray, labels: { in?: string; out?: string } = {}) 
   return t;
 }
 
-function outOfRange(t: LinearTracer, i: number, valid: string, line: number) {
-  return t.frame({
-    line,
-    note: `Index ${i} is out of range: ${valid}. Without this check the operation would touch memory outside the elements in use.`,
-    vars: { i, result: 'error' },
-  });
-}
-
-const validRead = (n: number) => (n === 0 ? 'the array is empty' : `valid indices are 0–${n - 1}`);
+// An index past the end is blocked by disabledReason (see indexPastEnd), so
+// the explorer never runs one; the early returns below only keep a direct call
+// from writing outside the elements in use.
 
 /**
  * Moves every element into a block twice the size, one copy per frame.
@@ -101,10 +95,7 @@ function* get(m: DynamicArray, args: Args): Gen {
   const i = intArg(args, 'index');
   const n = m.items.length;
   const t = tracerFor(m);
-  if (!(i >= 0 && i < n)) {
-    yield outOfRange(t, i, validRead(n), 1);
-    return m;
-  }
+  if (!(i >= 0 && i < n)) return m;
   yield t.frame({
     line: 0,
     note: `Read the element at index ${i}.`,
@@ -132,10 +123,7 @@ function* set(m: DynamicArray, args: Args): Gen {
   const x = intArg(args, 'value');
   const n = m.items.length;
   const t = tracerFor(m, { in: 'new value', out: 'overwritten' });
-  if (!(i >= 0 && i < n)) {
-    yield outOfRange(t, i, validRead(n), 1);
-    return m;
-  }
+  if (!(i >= 0 && i < n)) return m;
   const item = { id: `n${m.nextId}`, value: x };
   t.place(item, IN);
   yield t.frame({
@@ -181,10 +169,7 @@ function* insert(m: DynamicArray, args: Args): Gen {
   const x = intArg(args, 'value');
   const n = m.items.length;
   const t = tracerFor(m, { in: 'inserting' });
-  if (!(i >= 0 && i <= n)) {
-    yield outOfRange(t, i, `an insert may go anywhere from 0 to ${n} (just past the end)`, 1);
-    return m;
-  }
+  if (!(i >= 0 && i <= n)) return m;
   if (n >= ARRAY_MAX) {
     yield t.frame({ line: 2, note: `The array already holds ${ARRAY_MAX} elements, the most this demo allows.`, vars: { result: 'error' } });
     return m;
@@ -326,10 +311,7 @@ function* remove(m: DynamicArray, args: Args): Gen {
   const i = intArg(args, 'index');
   const n = m.items.length;
   const t = tracerFor(m);
-  if (!(i >= 0 && i < n)) {
-    yield outOfRange(t, i, validRead(n), 1);
-    return m;
-  }
+  if (!(i >= 0 && i < n)) return m;
   yield t.frame({
     line: 0,
     note: `Delete the element at index ${i}. The elements after it must close the gap, so the array stays contiguous.`,
@@ -380,6 +362,10 @@ function* remove(m: DynamicArray, args: Args): Gen {
 
 const nonEmpty = (m: DynamicArray) => (m.items.length === 0 ? 'The array is empty' : null);
 const notFull = (m: DynamicArray) => (m.items.length >= ARRAY_MAX ? `The array is full: this demo stops at ${ARRAY_MAX} elements` : null);
+/** get, set and delete need an element at the index: 0 to length − 1. */
+const existing = (m: DynamicArray, args?: Args) => nonEmpty(m) ?? indexPastEnd(args, m.items.length, 'array', 'element');
+/** insert may also go just past the end: 0 to length. */
+const insertable = (m: DynamicArray, args?: Args) => notFull(m) ?? indexPastEnd(args, m.items.length, 'array', 'element', true);
 
 /** Builds an array whose capacity is the smallest power of two (at least 4) that fits the values. */
 export function makeArray(values: readonly number[], capacity?: number): DynamicArray {
@@ -415,11 +401,11 @@ export const arrayStructure = defineStructure<DynamicArray, LinearState>({
       summary: summaryOf(m.items.length, m.capacity),
     }),
   operations: [
-    { id: 'get', label: 'Get', args: [indexArg(ARRAY_MAX - 1)], pseudocode: getCode, disabledReason: nonEmpty, run: get },
-    { id: 'set', label: 'Set', args: [indexArg(ARRAY_MAX - 1), VALUE_ARG], pseudocode: setCode, disabledReason: nonEmpty, run: set },
+    { id: 'get', label: 'Get', args: [indexArg(ARRAY_MAX - 1)], pseudocode: getCode, disabledReason: existing, run: get },
+    { id: 'set', label: 'Set', args: [indexArg(ARRAY_MAX - 1), VALUE_ARG], pseudocode: setCode, disabledReason: existing, run: set },
     { id: 'append', label: 'Append', args: [VALUE_ARG], pseudocode: appendCode, disabledReason: notFull, run: append },
-    { id: 'insert', label: 'Insert at', args: [indexArg(ARRAY_MAX - 1), VALUE_ARG], pseudocode: insertCode, disabledReason: notFull, run: insert },
-    { id: 'delete', label: 'Delete at', args: [indexArg(ARRAY_MAX - 1)], pseudocode: deleteCode, disabledReason: nonEmpty, run: remove },
+    { id: 'insert', label: 'Insert at', args: [indexArg(ARRAY_MAX - 1), VALUE_ARG], pseudocode: insertCode, disabledReason: insertable, run: insert },
+    { id: 'delete', label: 'Delete at', args: [indexArg(ARRAY_MAX - 1)], pseudocode: deleteCode, disabledReason: existing, run: remove },
   ],
   stats: [TOUCHED, { key: 'shifts', label: 'Elements shifted' }, { key: 'copies', label: 'Copied while growing' }, { key: 'resizes', label: 'Resizes' }],
   legend: [

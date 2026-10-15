@@ -16,6 +16,7 @@ import {
   sideQuestion,
   sideWord,
   size,
+  storedKeyArg,
   type BinNode,
   type BinTree,
   type Side,
@@ -264,15 +265,15 @@ const insert: Op = {
 
 // ───────────────────────────── delete ─────────────────────────────
 
-const DELETE_LINES: Lines = { update: 12, lr: 14, rotRight: 15, rl: 17, rotLeft: 18 };
+const DELETE_LINES: Lines = { update: 11, lr: 13, rotRight: 14, rl: 16, rotLeft: 17 };
 
 const remove: Op = {
   id: 'delete',
   label: 'Delete',
-  args: [keyArg('Key', 30)],
+  // Only keys in the tree: searching shows how a missing key is ruled out.
+  args: [storedKeyArg<AvlNode>()],
   pseudocode: [
     'delete(node, key):',
-    '  if node = nil: return nil',
     '  if key < node.key:',
     '    node.left ← delete(node.left, key)',
     '  elif key > node.key:',
@@ -298,24 +299,15 @@ const remove: Op = {
     const t = new TreeTracer(model, drawing, STATS);
     const path: NodeId[] = [];
 
-    /** Deletes `target` from the subtree at `id`; false when it isn't there. */
+    /** Deletes `target` from the subtree at `id`; false when it isn't there (unreachable: the key is a choice). */
     function* del(id: NodeId | null, parent: NodeId | null, side: Side | null, target: number, copy: boolean): Generator<F, boolean> {
-      if (id == null) {
-        yield t.frame({
-          line: 1,
-          note: `The walk reached an empty spot, so ${target} is not in the tree and nothing changes.`,
-          marks: { visited: path },
-          path,
-          vars: { key: target, found: false },
-        });
-        return false;
-      }
+      if (id == null) return false;
       const node = t.model.nodes[id];
       path.push(id);
       const vars = { key: target, 'node.key': node.key };
       t.count('comparisons');
       yield t.frame({
-        line: 2,
+        line: 1,
         note:
           copy && t.model.nodes[path[path.length - 2]]?.key === target
             ? `Now delete the old ${target} from the right subtree: compare it with ${node.key}.`
@@ -332,7 +324,7 @@ const remove: Op = {
       if (target !== node.key) {
         const dir: Side = target < node.key ? 'left' : 'right';
         yield t.frame({
-          line: dir === 'left' ? 3 : 5,
+          line: dir === 'left' ? 2 : 4,
           note: `${target} ${dir === 'left' ? '<' : '>'} ${node.key}: it can only be in the ${dir} subtree.`,
           marks: { visited: path },
           path,
@@ -351,7 +343,7 @@ const remove: Op = {
         t.model = drop(link(t.model, parent, side, child), id);
         path.pop();
         yield t.frame({
-          line: 7,
+          line: 6,
           note: `${copy ? `This is the old ${target}, now copied up. ` : ''}${
             child == null
               ? `${target} is a leaf, so it is simply removed.`
@@ -368,7 +360,7 @@ const remove: Op = {
       const s = walk[walk.length - 1];
       const sKey = t.model.nodes[s].key;
       yield t.frame({
-        line: 9,
+        line: 8,
         note: `${target} has two children, so its node stays and takes another key instead: its in-order successor, the leftmost key of its right subtree, ${sKey}.`,
         marks: { visited: [...path.slice(0, -1), ...walk.slice(0, -1)], reject: [id], min: [s] },
         path: [...path, ...walk],
@@ -376,7 +368,7 @@ const remove: Op = {
       });
       t.model = put(t.model, id, { ...t.model.nodes[id], key: sKey });
       yield t.frame({
-        line: 10,
+        line: 9,
         note: `Copy ${sKey} into the node. Everything on its left is smaller and everything else on its right is larger, so the order holds. The old ${sKey} must now go.`,
         marks: { visited: path.slice(0, -1), write: [id], min: [s] },
         path: [...path, ...walk],
@@ -391,7 +383,7 @@ const remove: Op = {
     const found = yield* del(model.root, null, null, key, false);
     if (!found) return model;
     yield t.frame({
-      line: 19,
+      line: 18,
       note:
         t.model.root == null
           ? `Done: ${key} was the only key, so the tree is now empty.`

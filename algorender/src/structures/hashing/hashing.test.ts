@@ -1,5 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { blockedReason, parseOps, replay } from '@/components/explorer/operations';
 import type { AnyStructure, Args } from '@/engine/module';
 import { recordOperation } from '@/engine/trace';
 import type { Frame } from '@/engine/types';
@@ -95,14 +96,26 @@ function checkFinal(state: HashState, m: ChainedModel) {
   expect(s.buckets).toBe(m.buckets.length);
 }
 
+/**
+ * What the reference says about one call. `disabled`: the model alone rules
+ * it out (disabledReason with no arguments). `blocked`: the explorer won't run
+ * it with these arguments. They differ on a full table, where only a key that
+ * is already stored may be put.
+ */
+type Step = { result?: unknown; disabled?: boolean; blocked?: boolean };
+
 type MapCase = {
   slug: string;
   hash: (key: string) => number;
   keyArb: fc.Arbitrary<Args>;
   toRef: (m: ChainedModel) => Map<string, number | null>;
-  /** Applies one op to the reference; returns the expected `result` var (or undefined) and whether it's disabled. */
-  step: (id: string, args: Args, ref: Map<string, number | null>) => { result?: unknown; disabled?: boolean };
+  /** Applies one op to the reference (unless blocked); returns the expected `result` var and whether it's disabled or blocked. */
+  step: (id: string, args: Args, ref: Map<string, number | null>) => Step;
 };
+
+/** On a full table only a stored key may be put or added; the model-only check reports the limit either way. */
+const full = (ref: Map<string, unknown>, key: string): Step | null =>
+  ref.size < MAX_KEYS ? null : ref.has(key) ? { disabled: true } : { disabled: true, blocked: true };
 
 const mapCase: MapCase = {
   slug: 'hash-table',
@@ -112,15 +125,17 @@ const mapCase: MapCase = {
   step(id, args, ref) {
     const key = String(args.key);
     switch (id) {
-      case 'put':
-        if (ref.size >= MAX_KEYS) return { disabled: true };
+      case 'put': {
+        const limit = full(ref, key);
+        if (limit?.blocked) return limit;
         ref.set(key, Number(args.value));
-        return {};
+        return { ...limit, result: limit ? 'updated' : undefined };
+      }
       case 'get':
-        if (ref.size === 0) return { disabled: true };
+        if (ref.size === 0) return { disabled: true, blocked: true };
         return { result: ref.has(key) ? ref.get(key) : 'not found' };
       case 'delete': {
-        if (ref.size === 0) return { disabled: true };
+        if (ref.size === 0) return { disabled: true, blocked: true };
         const result = ref.has(key) ? ref.get(key) : 'not found';
         ref.delete(key);
         return { result };
@@ -138,15 +153,17 @@ const setCase: MapCase = {
   step(id, args, ref) {
     const key = String(args.value);
     switch (id) {
-      case 'add':
-        if (ref.size >= MAX_KEYS) return { disabled: true };
+      case 'add': {
+        const limit = full(ref, key);
+        if (limit?.blocked) return limit;
         ref.set(key, null);
-        return {};
+        return { ...limit, result: limit ? 'already present' : undefined };
+      }
       case 'contains':
-        if (ref.size === 0) return { disabled: true };
+        if (ref.size === 0) return { disabled: true, blocked: true };
         return { result: ref.has(key) };
       case 'remove': {
-        if (ref.size === 0) return { disabled: true };
+        if (ref.size === 0) return { disabled: true, blocked: true };
         const result = ref.has(key);
         ref.delete(key);
         return { result };
@@ -181,14 +198,16 @@ describe.each([mapCase, setCase])('$slug', (c) => {
           for (const { op: k, args } of ops) {
             const spec = ds.operations[k];
             const expected = c.step(spec.id, args, ref);
-            const reason = spec.disabledReason?.(model) ?? null;
-            expect(reason != null).toBe(expected.disabled === true);
+            expect(spec.disabledReason?.(model) != null).toBe(expected.disabled === true);
+            const reason = blockedReason(ds, model, { op: spec.id, args });
+            expect(reason != null).toBe(expected.blocked === true);
             if (reason) continue;
 
             const before = JSON.stringify(model);
             const { frames, result } = recordOperation(spec.run(model, args));
             expect(JSON.stringify(model)).toBe(before);
             checkFrames(ds, spec.id, frames as Frame<HashState>[]);
+            for (const f of frames) expect(f.vars.result).not.toBe('error'); // allowed calls never reach an error path
             if (expected.result !== undefined) expect(frames.at(-1)!.vars.result).toBe(expected.result);
 
             const next = result as ChainedModel;
@@ -239,11 +258,59 @@ describe('hash-table specifics', () => {
     const m = ds.initial.find((s) => s.id === 'collisions')!.make(0) as ChainedModel;
     expect(Math.max(...m.buckets.map((c) => c.length))).toBe(3);
   });
-  it('rejects bad keys with an error frame instead of throwing', () => {
+  it('blocks keys that are blank or too long before anything runs', () => {
     const m = ds.initial[0].make(0);
-    const { frames, result } = run(ds, 'put', m, { key: '   ', value: 1 });
-    expect(result).toBe(m);
-    expect(frames.at(-1)!.vars.result).toBe('error');
+    for (const op of ['put', 'get', 'delete']) {
+      expect(blockedReason(ds, m, { op, args: { key: '   ', value: 1 } })).toMatch(/1–6 characters/);
+      expect(blockedReason(ds, m, { op, args: { key: 'giraffe', value: 1 } })).toMatch(/1–6 characters/);
+      expect(blockedReason(ds, m, { op, args: { key: ' cat ', value: 1 } })).toBeNull(); // trimmed
+    }
+  });
+
+  it('on a full table blocks only new keys: an existing key can still be updated', () => {
+    const fill = WORDS.slice(0, MAX_KEYS);
+    const m = fill.reduce((model, key, i) => run(ds, 'put', model, { key, value: i }).result as ChainedModel, ds.initial.find((s) => s.id === 'empty')!.make(0));
+    expect(m.size).toBe(MAX_KEYS);
+    expect(op(ds, 'put').disabledReason!(m)).toMatch(/at most 12 keys/); // nothing typed yet
+    expect(blockedReason(ds, m, { op: 'put', args: { key: 'kiwi', value: 1 } })).toMatch(/at most 12 keys: put a key it already has/);
+    expect(blockedReason(ds, m, { op: 'put', args: { key: 'cat', value: 77 } })).toBeNull();
+    const { frames, result } = run(ds, 'put', m, { key: 'cat', value: 77 });
+    expect(frames.at(-1)!.vars.result).toBe('updated');
+    expect((result as ChainedModel).buckets.flat().find((e) => e.key === 'cat')!.value).toBe(77);
+  });
+
+  it('URL replay stops at the first new key a full table can’t take', () => {
+    const puts = WORDS.slice(0, MAX_KEYS).map((key, i) => `put:${key}:${i}`);
+    const calls = parseOps([...puts, 'put:kiwi:1', 'put:cat:2'].join(';'), ds);
+    const { model, applied } = replay(ds, ds.initial.find((s) => s.id === 'empty')!.make(0), calls);
+    expect(applied).toHaveLength(MAX_KEYS);
+    expect((model as ChainedModel).size).toBe(MAX_KEYS);
+  });
+
+  it('get and delete of a missing key still run: one chain is walked to show it is absent', () => {
+    const m = ds.initial.find((s) => s.id === 'collisions')!.make(0);
+    for (const id of ['get', 'delete']) {
+      expect(blockedReason(ds, m, { op: id, args: { key: 'zebra' } })).toBeNull();
+      const { frames, result } = run(ds, id, m, { key: 'zebra' });
+      expect(result).toBe(m);
+      expect(frames.at(-1)!.vars.result).toBe('not found');
+    }
+  });
+});
+
+describe('hash-set specifics', () => {
+  const ds = bySlug('hash-set');
+  it('on a full set blocks only new values: adding a stored one still runs and finds it', () => {
+    const m = Array.from({ length: MAX_KEYS }, (_, i) => i * 3).reduce(
+      (model, value) => run(ds, 'add', model, { value }).result as ChainedModel,
+      ds.initial.find((s) => s.id === 'empty')!.make(0),
+    );
+    expect(m.size).toBe(MAX_KEYS);
+    expect(blockedReason(ds, m, { op: 'add', args: { value: 1 } })).toMatch(/at most 12 values/);
+    expect(blockedReason(ds, m, { op: 'add', args: { value: 3 } })).toBeNull();
+    const { frames, result } = run(ds, 'add', m, { value: 3 });
+    expect(result).toEqual(m);
+    expect(frames.at(-1)!.vars.result).toBe('already present');
   });
 });
 
@@ -280,6 +347,7 @@ describe('bloom-filter', () => {
           for (const { add, item } of ops) {
             const spec = op(ds, add ? 'add' : 'test');
             expect(spec.disabledReason?.(model) ?? null).toBeNull();
+            expect(blockedReason(ds, model, { op: spec.id, args: { item } })).toBeNull(); // a Bloom filter never fills up
             const before = JSON.stringify(model);
             const { frames, result } = recordOperation(spec.run(model, { item }));
             expect(JSON.stringify(model)).toBe(before);
@@ -314,6 +382,14 @@ describe('bloom-filter', () => {
       ),
       { numRuns: 150 },
     );
+  });
+
+  it('blocks blank or over-long items before anything runs', () => {
+    const m = ds.initial[0].make(0);
+    for (const id of ['add', 'test']) {
+      expect(blockedReason(ds, m, { op: id, args: { item: '  ' } })).toMatch(/1–6 characters/);
+      expect(blockedReason(ds, m, { op: id, args: { item: 'giraffe' } })).toMatch(/1–6 characters/);
+    }
   });
 
   it('the crowded example produces at least one false positive among common words', () => {

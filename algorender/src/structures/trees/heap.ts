@@ -327,14 +327,16 @@ const heapify: Op = {
     '    if A[i] ≤ A[c]: stop   (max: ≥)',
     '    swap A[i] and A[c];  i ← c',
   ],
-  *run(model, args) {
+  disabledReason: (_, args) => {
+    if (!args) return null;
     const text = String(args.values);
     const parsed = parseValues(text);
+    return 'error' in parsed ? `Can't build a heap from "${text}": ${parsed.error}` : null;
+  },
+  *run(model, args) {
+    const parsed = parseValues(String(args.values));
+    if ('error' in parsed) return model; // unreachable: disabledReason blocks a list that doesn't parse
     const t = new TreeTracer(model, drawing, STATS);
-    if ('error' in parsed) {
-      yield t.frame({ line: 1, note: `Can't build a heap from "${text}": ${parsed.error}. Nothing changed.`, vars: {} });
-      return model;
-    }
     const { values } = parsed;
     const n = values.length;
     const w = words(model.kind);
