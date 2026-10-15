@@ -17,6 +17,12 @@ export type Metrics = {
   /** Room on the right of a round node for its badges. */
   badge: number;
   font: number;
+  /** Smallest gap between neighbouring trees of a forest. */
+  treeGap: number;
+  /** Font size of edge labels. */
+  labelFont: number;
+  /** Horizontal distance between levels when the tree is drawn sideways. */
+  sideLevel: number;
 };
 
 /** A node's placement: centre (x, y), size, and how far it reaches left and right of x. */
@@ -32,21 +38,55 @@ export type TreeLayout = {
   minY: number;
   maxY: number;
   metrics: Metrics;
+  /** Drawn sideways: depth runs left to right and siblings stack top to bottom. */
+  sideways: boolean;
 };
 
-export function metricsFor(count: number, depth: number, hasEdgeLabels: boolean): Metrics {
+/** 'forest': several small trees side by side. 'search': a compact search or recursion tree. */
+export type LayoutKind = 'tree' | 'forest' | 'search';
+
+/** Width of an edge label's pill. */
+export const labelWidth = (text: string, font: number) => [...text].length * font * 0.62 + 6;
+
+export function metricsFor(count: number, depth: number, hasEdgeLabels: boolean, kind: LayoutKind = 'tree', longestLabel = ''): Metrics {
+  if (kind === 'search') {
+    const labelW = longestLabel ? labelWidth(longestLabel, 10) : 0;
+    return {
+      round: 20,
+      dot: 12,
+      cellW: 20,
+      cellH: 20,
+      pad: 3,
+      gap: 6,
+      level: hasEdgeLabels ? 44 : 40,
+      badge: 0,
+      font: 12,
+      treeGap: 12,
+      labelFont: 10,
+      // Sideways, a level needs room for the label beside each child; without labels, room to breathe.
+      sideLevel: labelW ? Math.max(36, 20 + labelW + 14) : 48,
+    };
+  }
+  if (kind === 'forest') {
+    return { round: 30, dot: 18, cellW: 24, cellH: 24, pad: 3, gap: 10, level: 56, badge: 12, font: 14, treeGap: 12, labelFont: 12, sideLevel: 56 };
+  }
   const big = count > 31;
   const mid = count > 15;
+  const gap = hasEdgeLabels ? 14 : big ? 8 : mid ? 10 : 14;
+  const level = (depth > 7 ? 52 : 64) - (hasEdgeLabels ? 6 : 0);
   return {
     round: big ? 28 : mid ? 32 : 36,
     dot: 18,
     cellW: big ? 24 : 28,
     cellH: big ? 24 : 28,
     pad: 3,
-    gap: hasEdgeLabels ? 14 : big ? 8 : mid ? 10 : 14,
-    level: (depth > 7 ? 52 : 64) - (hasEdgeLabels ? 6 : 0),
+    gap,
+    level,
     badge: 12,
     font: big ? 12 : mid ? 13 : 15,
+    treeGap: 2 * gap,
+    labelFont: 12,
+    sideLevel: level,
   };
 }
 
@@ -61,8 +101,49 @@ export function extent(node: TreeNode, m: Metrics): { l: number; r: number; h: n
   return { l: d / 2, r: d / 2 + badge, h: d };
 }
 
+/** The root of every tree: a forest's roots, or the single root. */
+export function rootsOf(shape: Pick<TreeShape, 'root'> & Partial<Pick<TreeShape, 'roots'>>): readonly NodeId[] {
+  return shape.roots ?? (shape.root == null ? [] : [shape.root]);
+}
+
 /** A laid-out subtree: node offsets relative to its root, and its left/right contour per depth. */
 type Sub = { ids: NodeId[]; off: number[]; l: number[]; r: number[] };
+
+/**
+ * Offsets that push neighbouring subtrees apart until their contours keep
+ * `gap` at every shared depth, centred so the first and last sit evenly
+ * either side of 0.
+ */
+function pack(subs: readonly Sub[], gap: number): number[] {
+  const shifts = [0];
+  const accL = [...subs[0].l];
+  const accR = [...subs[0].r];
+  for (let j = 1; j < subs.length; j++) {
+    const sub = subs[j];
+    let s = -Infinity;
+    for (let d = 0; d < Math.min(accR.length, sub.l.length); d++) s = Math.max(s, accR[d] + gap - sub.l[d]);
+    shifts.push(s);
+    for (let d = 0; d < sub.l.length; d++) {
+      accL[d] = d < accL.length ? Math.min(accL[d], sub.l[d] + s) : sub.l[d] + s;
+      accR[d] = d < accR.length ? Math.max(accR[d], sub.r[d] + s) : sub.r[d] + s;
+    }
+  }
+  const mid = (shifts[0] + shifts[shifts.length - 1]) / 2;
+  return shifts.map((s) => s - mid);
+}
+
+/** Adds `sub`, shifted by `s`, to `out`: one level below out's root (a child), or level with it (a forest's next tree). */
+function merge(out: Sub, sub: Sub, s: number, below: boolean) {
+  const k = below ? 1 : 0;
+  for (let i = 0; i < sub.ids.length; i++) {
+    out.ids.push(sub.ids[i]);
+    out.off.push(sub.off[i] + s);
+  }
+  for (let d = 0; d < sub.l.length; d++) {
+    out.l[d + k] = out.l[d + k] === undefined ? sub.l[d] + s : Math.min(out.l[d + k], sub.l[d] + s);
+    out.r[d + k] = out.r[d + k] === undefined ? sub.r[d] + s : Math.max(out.r[d + k], sub.r[d] + s);
+  }
+}
 
 /**
  * Tidy tree layout (Reingold–Tilford, generalised to any number of children
@@ -72,16 +153,26 @@ type Sub = { ids: NodeId[]; off: number[]; l: number[]; r: number[] };
  * binary node with one child places it half a slot to its side, so a lone
  * left child is left of its parent and a lone right child right of it.
  *
+ * A forest's trees sit side by side as whole blocks, a little further apart
+ * than siblings. Hidden nodes are laid out like any other, so revealing them moves
+ * nothing. Sideways, depth runs left to right and siblings stack downwards.
+ *
  * Subtrees never overlap, and the layout depends only on the tree's shape, so
  * the same tree always looks the same and a changed tree animates in place.
  */
-export function layoutTree(shape: Pick<TreeShape, 'root' | 'nodes'>): TreeLayout {
-  const { root, nodes } = shape;
+export function layoutTree(
+  shape: Pick<TreeShape, 'root' | 'nodes'> & Partial<Pick<TreeShape, 'roots' | 'search'>>,
+  opts: { sideways?: boolean } = {},
+): TreeLayout {
+  const { nodes } = shape;
+  const roots = rootsOf(shape);
+  const kind: LayoutKind = shape.search ? 'search' : shape.roots ? 'forest' : 'tree';
   const depthOf = new Map<NodeId, number>();
   const parent: Record<NodeId, NodeId> = {};
   let maxDepth = 0;
   let edgeLabels = false;
-  if (root != null) {
+  let longest = '';
+  for (const root of roots) {
     const stack: [NodeId, number][] = [[root, 0]];
     while (stack.length) {
       const [id, d] = stack.pop()!;
@@ -90,7 +181,10 @@ export function layoutTree(shape: Pick<TreeShape, 'root' | 'nodes'>): TreeLayout
       if (!node) throw new Error(`Unknown node "${id}"`);
       depthOf.set(id, d);
       maxDepth = Math.max(maxDepth, d);
-      if (node.edgeLabel) edgeLabels = true;
+      if (node.edgeLabel) {
+        edgeLabels = true;
+        if ([...node.edgeLabel].length > [...longest].length) longest = node.edgeLabel;
+      }
       for (const c of node.children) {
         if (c == null) continue;
         parent[c] = id;
@@ -98,8 +192,11 @@ export function layoutTree(shape: Pick<TreeShape, 'root' | 'nodes'>): TreeLayout
       }
     }
   }
-  const m = metricsFor(depthOf.size, maxDepth, edgeLabels);
-  if (root == null) return { boxes: {}, parent, minX: 0, maxX: 0, minY: 0, maxY: 0, metrics: m };
+  const sideways = opts.sideways === true;
+  const base = metricsFor(depthOf.size, maxDepth, edgeLabels, kind, longest);
+  // Sideways, siblings stack down a phone's long side: pack them a little closer.
+  const m = sideways && kind === 'search' ? { ...base, gap: 4 } : base;
+  if (roots.length === 0) return { boxes: {}, parent, minX: 0, maxX: 0, minY: 0, maxY: 0, metrics: m, sideways };
 
   const place = (id: NodeId): Sub => {
     const node = nodes[id];
@@ -120,38 +217,22 @@ export function layoutTree(shape: Pick<TreeShape, 'root' | 'nodes'>): TreeLayout
       const half = (kids[0].r[0] - kids[0].l[0] + m.gap) / 2;
       shifts = [slots[0] === 0 ? -half : half];
     } else {
-      shifts = [0];
-      const accL = [...kids[0].l];
-      const accR = [...kids[0].r];
-      for (let j = 1; j < kids.length; j++) {
-        const sub = kids[j];
-        let s = -Infinity;
-        for (let d = 0; d < Math.min(accR.length, sub.l.length); d++) s = Math.max(s, accR[d] + m.gap - sub.l[d]);
-        shifts.push(s);
-        for (let d = 0; d < sub.l.length; d++) {
-          accL[d] = d < accL.length ? Math.min(accL[d], sub.l[d] + s) : sub.l[d] + s;
-          accR[d] = d < accR.length ? Math.max(accR[d], sub.r[d] + s) : sub.r[d] + s;
-        }
-      }
-      const mid = (shifts[0] + shifts[shifts.length - 1]) / 2;
-      shifts = shifts.map((s) => s - mid);
+      shifts = pack(kids, m.gap);
     }
-
-    kids.forEach((sub, j) => {
-      const s = shifts[j];
-      for (let i = 0; i < sub.ids.length; i++) {
-        out.ids.push(sub.ids[i]);
-        out.off.push(sub.off[i] + s);
-      }
-      for (let d = 0; d < sub.l.length; d++) {
-        out.l[d + 1] = out.l[d + 1] === undefined ? sub.l[d] + s : Math.min(out.l[d + 1], sub.l[d] + s);
-        out.r[d + 1] = out.r[d + 1] === undefined ? sub.r[d] + s : Math.max(out.r[d + 1], sub.r[d] + s);
-      }
-    });
+    kids.forEach((sub, j) => merge(out, sub, shifts[j], true));
     return out;
   };
 
-  const all = place(root);
+  const trees = roots.map(place);
+  let all = trees[0];
+  if (trees.length > 1) {
+    // Trees are packed as whole blocks, so one tree never tucks under another's branches.
+    const blocks = trees.map((t) => ({ ...t, l: [Math.min(...t.l)], r: [Math.max(...t.r)] }));
+    const shifts = pack(blocks, m.treeGap);
+    all = { ids: [], off: [], l: [], r: [] };
+    trees.forEach((sub, j) => merge(all, sub, shifts[j], false));
+  }
+
   const boxes: Record<NodeId, Box> = {};
   let minX = Infinity;
   let maxX = -Infinity;
@@ -160,13 +241,15 @@ export function layoutTree(shape: Pick<TreeShape, 'root' | 'nodes'>): TreeLayout
   all.ids.forEach((id, i) => {
     const e = extent(nodes[id], m);
     const depth = depthOf.get(id)!;
-    const x = all.off[i];
-    const y = depth * m.level;
-    boxes[id] = { x, y, w: e.l + e.r, h: e.h, left: e.l, right: e.r, depth };
-    minX = Math.min(minX, x - e.l);
-    maxX = Math.max(maxX, x + e.r);
-    minY = Math.min(minY, y - e.h / 2);
-    maxY = Math.max(maxY, y + e.h / 2);
+    // Sideways, the tidy offset runs down the page and depth runs across.
+    const box: Box = sideways
+      ? { x: depth * m.sideLevel, y: all.off[i], w: e.h, h: e.l + e.r, left: e.h / 2, right: e.h / 2, depth }
+      : { x: all.off[i], y: depth * m.level, w: e.l + e.r, h: e.h, left: e.l, right: e.r, depth };
+    boxes[id] = box;
+    minX = Math.min(minX, box.x - box.left);
+    maxX = Math.max(maxX, box.x + box.right);
+    minY = Math.min(minY, sideways ? box.y - e.l : box.y - e.h / 2);
+    maxY = Math.max(maxY, sideways ? box.y + e.r : box.y + e.h / 2);
   });
-  return { boxes, parent, minX, maxX, minY, maxY, metrics: m };
+  return { boxes, parent, minX, maxX, minY, maxY, metrics: m, sideways };
 }

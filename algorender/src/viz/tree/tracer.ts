@@ -1,6 +1,7 @@
 import type { Checkpoint, Frame, VarValue } from '@/engine/types';
 import { MARKS, type MarkKey } from '@/viz/marks';
-import type { NodeId, TreeNode, TreeShape, TreeState } from './types';
+import { rootsOf } from './layout';
+import type { NodeId, TableRow, TreeNode, TreeShape, TreeState } from './types';
 
 /** How a structure module draws its (immutable) model as a tree. */
 export type TreeDrawing<M> = {
@@ -99,10 +100,10 @@ export function treeSnapshot<M>(drawing: TreeDrawing<M>, model: M): TreeState {
   return new TreeTracer(model, drawing, []).frame({ note: '' }).state;
 }
 
-/** Parent of every node reachable from the root. */
-export function parents(shape: Pick<TreeShape, 'root' | 'nodes'>): Map<NodeId, NodeId> {
+/** Parent of every node reachable from the root (from every root, in a forest). */
+export function parents(shape: Pick<TreeShape, 'root' | 'nodes'> & Partial<Pick<TreeShape, 'roots'>>): Map<NodeId, NodeId> {
   const parent = new Map<NodeId, NodeId>();
-  const stack = shape.root == null ? [] : [shape.root];
+  const stack = [...rootsOf(shape)];
   while (stack.length) {
     const id = stack.pop()!;
     for (const c of shape.nodes[id]?.children ?? []) {
@@ -131,7 +132,10 @@ function share(next: TreeShape, prev: TreeShape | undefined): TreeShape {
     next.strip && prev.strip && next.strip.label === prev.strip.label && sameList(next.strip.ids, prev.strip.ids)
       ? prev.strip
       : next.strip;
-  return { root: next.root, nodes: allSame ? prev.nodes : nodes, strip };
+  const shared: TreeShape = { ...next, nodes: allSame ? prev.nodes : nodes, strip };
+  if (next.roots && prev.roots && sameList(next.roots, prev.roots)) shared.roots = prev.roots;
+  if (next.table && prev.table && sameTable(next.table, prev.table)) shared.table = prev.table;
+  return shared;
 }
 
 function sameNode(a: TreeNode, b: TreeNode): boolean {
@@ -144,7 +148,23 @@ function sameNode(a: TreeNode, b: TreeNode): boolean {
     a.cells.every((c, i) => c.id === b.cells[i].id && c.label === b.cells[i].label) &&
     a.badges?.top === b.badges?.top &&
     a.badges?.bottom === b.badges?.bottom &&
-    a.badges?.alert === b.badges?.alert
+    a.badges?.alert === b.badges?.alert &&
+    a.hidden === b.hidden &&
+    a.edgeGlyph === b.edgeGlyph &&
+    a.name === b.name
+  );
+}
+
+function sameTable(a: readonly TableRow[], b: readonly TableRow[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (row, i) =>
+        row.id === b[i].id &&
+        row.label === b[i].label &&
+        row.cells.length === b[i].cells.length &&
+        row.cells.every((c, k) => c.id === b[i].cells[k].id && c.label === b[i].cells[k].label && c.node === b[i].cells[k].node),
+    )
   );
 }
 
@@ -161,11 +181,13 @@ function highlights(
 ): string {
   const cellLabel = new Map<string, string>();
   for (const node of Object.values(shape.nodes)) for (const c of node.cells) cellLabel.set(c.id, c.label);
+  for (const row of shape.table ?? []) for (const c of row.cells) cellLabel.set(c.id, `${row.label} ${c.label || '(empty)'}`);
   const labelOf = (id: string): string => {
     const cell = cellLabel.get(id);
     if (cell != null) return cell;
     const node = shape.nodes[id];
     if (!node) return id;
+    if (node.name) return node.name;
     if (node.cells.length) return node.cells.map((c) => c.label).join(' ');
     // A trie node: the prefix spelled by the edges above it.
     let prefix = '';

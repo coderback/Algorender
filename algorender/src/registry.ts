@@ -1,4 +1,4 @@
-import { backtracking } from '@/algorithms/backtracking';
+import { backtracking, decisionTrees } from '@/algorithms/backtracking';
 import { dynamicProgramming } from '@/algorithms/dp';
 import { graphAlgorithms } from '@/algorithms/graph';
 import { greedy } from '@/algorithms/greedy';
@@ -28,6 +28,7 @@ for (const m of [
   ...greedy,
   ...dynamicProgramming,
   ...backtracking,
+  ...decisionTrees,
   ...stringAlgorithms,
   ...patterns,
   ...intervals,
