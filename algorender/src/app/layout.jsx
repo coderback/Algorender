@@ -25,11 +25,9 @@ export default function RootLayout({ children }) {
   return (
     // The theme script may stamp data-theme before React hydrates.
     <html lang="en-GB" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <head>
-        {/* beforeInteractive runs in <head> ahead of hydration, so a saved theme never flashes. */}
-        <Script id="theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
-      </head>
       <body className="antialiased">
+        {/* Next moves beforeInteractive scripts into <head>, ahead of hydration, so a saved theme never flashes. */}
+        <Script id="theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
         {children}
         <Analytics />
       </body>
