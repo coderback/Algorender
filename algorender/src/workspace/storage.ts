@@ -40,3 +40,24 @@ export function saveLanguage(language: Language) {
     // Not saved.
   }
 }
+
+/** Which stages of an exercise the learner has passed (all tests green). */
+export type ExerciseProgress = { parsons?: boolean; fill?: number; write?: boolean; bug?: boolean };
+
+const progressKey = (slug: string) => `algorender:exercise:${slug}`;
+
+export function loadProgress(slug: string): ExerciseProgress {
+  try {
+    return JSON.parse(localStorage.getItem(progressKey(slug)) ?? '{}') as ExerciseProgress;
+  } catch {
+    return {};
+  }
+}
+
+export function saveProgress(slug: string, progress: ExerciseProgress) {
+  try {
+    localStorage.setItem(progressKey(slug), JSON.stringify(progress));
+  } catch {
+    // Not saved.
+  }
+}

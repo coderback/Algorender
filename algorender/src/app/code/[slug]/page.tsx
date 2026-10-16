@@ -22,6 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${exercise.title} | Algorender`, description: `${exercise.summary} In Python, JavaScript or TypeScript.` };
 }
 
+const EYEBROW = { write: 'Code it yourself', modify: 'Change the code', bug: 'Find the bug' } as const;
+
 export default async function ExercisePage({ params }: Props) {
   const exercise = getExercise((await params).slug);
   if (!exercise) notFound();
@@ -34,7 +36,7 @@ export default async function ExercisePage({ params }: Props) {
       </Link>
       <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
         <div>
-          <div className="mb-1 text-xs font-semibold tracking-wider text-accent-ink uppercase">Code it yourself</div>
+          <div className="mb-1 text-xs font-semibold tracking-wider text-accent-ink uppercase">{EYEBROW[exercise.kind]}</div>
           <h1 className="text-3xl font-bold text-ink">{exercise.title}</h1>
           <div className="mt-2 max-w-3xl space-y-2 text-ink-soft">
             {exercise.task.map((p, i) => (
