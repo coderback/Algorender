@@ -4,16 +4,23 @@ import Link from 'next/link';
 import { FiAlertTriangle, FiArrowRight, FiCheck, FiX } from 'react-icons/fi';
 import { TraceStage } from '@/components/explorer/TraceStage';
 import type { Exercise } from '@/content/exercises';
+import type { LegendEntry } from '@/engine/module';
 import type { Trace } from '@/engine/types';
 import type { RunError } from './protocol';
-import { printed } from './trace';
+import { printed, type RunTrace } from './trace';
 import type { Outcome } from './useExerciseRun';
 
 const NO_PREDICT = { mode: 'watch', density: 'some', setMode: () => {}, setDensity: () => {} } as const;
 
+/** The memory diagram's cues, whatever the exercise draws in its own view. */
+export const MEMORY_LEGEND: readonly LegendEntry[] = [
+  { neutral: 'A name or object' },
+  { mark: 'write', label: 'Changed on this line' },
+];
+
 /**
  * What a run produced: an error card, each judged test's verdict, anything the
- * code printed, and the run itself on the array or grid view beside the learner’s code.
+ * code printed, and the run itself on the array, grid or memory view beside the learner’s code.
  */
 export function RunOutput({
   outcome,
@@ -40,16 +47,11 @@ export function RunOutput({
       )}
       <Results outcome={outcome} exercise={exercise} />
       {outcome.run && (
-        <TraceStage<unknown>
+        <RunPicture
           key={outcome.id}
-          trace={outcome.run.trace as Trace<unknown>}
-          view={outcome.run.view}
-          pseudocode={trimTrailingBlank(outcome.code.split('\n'))}
-          stats={outcome.run.stats}
-          legend={exercise.legend}
-          predict={NO_PREDICT}
-          code={{ title: 'Your code', numberAll: true }}
-          share={false}
+          run={outcome.run}
+          code={outcome.code}
+          legend={outcome.run.view === 'memory' ? MEMORY_LEGEND : exercise.legend}
           onFrame={onFrame}
           layout={layout}
           keyboard={keyboard}
@@ -59,9 +61,45 @@ export function RunOutput({
   );
 }
 
+/** A run on its view, beside the code that made it. Remount it (a new `key`) for every run. */
+export function RunPicture({
+  run,
+  code,
+  legend,
+  title = 'Your code',
+  onFrame,
+  layout = 'wide',
+  keyboard = 'page',
+}: {
+  run: RunTrace;
+  code: string;
+  legend: readonly LegendEntry[];
+  title?: string;
+  onFrame: (index: number) => void;
+  layout?: 'wide' | 'stacked';
+  keyboard?: 'page' | 'local';
+}) {
+  return (
+    <TraceStage<unknown>
+      trace={run.trace as Trace<unknown>}
+      view={run.view}
+      pseudocode={trimTrailingBlank(code.split('\n'))}
+      stats={run.stats}
+      legend={legend}
+      predict={NO_PREDICT}
+      code={{ title, numberAll: true }}
+      share={false}
+      onFrame={onFrame}
+      layout={layout}
+      keyboard={keyboard}
+    />
+  );
+}
+
 function Results({ outcome, exercise }: { outcome: Outcome; exercise: Exercise }) {
   const { result, verdicts } = outcome;
-  const output = printed(result);
+  // The memory view shows what was printed so far, step by step.
+  const output = outcome.run?.view === 'memory' ? [] : printed(result);
   const total = verdicts?.length ?? 0;
   const passed = verdicts?.filter((v) => v.verdict.pass).length ?? 0;
   const allPass = verdicts != null && total > 0 && passed === total;
@@ -123,7 +161,7 @@ const ERROR_TITLE: Record<RunError['kind'], string> = {
   internal: 'Something went wrong on our side',
 };
 
-function ErrorCard({ error }: { error: RunError }) {
+export function ErrorCard({ error }: { error: RunError }) {
   return (
     <div role="alert" className="flex gap-3 rounded-xl border border-bad-line bg-bad-soft px-4 py-3 text-sm">
       <FiAlertTriangle aria-hidden className="mt-0.5 shrink-0 text-bad-ink" />

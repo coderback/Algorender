@@ -133,7 +133,8 @@ export function TraceStage<S>({
         <aside className={layout === 'wide' ? 'min-w-0 space-y-3' : 'grid min-w-0 gap-3 md:grid-cols-2 md:items-start'}>
           <CodePanel lines={pseudocode} current={frame.line} title={code?.title} numberAll={code?.numberAll} />
           {stats.length > 0 && <StatsPanel stats={stats} values={frame.stats} />}
-          <VarsPanel vars={frame.vars} />
+          {/* The memory view draws every name itself. */}
+          {view !== 'memory' && <VarsPanel vars={frame.vars} />}
           <Legend entries={legend} />
         </aside>
       </div>

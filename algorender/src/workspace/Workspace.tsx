@@ -8,7 +8,7 @@ import { CodeEditor } from './editor/CodeEditor';
 import { blankNumbers, fillTemplate, parseBlanks, type Segment } from './formats/blanks';
 import { assemble, firstMisplaced, parsonsLines, seedOf, shuffled } from './formats/parsons';
 import { InlineText } from './InlineText';
-import { LANGUAGES, type Language } from './protocol';
+import { LANGUAGES, type Language, type RunMode } from './protocol';
 import { RunOutput, statusText } from './RunOutput';
 import { FillStage } from './stages/FillStage';
 import { ParsonsStage, type Arrangement } from './stages/ParsonsStage';
@@ -69,6 +69,8 @@ function passedStage(progress: ExerciseProgress, stage: Stage, levels: number): 
 function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Stage[]; variant: 'page' | 'lesson' }) {
   const [language, setLanguage] = useState<Language>(() => loadLanguage() ?? 'python');
   const [example, setExample] = useState(exercise.examples[0].id);
+  // 'lines' plays the example line by line on the memory view instead of the algorithm's own view.
+  const [mode, setMode] = useState<RunMode>('visual');
   const [progress, setProgress] = useState<ExerciseProgress>(() => loadProgress(exercise.slug));
   const fillSegments = exercise.blanks ? parseBlanks(exercise.blanks[language]) : [];
   const levels = exercise.fades ?? (exercise.blanks ? [blankNumbers(fillSegments)] : []);
@@ -131,9 +133,9 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
     clear();
   };
 
-  const onRun = async () => {
+  const onRun = async (runMode: RunMode = mode) => {
     setFlagged(null);
-    const result = await run(code, example);
+    const result = await run(code, example, { mode: runMode });
     if (!result || !allPass(result)) return;
     const next = { ...progress };
     if (stage === 'fill') next.fill = Math.max(progress.fill ?? -1, level);
@@ -175,6 +177,20 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
             </option>
           ))}
         </select>
+      </label>
+      <label className="flex items-center gap-2 text-sm text-ink-soft">
+        <input
+          type="checkbox"
+          checked={mode === 'lines'}
+          onChange={(e) => {
+            const next: RunMode = e.target.checked ? 'lines' : 'visual';
+            setMode(next);
+            // Show the same run the other way, rather than asking for another click.
+            if (outcome && !stale && !running) void onRun(next);
+          }}
+          className="size-4 accent-accent"
+        />
+        Line by line, with memory
       </label>
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {stage === 'parsons' && (
@@ -227,7 +243,7 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
           ))}
         <button
           type="button"
-          onClick={onRun}
+          onClick={() => void onRun()}
           disabled={busy || (stage === 'parsons' && arrangement.program.length === 0)}
           aria-busy={busy}
           aria-keyshortcuts={stage === 'write' || stage === 'bug' ? 'Control+Enter Meta+Enter' : undefined}
@@ -281,7 +297,7 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
             label={`Your ${LANGUAGES[language].label} code`}
             runLine={stale ? null : frameLine}
             errorLine={stale ? null : (outcome?.result.error?.line ?? null)}
-            onRun={onRun}
+            onRun={() => void onRun()}
           />
           <p className="text-xs text-ink-muted">Ctrl/⌘ + Enter runs your code. Tab indents; press Esc, then Tab, to leave the editor.</p>
         </>

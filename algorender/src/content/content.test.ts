@@ -67,6 +67,15 @@ describe('lessons', () => {
     }
   });
 
+  it('only traces code snippets that exist', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { getSnippet } = await import('./snippets');
+    for (const { slug } of lessons) {
+      const body = readFileSync(fileURLToPath(new URL(`./lessons/${slug}.mdx`, import.meta.url)), 'utf8');
+      for (const [, used] of body.matchAll(/snippet="([a-z0-9-]+)"/g)) expect(getSnippet(used), `${slug} traces snippet ${used}`).toBeDefined();
+    }
+  });
+
   it('only embeds visualisers that are registered', async () => {
     const { readFileSync } = await import('node:fs');
     for (const { slug } of lessons) {
