@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import SearchBar from './SearchBar';
 import { ThemeToggle } from './ThemeToggle';
+import { AccountMenu } from './account/AccountMenu';
 import { dataStructures, algorithms } from '@/data/visualisers';
 
 const navLink = 'text-sm font-medium text-ink-soft hover:text-accent-ink';
@@ -20,11 +21,12 @@ export default function Header() {
               <span className="text-2xl font-bold text-ink tracking-tight">Algorender</span>
             </Link>
             {/* Beside the brand from sm up; on phones it moves to its own row, after the search. */}
-            <nav aria-label="Main" className="hidden items-center gap-5 sm:flex">
+            <nav aria-label="Main" className="hidden items-center gap-4 sm:flex lg:gap-5">
               <Link href="/learn" className={navLink}>Learn</Link>
               <Link href="/code" className={navLink}>Code</Link>
               <Link href="/practice" className={navLink}>Practice</Link>
               <Link href="/compare" className={navLink}>Compare sorts</Link>
+              <AccountMenu linkClass={navLink} />
             </nav>
           </div>
 
@@ -35,11 +37,12 @@ export default function Header() {
             <ThemeToggle />
           </div>
 
-          <nav aria-label="Main" className="flex w-full items-center gap-5 sm:hidden">
+          <nav aria-label="Main" className="flex w-full flex-wrap items-center gap-x-5 gap-y-1 sm:hidden">
             <Link href="/learn" className={navLink}>Learn</Link>
             <Link href="/code" className={navLink}>Code</Link>
             <Link href="/practice" className={navLink}>Practice</Link>
             <Link href="/compare" className={navLink}>Compare sorts</Link>
+            <AccountMenu linkClass={navLink} />
           </nav>
         </div>
       </div>
