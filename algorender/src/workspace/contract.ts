@@ -19,6 +19,7 @@ export type ContractCase = {
     /** Exactly this many events (every kind counts toward maxEvents). */
     count?: number;
     arrays?: Record<string, number[]>;
+    grids?: Record<string, (number | null)[][]>;
     returned?: Json;
     /**
      * Error kind and line; `message` must contain this text when given;
@@ -31,6 +32,49 @@ export type ContractCase = {
 
 const at = (line: number | null, vars: Record<string, number | string | boolean | null> = {}) => ({ line, vars });
 const cell = (index: number, value: number) => ({ array: 'arr', index, value });
+/** A cell of grid `grid` as a comparison operand, or (without a value) as a `from` entry. */
+const gcell = (grid: string, row: number, col: number, value: number | null) => ({ grid, row, col, value });
+const read = (grid: string, row: number, col: number) => ({ grid, row, col });
+
+const UNIQUE_PATHS_PY = `def unique_paths(rows, cols):
+    dp = table(rows, cols)
+    for i in range(rows):
+        for j in range(cols):
+            if i == 0 or j == 0:
+                dp[i][j] = 1
+            else:
+                dp[i][j] = dp[i - 1][j] + dp[i][j - 1]
+    return dp[rows - 1][cols - 1]
+`;
+const UNIQUE_PATHS_JS = `function uniquePaths(rows, cols) {
+  const dp = table(rows, cols);
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (i === 0 || j === 0) {
+        dp[i][j] = 1;
+      } else {
+        dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
+      }
+    }
+  }
+  return dp[rows - 1][cols - 1];
+}
+`;
+// The type annotation on dp must not stop the table being named after it.
+const UNIQUE_PATHS_TS = UNIQUE_PATHS_JS.replace('function uniquePaths(rows, cols) {', 'function uniquePaths(rows: number, cols: number): number {').replace(
+  'const dp = table(rows, cols);',
+  'const dp: number[][] = table(rows, cols);',
+);
+const PATHS_VARS = { rows: 2, cols: 3 };
+const pathWrite = (row: number, col: number, value: number, from: ReturnType<typeof read>[], line: number) => ({
+  kind: 'cellWrite' as const,
+  grid: 'dp',
+  row,
+  col,
+  value,
+  from,
+  ...at(line, { ...PATHS_VARS, i: row, j: col }),
+});
 
 const BUBBLE_PY = `def bubble_sort(arr):
     n = len(arr)
@@ -295,6 +339,343 @@ export const CONTRACT: ContractCase[] = [
       arrays: { arr: [1] },
       returned: null,
     },
+  },
+  {
+    name: 'grids: table() makes a named grid, and each cell write lists the cells read for it',
+    code: { python: UNIQUE_PATHS_PY, javascript: UNIQUE_PATHS_JS, typescript: UNIQUE_PATHS_TS },
+    entry: { python: 'unique_paths', js: 'uniquePaths' },
+    args: [
+      { kind: 'value', name: 'rows', value: 2 },
+      { kind: 'value', name: 'cols', value: 3 },
+    ],
+    expect: {
+      events: [
+        { kind: 'grid', grid: 'dp', name: 'dp', rows: 2, cols: 3, values: [[0, 0, 0], [0, 0, 0]], ...at(2, PATHS_VARS) },
+        pathWrite(0, 0, 1, [], 6),
+        pathWrite(0, 1, 1, [], 6),
+        pathWrite(0, 2, 1, [], 6),
+        pathWrite(1, 0, 1, [], 6),
+        pathWrite(1, 1, 2, [read('dp', 0, 1), read('dp', 1, 0)], 8),
+        pathWrite(1, 2, 3, [read('dp', 0, 2), read('dp', 1, 1)], 8),
+      ],
+      arrays: {},
+      grids: { dp: [[1, 1, 1], [1, 2, 3]] },
+      returned: 3,
+    },
+  },
+  {
+    name: 'grids: a grid argument, with cells compared to cells',
+    code: {
+      python: `def rises(grid):
+    count = 0
+    for i in range(1, len(grid)):
+        for j in range(len(grid[i])):
+            if grid[i][j] > grid[i - 1][j]:
+                count += 1
+    return count
+`,
+      javascript: `function rises(grid) {
+  let count = 0;
+  for (let i = 1; i < grid.length; i++) {
+    for (let j = 0; j < grid[i].length; j++) {
+      if (grid[i][j] > grid[i - 1][j]) {
+        count += 1;
+      }
+    }
+  }
+  return count;
+}
+`,
+    },
+    entry: { python: 'rises', js: 'rises' },
+    args: [{ kind: 'grid', name: 'grid', values: [[1, 5], [3, 2], [4, 4]] }],
+    expect: {
+      events: [
+        { kind: 'grid', grid: 'grid', name: 'grid', rows: 3, cols: 2, values: [[1, 5], [3, 2], [4, 4]], ...at(null) },
+        { kind: 'compare', op: '>', a: gcell('grid', 1, 0, 3), b: gcell('grid', 0, 0, 1), result: true, ...at(5, { count: 0, i: 1, j: 0 }) },
+        { kind: 'compare', op: '>', a: gcell('grid', 1, 1, 2), b: gcell('grid', 0, 1, 5), result: false, ...at(5, { count: 1, i: 1, j: 1 }) },
+        { kind: 'compare', op: '>', a: gcell('grid', 2, 0, 4), b: gcell('grid', 1, 0, 3), result: true, ...at(5, { count: 1, i: 2, j: 0 }) },
+        { kind: 'compare', op: '>', a: gcell('grid', 2, 1, 4), b: gcell('grid', 1, 1, 2), result: true, ...at(5, { count: 2, i: 2, j: 1 }) },
+      ],
+      grids: { grid: [[1, 5], [3, 2], [4, 4]] },
+      returned: 3,
+    },
+  },
+  {
+    name: 'grids: from lists each cell once, resets when a statement begins, and blank cells are null',
+    code: {
+      python: `def reads(rows, cols):
+    dp = table(rows, cols, None)
+    dp[0][0] = 2
+    dp[0][1] = dp[0][0] + dp[0][0]
+    dp[0][1] += 1
+    if dp[1][0] == None:
+        dp[1][1] = dp[0][1]
+`,
+      javascript: `function reads(rows, cols) {
+  const dp = table(rows, cols, null);
+  dp[0][0] = 2;
+  dp[0][1] = dp[0][0] + dp[0][0];
+  dp[0][1] += 1;
+  if (dp[1][0] === null) {
+    dp[1][1] = dp[0][1];
+  }
+}
+`,
+    },
+    entry: { python: 'reads', js: 'reads' },
+    args: [
+      { kind: 'value', name: 'rows', value: 2 },
+      { kind: 'value', name: 'cols', value: 2 },
+    ],
+    expect: {
+      events: [
+        { kind: 'grid', grid: 'dp', name: 'dp', rows: 2, cols: 2, values: [[null, null], [null, null]], ...at(2, { rows: 2, cols: 2 }) },
+        { kind: 'cellWrite', grid: 'dp', row: 0, col: 0, value: 2, from: [], ...at(3, { rows: 2, cols: 2 }) },
+        { kind: 'cellWrite', grid: 'dp', row: 0, col: 1, value: 4, from: [read('dp', 0, 0)], ...at(4, { rows: 2, cols: 2 }) },
+        // += reads the cell it writes.
+        { kind: 'cellWrite', grid: 'dp', row: 0, col: 1, value: 5, from: [read('dp', 0, 1)], ...at(5, { rows: 2, cols: 2 }) },
+        { kind: 'compare', op: '==', a: gcell('dp', 1, 0, null), b: { value: null }, result: true, ...at(6, { rows: 2, cols: 2 }) },
+        // The if's read of dp[1][0] belongs to the if statement, not to the write inside it.
+        { kind: 'cellWrite', grid: 'dp', row: 1, col: 1, value: 5, from: [read('dp', 0, 1)], ...at(7, { rows: 2, cols: 2 }) },
+      ],
+      grids: { dp: [[2, 5], [null, 5]] },
+      returned: null,
+    },
+  },
+  {
+    name: 'grids: a helper’s returned cell counts as read by the statement that called it',
+    code: {
+      python: `def at(dp, i, j):
+    if i < 0 or j < 0:
+        return 0
+    # (line 4: the JS closes its if here)
+    return dp[i][j]
+
+def fill(rows, cols):
+    dp = table(rows, cols, 1)
+    dp[1][1] = at(dp, 0, 1) + at(dp, 1, 0) + at(dp, -1, 1)
+`,
+      javascript: `function at(dp, i, j) {
+  if (i < 0 || j < 0) {
+    return 0;
+  }
+  return dp[i][j];
+}
+function fill(rows, cols) {
+  const dp = table(rows, cols, 1);
+  dp[1][1] = at(dp, 0, 1) + at(dp, 1, 0) + at(dp, -1, 1);
+}
+`,
+    },
+    entry: { python: 'fill', js: 'fill' },
+    args: [
+      { kind: 'value', name: 'rows', value: 2 },
+      { kind: 'value', name: 'cols', value: 2 },
+    ],
+    expect: {
+      events: [
+        { kind: 'grid', grid: 'dp', name: 'dp', rows: 2, cols: 2, values: [[1, 1], [1, 1]], ...at(8, { rows: 2, cols: 2 }) },
+        { kind: 'cellWrite', grid: 'dp', row: 1, col: 1, value: 2, from: [read('dp', 0, 1), read('dp', 1, 0)], ...at(9, { rows: 2, cols: 2 }) },
+      ],
+      grids: { dp: [[1, 1], [1, 2]] },
+      returned: null,
+    },
+  },
+  {
+    name: 'grids: memoised recursion lists the cells its calls returned',
+    code: {
+      python: `def paths(memo, i, j):
+    if i == 0 or j == 0:
+        return 1
+    # (lines 4 and 7: the JS closes its ifs there)
+    if memo[i][j] > 0:
+        return memo[i][j]
+
+    memo[i][j] = paths(memo, i - 1, j) + paths(memo, i, j - 1)
+    return memo[i][j]
+
+def count(rows, cols):
+    memo = table(rows, cols)
+    return paths(memo, rows - 1, cols - 1)
+`,
+      javascript: `function paths(memo, i, j) {
+  if (i === 0 || j === 0) {
+    return 1;
+  }
+  if (memo[i][j] > 0) {
+    return memo[i][j];
+  }
+  memo[i][j] = paths(memo, i - 1, j) + paths(memo, i, j - 1);
+  return memo[i][j];
+}
+function count(rows, cols) {
+  const memo = table(rows, cols);
+  return paths(memo, rows - 1, cols - 1);
+}
+`,
+    },
+    entry: { python: 'count', js: 'count' },
+    args: [
+      { kind: 'value', name: 'rows', value: 3 },
+      { kind: 'value', name: 'cols', value: 3 },
+    ],
+    expect: {
+      events: [
+        { kind: 'grid', grid: 'memo', name: 'memo', rows: 3, cols: 3, values: [[0, 0, 0], [0, 0, 0], [0, 0, 0]], ...at(12, { rows: 3, cols: 3 }) },
+        { kind: 'compare', op: '>', a: gcell('memo', 2, 2, 0), b: { value: 0 }, result: false, ...at(5, { i: 2, j: 2 }) },
+        { kind: 'compare', op: '>', a: gcell('memo', 1, 2, 0), b: { value: 0 }, result: false, ...at(5, { i: 1, j: 2 }) },
+        { kind: 'compare', op: '>', a: gcell('memo', 1, 1, 0), b: { value: 0 }, result: false, ...at(5, { i: 1, j: 1 }) },
+        { kind: 'cellWrite', grid: 'memo', row: 1, col: 1, value: 2, from: [], ...at(8, { i: 1, j: 1 }) },
+        { kind: 'cellWrite', grid: 'memo', row: 1, col: 2, value: 3, from: [read('memo', 1, 1)], ...at(8, { i: 1, j: 2 }) },
+        { kind: 'compare', op: '>', a: gcell('memo', 2, 1, 0), b: { value: 0 }, result: false, ...at(5, { i: 2, j: 1 }) },
+        { kind: 'compare', op: '>', a: gcell('memo', 1, 1, 2), b: { value: 0 }, result: true, ...at(5, { i: 1, j: 1 }) },
+        { kind: 'cellWrite', grid: 'memo', row: 2, col: 1, value: 3, from: [read('memo', 1, 1)], ...at(8, { i: 2, j: 1 }) },
+        { kind: 'cellWrite', grid: 'memo', row: 2, col: 2, value: 6, from: [read('memo', 1, 2), read('memo', 2, 1)], ...at(8, { i: 2, j: 2 }) },
+      ],
+      grids: { memo: [[0, 0, 0], [0, 2, 3], [0, 3, 6]] },
+      returned: 6,
+    },
+  },
+  {
+    name: 'grids: reads through iteration and slices count, and a row kept in a variable still writes the grid',
+    code: {
+      python: `def fold(rows, cols):
+    dp = table(rows, cols, 1)
+    row = dp[1]
+    row[0] = sum(dp[0])
+    row[1] = max(dp[0][1:]) + row[0]
+`,
+      javascript: `function fold(rows, cols) {
+  const dp = table(rows, cols, 1);
+  const row = dp[1];
+  row[0] = dp[0].reduce((a, b) => a + b, 0);
+  row[1] = Math.max(...dp[0].slice(1)) + row[0];
+}
+`,
+    },
+    entry: { python: 'fold', js: 'fold' },
+    args: [
+      { kind: 'value', name: 'rows', value: 2 },
+      { kind: 'value', name: 'cols', value: 2 },
+    ],
+    expect: {
+      events: [
+        { kind: 'grid', grid: 'dp', name: 'dp', rows: 2, cols: 2, values: [[1, 1], [1, 1]], ...at(2, { rows: 2, cols: 2 }) },
+        { kind: 'cellWrite', grid: 'dp', row: 1, col: 0, value: 2, from: [read('dp', 0, 0), read('dp', 0, 1)], ...at(4, { rows: 2, cols: 2 }) },
+        { kind: 'cellWrite', grid: 'dp', row: 1, col: 1, value: 3, from: [read('dp', 0, 1), read('dp', 1, 0)], ...at(5, { rows: 2, cols: 2 }) },
+      ],
+      grids: { dp: [[1, 1], [2, 3]] },
+      returned: null,
+    },
+  },
+  {
+    name: 'grids: array() makes a second visual array named after its variable',
+    code: {
+      python: `def prefix_sums(arr):
+    sums = array(len(arr))
+    total = 0
+    for i in range(len(arr)):
+        total += arr[i]
+        sums[i] = total
+    return sums
+`,
+      javascript: `function prefixSums(arr) {
+  const sums = array(arr.length);
+  let total = 0;
+  for (let i = 0; i < arr.length; i++) {
+    total += arr[i];
+    sums[i] = total;
+  }
+  return sums;
+}
+`,
+    },
+    entry: { python: 'prefix_sums', js: 'prefixSums' },
+    args: [{ kind: 'array', name: 'arr', values: [1, 2, 3] }],
+    expect: {
+      events: [
+        { kind: 'array', array: 'arr', name: 'arr', values: [1, 2, 3], ...at(null) },
+        { kind: 'array', array: 'sums', name: 'sums', values: [0, 0, 0], ...at(2) },
+        { kind: 'write', array: 'sums', index: 0, value: 1, ...at(6, { total: 1, i: 0 }) },
+        { kind: 'write', array: 'sums', index: 1, value: 3, ...at(6, { total: 3, i: 1 }) },
+        { kind: 'write', array: 'sums', index: 2, value: 6, ...at(6, { total: 6, i: 2 }) },
+      ],
+      arrays: { arr: [1, 2, 3], sums: [1, 3, 6] },
+      grids: {},
+      returned: [1, 3, 6],
+    },
+  },
+  {
+    name: 'grids: unnamed helpers count up, and a reused name gets a fresh id',
+    code: {
+      python: `def make(n):
+    first = array(n)
+    first = array(n + 1)
+    print(table(1, 1))
+    return len(first)
+`,
+      javascript: `function make(n) {
+  let first = array(n);
+  first = array(n + 1);
+  console.log(table(1, 1));
+  return first.length;
+}
+`,
+    },
+    entry: { python: 'make', js: 'make' },
+    args: [{ kind: 'value', name: 'n', value: 1 }],
+    expect: {
+      events: [
+        { kind: 'array', array: 'first', name: 'first', values: [0], ...at(2, { n: 1 }) },
+        { kind: 'array', array: 'first2', name: 'first', values: [0, 0], ...at(3, { n: 1 }) },
+        { kind: 'grid', grid: 'table1', name: 'table1', rows: 1, cols: 1, values: [[0]], ...at(4, { n: 1 }) },
+        { kind: 'print', text: '[[0]]', ...at(4, { n: 1 }) },
+      ],
+      arrays: { first: [0], first2: [0, 0] },
+      grids: { table1: [[0]] },
+      returned: 2,
+    },
+  },
+  {
+    name: 'grids: a row past the end is a runtime error on its line',
+    code: {
+      python: `def past_the_end(rows, cols):
+    dp = table(rows, cols)
+    dp[rows][0] = 1
+`,
+      javascript: `function pastTheEnd(rows, cols) {
+  const dp = table(rows, cols);
+  dp[rows][0] = 1;
+}
+`,
+    },
+    entry: { python: 'past_the_end', js: 'pastTheEnd' },
+    args: [
+      { kind: 'value', name: 'rows', value: 2 },
+      { kind: 'value', name: 'cols', value: 2 },
+    ],
+    expect: { kinds: ['grid'], grids: { dp: [[0, 0], [0, 0]] }, error: { kind: 'runtime', line: 3, message: '2 is out of range for dp (2 rows)' } },
+  },
+  {
+    name: 'grids: a cell can only hold a number',
+    code: {
+      python: `def store_text(rows, cols):
+    dp = table(rows, cols)
+    dp[0][1] = "x"
+`,
+      javascript: `function storeText(rows, cols) {
+  const dp = table(rows, cols);
+  dp[0][1] = "x";
+}
+`,
+    },
+    entry: { python: 'store_text', js: 'storeText' },
+    args: [
+      { kind: 'value', name: 'rows', value: 1 },
+      { kind: 'value', name: 'cols', value: 2 },
+    ],
+    expect: { kinds: ['grid'], grids: { dp: [[0, 0]] }, error: { kind: 'runtime', line: 3, message: "TypeError: dp holds numbers, so dp[0][1] can't store" } },
   },
   {
     name: 'a missing entry function says what to define',

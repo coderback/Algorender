@@ -3,7 +3,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { CONTRACT, entryFor } from '../contract';
-import { type Arg, DEFAULT_LIMITS, type Language, type Limits, type RunEvent, type RunResult } from '../protocol';
+import { type Arg, DEFAULT_LIMITS, type Language, type Limits, MAX_FROM, type RunEvent, type RunResult } from '../protocol';
 import { instrument } from './instrument';
 import { runJs } from './runtime';
 
@@ -29,6 +29,7 @@ for (const language of ['javascript', 'typescript'] as const) {
         else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
         if (want.count !== undefined) expect(r.events).toHaveLength(want.count);
         if (want.arrays) expect(r.arrays).toEqual(want.arrays);
+        if (want.grids) expect(r.grids).toEqual(want.grids);
         if ('returned' in want) expect(r.returned).toEqual(want.returned);
         if (want.error) {
           expect(r.error?.kind).toBe(want.error.kind);
@@ -560,6 +561,120 @@ function f(arr) {
   });
 });
 
+describe('grids', () => {
+  const size = (rows: number, cols: number): Arg[] => [
+    { kind: 'value', name: 'rows', value: rows },
+    { kind: 'value', name: 'cols', value: cols },
+  ];
+  const grid = (values: number[][]): Arg => ({ kind: 'grid', name: 'grid', values });
+  const failure = (body: string, rows = 2, cols = 2) => {
+    const r = run(`function f(rows, cols) {\n  const dp = table(rows, cols);\n  ${body};\n}\n`, 'f', size(rows, cols));
+    return { message: r.error?.message, kind: r.error?.kind, line: r.error?.line, grids: r.grids, kinds: kinds(r) };
+  };
+
+  it('reads like an array of arrays: length, iteration, methods, printing and returning', () => {
+    const r = run(
+      `function f(grid) {
+  const row = grid[1];
+  let total = 0;
+  for (const r of grid) total += r.reduce((a, b) => a + b, 0);
+  console.log(grid, grid[0]);
+  return [Array.isArray(grid), grid.length, row.length, row.at(-1), total, grid[0].slice(1), grid, row, grid.map((r) => r[0]), JSON.stringify(grid)];
+}
+`,
+      'f',
+      [grid([[1, 2], [3, 4]])],
+    );
+    expect(r.error).toBeNull();
+    expect(r.returned).toEqual([true, 2, 2, 4, 10, [2], [[1, 2], [3, 4]], [3, 4], [1, 3], '[[1,2],[3,4]]']);
+    // The grid and its rows are left out of the variables, like visual arrays.
+    expect(only(r, 'print')[0]).toMatchObject({ text: '[[1, 2], [3, 4]] [1, 2]', vars: { total: 10 } });
+  });
+
+  it('refuses whatever would change a row or the grid’s size, with a reason', () => {
+    const cases: [string, string][] = [
+      ['dp[0] = [1, 2]', 'TypeError: dp[…] = … would replace a whole row of dp'],
+      ['dp.push([1, 2])', 'TypeError: dp.push() would change the size of dp, but a table keeps its size'],
+      ['dp.length = 1', 'a table keeps its size'],
+      ['delete dp[0]', 'a table keeps its size'],
+      ['dp.fill([])', 'would replace whole rows of dp'],
+      ['dp.extra = 1', 'dp is a visual table'],
+      ['dp[0].push(1)', 'TypeError: dp[0].push() would change the length of a row of dp'],
+      ['dp[0].splice(0, 1)', 'set cells with dp[0][j] = …'],
+      ['dp[0].length = 0', 'a table keeps its size'],
+      ['delete dp[0][0]', 'a table keeps its size'],
+      ['dp[0].fill(1)', 'TypeError: dp[0].fill() would change many cells at once'],
+      ['dp[0].sort()', 'TypeError: dp[0].sort() would sort without showing the steps'],
+      ['dp.reverse()', 'reorder the rows'],
+    ];
+    for (const [body, reason] of cases) {
+      const f = failure(body);
+      expect(f, body).toMatchObject({ kind: 'runtime', line: 3, grids: { dp: [[0, 0], [0, 0]] } });
+      expect(f.message, body).toContain(reason);
+    }
+  });
+
+  it('rejects bad sizes, fills, indices and values', () => {
+    const cases: [string, string][] = [
+      ['table(2.5, 1)', 'TypeError: table(rows, cols) needs whole numbers, not 2.5.'],
+      ['table("2", 1)', 'TypeError: table(rows, cols) needs whole numbers, not "2".'],
+      ['table(-1, 2)', "RangeError: table() can't make -1 rows."],
+      ['table(2, -3)', "RangeError: table() can't make -3 columns."],
+      ['table(200, 200)', 'RangeError: table(200, 200) would make 40,000 cells; a visual table holds at most 10,000.'],
+      ['table(1, 1, "x")', 'TypeError: fill must be a number or null, not "x".'],
+      ['array(-1)', "RangeError: array() can't make -1 cells."],
+      ['array(2.5)', 'TypeError: array() needs a whole number of cells, not 2.5.'],
+      ['array(3, null)', 'TypeError: fill must be a number, not null.'],
+      ['array([1, "a"])', 'TypeError: array() takes numbers, not "a".'],
+      ['array(null)', 'TypeError: array() takes a length or a list of numbers, not null.'],
+      ['table(2, 2)[0][2]', 'RangeError: Column 2 is out of range for table1 (2 columns)'],
+      ['table(2, 2)[-1]', 'RangeError: Row -1 is out of range for table1 (2 rows)'],
+      ['table(2, 2)[0][0.5]', "TypeError: Index 0.5 isn't a whole number, so it can't pick a cell of table1[0]."],
+    ];
+    for (const [expression, message] of cases) {
+      const r = run(`function f() {\n  const x = 1;\n  return ${expression};\n}\n`, 'f');
+      expect(r.error, expression).toEqual({ kind: 'runtime', line: 3, message });
+    }
+    expect(failure('dp[0][0] = Infinity', 1, 1)).toMatchObject({ message: "RangeError: dp holds finite numbers, so dp[0][0] can't store Infinity.", grids: { dp: [[0]] } });
+    expect(failure('dp[0][0] = null', 1, 1)).toMatchObject({ message: "TypeError: dp holds numbers, so dp[0][0] can't store null.", kinds: ['grid'] });
+    expect(failure('dp[0][2] = 1').message).toBe('RangeError: Column 2 is out of range for dp (2 columns)');
+  });
+
+  it('makes arrays from values or a length, named after their variable', () => {
+    const r = run(`function f(grid) {\n  const copy = array(grid[1]);\n  const zeros = array(2, 7);\n  return [copy, zeros];\n}\n`, 'f', [grid([[1], [5]])]);
+    expect(r.events.slice(1)).toEqual([
+      { kind: 'array', array: 'copy', name: 'copy', values: [5], line: 2, vars: {} },
+      { kind: 'array', array: 'zeros', name: 'zeros', values: [7, 7], line: 3, vars: {} },
+    ]);
+    expect(r.arrays).toEqual({ copy: [5], zeros: [7, 7] });
+  });
+
+  it('names a plain declaration or assignment, but not a nested call or a destructuring target', () => {
+    const r = run(`function f() {\n  let dp = table(1, 1);\n  const [a, b] = [table(1, 1), array(1)];\n  const pair = [table(1, 1)];\n}\n`, 'f');
+    expect(r.events.map((e) => ('grid' in e ? e.grid : 'array' in e ? e.array : e.kind))).toEqual(['dp', 'table1', 'array1', 'table2']);
+  });
+
+  it('leaves a learner’s own table function alone', () => {
+    const r = run(`function table(rows, cols) {\n  return Array.from({ length: rows }, () => Array(cols).fill(9));\n}\nfunction f() {\n  const dp = table(1, 2);\n  dp[0][0] = 1;\n  return dp;\n}\n`, 'f');
+    expect(r.events).toEqual([]);
+    expect(r.returned).toEqual([[1, 9]]);
+  });
+
+  it('lists at most MAX_FROM cells read, the first ones', () => {
+    const r = run(`function f(rows, cols) {\n  const dp = table(rows, cols, 1);\n  dp[1][0] = dp[0].reduce((a, b) => a + b, 0);\n}\n`, 'f', size(2, 40));
+    const [write] = only(r, 'cellWrite');
+    expect(write.from).toHaveLength(MAX_FROM);
+    expect(write.from[MAX_FROM - 1]).toEqual({ grid: 'dp', row: 0, col: MAX_FROM - 1 });
+  });
+
+  it('counts cell writes toward the event limit, and a stopped write is not applied', () => {
+    const r = run(`function f(rows, cols) {\n  const dp = table(rows, cols);\n  while (true) {\n    dp[0][0] = dp[0][0] + 1;\n  }\n}\n`, 'f', size(1, 1), { maxEvents: 10 });
+    expect(r.events).toHaveLength(10);
+    expect(r.error).toMatchObject({ kind: 'limit', line: 4 });
+    expect(r.grids).toEqual({ dp: [[9]] });
+  });
+});
+
 // Replaying the events from the starting values must reproduce every
 // comparison's values and the final arrays, whatever the input.
 const SORTS: Record<string, string> = {
@@ -637,4 +752,59 @@ describe('property: events replay to the final arrays', () => {
       );
     });
   }
+});
+
+const MIN_PATH = `function minPath(grid) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const best = table(rows, cols);
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (i === 0 && j === 0) best[i][j] = grid[i][j];
+      else if (i === 0) best[i][j] = best[i][j - 1] + grid[i][j];
+      else if (j === 0) best[i][j] = best[i - 1][j] + grid[i][j];
+      else best[i][j] = (best[i - 1][j] < best[i][j - 1] ? best[i - 1][j] : best[i][j - 1]) + grid[i][j];
+    }
+  }
+  return best[rows - 1][cols - 1];
+}`;
+
+describe('property: grid events replay to the final grids', () => {
+  const grids = fc
+    .tuple(fc.integer({ min: 1, max: 5 }), fc.integer({ min: 1, max: 5 }))
+    .chain(([rows, cols]) => fc.array(fc.array(fc.integer({ min: 0, max: 9 }), { minLength: cols, maxLength: cols }), { minLength: rows, maxLength: rows }));
+
+  it('min path sum: each write lists exactly the cells it was built from', () => {
+    fc.assert(
+      fc.property(grids, (values) => {
+        const r = run(MIN_PATH, 'minPath', [{ kind: 'grid', name: 'grid', values }]);
+        expect(r.error).toBeNull();
+        const state: Record<string, (number | null)[][]> = {};
+        for (const e of r.events) {
+          if (e.kind === 'grid') state[e.grid] = e.values.map((row) => [...row]);
+          else if (e.kind === 'compare') {
+            for (const side of [e.a, e.b]) if ('grid' in side) expect(state[side.grid][side.row][side.col]).toBe(side.value);
+          } else if (e.kind === 'cellWrite') {
+            const { row: i, col: j } = e;
+            const above = i > 0 ? [{ grid: 'best', row: i - 1, col: j }] : [];
+            const left = j > 0 ? [{ grid: 'best', row: i, col: j - 1 }] : [];
+            expect(new Set(e.from.map((c) => `${c.grid}:${c.row}:${c.col}`))).toEqual(
+              new Set([...above, ...left, { grid: 'grid', row: i, col: j }].map((c) => `${c.grid}:${c.row}:${c.col}`)),
+            );
+            state[e.grid][i][j] = e.value;
+          }
+        }
+        expect(state).toEqual(r.grids);
+        // Reference: the same recurrence on plain arrays.
+        const best = values.map((row) => row.map(() => 0));
+        values.forEach((row, i) =>
+          row.forEach((v, j) => {
+            best[i][j] = v + (i === 0 && j === 0 ? 0 : Math.min(i > 0 ? best[i - 1][j] : Infinity, j > 0 ? best[i][j - 1] : Infinity));
+          }),
+        );
+        expect(r.returned).toBe(best.at(-1)!.at(-1));
+      }),
+      { numRuns: 40 },
+    );
+  });
 });

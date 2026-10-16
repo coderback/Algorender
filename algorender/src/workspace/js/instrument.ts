@@ -17,6 +17,9 @@
 //   error belongs to the innermost line.
 // - Catch clauses rethrow the run's stop signal first, so the learner's
 //   try/catch can't swallow a limit.
+// - `const name = table(…)` and `name = table(…)` (or array) call the helper
+//   as __viz.named("name", table)(…), so the collection is named after its
+//   variable; a learner's own `table` passes through unchanged.
 // The code runs in strict mode (parsed as such, so strict-only errors are
 // syntax errors): sloppy mode would let `i = 0` create a global in the worker
 // that outlives the run.
@@ -49,6 +52,8 @@ const VARS = '__vizV';
 const STRICT = '"use strict"; ';
 
 const COMPARISONS = new Set(['<', '<=', '>', '>=', '==', '===', '!=', '!==']);
+/** The helpers that make visual collections (runtime.ts). */
+const HELPERS = new Set(['table', 'array']);
 
 export function instrument(code: string, language: SourceLanguage): { code: string } {
   const source = language === 'typescript' ? stripTypes(code) : code;
@@ -314,6 +319,7 @@ class Instrumenter {
         return this.block(s);
       case 'ExpressionStatement':
         s.expression = this.node(s.expression);
+        if (s.expression.type === 'AssignmentExpression' && s.expression.operator === '=') this.nameHelper(s.expression.left, s.expression.right);
         return s;
       case 'VariableDeclaration':
         this.declaration(s);
@@ -428,7 +434,15 @@ class Instrumenter {
     for (const decl of d.declarations) {
       decl.id = this.node(decl.id);
       if (decl.init) decl.init = this.node(decl.init);
+      this.nameHelper(decl.id, decl.init);
     }
+  }
+
+  /** `name = table(…)`: the call becomes __viz.named("name", table)(…), so the table is named after its variable. */
+  private nameHelper(target: ES.Pattern, value: ES.Expression | null | undefined) {
+    if (target.type !== 'Identifier' || value?.type !== 'CallExpression' || value.optional) return;
+    const callee = value.callee;
+    if (callee.type === 'Identifier' && HELPERS.has(callee.name)) value.callee = vizCall('named', [lit(target.name), callee]);
   }
 
   /** catch (e) { … } → catch (e) { __viz.rethrow(e); … }, with a name for `catch {}` and destructured params. */

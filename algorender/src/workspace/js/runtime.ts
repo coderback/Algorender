@@ -4,14 +4,30 @@
 //
 // instrument.ts rewrites the code to call the `__viz` helpers below: line()
 // before every statement, cmp()/cell() for comparisons, enter()/leave() around
-// function bodies, rethrow() in catch clauses. Array arguments arrive as
-// Proxies over plain arrays that record writes, pushes and pops, and refuse
-// the mutators the view can't show step by step. Every event is recorded
-// before its change is applied, so the final arrays always match the events,
-// even when that event is the one that stops the run.
+// function bodies, rethrow() in catch clauses, named() for `x = table(…)`.
+// Array arguments (and array()) arrive as Proxies over plain arrays that
+// record writes, pushes and pops, and refuse the mutators the view can't show
+// step by step. Grids (arguments and table()) are a Proxy over an array of row
+// Proxies: rows record cell reads (for a cell write's `from`, cleared by
+// line()) and writes, and neither can be replaced or resized. Every event is
+// recorded before its change is applied, so the final collections always
+// match the events, even when that event is the one that stops the run.
 
 import type { VarValue } from '@/engine/types';
-import type { Arg, CompareOp, Json, Limits, Operand, RunError, RunEvent, RunRequest, RunResult } from '../protocol';
+import {
+  MAX_CELLS,
+  MAX_FROM,
+  type Arg,
+  type CompareOp,
+  type GridCell,
+  type Json,
+  type Limits,
+  type Operand,
+  type RunError,
+  type RunEvent,
+  type RunRequest,
+  type RunResult,
+} from '../protocol';
 import { instrument, LearnerSyntaxError } from './instrument';
 
 /** Lists longer than this show their first items, then the length (as the Python runtime does). */
@@ -40,10 +56,34 @@ class Cell {
   }
 }
 
+/** A visual-grid cell read by a comparison. */
+class GridCellValue {
+  readonly grid: string;
+  readonly row: number;
+  readonly col: number;
+  readonly value: number | null;
+  constructor(grid: string, row: number, col: number, value: number | null) {
+    this.grid = grid;
+    this.row = row;
+    this.col = col;
+    this.value = value;
+  }
+}
+
+const isCell = (x: unknown): x is Cell | GridCellValue => x instanceof Cell || x instanceof GridCellValue;
+
 /** Reads the variables in scope where it was created (built by instrument.ts). */
 type Capture = (() => Record<string, unknown>) | null;
-type Visual = { id: string; data: number[] };
+/** What a visual Proxy stands for. `id` is unique in the run; `name` is the learner's variable, for messages. */
+type ArrayInfo = { kind: 'array'; id: string; name: string; data: number[] };
+type GridInfo = { kind: 'grid'; id: string; name: string; data: (number | null)[][] };
+type RowInfo = { kind: 'row'; grid: GridInfo; r: number; data: (number | null)[] };
+type Visual = ArrayInfo | GridInfo | RowInfo;
 type At = { line: number | null; vars: Record<string, VarValue> };
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+/** Values as the learner reads them in a message: `[1, null]`. */
+const cellsText = (data: readonly (number | null)[]) => `[${data.map(String).join(', ')}]`;
 
 const SKIP = Symbol('skip');
 /** A key that looks like an index but isn't a whole number (1.5, NaN, undefined). */
@@ -78,6 +118,33 @@ function evaluate(op: string, a: unknown, b: unknown): boolean {
   }
 }
 
+// A grid's rows and a row's cells are fixed in number, like the table on screen.
+const GRID_REFUSED: Record<string, (name: string) => string> = {
+  ...Object.fromEntries(
+    ['push', 'pop', 'shift', 'unshift', 'splice'].map((m) => [
+      m,
+      (g: string) => `${g}.${m}() would change the size of ${g}, but a table keeps its size; make it as big as you need with table(rows, cols).`,
+    ]),
+  ),
+  sort: (g) => `${g}.sort() would reorder the rows without showing the steps.`,
+  reverse: (g) => `${g}.reverse() would reorder the rows without showing the steps.`,
+  fill: (g) => `${g}.fill() would replace whole rows of ${g}; set its cells one at a time with ${g}[i][j] = ….`,
+  copyWithin: (g) => `${g}.copyWithin() would replace whole rows of ${g}; set its cells one at a time with ${g}[i][j] = ….`,
+};
+
+const ROW_REFUSED: Record<string, (row: string, grid: string) => string> = {
+  ...Object.fromEntries(
+    ['push', 'pop', 'shift', 'unshift', 'splice'].map((m) => [
+      m,
+      (row: string, g: string) => `${row}.${m}() would change the length of a row of ${g}, but a table keeps its size; set cells with ${row}[j] = ….`,
+    ]),
+  ),
+  sort: (row) => `${row}.sort() would sort without showing the steps; set the cells yourself.`,
+  reverse: (row) => `${row}.reverse() would reverse without showing the steps; set the cells yourself.`,
+  fill: (row) => `${row}.fill() would change many cells at once; set one cell at a time with ${row}[j] = ….`,
+  copyWithin: (row) => `${row}.copyWithin() would change many cells at once; set one cell at a time with ${row}[j] = ….`,
+};
+
 const REFUSED: Record<string, (name: string) => string> = {
   sort: (a) => `${a}.sort() would sort without showing the steps; write the comparisons and swaps yourself.`,
   reverse: (a) => `${a}.reverse() would reverse without showing the steps; swap the cells yourself.`,
@@ -92,6 +159,19 @@ class Run {
   readonly events: RunEvent[] = [];
   /** Each visual array's values, by id. */
   readonly arrays = new Map<string, number[]>();
+  /** Each visual grid's rows, by id. */
+  readonly grids = new Map<string, (number | null)[][]>();
+  /**
+   * Grid cells the current function's statement has read, in order, each once,
+   * by `grid:row:col`. A call starts its own; when it returns, what its last
+   * statement read joins the caller's, so `dp[i][j] = at(i - 1, j) + …` and
+   * memoised recursion list the cells their calls returned.
+   */
+  private reads = new Map<string, GridCell>();
+  /** The callers' read logs, one per tracked frame, like `frames`. */
+  private readonly callerReads: Map<string, GridCell>[] = [];
+  private readonly ids = new Set<string>();
+  private readonly unnamed = { table: 0, array: 0 };
   /** Set when a limit stopped the run, even if the learner's code caught the signal. */
   stopped: RunError | null = null;
   /** Set once the run has returned: callbacks that outlive it (timers, promises) stop at their next line. */
@@ -121,29 +201,45 @@ class Run {
       this.line = n;
       this.capture = capture;
       this.errorLine = n;
+      // A new statement: a cell write's `from` is only what its own statement read.
+      if (this.reads.size > 0) this.reads.clear();
     },
     cell: (obj: unknown, key: unknown, line: number): unknown => {
       this.errorLine = line;
       const info = typeof obj === 'object' && obj !== null ? this.visual.get(obj) : undefined;
-      if (info && typeof key !== 'symbol') {
+      // A grid gives its row as usual (dp[i] in dp[i][j]); the row then gives the cell.
+      if (info && info.kind !== 'grid' && typeof key !== 'symbol') {
         const k = String(key);
         const i = asIndex(k);
         if (i === null) return (obj as Record<string, unknown>)[k];
-        const index = this.readable(info, k, i);
-        return new Cell(info.id, index, info.data[index]);
+        if (info.kind === 'array') {
+          const index = this.readable(info, k, i);
+          return new Cell(info.id, index, info.data[index]);
+        }
+        const col = this.column(info, k, i);
+        this.read(info, col);
+        return new GridCellValue(info.grid.id, info.r, col, info.data[col]);
       }
       return (obj as Record<PropertyKey, unknown>)[key as PropertyKey];
     },
     cmp: (op: string, a: unknown, b: unknown, line: number, capture: Capture): boolean => {
       this.errorLine = line;
-      const result = evaluate(op, a instanceof Cell ? a.value : a, b instanceof Cell ? b.value : b);
-      if (a instanceof Cell || b instanceof Cell) {
+      const result = evaluate(op, isCell(a) ? a.value : a, isCell(b) ? b.value : b);
+      if (isCell(a) || isCell(b)) {
         this.emit({ kind: 'compare', op: REPORTED_OP[op], a: this.operand(a), b: this.operand(b), result, line, vars: this.vars(capture) });
       }
       return result;
     },
+    /** `name = table(…)`: the helper, told the variable's name; a learner's own function of that name as it is. */
+    named: (name: string, fn: unknown): unknown => {
+      if (fn === this.helpers.table) return (rows: unknown, cols: unknown, fill: unknown = 0) => this.makeTable(name, rows, cols, fill);
+      if (fn === this.helpers.array) return (values: unknown, fill: unknown = 0) => this.makeArray(name, values, fill);
+      return fn;
+    },
     enter: (): number => {
       this.frames.push(this.line, this.capture);
+      this.callerReads.push(this.reads);
+      this.reads = new Map();
       return this.frames.length;
     },
     leave: (depth: number, value?: unknown): unknown => {
@@ -152,6 +248,13 @@ class Run {
         this.line = this.frames[depth - 2] as number | null;
         this.capture = this.frames[depth - 1] as Capture;
         this.frames.length = depth - 2;
+        const caller = this.callerReads[depth / 2 - 1];
+        for (const [key, cell] of this.reads) {
+          if (caller.size >= MAX_FROM) break;
+          if (!caller.has(key)) caller.set(key, cell);
+        }
+        this.callerReads.length = depth / 2 - 1;
+        this.reads = caller;
       }
       this.errorLine = this.line;
       return value;
@@ -198,29 +301,102 @@ class Run {
     return { line: this.line, vars: this.vars(this.capture) };
   }
 
-  // Arguments and visual arrays ----------------------------------------------
+  // Arguments and the helpers --------------------------------------------------
 
   arg(a: Arg): unknown {
     if (a.kind === 'value') return structuredClone(a.value);
+    this.ids.add(a.name);
+    if (a.kind === 'grid') {
+      const values = a.values.map((row) => [...row]);
+      this.emit({ kind: 'grid', grid: a.name, name: a.name, rows: values.length, cols: values[0]?.length ?? 0, values: values.map((row) => [...row]), line: null, vars: {} });
+      return this.visualGrid(a.name, a.name, values);
+    }
     this.emit({ kind: 'array', array: a.name, name: a.name, values: [...a.values], line: null, vars: {} });
     return this.visualArray(a.name, a.values);
   }
 
-  private visualArray(name: string, values: number[]): number[] {
+  /** table() and array() as the learner's code sees them (globals it may shadow). */
+  readonly helpers = {
+    table: (rows: unknown, cols: unknown, fill: unknown = 0) => this.makeTable(null, rows, cols, fill),
+    array: (values: unknown, fill: unknown = 0) => this.makeArray(null, values, fill),
+  };
+
+  /** [name, id] for a new collection: the variable's name, or table1, array2…; the id gets a number on the end when taken. */
+  private newId(name: string | null, kind: 'table' | 'array'): [string, string] {
+    const label = name ?? `${kind}${++this.unnamed[kind]}`;
+    let id = label;
+    for (let k = 2; this.ids.has(id); k++) id = `${label}${k}`;
+    this.ids.add(id);
+    return [label, id];
+  }
+
+  private fillValue(fill: unknown, blankOk: boolean): number | null {
+    if (fill === null && blankOk) return null;
+    if (typeof fill !== 'number' || !Number.isFinite(fill)) {
+      throw new TypeError(`fill must be ${blankOk ? 'a number or null' : 'a number'}, not ${short(this.show(fill, true))}.`);
+    }
+    return zero(fill);
+  }
+
+  private makeTable(name: string | null, rows: unknown, cols: unknown, fill: unknown): unknown {
+    for (const n of [rows, cols]) {
+      if (typeof n !== 'number' || !Number.isInteger(n)) throw new TypeError(`table(rows, cols) needs whole numbers, not ${short(this.show(n, true))}.`);
+    }
+    const [r, c] = [rows as number, cols as number];
+    if (r < 0 || c < 0) throw new RangeError(`table() can't make ${r < 0 ? `${r} rows` : `${c} columns`}.`);
+    if (r * c > MAX_CELLS) {
+      throw new RangeError(`table(${r}, ${c}) would make ${withCommas(r * c)} cells; a visual table holds at most ${withCommas(MAX_CELLS)}.`);
+    }
+    const value = this.fillValue(fill, true);
+    const [label, id] = this.newId(name, 'table');
+    const values = Array.from({ length: r }, () => Array<number | null>(c).fill(value));
+    this.emit({ kind: 'grid', grid: id, name: label, rows: r, cols: c, values: values.map((row) => [...row]), ...this.at() });
+    return this.visualGrid(id, label, values);
+  }
+
+  private makeArray(name: string | null, values: unknown, fill: unknown): unknown {
+    let items: number[];
+    if (typeof values === 'number') {
+      if (!Number.isInteger(values)) throw new TypeError(`array() needs a whole number of cells, not ${values}.`);
+      if (values < 0) throw new RangeError(`array() can't make ${values} cells.`);
+      if (values > MAX_CELLS) {
+        throw new RangeError(`array(${values}) would make ${withCommas(values)} cells; a visual array holds at most ${withCommas(MAX_CELLS)}.`);
+      }
+      items = Array<number>(values).fill(this.fillValue(fill, false)!);
+    } else {
+      const iterable = values != null && typeof (values as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function';
+      if (!iterable) throw new TypeError(`array() takes a length or a list of numbers, not ${short(this.show(values, true))}.`);
+      const list: unknown[] = Array.from(values as Iterable<unknown>);
+      if (list.length > MAX_CELLS) {
+        throw new RangeError(`array() would make ${withCommas(list.length)} cells; a visual array holds at most ${withCommas(MAX_CELLS)}.`);
+      }
+      for (const x of list) {
+        if (typeof x !== 'number' || !Number.isFinite(x)) throw new TypeError(`array() takes numbers, not ${short(this.show(x, true))}.`);
+      }
+      items = (list as number[]).map(zero);
+    }
+    const [label, id] = this.newId(name, 'array');
+    this.emit({ kind: 'array', array: id, name: label, values: [...items], ...this.at() });
+    return this.visualArray(id, items, label);
+  }
+
+  // Visual arrays ----------------------------------------------------------------
+
+  private visualArray(id: string, values: number[], name = id): number[] {
     const data = [...values];
-    const info: Visual = { id: name, data };
+    const info: ArrayInfo = { kind: 'array', id, name, data };
     const methods: Record<string, unknown> = {
       push: (...items: unknown[]) => {
         for (const item of items) {
           const value = this.storable(name, item, `${name}.push()`);
-          this.emit({ kind: 'append', array: name, value, ...this.at() });
+          this.emit({ kind: 'append', array: id, value, ...this.at() });
           data.push(value);
         }
         return data.length;
       },
       pop: () => {
         if (data.length === 0) return undefined;
-        this.emit({ kind: 'pop', array: name, index: data.length - 1, ...this.at() });
+        this.emit({ kind: 'pop', array: id, index: data.length - 1, ...this.at() });
         return data.pop();
       },
     };
@@ -262,25 +438,148 @@ class Run {
       preventExtensions: unchangeable,
     });
     this.visual.set(proxy, info);
-    this.arrays.set(name, data);
+    this.arrays.set(id, data);
     return proxy;
   }
 
-  private readable({ id, data }: Visual, key: string, i: number | typeof BAD_INDEX): number {
-    if (i === BAD_INDEX) throw new TypeError(`Index ${key} isn't a whole number, so it can't pick a cell of ${id}.`);
-    if (i < 0 || i >= data.length) throw new RangeError(`Index ${i} is out of range for ${id} (length ${data.length})`);
+  private readable({ name, data }: ArrayInfo, key: string, i: number | typeof BAD_INDEX): number {
+    if (i === BAD_INDEX) throw new TypeError(`Index ${key} isn't a whole number, so it can't pick a cell of ${name}.`);
+    if (i < 0 || i >= data.length) throw new RangeError(`Index ${i} is out of range for ${name} (length ${data.length})`);
     return i;
   }
 
-  private write({ id, data }: Visual, key: string, i: number | typeof BAD_INDEX, value: unknown) {
-    if (i === BAD_INDEX) throw new TypeError(`Index ${key} isn't a whole number, so it can't pick a cell of ${id}.`);
+  private write({ id, name, data }: ArrayInfo, key: string, i: number | typeof BAD_INDEX, value: unknown) {
+    if (i === BAD_INDEX) throw new TypeError(`Index ${key} isn't a whole number, so it can't pick a cell of ${name}.`);
     if (i < 0 || i >= data.length) {
-      const grow = i >= data.length ? `; use ${id}.push(value) to add to the end` : '';
-      throw new RangeError(`Index ${i} is out of range for ${id} (length ${data.length})${grow}.`);
+      const grow = i >= data.length ? `; use ${name}.push(value) to add to the end` : '';
+      throw new RangeError(`Index ${i} is out of range for ${name} (length ${data.length})${grow}.`);
     }
-    const stored = this.storable(id, value, `${id}[${i}]`);
+    const stored = this.storable(name, value, `${name}[${i}]`);
     this.emit({ kind: 'write', array: id, index: i, value: stored, ...this.at() });
     data[i] = stored;
+  }
+
+  // Visual grids -------------------------------------------------------------------
+
+  /** A Proxy over an array of row Proxies, so dp.length, iteration and dp.map(…) work as usual. */
+  private visualGrid(id: string, name: string, values: (number | null)[][]): unknown {
+    const data = values;
+    const grid: GridInfo = { kind: 'grid', id, name, data };
+    const rows = data.map((row, r) => this.visualRow(grid, r, row));
+    const methods: Record<string, unknown> = {};
+    for (const [method, why] of Object.entries(GRID_REFUSED)) {
+      methods[method] = () => {
+        throw new TypeError(why(name));
+      };
+    }
+    const fixed = (what: string) => {
+      throw new TypeError(`${what} would change the size of ${name}, but a table keeps its size; make it as big as you need with table(rows, cols).`);
+    };
+    const unchangeable = () => {
+      throw new TypeError(`${name} is a visual table: change it with ${name}[i][j] = value.`);
+    };
+    const proxy = new Proxy(rows, {
+      get: (target, key, receiver) => {
+        if (typeof key === 'string') {
+          const i = asIndex(key);
+          if (i !== null) return target[this.rowIndex(grid, key, i)];
+          if (Object.hasOwn(methods, key)) return methods[key];
+        }
+        return Reflect.get(target, key, receiver);
+      },
+      set: (_target, key) => {
+        if (typeof key === 'string') {
+          if (asIndex(key) !== null) {
+            throw new TypeError(`${name}[…] = … would replace a whole row of ${name}; set its cells one at a time with ${name}[i][j] = ….`);
+          }
+          if (key === 'length') return fixed(`Setting ${name}.length`);
+        }
+        return unchangeable();
+      },
+      deleteProperty: () => fixed(`delete ${name}[…]`),
+      defineProperty: unchangeable,
+      setPrototypeOf: unchangeable,
+      preventExtensions: unchangeable,
+    });
+    this.visual.set(proxy, grid);
+    this.grids.set(id, data);
+    return proxy;
+  }
+
+  /** One row: reading a cell is remembered for the next cell write's `from`; writing one is an event. */
+  private visualRow(grid: GridInfo, r: number, data: (number | null)[]): (number | null)[] {
+    const info: RowInfo = { kind: 'row', grid, r, data };
+    const label = `${grid.name}[${r}]`;
+    const methods: Record<string, unknown> = {};
+    for (const [method, why] of Object.entries(ROW_REFUSED)) {
+      methods[method] = () => {
+        throw new TypeError(why(label, grid.name));
+      };
+    }
+    const fixed = (what: string) => {
+      throw new TypeError(`${what} would change the length of a row of ${grid.name}, but a table keeps its size; set cells with ${label}[j] = ….`);
+    };
+    const unchangeable = () => {
+      throw new TypeError(`${label} is a row of a visual table: change it with ${label}[j] = value.`);
+    };
+    const proxy = new Proxy(data, {
+      get: (target, key, receiver) => {
+        if (typeof key === 'string') {
+          const i = asIndex(key);
+          if (i !== null) {
+            const col = this.column(info, key, i);
+            this.read(info, col);
+            return target[col];
+          }
+          if (Object.hasOwn(methods, key)) return methods[key];
+        }
+        return Reflect.get(target, key, receiver);
+      },
+      set: (_target, key, value) => {
+        if (typeof key === 'string') {
+          const i = asIndex(key);
+          if (i !== null) {
+            this.cellWrite(info, key, i, value);
+            return true;
+          }
+          if (key === 'length') return fixed(`Setting ${label}.length`);
+        }
+        return unchangeable();
+      },
+      deleteProperty: () => fixed(`delete ${label}[…]`),
+      defineProperty: unchangeable,
+      setPrototypeOf: unchangeable,
+      preventExtensions: unchangeable,
+    });
+    this.visual.set(proxy, info);
+    return proxy;
+  }
+
+  private rowIndex({ name, data }: GridInfo, key: string, i: number | typeof BAD_INDEX): number {
+    if (i === BAD_INDEX) throw new TypeError(`Index ${key} isn't a whole number, so it can't pick a row of ${name}.`);
+    if (i < 0 || i >= data.length) throw new RangeError(`Row ${i} is out of range for ${name} (${plural(data.length, 'row')})`);
+    return i;
+  }
+
+  private column({ grid, r, data }: RowInfo, key: string, i: number | typeof BAD_INDEX): number {
+    if (i === BAD_INDEX) throw new TypeError(`Index ${key} isn't a whole number, so it can't pick a cell of ${grid.name}[${r}].`);
+    if (i < 0 || i >= data.length) throw new RangeError(`Column ${i} is out of range for ${grid.name} (${plural(data.length, 'column')})`);
+    return i;
+  }
+
+  private read({ grid, r }: RowInfo, col: number) {
+    if (this.reads.size >= MAX_FROM) return;
+    const key = `${grid.id}\u0000${r}\u0000${col}`;
+    if (!this.reads.has(key)) this.reads.set(key, { grid: grid.id, row: r, col });
+  }
+
+  private cellWrite(info: RowInfo, key: string, i: number | typeof BAD_INDEX, value: unknown) {
+    const col = this.column(info, key, i);
+    const { grid, r, data } = info;
+    const stored = this.storable(grid.name, value, `${grid.name}[${r}][${col}]`);
+    const from = Array.from(this.reads.values(), (c) => ({ ...c }));
+    this.emit({ kind: 'cellWrite', grid: grid.id, row: r, col, value: stored, from, ...this.at() });
+    data[col] = stored;
   }
 
   private storable(name: string, value: unknown, what: string): number {
@@ -332,6 +631,7 @@ class Run {
 
   private operand(x: unknown): Operand {
     if (x instanceof Cell) return { array: x.array, index: x.index, value: x.value };
+    if (x instanceof GridCellValue) return { grid: x.grid, row: x.row, col: x.col, value: x.value };
     const shown = this.varValue(x);
     if (shown !== SKIP) return { value: shown };
     return { value: x === undefined ? null : short(this.show(x, true)) };
@@ -348,7 +648,7 @@ class Run {
     seen.add(v);
     try {
       const visual = this.visual.get(v);
-      if (visual) return `[${visual.data.join(', ')}]`;
+      if (visual) return visual.kind === 'grid' ? `[${visual.data.map(cellsText).join(', ')}]` : cellsText(visual.data);
       if (Array.isArray(v)) return `[${Array.from(v, (x) => this.show(x, true, seen)).join(', ')}]`;
       if (v instanceof Error) return `${v.name}: ${v.message}`;
       if (v instanceof Set) return `Set(${v.size}) {${Array.from(v, (x) => this.show(x, true, seen)).join(', ')}}`;
@@ -358,7 +658,7 @@ class Run {
       }
       const json = JSON.stringify(v, (_k, x: unknown) => {
         const visual = typeof x === 'object' && x !== null ? this.visual.get(x) : undefined;
-        return visual ? visual.data : x;
+        return visual ? plainData(visual) : x;
       });
       if (json !== undefined) return json;
     } catch {
@@ -383,7 +683,7 @@ class Run {
     if (path.includes(v)) return '…'; // contains itself
     const inner = [...path, v];
     const visual = this.visual.get(v);
-    if (visual) return [...visual.data];
+    if (visual) return plainData(visual);
     if (Array.isArray(v)) return Array.from(v, (x) => this.json(x, inner));
     if (v instanceof Set) return Array.from(v, (x) => this.json(x, inner));
     if (v instanceof Map) return Array.from(v, ([k, x]) => [this.json(k, inner), this.json(x, inner)]);
@@ -396,6 +696,11 @@ class Run {
     }
     return out;
   }
+}
+
+/** A copy of what a visual Proxy holds, as plain arrays. */
+function plainData(visual: Visual): (number | null)[] | (number | null)[][] {
+  return visual.kind === 'grid' ? visual.data.map((row) => [...row]) : [...visual.data];
 }
 
 function listText(items: number[]): string {
@@ -413,7 +718,7 @@ function errorMessage(e: unknown, run: Run): string {
 }
 
 function failed(kind: RunError['kind'], message: string, line: number | null = null): RunResult {
-  return { events: [], arrays: {}, returned: null, error: { kind, message, line }, ms: 0 };
+  return { events: [], arrays: {}, grids: {}, returned: null, error: { kind, message, line }, ms: 0 };
 }
 
 /** Runs one request to completion; never throws. */
@@ -442,9 +747,10 @@ function execute(request: RunRequest): RunResult {
 
   const run = new Run(request.limits);
   // The learner's top level runs inside a function: its declarations stay
-  // local to this run, and `entry` is looked up once it has finished.
-  const factory = new Function('__viz', 'console', `return function () {\n${code}\nreturn typeof ${entry} === "function" ? ${entry} : undefined;\n};`);
-  const program = factory(run.viz, run.console) as () => unknown;
+  // local to this run, and `entry` is looked up once it has finished. The
+  // helpers are parameters, so the learner's own `table` or `array` shadows them.
+  const factory = new Function('__viz', 'console', 'table', 'array', `return function () {\n${code}\nreturn typeof ${entry} === "function" ? ${entry} : undefined;\n};`);
+  const program = factory(run.viz, run.console, run.helpers.table, run.helpers.array) as () => unknown;
 
   let returned: unknown = undefined;
   let error: RunError | null = null;
@@ -485,5 +791,7 @@ function execute(request: RunRequest): RunResult {
   }
   const arrays: Record<string, number[]> = {};
   for (const [id, data] of run.arrays) arrays[id] = [...data];
-  return { events: run.events, arrays, returned: json, error, ms };
+  const grids: Record<string, (number | null)[][]> = {};
+  for (const [id, data] of run.grids) grids[id] = data.map((row) => [...row]);
+  return { events: run.events, arrays, grids, returned: json, error, ms };
 }

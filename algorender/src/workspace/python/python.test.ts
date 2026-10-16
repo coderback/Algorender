@@ -4,7 +4,7 @@
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { CONTRACT, entryFor } from '../contract';
-import { type Arg, DEFAULT_LIMITS, type Limits, type RunEvent, type RunResult } from '../protocol';
+import { type Arg, DEFAULT_LIMITS, type Limits, MAX_FROM, type RunEvent, type RunResult } from '../protocol';
 import { HARNESS } from './harness';
 
 let pyodide: PyodideInterface;
@@ -36,6 +36,7 @@ describe('contract', () => {
       else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
       if (want.count !== undefined) expect(r.events).toHaveLength(want.count);
       if (want.arrays) expect(r.arrays).toEqual(want.arrays);
+      if (want.grids) expect(r.grids).toEqual(want.grids);
       if ('returned' in want) expect(r.returned).toEqual(want.returned);
       if (want.error) {
         expect(r.error?.kind).toBe(want.error.kind);
@@ -432,6 +433,121 @@ describe('isolation between runs', () => {
     expect(r.error?.message).toContain("NameError: name 'leaked' is not defined");
     const state = pyodide.runPython('import builtins, sys\n[type(builtins.print).__name__, sys.gettrace() is None]');
     expect(state.toJs()).toEqual(['builtin_function_or_method', true]);
+  });
+});
+
+describe('grids', () => {
+  const size = (rows: number, cols: number): Arg[] => [
+    { kind: 'value', name: 'rows', value: rows },
+    { kind: 'value', name: 'cols', value: cols },
+  ];
+  const grid = (values: number[][]): Arg => ({ kind: 'grid', name: 'grid', values });
+
+  it('reads like a list of lists: negative indices, len, iteration, slices, printing and returning', () => {
+    const r = run(
+      `def f(grid):
+    row = grid[-1]
+    total = 0
+    for r in grid:
+        total += sum(r)
+    print(grid, grid[0])
+    return [len(grid), len(row), row[-1], total, grid[0][1:], grid, row, grid == [[1, 2], [3, 4]], 3 in row]
+`,
+      'f',
+      [grid([[1, 2], [3, 4]])],
+    );
+    expect(r.error).toBeNull();
+    expect(r.returned).toEqual([2, 2, 4, 10, [2], [[1, 2], [3, 4]], [3, 4], true, true]);
+    // The grid and its rows are left out of the variables, like visual arrays.
+    expect(only(r, 'print')[0]).toMatchObject({ text: '[[1, 2], [3, 4]] [1, 2]', vars: { total: 10 } });
+  });
+
+  it('normalises negative indices in writes and reports them as positions', () => {
+    const r = run(`def f(rows, cols):\n    dp = table(rows, cols)\n    dp[-1][-1] = 5\n`, 'f', size(2, 3));
+    expect(only(r, 'cellWrite')).toMatchObject([{ row: 1, col: 2, value: 5 }]);
+  });
+
+  it.each([
+    ['dp[0] = [1, 2]', 'would replace a whole row of dp'],
+    ['dp.append([1, 2])', 'dp.append() would change the size of dp'],
+    ['dp.pop()', 'a table keeps its size'],
+    ['del dp[0]', 'a table keeps its size'],
+    ['dp[0].append(1)', 'dp[0].append() would change the length of a row of dp'],
+    ['dp[0].pop()', 'set cells with dp[0][j] = …'],
+    ['del dp[0][0]', 'a table keeps its size'],
+    ['dp[0] += [1]', 'a table keeps its size'],
+    ['dp[0][0:1] = [5]', 'one cell at a time'],
+    ['dp[0].sort()', 'dp[0].sort() would sort without showing the steps'],
+    ['dp.reverse()', 'reorder the rows'],
+  ])('refuses %s with a reason', (statement, reason) => {
+    const r = run(`def f(rows, cols):\n    dp = table(rows, cols)\n    ${statement}\n`, 'f', size(2, 2));
+    expect(r.error).toEqual({ kind: 'runtime', line: 3, message: expect.stringContaining(reason) });
+    expect(r.error!.message).toMatch(/^TypeError: /);
+    expect(r.grids).toEqual({ dp: [[0, 0], [0, 0]] });
+  });
+
+  it.each([
+    ['table(2.5, 1)', 'TypeError: table(rows, cols) needs whole numbers, not 2.5.'],
+    ['table(True, 1)', 'TypeError: table(rows, cols) needs whole numbers, not True.'],
+    ['table(-1, 2)', "ValueError: table() can't make -1 rows."],
+    ['table(2, -3)', "ValueError: table() can't make -3 columns."],
+    ['table(200, 200)', 'ValueError: table(200, 200) would make 40,000 cells; a visual table holds at most 10,000.'],
+    ['table(1, 1, "x")', "TypeError: fill must be a number or None, not 'x'."],
+    ['array(-1)', "ValueError: array() can't make -1 cells."],
+    ['array(2.5)', 'TypeError: array() needs a whole number of cells, not 2.5.'],
+    ['array(3, None)', 'TypeError: fill must be a number, not None.'],
+    ['array([1, "a"])', "TypeError: array() takes numbers, not 'a'."],
+    ['array(None)', 'TypeError: array() takes a length or a list of numbers, not None.'],
+    ['table(2, 2)[0][2]', 'IndexError: column 2 is out of range for table1 (2 columns)'],
+    ['table(2, 2)[0]["a"]', 'TypeError: list indices must be integers or slices, not str'],
+  ])('rejects %s', (expression, message) => {
+    const r = run(`def f():\n    x = 1\n    return ${expression}\n`, 'f');
+    expect(r.error).toEqual({ kind: 'runtime', line: 3, message });
+  });
+
+  it.each([
+    ['dp[0][0] = float("inf")', 'ValueError: dp holds finite numbers'],
+    ['dp[0][0] = None', "TypeError: dp holds numbers, so dp[0][0] can't store None (a NoneType)."],
+    ['dp[0][0] = 2 ** 60', 'ValueError: dp holds numbers up to'],
+  ])('rejects the cell write %s and leaves the grid as it was', (statement, message) => {
+    const r = run(`def f(rows, cols):\n    dp = table(rows, cols)\n    ${statement}\n`, 'f', size(1, 1));
+    expect(r.error).toEqual({ kind: 'runtime', line: 3, message: expect.stringContaining(message) });
+    expect(kinds(r)).toEqual(['grid']);
+    expect(r.grids).toEqual({ dp: [[0]] });
+  });
+
+  it('makes arrays from values or a length, named after their variable', () => {
+    const r = run(`def f(grid):\n    copy = array(grid[1])\n    zeros = array(2, 7)\n    return [copy, zeros]\n`, 'f', [grid([[1], [5]])]);
+    expect(r.events.slice(1)).toEqual([
+      { kind: 'array', array: 'copy', name: 'copy', values: [5], line: 2, vars: {} },
+      { kind: 'array', array: 'zeros', name: 'zeros', values: [7, 7], line: 3, vars: {} },
+    ]);
+    expect(r.arrays).toEqual({ copy: [5], zeros: [7, 7] });
+  });
+
+  it('names an annotated assignment, but not a nested call or a tuple target', () => {
+    const r = run(`def f():\n    dp: list = table(1, 1)\n    a, b = table(1, 1), array(1)\n    pair = [table(1, 1)]\n`, 'f');
+    expect(r.events.map((e) => ('grid' in e ? e.grid : 'array' in e ? e.array : e.kind))).toEqual(['dp', 'table1', 'array1', 'table2']);
+  });
+
+  it('leaves a learner’s own table function alone', () => {
+    const r = run(`def table(rows, cols):\n    return [[9] * cols for _ in range(rows)]\n\ndef f():\n    dp = table(1, 2)\n    dp[0][0] = 1\n    return dp\n`, 'f');
+    expect(r.events).toEqual([]);
+    expect(r.returned).toEqual([[1, 9]]);
+  });
+
+  it('lists at most MAX_FROM cells read, the first ones', () => {
+    const r = run(`def f(rows, cols):\n    dp = table(rows, cols, 1)\n    dp[1][0] = sum(dp[0])\n`, 'f', size(2, 40));
+    const [write] = only(r, 'cellWrite');
+    expect(write.from).toHaveLength(MAX_FROM);
+    expect(write.from[MAX_FROM - 1]).toEqual({ grid: 'dp', row: 0, col: MAX_FROM - 1 });
+  });
+
+  it('counts cell writes toward the event limit, and a stopped write is not applied', () => {
+    const r = run(`def f(rows, cols):\n    dp = table(rows, cols)\n    while True:\n        dp[0][0] = dp[0][0] + 1\n`, 'f', size(1, 1), { maxEvents: 10 });
+    expect(r.events).toHaveLength(10);
+    expect(r.error).toMatchObject({ kind: 'limit', line: 4 });
+    expect(r.grids).toEqual({ dp: [[9]] });
   });
 });
 
