@@ -176,6 +176,64 @@ test('the PRIMM lesson asks for a prediction before it runs the code', async ({ 
   await expect(page.getByRole('tablist', { name: 'Ways to practise' })).toBeVisible();
 });
 
+test('line by line: an exercise run can play on the memory view', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openWith(page, 'bubble-sort', 'javascript', BUBBLE_JS);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).toContainText('All 7 tests pass.');
+  // Switching re-runs the same code, now recording every line.
+  await page.getByLabel('Line by line, with memory').check();
+  const memory = page.getByRole('group', { name: 'Memory' });
+  await expect(memory).toBeVisible();
+  await expect(page.getByTestId('narration')).toHaveText('The program starts at line 1.');
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: /Step forward/ }).click();
+  await expect(page.getByTestId('narration')).toHaveText('Line 4: arr[j] > arr[j + 1]? Yes, so line 5 runs next.');
+  await expect(memory.getByRole('group', { name: 'Frames' })).toContainText('bubbleSort, the current frame: arr refers to Array 1, i is 0, j is 0.');
+  await expect(tests(page)).toContainText('All 7 tests pass.');
+  expect(errors).toEqual([]);
+});
+
+test('the recursion lesson traces the call stack, and asks before the second run', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await page.goto('/learn/recursion');
+  const runs = page.getByRole('button', { name: 'Run it line by line' });
+  await runs.first().click();
+  const memory = page.getByRole('group', { name: 'Memory' }).first();
+  await expect(memory).toBeVisible();
+  const forward = page.getByRole('button', { name: /Step forward/ }).first();
+  for (let i = 0; i < 8; i++) await forward.click();
+  await expect(page.getByTestId('narration').first()).toHaveText('Line 5 calls factorial(1).');
+  await expect(memory.getByRole('group', { name: 'Frames' })).toContainText('factorial (call 4), the current frame: n is 1');
+  await forward.click();
+  await expect(page.getByTestId('narration').first()).toHaveText('Line 2: n <= 1? Yes, so line 3 runs next.');
+
+  await expect(runs.nth(1)).toBeDisabled();
+  await page.getByRole('group', { name: 'Predict' }).getByRole('button', { name: 'One, shared by every call' }).click();
+  await expect(page.getByRole('group', { name: 'Predict' })).toContainText('Right.');
+  await runs.nth(1).click();
+  await expect(page.getByTestId('narration').nth(1)).toHaveText('The program starts at line 1.');
+  await page.getByRole('button', { name: /Step forward/ }).nth(1).click();
+  await expect(page.getByTestId('narration').nth(1)).toHaveText('Line 1 defines total.');
+  await expect(page.getByRole('group', { name: 'Memory' }).nth(1).getByRole('group', { name: 'Objects' })).toContainText('Function total (new).');
+  expect(errors).toEqual([]);
+});
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`the memory view passes axe (${colorScheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme });
+    await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+    await page.goto('/learn/recursion');
+    await page.getByRole('button', { name: 'Run it line by line' }).first().click();
+    await expect(page.getByRole('group', { name: 'Memory' }).first()).toBeVisible();
+    for (let i = 0; i < 9; i++) await page.getByRole('button', { name: /Step forward/ }).first().click();
+    const { violations } = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
+      .analyze();
+    expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+}
+
 test('/code groups the exercises by kind', async ({ page }) => {
   await page.goto('/code');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Write it', 'Change it', 'Find the bug']);
