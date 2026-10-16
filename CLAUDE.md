@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Algorender is a Next.js 16 app for learning algorithms and data structures visually, and is being rebuilt into a broader platform (DS&A → math → ML → systems). `REVAMP_PLAN.md` at the repo root is the plan: read its roadmap and decisions before proposing architecture. Every visualiser now runs on the trace engine (one dynamic route, `app/visualisers/[slug]`); there are no legacy per-page visualisers left. Other routes: `/compare` (sorting race + growth chart), `/embed/[slug]` (chrome-less iframe embeds), `sitemap.xml`, `robots.txt`.
+Algorender is a Next.js 16 app for learning algorithms and data structures visually, and is being rebuilt into a broader platform (DS&A → math → ML → systems). `REVAMP_PLAN.md` at the repo root is the plan: read its roadmap and decisions before proposing architecture. Every visualiser now runs on the trace engine (one dynamic route, `app/visualisers/[slug]`); there are no legacy per-page visualisers left. Other routes: `/learn` (concept map and lessons), `/code` (exercises), `/practice` (interview-style problems with a local judge), `/compare` (sorting race + growth chart), `/embed/[slug]` (chrome-less iframe embeds), `sitemap.xml`, `robots.txt`.
 
 ## Development Commands
 
@@ -22,7 +22,7 @@ npm run workers      # bundle the JS runner's worker (runs before dev and build;
 
 The user's global `~/.npmrc` sets `os=linux`, which makes npm skip Windows native binaries (Tailwind's oxide, lightningcss, Next's SWC). Run installs with `npm_config_os=win32` set in the environment; don't add that to a project `.npmrc` (Vercel builds on Linux).
 
-The full e2e suite (~250 tests, including axe scans of every page in both themes) is heavy next to `next dev`. On a low-memory machine, run it against a production build instead: `npm run build`, `npx next start -p 3100`, then `npm run e2e -- --workers=2`. Playwright reuses whatever already listens on the port, so stop any stale server first.
+The full e2e suite (~320 tests, including axe scans of every page in both themes) is heavy next to `next dev`. On a low-memory machine, run it against a production build instead: `npm run build`, `npx next start -p 3100`, then `npm run e2e -- --workers=2`. Playwright reuses whatever already listens on the port, so stop any stale server first.
 
 ## Architecture
 
@@ -85,6 +85,18 @@ The full e2e suite (~250 tests, including axe scans of every page in both themes
   - Server routes must never accept the `null` origin with credentials.
   - In e2e tests, init scripts run in every frame, including the sandbox's, which has no storage: touch `localStorage` only when `window === window.top` (see `useLanguage` in `e2e/workspace.spec.ts`).
 
+### Practice problems (`/practice`, the local judge)
+
+- **Content:** one YAML file per problem in `src/content/problems/<slug>.yaml`, validated by `ProblemSchema` (`src/problems/schema.ts`, which documents every field). Statements, examples, hints and approaches are our own words, never copied from another site.
+  - **Signature:** a typed function (`int`, `float`, `bool`, `string`, arrays and 2D arrays of them, `TreeNode`, `ListNode`; a `void` function names its `inPlace` argument), or a `design` class whose tests are call lists, constructor first: `[[MinStack], [push, 3], [getMin]]`. Signatures are camelCase; Python gets snake_case (`codegen.ts`, which also writes every language's stub).
+  - **Tests:** `examples` (shown and judged), hand-picked `tests`, and seeded `generated` tests from a generator in `src/content/problems/gen-*.ts`, whose answers come from the TypeScript solution, run on the server at build time (`load.ts`). Keep a problem's tests well under 200 KB: they travel with the page.
+  - **Answers** are compared in trusted code (`judge.ts`): `exact`, `float`, `unordered` (top level), `unordered-deep`, or a named `check` in `src/content/problems/checks.ts` for problems with several right answers. An empty tree or list is `[]`.
+  - **Solutions:** Python and TypeScript; JavaScript is the TypeScript with its types stripped. `problems.test.ts` loads every problem, runs every stub (which must parse and fail something) and every solution against every test in all three languages through the browser's judge, and replays the examples on their view. `PROBLEMS=a,b npx vitest run src/content/problems` checks just those.
+- **Judge mode (`mode: 'judge'` in the protocol):** the code runs as written (TypeScript stripped, no instrumentation, no step counter), so big tests run at full speed and only the worker's timeout stops a loop. Arguments are plain values (trees and lists as `TreeNode`/`ListNode`), printing is capped (`MAX_PRINTS`), an error's line comes from the stack or traceback, and the result carries each argument's final value. Design problems pass `calls`. Contract cases cover all of it.
+- **Pages:** `/practice` (grouped by main pattern, or mixed with the patterns hidden; difficulty and solved filters), `/practice/[slug]` (statement beside `ProblemWorkspace`: Run examples, Submit, a chip per test, the selected test's input, expected answer, yours and its prints), `/practice/drills` (name the pattern for a mixed round of statements; wrong options come from `CONFUSED_WITH` in `patterns.ts`).
+- **Watching a test:** `watchRequest` replays one test on the problem's `view`: an `int[]` argument line by line on the array view (`traceArray.ts`: a frame per line, the learner's index variables from `POINTERS` drawn under the array, compares and writes marked and narrated), an `int[][]` from its cell reads and writes on the grid, a tree on TreeView, anything else on the memory view, which the learner can always switch to.
+- **Progress:** solved problems and languages live in localStorage (`src/problems/progress.ts`) until Phase 3b. Code is saved per problem under `algorender:code:problem:<slug>:<language>`.
+
 ### Registry
 
 `src/data/visualisers.js` is the single registry (name, slug, category, complexities, `hidden`) for the home page, search, and the new page headers. Complexities live only there; algorithm modules hold the teaching content.
@@ -99,6 +111,7 @@ The home page (`app/page.jsx`), root layout, `Header.jsx`, `SearchBar.jsx`, `ui/
 - Per-family property tests next to the modules (results vs reference implementations, frames, checkpoints, immutability).
 - `e2e/all-visualisers.spec.ts` opens and runs every visualiser listed in the registry with no console errors.
 - `e2e/a11y.spec.ts` runs axe (WCAG 2.2 A/AA + best practice) on every page in both themes, a few steps into each run, and checks the theme toggle and embed override.
+- `src/content/problems/problems.test.ts` checks every practice problem end to end in Python, JavaScript and TypeScript; `e2e/practice.spec.ts` covers the list, judging, replays, drills and axe on a sample of problem pages (they share one template).
 
 ### Design system
 
@@ -122,3 +135,4 @@ State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-s
 - Motion 14 (`motion/react`) for layout animation
 - Vitest 5 + fast-check (property tests), Playwright 1.64 (e2e), @axe-core/playwright 4.13 (accessibility scans)
 - react-icons, Radix UI (tabs), Vercel Analytics
+- react-markdown 10 (problem statements, with remark-math and rehype-katex), yaml + Zod (content)

@@ -801,6 +801,31 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 
 **Done when:** a learner can sign in, solve problems in 5 languages, and use a daily review queue that works offline and syncs.
 
+**Split into three steps, each on its own stacked branch:**
+- **3a: problems and the local judge** (`revamp/phase-3a`).
+  - **Problems:** one YAML file per problem (`src/content/problems/`, validated by Zod) with an original statement, a typed signature, examples, hand-picked tests, seeded generated tests, a comparator, hints, the pattern and why it fits, and reference solutions.
+  - **Signature types:** `int`, `float`, `bool`, `string`, arrays and 2D arrays of them, `TreeNode` and `ListNode`. A `void` function is judged on the argument it changes in place, and a design problem is judged on a sequence of method calls.
+  - **Generated code:** each language's stub comes from the signature.
+  - **Judge mode in both runtimes:** the code runs without instrumentation, so large tests run at full speed. The judge compares answers with an exact, float-tolerance, unordered or custom check, in trusted code.
+  - **Pages:** `/practice` lists problems by pattern and difficulty, and `/practice/[slug]` holds the statement, editor, examples, submission and verdicts.
+  - **Replay:** a failing test can be watched on the array, grid, tree or memory view.
+  - **Pattern drills:** "which pattern fits?" questions that mix patterns.
+  - **Content:** about 75 problems. Every reference solution runs against every test in Python, JavaScript and TypeScript.
+  - **Status (2026-10-16): 3a is done.**
+    - **Content:** 91 problems (20 easy, 65 medium, 6 hard) across 22 patterns, from hashing to bit manipulation, including six design problems (stack with minimum, LRU cache, trie, word dictionary, median finder, kth largest in a stream).
+    - **Checks:** every problem passes its examples, about 5 hand-picked edge cases and 6–10 seeded random tests in Python (Pyodide), JavaScript and TypeScript through the browser's own judge. Every stub parses and fails something. Every example replays on its view.
+    - **Watching a failing test:** an `int[]` argument now plays line by line on the array view (`traceArray.ts`), with the learner's index variables drawn as pointers at every line. A run recorded only at comparisons and writes missed code that reads cells inside arithmetic.
+    - **Links:** visualiser pages list the problems that use them, and the home page, header and sitemap link to `/practice`.
+    - **Left for 3c:** Java, C++ and Go stubs and drivers (the signature types map onto them directly), and the server judge.
+- **3b: accounts and progress** (`revamp/phase-3b`).
+  - **Accounts:** Drizzle over Postgres (PGlite in development and tests, any Postgres through `DATABASE_URL`) and Better Auth.
+  - **Progress:** the local-first event log (IndexedDB, UUIDv7) with an idempotent sync route. Existing localStorage progress moves into it.
+  - **Review:** the FSRS review queue (`ts-fsrs`) with cards generated from solved problems and lesson quizzes, and `/review` working offline.
+- **3c: the server judge** (`revamp/phase-3c`).
+  - **Drivers:** generated drivers for Java, C++ and Go, which read typed tests on stdin and write answers to a side channel.
+  - **Sandbox:** Vercel Sandbox behind sign-in and quotas, with server-written verdicts.
+  - **Checks:** reference solutions in all five languages, checked in CI.
+
 ### Phase 4 — Math and ML tracks
 
 **Work:**
