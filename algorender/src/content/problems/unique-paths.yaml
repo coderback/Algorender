@@ -1,0 +1,77 @@
+title: Count Paths Across a Grid
+difficulty: medium
+patterns: [dp-2d]
+why: >-
+  Every path into a cell arrives from the cell above it or the cell to its left, so each cell's
+  count is the sum of two neighbouring counts: a 2D table filled row by row.
+summary: Count the paths from the top-left to the bottom-right corner of a grid, moving only right or down.
+statement: |
+  A robot stands in the top-left cell of a grid with `m` rows and `n` columns. Each move takes it
+  one cell to the right or one cell down.
+
+  Return the number of different paths that take it to the bottom-right cell.
+constraints:
+  - "1 ≤ `m`, `n` ≤ 100"
+  - "The answer is less than 2³¹."
+signature:
+  function: uniquePaths
+  params:
+    - { name: m, type: int }
+    - { name: n, type: int }
+  returns: int
+examples:
+  - input: { m: 2, n: 3 }
+    output: 3
+    explanation: "Right, right, down; right, down, right; or down, right, right."
+  - input: { m: 3, n: 4 }
+    output: 10
+    explanation: "Every path makes 2 moves down and 3 to the right, in some order."
+tests:
+  - input: { m: 1, n: 1 }
+    output: 1
+  - input: { m: 1, n: 100 }
+    output: 1
+  - input: { m: 100, n: 1 }
+    output: 1
+  - input: { m: 4, n: 4 }
+    output: 20
+  - input: { m: 10, n: 10 }
+    output: 48620
+  - input: { m: 17, n: 18 }
+    output: 1166803110
+generated: { count: 8, seed: 29 }
+hints:
+  - "From which cells can the robot step into a given cell?"
+  - "`paths[r][c] = paths[r − 1][c] + paths[r][c − 1]`, and every cell in the top row or the left column has exactly one path."
+  - "Each row only reads the row above it, so one row of n numbers, updated from left to right, is enough."
+approach: |
+  Let `paths[r][c]` be the number of ways to reach cell (r, c). The last move into it came from the
+  cell above or the cell to the left, so `paths[r][c] = paths[r − 1][c] + paths[r][c − 1]`. Cells
+  in the top row or the left column can only be reached one way.
+
+  Fill the table row by row. Each row needs only the row above, so keep a single row: going left
+  to right, `row[c] += row[c − 1]` adds the count from the left to the count from above, which is
+  what `row[c]` still holds. The answer is the last cell.
+
+  (Counting directly also works: every path is m − 1 downs and n − 1 rights in some order, so the
+  answer is the binomial coefficient C(m + n − 2, m − 1).)
+complexity: { time: "O(m × n)", space: "O(n)" }
+solutions:
+  python: |
+    def unique_paths(m: int, n: int) -> int:
+        row = [1] * n  # paths to each cell of the current row; the top row has one each
+        for _ in range(1, m):
+            for c in range(1, n):
+                row[c] += row[c - 1]  # from above (row[c] still holds it) plus from the left
+        return row[-1]
+  typescript: |
+    function uniquePaths(m: number, n: number): number {
+      const row = new Array<number>(n).fill(1); // paths to each cell of the current row; the top row has one each
+      for (let r = 1; r < m; r++) {
+        for (let c = 1; c < n; c++) {
+          row[c] += row[c - 1]; // from above (row[c] still holds it) plus from the left
+        }
+      }
+      return row[n - 1];
+    }
+visualisers: [unique-paths]

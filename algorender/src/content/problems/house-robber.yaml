@@ -1,0 +1,71 @@
+title: Rob a Row of Houses
+difficulty: medium
+patterns: [dp-1d]
+why: >-
+  At each house you either rob it, adding to the best total from two houses back, or skip it and
+  keep the best total so far. Each answer builds from the two before it: a one-dimensional table.
+summary: Take the most money from a row of houses without robbing two neighbours.
+statement: |
+  A street has a row of houses, and `nums[i]` is the amount of money in house `i`. You may rob any
+  houses you like, except that robbing two houses that stand next to each other sets off an alarm.
+
+  Return the largest total you can take without robbing two neighbouring houses.
+constraints:
+  - "`nums` holds 1 to 2000 numbers."
+  - "0 ≤ `nums[i]` ≤ 1000"
+signature:
+  function: rob
+  params:
+    - { name: nums, type: "int[]" }
+  returns: int
+examples:
+  - input: { nums: [2, 7, 9, 3, 1] }
+    output: 12
+    explanation: "Rob houses 0, 2 and 4: 2 + 9 + 1 = 12."
+  - input: { nums: [5, 1, 1, 5] }
+    output: 10
+    explanation: Rob the first and last houses. Skipping two houses in a row is allowed.
+tests:
+  - input: { nums: [4] }
+    output: 4
+  - input: { nums: [3, 8] }
+    output: 8
+  - input: { nums: [0, 0, 0] }
+    output: 0
+  - input: { nums: [6, 6, 6, 6, 6] }
+    output: 18
+  - input: { nums: [10, 1, 1, 10, 1, 1, 10] }
+    output: 30
+  - input: { nums: [2, 1, 1, 2] }
+    output: 4
+generated: { count: 8, seed: 22 }
+hints:
+  - "Look at the last house. Either you rob it or you don't. What is the best total in each case?"
+  - "If `best(i)` is the most you can take from the first i houses, then `best(i) = max(best(i − 1), best(i − 2) + nums[i − 1])`."
+  - "Each answer looks only two back, so two variables are enough."
+approach: |
+  Walk along the street keeping two numbers: `best`, the most you can take from the houses seen so
+  far, and `before`, the most you can take from all of them but the last.
+
+  At a house holding `money`, robbing it gives `before + money` (its neighbour on the left must be
+  skipped, and `before` already leaves it out); skipping it keeps `best`. The new `best` is the
+  larger of the two, and the old `best` becomes `before`. After the last house, `best` is the
+  answer.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def rob(nums: list[int]) -> int:
+        before, best = 0, 0  # best totals without the last house seen, and with every house seen
+        for money in nums:
+            before, best = best, max(best, before + money)
+        return best
+  typescript: |
+    function rob(nums: number[]): number {
+      let before = 0; // best total from every house seen but the last
+      let best = 0; // best total from every house seen
+      for (const money of nums) {
+        [before, best] = [best, Math.max(best, before + money)];
+      }
+      return best;
+    }
+visualisers: [house-robber]

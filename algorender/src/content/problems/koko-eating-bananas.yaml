@@ -1,0 +1,88 @@
+title: Slowest Speed That Finishes in Time
+difficulty: medium
+patterns: [binary-search]
+why: >-
+  If a speed is fast enough, every faster speed is too: the yes/no answer flips exactly once as
+  the speed grows. Binary search on the speed finds where it flips.
+summary: Find the slowest steady eating speed that finishes every pile within the hours you have.
+statement: |
+  There are some piles of bananas, `piles[i]` in pile `i`, and you have `h` hours to eat them all.
+  You choose a whole-number speed `s` (bananas per hour) and keep to it. Each hour, you pick one
+  pile and eat `s` bananas from it; if that pile has fewer than `s` left, you finish it and rest
+  for the remainder of the hour.
+
+  So pile `i` takes `⌈piles[i] / s⌉` hours (the division rounded up). Return the smallest speed
+  `s` that finishes every pile within `h` hours.
+constraints:
+  - "`piles` holds 1 to 10⁴ numbers."
+  - "Every pile holds 1 to 10⁹ bananas."
+  - "`piles.length` ≤ `h` ≤ 10⁹, so some speed always works."
+signature:
+  function: minEatingSpeed
+  params:
+    - { name: piles, type: "int[]" }
+    - { name: h, type: int }
+  returns: int
+examples:
+  - input: { piles: [4, 9, 6], h: 6 }
+    output: 4
+    explanation: "At 4 an hour the piles take 1, 3 and 2 hours: 6 in all. At 3 an hour they would take 2 + 3 + 2 = 7."
+  - input: { piles: [10, 10], h: 2 }
+    output: 10
+    explanation: "With one hour for each pile, each pile has to go in a single hour."
+tests:
+  - input: { piles: [1], h: 1 }
+    output: 1
+  - input: { piles: [1000000000], h: 2 }
+    output: 500000000
+  - input: { piles: [1000000000], h: 1000000000 }
+    output: 1
+  - input: { piles: [3, 3, 3], h: 9 }
+    output: 1
+  - input: { piles: [7, 15, 3, 22], h: 20 }
+    output: 3
+  - input: { piles: [5, 8, 1], h: 3 }
+    output: 8
+generated: { count: 8, seed: 38 }
+hints:
+  - "If speed `s` finishes in time, does speed `s + 1`?"
+  - "It does: eating faster never takes longer. So the speeds that work are everything from some smallest speed upwards. Between which two speeds must that smallest one lie?"
+  - "It lies between 1 and the biggest pile (at that speed every pile takes one hour). Binary search that range, testing each middle speed by adding up the hours it needs."
+approach: |
+  Whether a speed works is a yes/no question that flips once: too slow below some speed, fast
+  enough from there up. The answer lies between 1 and `max(piles)`: at that speed every pile takes
+  one hour, and `h` is at least the number of piles.
+
+  Binary search that range, from `least = 1` to `most = max(piles)`. For the middle speed, add up
+  `⌈pile / speed⌉` over all the piles. If the total is at most `h`, the speed works, and so might
+  a slower one, so it becomes the new `most`. Otherwise you need to go faster:
+  `least = speed + 1`. When `least` meets `most`, that is the slowest speed that works.
+complexity: { time: "O(n log m), where m is the biggest pile", space: "O(1)" }
+solutions:
+  python: |
+    def min_eating_speed(piles: list[int], h: int) -> int:
+        least, most = 1, max(piles)
+        while least < most:
+            speed = (least + most) // 2
+            hours = 0
+            for pile in piles:
+                hours += (pile + speed - 1) // speed
+            if hours <= h:
+                most = speed
+            else:
+                least = speed + 1
+        return least
+  typescript: |
+    function minEatingSpeed(piles: number[], h: number): number {
+      let least = 1;
+      let most = Math.max(...piles);
+      while (least < most) {
+        const speed = Math.floor((least + most) / 2);
+        let hours = 0;
+        for (const pile of piles) hours += Math.ceil(pile / speed);
+        if (hours <= h) most = speed;
+        else least = speed + 1;
+      }
+      return least;
+    }
+visualisers: [binary-search]

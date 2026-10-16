@@ -1,0 +1,102 @@
+title: Largest Island
+difficulty: medium
+patterns: [graphs]
+why: >-
+  The islands are the connected components of a grid graph, so a flood fill from each new land cell
+  visits one whole island. Counting the cells each fill visits gives every island's size.
+summary: Find the size of the biggest group of connected land cells in a grid.
+statement: |
+  You are given `grid`, a map made of `1`s (land) and `0`s (water). An island is a group of land
+  cells joined up, down, left or right, and its area is the number of cells in it.
+
+  Return the area of the largest island, or `0` if there is no land at all.
+constraints:
+  - "The grid has 1 to 200 rows and 1 to 200 columns."
+  - "Every cell is `0` or `1`."
+signature:
+  function: maxAreaOfIsland
+  params:
+    - { name: grid, type: "int[][]" }
+  returns: int
+examples:
+  - input: { grid: [[0, 1, 1, 0, 0], [0, 1, 0, 0, 1], [1, 0, 0, 1, 1], [1, 1, 0, 1, 0]] }
+    output: 4
+    explanation: "The island on the right has 4 cells. The ones at the top left and the bottom left have 3 each."
+  - input: { grid: [[0, 0, 0], [0, 0, 0]] }
+    output: 0
+    explanation: There is no land.
+tests:
+  - input: { grid: [[1]] }
+    output: 1
+  - input: { grid: [[0]] }
+    output: 0
+  - input: { grid: [[1, 1], [1, 1]] }
+    output: 4
+  - input: { grid: [[1, 0, 1], [0, 1, 0], [1, 0, 1]] }
+    output: 1
+  - input: { grid: [[1, 1, 0, 1, 1, 1]] }
+    output: 3
+  - input: { grid: [[1], [1], [0], [1]] }
+    output: 2
+generated: { count: 8, seed: 42 }
+hints:
+  - "How would you count the islands? This time, also count the cells of each one as you visit them."
+  - "Start a flood fill at each land cell you haven't visited. Every cell it takes off its stack adds one to that island's area."
+  - "Keep the largest area seen so far. Sink visited cells (set them to 0) so each one is counted once."
+approach: |
+  Scan the grid. At each land cell, flood-fill its island with a stack: sink the starting cell (set
+  it to `0`) and push it, then repeatedly pop a cell, add one to the area, and push each neighbour
+  that is on the grid and still land, sinking it as you push it. When the stack is empty, the area
+  is the island's size; keep the largest.
+
+  Each cell is pushed at most once, so the whole scan is linear in the size of the grid. An explicit
+  stack avoids deep recursion on a big island.
+complexity: { time: "O(rows · cols)", space: "O(rows · cols) for the stack in the worst case" }
+solutions:
+  python: |
+    def max_area_of_island(grid: list[list[int]]) -> int:
+        rows, cols = len(grid), len(grid[0])
+        best = 0
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] != 1:
+                    continue
+                grid[r][c] = 0  # sink it, so it is counted once
+                stack = [(r, c)]
+                area = 0
+                while stack:
+                    y, x = stack.pop()
+                    area += 1
+                    for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                        if 0 <= ny < rows and 0 <= nx < cols and grid[ny][nx] == 1:
+                            grid[ny][nx] = 0
+                            stack.append((ny, nx))
+                best = max(best, area)
+        return best
+  typescript: |
+    function maxAreaOfIsland(grid: number[][]): number {
+      const rows = grid.length;
+      const cols = grid[0].length;
+      let best = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (grid[r][c] !== 1) continue;
+          grid[r][c] = 0; // sink it, so it is counted once
+          const stack: number[][] = [[r, c]];
+          let area = 0;
+          while (stack.length > 0) {
+            const [y, x] = stack.pop()!;
+            area++;
+            for (const [ny, nx] of [[y + 1, x], [y - 1, x], [y, x + 1], [y, x - 1]]) {
+              if (ny >= 0 && ny < rows && nx >= 0 && nx < cols && grid[ny][nx] === 1) {
+                grid[ny][nx] = 0;
+                stack.push([ny, nx]);
+              }
+            }
+          }
+          best = Math.max(best, area);
+        }
+      }
+      return best;
+    }
+visualisers: [depth-first-search]

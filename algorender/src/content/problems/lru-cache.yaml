@@ -1,0 +1,184 @@
+title: Least Recently Used Cache
+difficulty: medium
+patterns: [hashing, linked-list]
+why: >-
+  You need constant-time lookup by key, which is a hash map, and constant-time "mark as just used"
+  and "drop the oldest", which is a doubly linked list kept in order of use. Each map entry points
+  at its node in the list.
+summary: Build a fixed-size key-value cache that evicts the least recently used key.
+statement: |
+  Write a class `LRUCache`, a key-value store that holds at most `capacity` keys:
+
+  - `LRUCache(capacity)` makes an empty cache.
+  - `get(key)` returns the value stored for `key`, or `-1` if the cache doesn't hold it.
+  - `put(key, value)` stores `value` for `key`, replacing any old value. If that would add a new
+    key to a full cache, first remove the **least recently used** key: the one whose last `get` or
+    `put` was longest ago.
+
+  A `get` that finds its key and every `put` count as using that key. Both methods must take
+  constant time on average.
+
+  Each test is a list of calls, starting with the constructor; the expected answer lists what each
+  call returns (`null` for the constructor and for `put`).
+constraints:
+  - "1 ≤ `capacity` ≤ 3000"
+  - "Keys are between 0 and 10⁴; values are between 0 and 10⁵."
+  - "A test makes at most 2 × 10⁵ calls."
+design:
+  class: LRUCache
+  init:
+    - { name: capacity, type: int }
+  methods:
+    - { name: get, params: [{ name: key, type: int }], returns: int }
+    - { name: put, params: [{ name: key, type: int }, { name: value, type: int }], returns: void }
+examples:
+  - calls: [[LRUCache, 2], [put, 1, 100], [put, 2, 200], [get, 1], [put, 3, 300], [get, 2], [get, 3], [get, 1]]
+    output: [null, null, null, 100, null, -1, 300, 100]
+    explanation: Reading key 1 makes key 2 the least recently used, so putting key 3 evicts key 2.
+  - calls: [[LRUCache, 1], [put, 5, 7], [put, 5, 8], [get, 5], [put, 6, 9], [get, 5]]
+    output: [null, null, null, 8, null, -1]
+    explanation: Putting a key that is already there replaces its value and evicts nothing.
+tests:
+  - calls: [[LRUCache, 1], [get, 0]]
+    output: [null, -1]
+  - calls: [[LRUCache, 2], [put, 1, 1], [put, 2, 2], [put, 1, 10], [put, 3, 3], [get, 1], [get, 2], [get, 3]]
+    output: [null, null, null, null, null, 10, -1, 3]
+  - calls: [[LRUCache, 2], [put, 4, 40], [get, 9], [put, 5, 50], [put, 6, 60], [get, 4], [get, 5], [get, 6]]
+    output: [null, null, -1, null, null, -1, 50, 60]
+  - calls: [[LRUCache, 3], [put, 0, 0], [put, 1, 1], [put, 2, 2], [get, 0], [put, 3, 3], [get, 1], [get, 0], [get, 2], [get, 3]]
+    output: [null, null, null, null, 0, null, -1, 0, 2, 3]
+generated: { count: 6, seed: 39 }
+hints:
+  - "A hash map gives a constant-time `get`. What else must you keep track of to know which key to evict?"
+  - "Keep the keys in order of last use. Using a key moves it to the most recent end; evicting removes from the other end. Which structure does both in constant time?"
+  - "A doubly linked list with a dummy node at each end. Let the map point from each key to its node, so you can unlink a node without searching for it."
+  - "Python's `OrderedDict` and JavaScript's `Map` (which remembers insertion order) can play the list's part, if you'd rather not build it yourself."
+approach: |
+  Combine a hash map with a doubly linked list kept in order of use, least recent at the front and
+  most recent at the back. The map takes each key to its node, which stores the key and the value.
+  Two dummy nodes, `head` and `tail`, sit at the ends, so unlinking or appending a node never meets
+  a missing neighbour.
+
+  - `get(key)`: if the key isn't in the map, return −1. Otherwise unlink its node, append it at the
+    back, and return its value.
+  - `put(key, value)`: if the key is in the map, update its node's value and move the node to the
+    back. Otherwise, if the cache is full, unlink the node just after `head` (the least recently
+    used) and delete its key from the map; then append a new node and record it in the map.
+
+  Every call is a few pointer changes and map operations, so each takes constant time.
+complexity: { time: "O(1) per call, on average", space: "O(capacity)" }
+solutions:
+  python: |
+    class CacheNode:
+        def __init__(self, key: int, value: int):
+            self.key = key
+            self.value = value
+            self.prev = None
+            self.next = None
+
+
+    class LRUCache:
+        def __init__(self, capacity: int):
+            self.capacity = capacity
+            self.nodes = {}
+            self.head = CacheNode(0, 0)  # just before the least recently used
+            self.tail = CacheNode(0, 0)  # just after the most recently used
+            self.head.next = self.tail
+            self.tail.prev = self.head
+
+        def _unlink(self, node: CacheNode) -> None:
+            node.prev.next = node.next
+            node.next.prev = node.prev
+
+        def _append(self, node: CacheNode) -> None:
+            node.prev = self.tail.prev
+            node.next = self.tail
+            self.tail.prev.next = node
+            self.tail.prev = node
+
+        def get(self, key: int) -> int:
+            node = self.nodes.get(key)
+            if node is None:
+                return -1
+            self._unlink(node)
+            self._append(node)
+            return node.value
+
+        def put(self, key: int, value: int) -> None:
+            node = self.nodes.get(key)
+            if node is not None:
+                node.value = value
+                self._unlink(node)
+                self._append(node)
+                return
+            if len(self.nodes) == self.capacity:
+                oldest = self.head.next
+                self._unlink(oldest)
+                del self.nodes[oldest.key]
+            node = CacheNode(key, value)
+            self.nodes[key] = node
+            self._append(node)
+  typescript: |
+    class CacheNode {
+      key: number;
+      value: number;
+      prev: CacheNode | null = null;
+      next: CacheNode | null = null;
+
+      constructor(key: number, value: number) {
+        this.key = key;
+        this.value = value;
+      }
+    }
+
+    class LRUCache {
+      private capacity: number;
+      private nodes = new Map<number, CacheNode>();
+      private head = new CacheNode(0, 0); // just before the least recently used
+      private tail = new CacheNode(0, 0); // just after the most recently used
+
+      constructor(capacity: number) {
+        this.capacity = capacity;
+        this.head.next = this.tail;
+        this.tail.prev = this.head;
+      }
+
+      private unlink(node: CacheNode): void {
+        node.prev!.next = node.next;
+        node.next!.prev = node.prev;
+      }
+
+      private append(node: CacheNode): void {
+        node.prev = this.tail.prev;
+        node.next = this.tail;
+        this.tail.prev!.next = node;
+        this.tail.prev = node;
+      }
+
+      get(key: number): number {
+        const node = this.nodes.get(key);
+        if (node === undefined) return -1;
+        this.unlink(node);
+        this.append(node);
+        return node.value;
+      }
+
+      put(key: number, value: number): void {
+        const node = this.nodes.get(key);
+        if (node !== undefined) {
+          node.value = value;
+          this.unlink(node);
+          this.append(node);
+          return;
+        }
+        if (this.nodes.size === this.capacity) {
+          const oldest = this.head.next!;
+          this.unlink(oldest);
+          this.nodes.delete(oldest.key);
+        }
+        const fresh = new CacheNode(key, value);
+        this.nodes.set(key, fresh);
+        this.append(fresh);
+      }
+    }
+visualisers: [hash-table, linked-list]

@@ -1,0 +1,106 @@
+title: Combinations That Add Up
+difficulty: medium
+patterns: [backtracking]
+why: >-
+  You must list every way to reach a total, and each pick narrows what is left to reach.
+  Backtracking tries a pick, explores what follows, and undoes it, giving up on a branch as soon as
+  the total is passed.
+summary: List every combination of candidates, each usable any number of times, that adds up to a target.
+statement: |
+  You are given `candidates`, a list of distinct positive integers, and a positive integer `target`.
+  Return every combination of candidates that adds up to exactly `target`. You may use each
+  candidate as many times as you like.
+
+  Two combinations are the same if they use every candidate the same number of times, so `[2, 3]`
+  and `[3, 2]` are one combination: list each combination once. The combinations, and the numbers
+  inside each one, may come in any order. If nothing adds up to `target`, return an empty list.
+constraints:
+  - "`candidates` holds 1 to 30 distinct numbers, each between 2 and 40."
+  - "1 ≤ `target` ≤ 40"
+  - "The answer holds fewer than 150 combinations."
+signature:
+  function: combinationSum
+  params:
+    - { name: candidates, type: "int[]" }
+    - { name: target, type: int }
+  returns: "int[][]"
+compare: unordered-deep
+examples:
+  - input: { candidates: [2, 3, 5, 9], target: 9 }
+    output: [[9], [2, 2, 5], [2, 2, 2, 3], [3, 3, 3]]
+    explanation: "9 on its own, 2 + 2 + 5, 2 + 2 + 2 + 3 and 3 + 3 + 3. Using a candidate more than once is allowed."
+  - input: { candidates: [3, 4, 7], target: 10 }
+    output: [[3, 7], [3, 3, 4]]
+  - input: { candidates: [4], target: 3 }
+    output: []
+    explanation: The only candidate is already more than the target.
+tests:
+  - input: { candidates: [3], target: 2 }
+    output: []
+  - input: { candidates: [2], target: 2 }
+    output: [[2]]
+  - input: { candidates: [5, 10], target: 15 }
+    output: [[5, 5, 5], [5, 10]]
+  - input: { candidates: [2, 4], target: 8 }
+    output: [[2, 2, 2, 2], [2, 2, 4], [4, 4]]
+  - input: { candidates: [3, 4, 5], target: 6 }
+    output: [[3, 3]]
+  - input: { candidates: [40], target: 40 }
+    output: [[40]]
+generated: { count: 8, seed: 38 }
+hints:
+  - "Build a combination one number at a time. When the amount still needed reaches 0 you have found one; once it would go below 0 you can stop."
+  - "To avoid listing `[2, 3]` and `[3, 2]` both, only ever pick candidates from the current position onwards."
+  - "Recurse with `(start, remaining)`: for each `i ≥ start`, append `candidates[i]`, recurse with `(i, remaining − candidates[i])` (the same `i`, since a candidate can repeat), then pop."
+approach: |
+  Sort a copy of the candidates, then backtrack with the combination being built, `chosen`, and the
+  amount still needed, `remaining`. `explore(start, remaining)`:
+
+  - saves a copy of `chosen` when `remaining` is 0;
+  - otherwise tries each candidate from index `start` onwards: append it, explore
+    `(i, remaining − candidate)`, then pop it.
+
+  Passing `i` rather than `i + 1` lets a candidate repeat, and never going back to an earlier index
+  builds each combination in one order only, so it appears once. Because the candidates are sorted,
+  the loop can stop at the first one bigger than `remaining`: every later one is bigger still.
+complexity: { time: "Exponential: up to n choices at each of t / m levels, for target t and smallest candidate m", space: "O(t / m) for the recursion, besides the output" }
+solutions:
+  python: |
+    def combination_sum(candidates: list[int], target: int) -> list[list[int]]:
+        nums = sorted(candidates)
+        result = []
+        chosen = []
+
+        def explore(start, remaining):
+            if remaining == 0:
+                result.append(chosen[:])
+                return
+            for i in range(start, len(nums)):
+                if nums[i] > remaining:
+                    break  # the rest are bigger still
+                chosen.append(nums[i])
+                explore(i, remaining - nums[i])  # i again: it may repeat
+                chosen.pop()
+
+        explore(0, target)
+        return result
+  typescript: |
+    function combinationSum(candidates: number[], target: number): number[][] {
+      const nums = [...candidates].sort((a, b) => a - b);
+      const result: number[][] = [];
+      const chosen: number[] = [];
+      const explore = (start: number, remaining: number): void => {
+        if (remaining === 0) {
+          result.push([...chosen]);
+          return;
+        }
+        for (let i = start; i < nums.length && nums[i] <= remaining; i++) {
+          chosen.push(nums[i]);
+          explore(i, remaining - nums[i]); // i again: it may repeat
+          chosen.pop();
+        }
+      };
+      explore(0, target);
+      return result;
+    }
+visualisers: [subsets]

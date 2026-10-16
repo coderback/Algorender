@@ -1,0 +1,88 @@
+title: Check a Binary Tree Is Balanced
+difficulty: easy
+patterns: [trees]
+why: >-
+  Whether a node is balanced depends on its subtrees' heights, and its own height comes from theirs
+  too. One post-order pass can return both, so no height is worked out twice.
+summary: Decide whether, at every node, the two subtrees differ in height by at most one.
+statement: |
+  You are given `root`, the root of a binary tree (or nothing, for an empty tree).
+
+  The tree is **balanced** if, at every node, the heights of the left and right subtrees differ by
+  at most 1. A subtree's height is the number of nodes on its longest downward path, and an empty
+  subtree has height 0. Return `true` if the tree is balanced and `false` otherwise. An empty tree
+  is balanced.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds 0 to 1000 nodes."
+  - "Every value is between −10⁴ and 10⁴."
+signature:
+  function: isBalanced
+  params:
+    - { name: root, type: TreeNode }
+  returns: bool
+examples:
+  - input: { root: [7, 3, 9, null, null, 8, 12] }
+    output: true
+    explanation: "The root's subtrees have heights 1 and 2, which differ by only 1, and every other node is balanced too."
+  - input: { root: [5, 4, 6, 3, null, null, null, 2] }
+    output: false
+    explanation: "At node 4, the left subtree (3 and 2) has height 2 and the right one is empty."
+tests:
+  - input: { root: [] }
+    output: true
+  - input: { root: [1] }
+    output: true
+  - input: { root: [1, 2] }
+    output: true
+  - input: { root: [1, null, 2, null, 3] }
+    output: false
+  - input: { root: [1, 2, 3, 4, 5, null, null, 6, 7] }
+    output: false
+  - input: { root: [1, 2, 3, 4, null, 5, 6, 7] }
+    output: false
+  - input: { root: [10, 5, 15, 3, 7, 12, 20, 1] }
+    output: true
+generated: { count: 9, seed: 42 }
+hints:
+  - "Write a function for a subtree's height first. How would you use it to check a single node?"
+  - "Calling it at every node repeats work, about n² steps on a long thin tree. Could one pass return a subtree's height and report trouble at the same time?"
+  - "Return the height when the subtree is balanced, and a special value such as −1 when it isn't; a parent that sees −1 passes it straight up."
+approach: |
+  Use one post-order recursion that returns a subtree's height, or −1 if some node inside it is
+  unbalanced. At a node, get both children's results. If either is −1, or they differ by more than
+  1, return −1. Otherwise return `1 + max(left, right)`. The tree is balanced exactly when the
+  root's result isn't −1.
+
+  Checking only the root isn't enough: a tree can be balanced at the root and lopsided further
+  down. Each node is visited once.
+complexity: { time: "O(n)", space: "O(h) for the recursion, h the tree's height" }
+solutions:
+  python: |
+    def is_balanced(root: TreeNode | None) -> bool:
+        def height(node: TreeNode | None) -> int:
+            """The subtree's height, or -1 if it isn't balanced."""
+            if node is None:
+                return 0
+            left = height(node.left)
+            right = height(node.right)
+            if left < 0 or right < 0 or abs(left - right) > 1:
+                return -1
+            return 1 + max(left, right)
+
+        return height(root) >= 0
+  typescript: |
+    function isBalanced(root: TreeNode | null): boolean {
+      // The subtree's height, or -1 if it isn't balanced.
+      const height = (node: TreeNode | null): number => {
+        if (node === null) return 0;
+        const left = height(node.left);
+        const right = height(node.right);
+        if (left < 0 || right < 0 || Math.abs(left - right) > 1) return -1;
+        return 1 + Math.max(left, right);
+      };
+      return height(root) >= 0;
+    }
+visualisers: [binary-tree, avl-tree]

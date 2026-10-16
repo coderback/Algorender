@@ -1,0 +1,67 @@
+title: Group Anagrams
+difficulty: medium
+patterns: [hashing]
+why: >-
+  Anagrams share a signature, such as their letters in sorted order. Grouping by signature is a
+  hash map from signature to the words that have it.
+summary: Gather words that are rearrangements of each other into groups.
+statement: |
+  You are given a list of lowercase words `strs`. Two words are anagrams if one is a rearrangement
+  of the other's letters, using each letter exactly as often (`"listen"` and `"silent"`).
+
+  Group the words so that each group holds words that are all anagrams of each other, and no two
+  groups could be merged. Return the groups as a list of lists. The order of the groups, and of the
+  words inside each group, doesn't matter.
+constraints:
+  - "`strs` holds 1 to 10⁴ words."
+  - "Each word has 0 to 100 lowercase English letters."
+signature:
+  function: groupAnagrams
+  params:
+    - { name: strs, type: "string[]" }
+  returns: "string[][]"
+compare: unordered-deep
+examples:
+  - input: { strs: ["tea", "ate", "tan", "eat", "nat", "bat"] }
+    output: [["tea", "ate", "eat"], ["tan", "nat"], ["bat"]]
+  - input: { strs: ["", "b", ""] }
+    output: [["", ""], ["b"]]
+    explanation: The empty word is an anagram of itself.
+tests:
+  - input: { strs: ["a"] }
+    output: [["a"]]
+  - input: { strs: ["ab", "ba", "abc", "cab", "bca", "aab"] }
+    output: [["ab", "ba"], ["abc", "cab", "bca"], ["aab"]]
+  - input: { strs: ["aa", "a", "aa"] }
+    output: [["aa", "aa"], ["a"]]
+  - input: { strs: ["ab", "aab", "abb"] }
+    output: [["ab"], ["aab"], ["abb"]]
+generated: { count: 6, seed: 9 }
+hints:
+  - "What do all anagrams of a word have in common that other words don't?"
+  - "Sort a word's letters: every anagram gives the same sorted string. Use that as a key."
+approach: |
+  Give every word a signature that all its anagrams share: its letters in sorted order (or a count
+  of each of the 26 letters). Put each word into a hash map under its signature; the map's values
+  are the groups.
+complexity: { time: "O(n · k log k) for n words of length up to k", space: "O(n · k)" }
+solutions:
+  python: |
+    def group_anagrams(strs: list[str]) -> list[list[str]]:
+        groups = {}
+        for word in strs:
+            key = ''.join(sorted(word))
+            groups.setdefault(key, []).append(word)
+        return list(groups.values())
+  typescript: |
+    function groupAnagrams(strs: string[]): string[][] {
+      const groups = new Map<string, string[]>();
+      for (const word of strs) {
+        const key = [...word].sort().join('');
+        const group = groups.get(key);
+        if (group) group.push(word);
+        else groups.set(key, [word]);
+      }
+      return [...groups.values()];
+    }
+visualisers: [hash-table]

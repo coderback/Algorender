@@ -1,0 +1,100 @@
+title: Count Connected Groups
+difficulty: medium
+patterns: [union-find, graphs]
+why: >-
+  The edges arrive as a list, and each one may merge two groups into one. Union-find starts with
+  every node in a group of its own and merges groups as edges come in; each real merge leaves one
+  group fewer.
+summary: Count how many separate groups the edges of an undirected graph make.
+statement: |
+  There are `n` nodes, numbered from 0 to `n − 1`, and a list `edges` where each `[a, b]` joins
+  nodes `a` and `b` (edges have no direction). Two nodes are in the same group if you can get from
+  one to the other along edges.
+
+  Return the number of groups (the connected components). A node with no edges is a group on its
+  own.
+constraints:
+  - "1 ≤ `n` ≤ 2000"
+  - "`edges` holds 0 to 5000 edges. Each joins two different nodes, and no edge is listed twice."
+signature:
+  function: countComponents
+  params:
+    - { name: n, type: int }
+    - { name: edges, type: "int[][]" }
+  returns: int
+view: memory
+examples:
+  - input: { n: 6, edges: [[0, 3], [3, 4], [1, 5]] }
+    output: 3
+    explanation: "The groups are {0, 3, 4}, {1, 5}, and node 2 on its own."
+  - input: { n: 4, edges: [[0, 1], [1, 2], [2, 0], [2, 3]] }
+    output: 1
+    explanation: "The loop 0–1–2 doesn't split anything off, and 3 hangs off 2: one group."
+tests:
+  - input: { n: 1, edges: [] }
+    output: 1
+  - input: { n: 4, edges: [] }
+    output: 4
+  - input: { n: 3, edges: [[0, 1], [1, 2]] }
+    output: 1
+  - input: { n: 7, edges: [[6, 0], [5, 1], [4, 2], [3, 6]] }
+    output: 3
+  - input: { n: 2, edges: [[1, 0]] }
+    output: 1
+generated: { count: 8, seed: 45 }
+hints:
+  - "Start with every node in a group of its own. What can a single edge do to the number of groups?"
+  - "An edge between two nodes already in the same group changes nothing; otherwise it merges two groups into one."
+  - "Union-find: `find` follows parent links up to a group's root, and a union links one root under the other. Start the count at `n` and subtract one for every union that joins two different roots."
+approach: |
+  Union-find. Give each node a parent, starting with itself, so every node is the root of its own
+  group. `find(x)` follows parent links to the root of x's group, pointing nodes closer to the root
+  as it goes (path compression) so later finds are quick.
+
+  Start the count at `n`. For each edge, find the roots of both ends. If they differ, link one root
+  under the other and subtract one from the count; if they are the same, the edge joins two nodes
+  that were already connected and changes nothing. The count left at the end is the number of
+  groups.
+
+  Counting the breadth-first or depth-first searches needed to visit every node works as well.
+complexity: { time: "O(n + E · log n), close to linear in practice", space: "O(n)" }
+solutions:
+  python: |
+    def count_components(n: int, edges: list[list[int]]) -> int:
+        parent = list(range(n))
+
+        def find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]  # halve the path as we go
+                x = parent[x]
+            return x
+
+        groups = n
+        for a, b in edges:
+            root_a, root_b = find(a), find(b)
+            if root_a != root_b:
+                parent[root_a] = root_b
+                groups -= 1
+        return groups
+  typescript: |
+    function countComponents(n: number, edges: number[][]): number {
+      const parent = Array.from({ length: n }, (_, i) => i);
+      const find = (x: number): number => {
+        while (parent[x] !== x) {
+          parent[x] = parent[parent[x]]; // halve the path as we go
+          x = parent[x];
+        }
+        return x;
+      };
+      let groups = n;
+      for (const [a, b] of edges) {
+        const rootA = find(a);
+        const rootB = find(b);
+        if (rootA !== rootB) {
+          parent[rootA] = rootB;
+          groups--;
+        }
+      }
+      return groups;
+    }
+visualisers: [union-find]

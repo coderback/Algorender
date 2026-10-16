@@ -1,0 +1,86 @@
+title: A Binary Tree Seen from the Right
+difficulty: medium
+patterns: [trees]
+why: >-
+  What you see from the right is the last node on each level, so go level by level (breadth-first)
+  and keep each level's final value.
+summary: List the values you would see looking at a binary tree from its right-hand side.
+statement: |
+  You are given `root`, the root of a binary tree (or nothing, for an empty tree).
+
+  Imagine standing to the right of the tree and looking at it: on each level, you see only the
+  rightmost node. Return the values you see, from the top level down. An empty tree gives `[]`.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds 0 to 2000 nodes."
+  - "Every value is between −1000 and 1000."
+signature:
+  function: rightSideView
+  params:
+    - { name: root, type: TreeNode }
+  returns: "int[]"
+examples:
+  - input: { root: [8, 4, 9, 2, 6] }
+    output: [8, 9, 6]
+    explanation: "9 hides 4 on the second level, and 6 hides 2 on the third."
+  - input: { root: [1, 2, 3, 4] }
+    output: [1, 3, 4]
+    explanation: "4 is a left child, but nothing on its level is further right, so you can see it."
+tests:
+  - input: { root: [] }
+    output: []
+  - input: { root: [7] }
+    output: [7]
+  - input: { root: [1, 2] }
+    output: [1, 2]
+  - input: { root: [1, null, 2, null, 3] }
+    output: [1, 2, 3]
+  - input: { root: [5, 3, 6, 2, 4, null, null, 1] }
+    output: [5, 6, 4, 1]
+generated: { count: 8, seed: 45 }
+hints:
+  - "Which node on each level can you see from the right?"
+  - "Go level by level, as in a breadth-first search, and keep the last value of each level."
+  - "A depth-first alternative: visit right children before left ones; the first node you reach at each new depth is the one you see."
+approach: |
+  Go breadth-first, one level at a time. Keep the list of nodes on the current level, starting
+  with just the root. Each round, record the value of the level's last node, then build the next
+  level from the children, left child before right child, node by node. Stop when a level is
+  empty.
+
+  The rightmost node of a level isn't always a right child: when a level has a single node, you see
+  it whichever side it hangs from.
+complexity: { time: "O(n)", space: "O(w), w the widest level" }
+solutions:
+  python: |
+    def right_side_view(root: TreeNode | None) -> list[int]:
+        seen = []
+        level = [root] if root else []
+        while level:
+            seen.append(level[-1].val)
+            next_level = []
+            for node in level:
+                if node.left:
+                    next_level.append(node.left)
+                if node.right:
+                    next_level.append(node.right)
+            level = next_level
+        return seen
+  typescript: |
+    function rightSideView(root: TreeNode | null): number[] {
+      const seen: number[] = [];
+      let level: TreeNode[] = root ? [root] : [];
+      while (level.length > 0) {
+        seen.push(level[level.length - 1].val);
+        const nextLevel: TreeNode[] = [];
+        for (const node of level) {
+          if (node.left) nextLevel.push(node.left);
+          if (node.right) nextLevel.push(node.right);
+        }
+        level = nextLevel;
+      }
+      return seen;
+    }
+visualisers: [binary-tree, breadth-first-search]

@@ -1,0 +1,97 @@
+title: Rainwater Between Bars
+difficulty: hard
+patterns: [two-pointers]
+why: >-
+  The water above a bar is set by the tallest bar on each side. Two pointers moving in from the
+  ends always know which side's maximum is the limit, so one pass with O(1) memory is enough.
+summary: Work out how much rain collects between bars of different heights.
+statement: |
+  You are given a list `height` of non-negative integers: the heights of bars of width 1 standing
+  side by side. Rain falls on them and settles in the dips.
+
+  Above position `i`, water rises to the lower of two heights: the tallest bar from the start up to
+  `i`, and the tallest bar from `i` to the end. The water above `i` is that level minus
+  `height[i]`. Return the total amount of water trapped.
+constraints:
+  - "`height` holds 1 to 2 × 10⁴ numbers."
+  - "Every height is between 0 and 10⁵."
+signature:
+  function: trap
+  params:
+    - { name: height, type: "int[]" }
+  returns: int
+examples:
+  - input: { height: [3, 0, 2, 0, 4] }
+    output: 7
+    explanation: "Between the outer bars the level is 3, so positions 1, 2 and 3 hold 3 + 1 + 3 = 7."
+  - input: { height: [0, 2, 0, 1, 0, 3, 1, 0, 2] }
+    output: 8
+  - input: { height: [5, 4, 3] }
+    output: 0
+    explanation: "The bars only get lower, so every drop runs off the end."
+tests:
+  - input: { height: [7] }
+    output: 0
+  - input: { height: [2, 0, 2] }
+    output: 2
+  - input: { height: [0, 0, 0] }
+    output: 0
+  - input: { height: [5, 1, 1, 5] }
+    output: 8
+  - input: { height: [1, 0, 3, 0, 1] }
+    output: 2
+  - input: { height: [100000, 0, 100000] }
+    output: 100000
+generated: { count: 8, seed: 30 }
+hints:
+  - "Think about one position at a time: how high does the water above it reach?"
+  - "It reaches the lower of the tallest bar on its left and the tallest bar on its right. Two lists of running maxima, one from each end, give that for every position."
+  - "To save the memory, move two pointers in from the ends. The side whose bar is lower is the limit for that bar, so you can settle it and move on."
+approach: |
+  The water above position `i` is `min(tallest from the left, tallest from the right) − height[i]`,
+  counting bar `i` itself on both sides. Two pointers find it without storing those maxima.
+
+  Keep `left` and `right` at the ends, with `leftMax` and `rightMax`, the tallest bars each pointer
+  has seen. At each step, move the pointer standing at the lower bar. Say
+  `height[left] < height[right]`. Every bar `left` has passed was lower than some bar on the right
+  (that's why `left` moved), so the right side has a bar at least `leftMax` tall, and the level at
+  `left` is just `leftMax`. Update `leftMax` with `height[left]`, add `leftMax − height[left]`, and
+  step `left` on. The other case is the mirror image.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def trap(height: list[int]) -> int:
+        left, right = 0, len(height) - 1
+        left_max = right_max = 0
+        water = 0
+        while left < right:
+            if height[left] < height[right]:
+                left_max = max(left_max, height[left])
+                water += left_max - height[left]
+                left += 1
+            else:
+                right_max = max(right_max, height[right])
+                water += right_max - height[right]
+                right -= 1
+        return water
+  typescript: |
+    function trap(height: number[]): number {
+      let left = 0;
+      let right = height.length - 1;
+      let leftMax = 0;
+      let rightMax = 0;
+      let water = 0;
+      while (left < right) {
+        if (height[left] < height[right]) {
+          leftMax = Math.max(leftMax, height[left]);
+          water += leftMax - height[left];
+          left++;
+        } else {
+          rightMax = Math.max(rightMax, height[right]);
+          water += rightMax - height[right];
+          right--;
+        }
+      }
+      return water;
+    }
+visualisers: [two-pointers]

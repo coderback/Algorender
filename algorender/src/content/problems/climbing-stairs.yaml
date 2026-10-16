@@ -1,0 +1,68 @@
+title: Count Ways Up a Staircase
+difficulty: easy
+patterns: [dp-1d]
+why: >-
+  Your last move onto step n came from step n − 1 or from step n − 2, so the count for n is the sum
+  of the counts for the two steps below it: the small answers build the big one.
+summary: Count the different ways to climb n steps, taking one or two steps at a time.
+statement: |
+  A staircase has `n` steps. Each move takes you up either one step or two steps.
+
+  Return how many different sequences of moves take you from the bottom to exactly the top step.
+  Sequences that differ at any move count separately, so `1 + 2` and `2 + 1` are two ways.
+constraints:
+  - "1 ≤ `n` ≤ 45"
+signature:
+  function: climbStairs
+  params:
+    - { name: n, type: int }
+  returns: int
+examples:
+  - input: { n: 3 }
+    output: 3
+    explanation: "`1 + 1 + 1`, `1 + 2` and `2 + 1`."
+  - input: { n: 4 }
+    output: 5
+    explanation: "`1 + 1 + 1 + 1`, `1 + 1 + 2`, `1 + 2 + 1`, `2 + 1 + 1` and `2 + 2`."
+tests:
+  - input: { n: 1 }
+    output: 1
+  - input: { n: 2 }
+    output: 2
+  - input: { n: 5 }
+    output: 8
+  - input: { n: 10 }
+    output: 89
+  - input: { n: 45 }
+    output: 1836311903
+generated: { count: 8, seed: 21 }
+hints:
+  - "Think about the very last move. Where could you have been standing just before it?"
+  - "If `ways(k)` is the number of ways to reach step k, then `ways(n) = ways(n − 1) + ways(n − 2)`. What are the first one or two values?"
+  - "Plain recursion works the same steps out again and again, so it is far too slow for n = 45. Fill the answers in from the bottom up and keep only the last two."
+approach: |
+  Let `ways(k)` be the number of ways to reach step k. The last move onto step k is either a single
+  step from k − 1 or a double step from k − 2. Those two groups of sequences never overlap, so
+  `ways(k) = ways(k − 1) + ways(k − 2)`, starting from `ways(0) = 1` (standing at the bottom is one
+  way) and `ways(1) = 1`.
+
+  Work upwards from the bottom. Each answer needs only the two before it, so two variables are
+  enough. The answers are the Fibonacci numbers, shifted along by one.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def climb_stairs(n: int) -> int:
+        below, here = 1, 1  # ways to reach the step before, and the current step (step 1)
+        for step in range(2, n + 1):
+            below, here = here, below + here
+        return here
+  typescript: |
+    function climbStairs(n: number): number {
+      let below = 1; // ways to reach the step before
+      let here = 1; // ways to reach the current step (step 1 to begin with)
+      for (let step = 2; step <= n; step++) {
+        [below, here] = [here, below + here];
+      }
+      return here;
+    }
+visualisers: [fibonacci-memoization]

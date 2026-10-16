@@ -1,0 +1,99 @@
+title: Insert a Range into a Sorted List
+difficulty: medium
+patterns: [intervals]
+why: >-
+  The ranges are already sorted and separate, so one pass splits them into three groups: those
+  wholly before the new range, those that overlap it (merge them in), and those wholly after it.
+summary: Add a new range to a sorted list of separate ranges, merging any that overlap.
+statement: |
+  You are given `intervals`, a list of ranges `[start, end]` sorted by start, in which no two ranges
+  overlap or touch. You are also given one more range, `newInterval`.
+
+  Insert `newInterval` and return the resulting list of ranges, sorted by start, with any ranges
+  that now overlap merged into one. Ranges that share even a single point overlap, so `[1, 3]` and
+  `[3, 6]` merge into `[1, 6]`. You may build a new list rather than change `intervals`.
+constraints:
+  - "`intervals` holds 0 to 10⁴ ranges."
+  - "Every range, `newInterval` included, has 0 ≤ `start` ≤ `end` ≤ 10⁵."
+  - "`intervals` is sorted by start, and each range ends before the next one starts."
+signature:
+  function: insert
+  params:
+    - { name: intervals, type: "int[][]" }
+    - { name: newInterval, type: "int[]" }
+  returns: "int[][]"
+view: memory
+examples:
+  - input: { intervals: [[1, 2], [4, 5], [7, 9], [12, 14]], newInterval: [5, 8] }
+    output: [[1, 2], [4, 9], [12, 14]]
+    explanation: "`[5, 8]` touches `[4, 5]` at 5 and overlaps `[7, 9]`, so the three become `[4, 9]`."
+  - input: { intervals: [[1, 3], [8, 10]], newInterval: [4, 6] }
+    output: [[1, 3], [4, 6], [8, 10]]
+    explanation: Nothing overlaps, so the new range slots in between.
+tests:
+  - input: { intervals: [], newInterval: [2, 5] }
+    output: [[2, 5]]
+  - input: { intervals: [[3, 4]], newInterval: [0, 1] }
+    output: [[0, 1], [3, 4]]
+  - input: { intervals: [[3, 4]], newInterval: [6, 9] }
+    output: [[3, 4], [6, 9]]
+  - input: { intervals: [[1, 2], [3, 5], [6, 7], [8, 10]], newInterval: [0, 11] }
+    output: [[0, 11]]
+  - input: { intervals: [[1, 5]], newInterval: [2, 3] }
+    output: [[1, 5]]
+  - input: { intervals: [[0, 0], [2, 2]], newInterval: [1, 1] }
+    output: [[0, 0], [1, 1], [2, 2]]
+  - input: { intervals: [[1, 2], [5, 6]], newInterval: [2, 5] }
+    output: [[1, 6]]
+generated: { count: 8, seed: 41 }
+hints:
+  - "Because the ranges are sorted and separate, they fall into three groups compared with `newInterval`. What are they?"
+  - "Ranges that end before `newInterval` starts are untouched, and so are ranges that start after it ends. Everything in between overlaps it."
+  - "Copy the first group, merge the middle group into `newInterval` by taking the smallest start and the largest end, add it, then copy the rest."
+approach: |
+  Walk through `intervals` once, in three phases. First, every range that ends before `newInterval`
+  starts (`end < newStart`) comes before it untouched: copy it to the result. Next, every range that
+  starts no later than `newInterval` ends (`start ≤ newEnd`) overlaps it: widen the new range to the
+  smaller of the two starts and the larger of the two ends. Add the widened range. Finally, copy
+  the remaining ranges, which all start after it ends.
+complexity: { time: "O(n)", space: "O(n) for the result" }
+solutions:
+  python: |
+    def insert(intervals: list[list[int]], new_interval: list[int]) -> list[list[int]]:
+        start, end = new_interval
+        result = []
+        i, n = 0, len(intervals)
+        while i < n and intervals[i][1] < start:
+            result.append(intervals[i])
+            i += 1
+        while i < n and intervals[i][0] <= end:
+            start = min(start, intervals[i][0])
+            end = max(end, intervals[i][1])
+            i += 1
+        result.append([start, end])
+        while i < n:
+            result.append(intervals[i])
+            i += 1
+        return result
+  typescript: |
+    function insert(intervals: number[][], newInterval: number[]): number[][] {
+      let [start, end] = newInterval;
+      const result: number[][] = [];
+      let i = 0;
+      while (i < intervals.length && intervals[i][1] < start) {
+        result.push(intervals[i]);
+        i++;
+      }
+      while (i < intervals.length && intervals[i][0] <= end) {
+        start = Math.min(start, intervals[i][0]);
+        end = Math.max(end, intervals[i][1]);
+        i++;
+      }
+      result.push([start, end]);
+      while (i < intervals.length) {
+        result.push(intervals[i]);
+        i++;
+      }
+      return result;
+    }
+visualisers: [merge-intervals]

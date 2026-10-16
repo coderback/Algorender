@@ -1,0 +1,88 @@
+title: Most Frequent Values
+difficulty: medium
+patterns: [hashing, heap]
+why: >-
+  First you need how often each value appears, which is a counting hash map. Then you need only
+  the k largest counts, which a heap (or buckets indexed by count) gives without sorting everything.
+summary: Return the k values that appear most often in a list.
+statement: |
+  You are given a list of integers `nums` and an integer `k`. Return the `k` values that appear
+  most often in `nums`, in any order.
+
+  The tests are chosen so the answer is unique: each of the `k` values appears strictly more often
+  than every value left out.
+constraints:
+  - "`nums` holds 1 to 10⁵ numbers, each between −10⁴ and 10⁴."
+  - "`k` is between 1 and the number of different values in `nums`."
+  - "There is no tie at the boundary, so exactly one set of `k` values is right."
+signature:
+  function: topKFrequent
+  params:
+    - { name: nums, type: "int[]" }
+    - { name: k, type: int }
+  returns: "int[]"
+compare: unordered
+view: memory
+examples:
+  - input: { nums: [5, 3, 5, 9, 3, 5], k: 2 }
+    output: [5, 3]
+    explanation: "`5` appears three times and `3` twice; `9` appears only once."
+  - input: { nums: [-1, -1, 4], k: 1 }
+    output: [-1]
+tests:
+  - input: { nums: [7], k: 1 }
+    output: [7]
+  - input: { nums: [2, 1, 3], k: 3 }
+    output: [2, 1, 3]
+  - input: { nums: [0, 0, 0, 1, 1, 2, 2, 2, 2], k: 2 }
+    output: [2, 0]
+  - input: { nums: [4, 4, -4, -4, -4, 6], k: 2 }
+    output: [-4, 4]
+  - input: { nums: [1, 2, 2, 3, 3, 3, 4, 4, 4, 4], k: 3 }
+    output: [4, 3, 2]
+generated: { count: 8, seed: 23 }
+hints:
+  - "Start by counting: how often does each value appear?"
+  - "Sorting the values by count works in O(n log n). Can you avoid a full sort when you only need the top k?"
+  - "A count is between 1 and n. Put each value in a bucket for its count, then read the buckets from the highest count down until you have k values."
+approach: |
+  Count each value with a hash map. Then make buckets: `buckets[c]` lists the values that appear
+  exactly `c` times, where `c` is at most `n`. Walk the buckets from `n` down to 1, collecting
+  values, and stop as soon as you have `k`. Because the answer is unique, you never have to choose
+  between values with the same count at the boundary.
+
+  A min-heap of size `k` keyed by count also works, in O(n log k): push each value, and pop the
+  least frequent whenever the heap holds more than `k`.
+complexity: { time: "O(n)", space: "O(n)" }
+solutions:
+  python: |
+    from collections import Counter
+
+    def top_k_frequent(nums: list[int], k: int) -> list[int]:
+        counts = Counter(nums)
+        buckets = [[] for _ in range(len(nums) + 1)]
+        for value, count in counts.items():
+            buckets[count].append(value)
+        top = []
+        for count in range(len(nums), 0, -1):
+            for value in buckets[count]:
+                top.append(value)
+                if len(top) == k:
+                    return top
+        return top
+  typescript: |
+    function topKFrequent(nums: number[], k: number): number[] {
+      const counts = new Map<number, number>();
+      for (const x of nums) counts.set(x, (counts.get(x) ?? 0) + 1);
+      const buckets: number[][] = Array.from({ length: nums.length + 1 }, () => []);
+      for (const [value, count] of counts) buckets[count].push(value);
+      const top: number[] = [];
+      for (let count = nums.length; count > 0; count--) {
+        for (const value of buckets[count]) {
+          top.push(value);
+          if (top.length === k) return top;
+        }
+      }
+      return top;
+    }
+visualisers: [hash-table, heap]

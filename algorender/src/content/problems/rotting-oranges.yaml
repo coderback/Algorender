@@ -1,0 +1,119 @@
+title: Spreading Rot
+difficulty: medium
+patterns: [graphs]
+why: >-
+  Rot spreads one step per minute from every rotten orange at once, so the minute an orange rots is
+  its distance from the nearest rotten one. A breadth-first search started from all the rotten
+  oranges together measures exactly that, layer by layer.
+summary: Find how many minutes it takes for rot to reach every orange in a grid.
+statement: |
+  You are given `grid`, where each cell is one of:
+
+  - `0`: empty,
+  - `1`: a fresh orange,
+  - `2`: a rotten orange.
+
+  Every minute, each fresh orange next to a rotten one (up, down, left or right) becomes rotten.
+  Return the number of minutes until no fresh orange is left. If some fresh orange can never rot,
+  return `-1`. If there are no fresh oranges to begin with, the answer is `0`.
+constraints:
+  - "The grid has 1 to 100 rows and 1 to 100 columns."
+  - "Every cell is `0`, `1` or `2`."
+signature:
+  function: orangesRotting
+  params:
+    - { name: grid, type: "int[][]" }
+  returns: int
+examples:
+  - input: { grid: [[1, 1, 0, 2], [0, 1, 1, 1], [2, 0, 0, 1]] }
+    output: 5
+    explanation: "The rot spreads from the top-right orange down and then left along the middle row; the top-left orange is the last to go, at minute 5. The rotten orange at the bottom left has no fresh neighbour to spread to."
+  - input: { grid: [[2, 1], [0, 0], [1, 1]] }
+    output: -1
+    explanation: The bottom row is cut off by empty cells, so it never rots.
+  - input: { grid: [[0, 2], [2, 0]] }
+    output: 0
+    explanation: There are no fresh oranges, so no time is needed.
+tests:
+  - input: { grid: [[1]] }
+    output: -1
+  - input: { grid: [[2]] }
+    output: 0
+  - input: { grid: [[0]] }
+    output: 0
+  - input: { grid: [[2, 1, 1, 1, 1]] }
+    output: 4
+  - input: { grid: [[2, 1, 1], [1, 1, 1], [1, 1, 2]] }
+    output: 2
+  - input: { grid: [[1, 1, 1], [1, 2, 1], [1, 1, 1], [0, 0, 0], [1, 1, 1]] }
+    output: -1
+generated: { count: 8, seed: 43 }
+hints:
+  - "All the rotten oranges spread at the same time. Which search explores outwards one step at a time?"
+  - "Put every rotten orange in a queue at the start, then handle the queue one minute (one layer) at a time."
+  - "Count the fresh oranges first and lower the count each time one rots. If it isn't 0 when the queue runs dry, return −1."
+approach: |
+  Multi-source breadth-first search. Put every rotten orange in a queue and count the fresh ones.
+  Then, while fresh oranges remain and the queue isn't empty, play one minute: take every orange
+  that is in the queue at the start of the minute, and rot each fresh neighbour (set it to `2`,
+  lower the fresh count, and queue it for the next minute). Add one to the minutes.
+
+  When the loop stops, return the minutes if no fresh orange is left, or `-1` if some never rotted.
+  Each cell is queued at most once.
+complexity: { time: "O(rows · cols)", space: "O(rows · cols) for the queue" }
+solutions:
+  python: |
+    from collections import deque
+
+    def oranges_rotting(grid: list[list[int]]) -> int:
+        rows, cols = len(grid), len(grid[0])
+        queue = deque()
+        fresh = 0
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] == 2:
+                    queue.append((r, c))
+                elif grid[r][c] == 1:
+                    fresh += 1
+        minutes = 0
+        while queue and fresh > 0:
+            for _ in range(len(queue)):  # the oranges that rotted last minute
+                r, c = queue.popleft()
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == 1:
+                        grid[nr][nc] = 2
+                        fresh -= 1
+                        queue.append((nr, nc))
+            minutes += 1
+        return minutes if fresh == 0 else -1
+  typescript: |
+    function orangesRotting(grid: number[][]): number {
+      const rows = grid.length;
+      const cols = grid[0].length;
+      const queue: number[][] = [];
+      let fresh = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (grid[r][c] === 2) queue.push([r, c]);
+          else if (grid[r][c] === 1) fresh++;
+        }
+      }
+      let minutes = 0;
+      let head = 0;
+      while (head < queue.length && fresh > 0) {
+        const end = queue.length; // the oranges that rotted last minute end here
+        for (; head < end; head++) {
+          const [r, c] = queue[head];
+          for (const [nr, nc] of [[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]]) {
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === 1) {
+              grid[nr][nc] = 2;
+              fresh--;
+              queue.push([nr, nc]);
+            }
+          }
+        }
+        minutes++;
+      }
+      return fresh === 0 ? minutes : -1;
+    }
+visualisers: [breadth-first-search]

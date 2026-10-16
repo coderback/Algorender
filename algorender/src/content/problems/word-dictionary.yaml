@@ -1,0 +1,133 @@
+title: Word Dictionary with Wildcards
+difficulty: medium
+patterns: [trie, backtracking]
+why: >-
+  The stored words share starts, so a trie holds them. A `.` could be any letter, so there the
+  search tries each child in turn and backs up when a branch fails.
+summary: Store words and look them up by patterns in which `.` matches any letter.
+statement: |
+  Write a class `WordDictionary` that stores lowercase words and finds them by pattern:
+
+  - `WordDictionary()` makes an empty dictionary.
+  - `addWord(word)` stores `word`.
+  - `search(word)` returns `true` if some stored word matches `word`, and `false` otherwise.
+    Here `word` may contain dots: each `.` matches any one letter, and every other letter must
+    match itself. A match has exactly the same length.
+
+  Each test is a list of calls, starting with the constructor; the expected answer lists what each
+  call returns (`null` for the constructor and for `addWord`).
+constraints:
+  - "Stored words have 1 to 25 lowercase English letters."
+  - "Searched words have 1 to 25 characters, each a lowercase letter or `.`, with at most 2 dots."
+  - "A test makes at most 10⁴ calls."
+design:
+  class: WordDictionary
+  methods:
+    - { name: addWord, params: [{ name: word, type: string }], returns: void }
+    - { name: search, params: [{ name: word, type: string }], returns: bool }
+examples:
+  - calls: [[WordDictionary], [addWord, "cat"], [addWord, "cart"], [search, "c.t"], [search, "c..t"], [search, "ca"]]
+    output: [null, null, null, true, true, false]
+    explanation: '`c.t` matches "cat" and `c..t` matches "cart", but nothing matches `ca`: a match must have the same length.'
+  - calls: [[WordDictionary], [addWord, "dog"], [search, ".o."], [search, "d.gs"], [search, "."]]
+    output: [null, null, true, false, false]
+tests:
+  - calls: [[WordDictionary], [search, "a"], [search, "."]]
+    output: [null, false, false]
+  - calls: [[WordDictionary], [addWord, "a"], [search, "."], [search, "a"], [search, ".."]]
+    output: [null, null, true, true, false]
+  - calls: [[WordDictionary], [addWord, "pin"], [addWord, "pan"], [search, "p.n"], [search, "p.t"], [search, ".an"], [search, "..n"], [search, "pe."]]
+    output: [null, null, null, true, false, true, true, false]
+  - calls: [[WordDictionary], [addWord, "ax"], [addWord, "by"], [search, ".y"], [search, ".z"], [search, "a."]]
+    output: [null, null, null, true, false, true]
+generated: { count: 8, seed: 52 }
+hints:
+  - "Without dots this is an ordinary trie lookup. What changes when a character could be any letter?"
+  - "At a `.`, the next letter could be any child of the current node, so try each one."
+  - "Write the search recursively: given a node and a position in the pattern, match one character and recurse on the rest. At a dot, succeed if the recursion succeeds for any child."
+approach: |
+  Store the words in a trie: each node maps letters to child nodes and has a flag `end` for a word
+  ending there. `addWord` walks down from the root, making missing children, and sets `end` on the
+  last node.
+
+  `search` is a depth-first search of the trie, steered by the pattern. `match(node, i)` asks
+  whether the pattern from position `i` onwards can be matched starting from `node`:
+
+  - at the end of the pattern, the answer is `node.end`;
+  - for a letter, follow that letter's child, or fail if there isn't one;
+  - for a `.`, try every child, and succeed as soon as one of them does. A branch that fails just
+    returns, and the next child is tried.
+complexity: { time: "O(L) to add; O(L) to search without dots, up to O(26ᵈ · L) with d dots", space: "O(total letters stored)" }
+solutions:
+  python: |
+    class TrieNode:
+        def __init__(self):
+            self.children = {}
+            self.end = False  # a stored word ends here
+
+
+    class WordDictionary:
+        def __init__(self):
+            self.root = TrieNode()
+
+        def add_word(self, word: str) -> None:
+            node = self.root
+            for ch in word:
+                if ch not in node.children:
+                    node.children[ch] = TrieNode()
+                node = node.children[ch]
+            node.end = True
+
+        def search(self, word: str) -> bool:
+            def match(node: TrieNode, i: int) -> bool:
+                """Whether word[i:] can be matched starting from node."""
+                if i == len(word):
+                    return node.end
+                if word[i] == '.':
+                    for child in node.children.values():
+                        if match(child, i + 1):
+                            return True
+                    return False
+                child = node.children.get(word[i])
+                return child is not None and match(child, i + 1)
+
+            return match(self.root, 0)
+  typescript: |
+    class TrieNode {
+      children = new Map<string, TrieNode>();
+      end = false; // a stored word ends here
+    }
+
+    class WordDictionary {
+      private root = new TrieNode();
+
+      addWord(word: string): void {
+        let node = this.root;
+        for (const ch of word) {
+          let child = node.children.get(ch);
+          if (child === undefined) {
+            child = new TrieNode();
+            node.children.set(ch, child);
+          }
+          node = child;
+        }
+        node.end = true;
+      }
+
+      search(word: string): boolean {
+        // Whether word from position i on can be matched starting from node.
+        const match = (node: TrieNode, i: number): boolean => {
+          if (i === word.length) return node.end;
+          if (word[i] === '.') {
+            for (const child of node.children.values()) {
+              if (match(child, i + 1)) return true;
+            }
+            return false;
+          }
+          const child = node.children.get(word[i]);
+          return child !== undefined && match(child, i + 1);
+        };
+        return match(this.root, 0);
+      }
+    }
+visualisers: [trie]

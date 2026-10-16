@@ -1,0 +1,92 @@
+title: The Extra Edge
+difficulty: medium
+patterns: [union-find]
+why: >-
+  Adding the edges one at a time, the edge to remove is the first one whose two ends are already
+  connected. Union-find answers "already connected?" for each edge as it arrives.
+summary: Find the edge that turned a tree into a graph with a cycle.
+statement: |
+  A tree with `n` nodes, numbered from 1 to `n`, had one extra edge added between two of its nodes
+  that weren't already joined directly. You are given the `n` edges of the result, `edges`, where
+  each `[a, b]` (with `a < b`) joins nodes `a` and `b`. Edges have no direction.
+
+  Return an edge you can remove so that the remaining edges form a tree again: connected, with no
+  cycle. If several edges would work, return the one that comes last in `edges`.
+constraints:
+  - "3 ≤ `n` ≤ 1000"
+  - "`edges` holds exactly `n` edges, each `[a, b]` with 1 ≤ `a` < `b` ≤ `n`, and no edge appears twice."
+  - "The edges connect all `n` nodes."
+signature:
+  function: findRedundantConnection
+  params:
+    - { name: edges, type: "int[][]" }
+  returns: "int[]"
+view: memory
+examples:
+  - input: { edges: [[1, 4], [3, 4], [1, 3], [1, 2], [4, 5]] }
+    output: [1, 3]
+    explanation: "Nodes 1, 3 and 4 form a loop. Removing any of its three edges leaves a tree, and `[1, 3]` is the last of them in the list."
+  - input: { edges: [[2, 3], [1, 2], [3, 5], [4, 5], [1, 5]] }
+    output: [1, 5]
+    explanation: "The loop is 1–2–3–5–1, and `[1, 5]` closes it last."
+tests:
+  - input: { edges: [[1, 2], [2, 3], [1, 3]] }
+    output: [1, 3]
+  - input: { edges: [[1, 3], [2, 3], [1, 2]] }
+    output: [1, 2]
+  - input: { edges: [[1, 2], [1, 3], [1, 4], [3, 4], [4, 5]] }
+    output: [3, 4]
+  - input: { edges: [[3, 4], [1, 2], [2, 4], [1, 4], [4, 5], [5, 6]] }
+    output: [1, 4]
+  - input: { edges: [[1, 5], [1, 2], [2, 3], [3, 4], [4, 5]] }
+    output: [4, 5]
+generated: { count: 8, seed: 46 }
+hints:
+  - "Removing an edge leaves a tree exactly when that edge is on the one cycle. Which cycle edge comes last in the list?"
+  - "Add the edges one at a time to n separate nodes. The first edge that joins two nodes already connected closes the cycle, and all the cycle's other edges came before it."
+  - "Union-find: for each edge, if both ends have the same root, return the edge; otherwise union their groups."
+approach: |
+  Add the edges in order to a union-find structure over the nodes 1 to n. For each edge `[a, b]`,
+  find the roots of `a` and `b`. If they are the same, `a` and `b` are already connected, so this
+  edge closes the cycle: return it. Otherwise union the two groups and go on.
+
+  Why this is the right edge: the edges whose removal leaves a tree are exactly the edges on the
+  cycle. The cycle's two ends can only be connected once all of its other edges have been added, so
+  the first edge found joining connected nodes is the cycle edge that comes last in the list.
+complexity: { time: "O(n log n), close to linear in practice", space: "O(n)" }
+solutions:
+  python: |
+    def find_redundant_connection(edges: list[list[int]]) -> list[int]:
+        parent = list(range(len(edges) + 1))  # nodes 1 to n; index 0 unused
+
+        def find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]  # halve the path as we go
+                x = parent[x]
+            return x
+
+        for a, b in edges:
+            root_a, root_b = find(a), find(b)
+            if root_a == root_b:
+                return [a, b]  # already connected: this edge closes the cycle
+            parent[root_a] = root_b
+        return []
+  typescript: |
+    function findRedundantConnection(edges: number[][]): number[] {
+      const parent = Array.from({ length: edges.length + 1 }, (_, i) => i); // nodes 1 to n; index 0 unused
+      const find = (x: number): number => {
+        while (parent[x] !== x) {
+          parent[x] = parent[parent[x]]; // halve the path as we go
+          x = parent[x];
+        }
+        return x;
+      };
+      for (const [a, b] of edges) {
+        const rootA = find(a);
+        const rootB = find(b);
+        if (rootA === rootB) return [a, b]; // already connected: this edge closes the cycle
+        parent[rootA] = rootB;
+      }
+      return [];
+    }
+visualisers: [union-find]

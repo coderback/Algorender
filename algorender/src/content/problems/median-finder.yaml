@@ -1,0 +1,150 @@
+title: Running Median
+difficulty: hard
+patterns: [heap]
+why: >-
+  The median splits the numbers into a lower half and an upper half, and only the largest of the
+  lower half and the smallest of the upper half matter. Two heaps, one per half, keep both on top.
+summary: Collect numbers one at a time and report their median whenever asked.
+statement: |
+  Write a class `MedianFinder` that collects integers and reports their median:
+
+  - `addNum(num)` adds `num` to the collection.
+  - `findMedian()` returns the median of every number added so far.
+
+  The median is the middle value once the numbers are sorted. With an even count there are two
+  middle values, and the median is their average, so the median of `[2, 3]` is `2.5`. `findMedian`
+  is only called after at least one number has been added. Aim for O(log n) per `addNum` and O(1)
+  per `findMedian`.
+
+  Each test is a list of calls, starting with the constructor; the expected answer lists what each
+  call returns (`null` for the constructor and for `addNum`). A median within 10⁻⁵ of the right
+  value is accepted.
+constraints:
+  - "Every number is between −10⁵ and 10⁵."
+  - "A test makes at most 5 × 10⁴ calls."
+design:
+  class: MedianFinder
+  methods:
+    - { name: addNum, params: [{ name: num, type: int }], returns: void }
+    - { name: findMedian, returns: float }
+compare: float
+examples:
+  - calls: [[MedianFinder], [addNum, 4], [addNum, 10], [findMedian], [addNum, 6], [findMedian]]
+    output: [null, null, null, 7.0, null, 6.0]
+    explanation: "After 4 and 10 the median is their average, 7. Adding 6 makes it the middle value."
+  - calls: [[MedianFinder], [addNum, 5], [findMedian], [addNum, -4], [addNum, 10], [findMedian], [addNum, 0], [findMedian]]
+    output: [null, null, 5.0, null, null, 5.0, null, 2.5]
+    explanation: "Sorted, the last collection is −4, 0, 5, 10, so the median is the average of 0 and 5."
+tests:
+  - calls: [[MedianFinder], [addNum, 7], [findMedian]]
+    output: [null, null, 7.0]
+  - calls: [[MedianFinder], [addNum, -100000], [addNum, -100000], [findMedian]]
+    output: [null, null, null, -100000.0]
+  - calls: [[MedianFinder], [addNum, 3], [addNum, 3], [addNum, 3], [findMedian], [addNum, 1], [findMedian]]
+    output: [null, null, null, null, 3.0, null, 3.0]
+  - calls: [[MedianFinder], [addNum, 9], [addNum, 8], [addNum, 7], [addNum, 6], [findMedian], [addNum, 5], [findMedian]]
+    output: [null, null, null, null, null, 7.5, null, 7.0]
+  - calls: [[MedianFinder], [addNum, 1], [findMedian], [findMedian], [addNum, 2], [findMedian]]
+    output: [null, null, 1.0, 1.0, null, 1.5]
+generated: { count: 6, seed: 35 }
+hints:
+  - "Sorting after every addition is slow. Which numbers actually decide the median?"
+  - "Split the numbers into a lower half and an upper half. The median depends only on the largest number of the lower half and the smallest of the upper half."
+  - "Keep the lower half in a max-heap and the upper half in a min-heap, with the lower half the same size or one bigger. After each addition, move a top across to restore that balance."
+approach: |
+  Keep two heaps: `low`, a max-heap holding the smaller half of the numbers, and `high`, a min-heap
+  holding the larger half. Keep every number in `low` no bigger than every number in `high`, and keep
+  `low` the same size as `high` or one bigger.
+
+  To add a number, push it into `low`, then move `low`'s largest into `high`; that keeps the halves
+  in order whichever half the number belongs to. If `high` is now bigger than `low`, move its
+  smallest back. The median is the top of `low` when the count is odd, and the average of the two
+  tops when it is even.
+complexity: { time: "O(log n) per addNum, O(1) per findMedian", space: "O(n)" }
+solutions:
+  python: |
+    import heapq
+
+    class MedianFinder:
+        def __init__(self):
+            self.low = []   # the smaller half, negated so the largest is on top
+            self.high = []  # the larger half, smallest on top
+
+        def add_num(self, num: int) -> None:
+            heapq.heappush(self.low, -num)
+            heapq.heappush(self.high, -heapq.heappop(self.low))
+            if len(self.high) > len(self.low):
+                heapq.heappush(self.low, -heapq.heappop(self.high))
+
+        def find_median(self) -> float:
+            if len(self.low) > len(self.high):
+                return float(-self.low[0])
+            return (-self.low[0] + self.high[0]) / 2
+  typescript: |
+    class Heap<T> {
+      private items: T[] = [];
+      private before: (a: T, b: T) => boolean;
+
+      // before(a, b) is true when a belongs nearer the top than b.
+      constructor(before: (a: T, b: T) => boolean) {
+        this.before = before;
+      }
+
+      size(): number {
+        return this.items.length;
+      }
+
+      peek(): T {
+        return this.items[0];
+      }
+
+      push(item: T): void {
+        const a = this.items;
+        a.push(item);
+        let i = a.length - 1;
+        while (i > 0) {
+          const parent = (i - 1) >> 1;
+          if (!this.before(a[i], a[parent])) break;
+          [a[i], a[parent]] = [a[parent], a[i]];
+          i = parent;
+        }
+      }
+
+      pop(): T {
+        const a = this.items;
+        const top = a[0];
+        const last = a.pop()!;
+        if (a.length > 0) {
+          a[0] = last;
+          let i = 0;
+          while (true) {
+            const left = 2 * i + 1;
+            const right = left + 1;
+            let first = i;
+            if (left < a.length && this.before(a[left], a[first])) first = left;
+            if (right < a.length && this.before(a[right], a[first])) first = right;
+            if (first === i) break;
+            [a[i], a[first]] = [a[first], a[i]];
+            i = first;
+          }
+        }
+        return top;
+      }
+    }
+
+    class MedianFinder {
+      private low = new Heap<number>((a, b) => a > b); // the smaller half, largest on top
+      private high = new Heap<number>((a, b) => a < b); // the larger half, smallest on top
+
+      addNum(num: number): void {
+        this.low.push(num);
+        this.high.push(this.low.pop());
+        if (this.high.size() > this.low.size()) this.low.push(this.high.pop());
+      }
+
+      findMedian(): number {
+        if (this.low.size() > this.high.size()) return this.low.peek();
+        return (this.low.peek() + this.high.peek()) / 2;
+      }
+    }
+visualisers: [heap]

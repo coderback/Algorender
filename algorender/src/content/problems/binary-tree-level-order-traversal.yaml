@@ -1,0 +1,85 @@
+title: Binary Tree Level by Level
+difficulty: medium
+patterns: [trees]
+why: >-
+  "Row by row from the top" is breadth-first order. Going a level at a time, the children of one
+  level's nodes, left to right, make up the next level.
+summary: List a binary tree's values level by level, each level from left to right.
+statement: |
+  You are given `root`, the root of a binary tree (or nothing, for an empty tree).
+
+  Return its values level by level: a list with one inner list per level, from the root's level
+  downwards, each holding that level's values from left to right. An empty tree gives `[]`.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds 0 to 2000 nodes."
+  - "Every value is between −1000 and 1000."
+signature:
+  function: levelOrder
+  params:
+    - { name: root, type: TreeNode }
+  returns: "int[][]"
+examples:
+  - input: { root: [6, 2, 8, 1, 4, null, 9] }
+    output: [[6], [2, 8], [1, 4, 9]]
+  - input: { root: [1, null, 2, 3] }
+    output: [[1], [2], [3]]
+    explanation: Each level of this tree has a single node.
+tests:
+  - input: { root: [] }
+    output: []
+  - input: { root: [5] }
+    output: [[5]]
+  - input: { root: [1, 2, 3, 4, 5, 6, 7] }
+    output: [[1], [2, 3], [4, 5, 6, 7]]
+  - input: { root: [0, -1, null, -2, null, -3] }
+    output: [[0], [-1], [-2], [-3]]
+  - input: { root: [3, 9, 9, null, 1, 1] }
+    output: [[3], [9, 9], [1, 1]]
+generated: { count: 8, seed: 44 }
+hints:
+  - "If you have the nodes of one level, in order from left to right, how do you get the next level?"
+  - "Their children, taken left child then right child, node by node, are the next level, already in order."
+  - "Start with the list holding just the root. Record its values, build the next list from the children, and repeat until a level is empty."
+approach: |
+  Go breadth-first, one level at a time. Keep the list of nodes on the current level, starting
+  with just the root (or nothing, for an empty tree). Each round, record that level's values, then
+  build the next level from their children, left child before right child, node by node. Stop when
+  a level is empty.
+
+  This is a breadth-first search in which the current level plays the part of the queue. With a
+  real queue, the queue's length at the start of each round tells you how many nodes the level has.
+complexity: { time: "O(n)", space: "O(w), w the widest level" }
+solutions:
+  python: |
+    def level_order(root: TreeNode | None) -> list[list[int]]:
+        levels = []
+        level = [root] if root else []
+        while level:
+            levels.append([node.val for node in level])
+            next_level = []
+            for node in level:
+                if node.left:
+                    next_level.append(node.left)
+                if node.right:
+                    next_level.append(node.right)
+            level = next_level
+        return levels
+  typescript: |
+    function levelOrder(root: TreeNode | null): number[][] {
+      const levels: number[][] = [];
+      let level: TreeNode[] = root ? [root] : [];
+      while (level.length > 0) {
+        levels.push(level.map((node) => node.val));
+        const nextLevel: TreeNode[] = [];
+        for (const node of level) {
+          if (node.left) nextLevel.push(node.left);
+          if (node.right) nextLevel.push(node.right);
+        }
+        level = nextLevel;
+      }
+      return levels;
+    }
+visualisers: [binary-tree, breadth-first-search]

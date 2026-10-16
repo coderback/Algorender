@@ -1,0 +1,70 @@
+title: Find the Missing Number
+difficulty: easy
+patterns: [bit-manipulation, math]
+why: >-
+  The list holds every number from 0 to n but one. XOR-ing every index and every value cancels
+  each number that is present (`x ^ x = 0`) and leaves the missing one; the sum formula does the
+  same job.
+summary: A list holds every number from 0 to n except one; find the missing one.
+statement: |
+  The list `nums` holds `n` different numbers, all from the range 0 to `n`. That range has `n + 1`
+  numbers, so exactly one of them is missing. Return the missing number.
+
+  Aim for O(n) time and a constant amount of extra memory.
+constraints:
+  - "`nums` holds n numbers, where 1 ≤ n ≤ 10⁴."
+  - "Every number is between 0 and n, and no number appears twice."
+signature:
+  function: missingNumber
+  params:
+    - { name: nums, type: "int[]" }
+  returns: int
+examples:
+  - input: { nums: [2, 0, 4, 1] }
+    output: 3
+    explanation: "Four numbers, so the range is 0 to 4, and 3 is missing."
+  - input: { nums: [0, 1] }
+    output: 2
+    explanation: "Two numbers, so the range is 0 to 2: 0 and 1 are there, so 2 is missing."
+tests:
+  - input: { nums: [0] }
+    output: 1
+  - input: { nums: [1] }
+    output: 0
+  - input: { nums: [1, 2, 3] }
+    output: 0
+  - input: { nums: [5, 4, 2, 1, 0, 6] }
+    output: 3
+  - input: { nums: [3, 0, 2, 1] }
+    output: 4
+generated: { count: 8, seed: 38 }
+hints:
+  - "Sorting the list, or keeping a set of what you have seen, works. Can you do it without the extra memory?"
+  - "You know the sum of 0 to n: it is n(n + 1) / 2. What does subtracting the sum of the list leave?"
+  - "Or with XOR: XOR together every index from 0 to n − 1, the number n and every value. Each number that is present appears twice and cancels."
+approach: |
+  The numbers 0 to `n` appear once each among the indices `0 … n − 1` together with `n`. Among the
+  values, every number appears once too, except the missing one.
+
+  XOR all of them together: start from `n`, and XOR in each index `i` and each value `nums[i]`.
+  Every number that is present appears twice and cancels (`x ^ x = 0`), so what is left is the
+  missing number.
+
+  Summing works the same way: the missing number is `n(n + 1) / 2 − sum(nums)`.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def missing_number(nums: list[int]) -> int:
+        missing = len(nums)  # n is never an index, so start with it
+        for i, x in enumerate(nums):
+            missing ^= i ^ x  # every number present appears twice and cancels
+        return missing
+  typescript: |
+    function missingNumber(nums: number[]): number {
+      let missing = nums.length; // n is never an index, so start with it
+      for (let i = 0; i < nums.length; i++) {
+        missing ^= i ^ nums[i]; // every number present appears twice and cancels
+      }
+      return missing;
+    }
+visualisers: []

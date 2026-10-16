@@ -1,0 +1,72 @@
+title: Reach the Last Index
+difficulty: medium
+patterns: [greedy]
+why: >-
+  You never need to know how you reach a position, only how far you could get from everything
+  reachable so far: keep the furthest reachable index and push it forward in one greedy scan.
+summary: Decide whether jumps of up to `nums[i]` steps can carry you from the first index to the last.
+statement: |
+  You start at index 0 of a list of non-negative integers `nums`. From index `i` you may jump
+  forward by any number of steps from 1 up to `nums[i]`; from an index holding 0 you can't move.
+
+  Return `true` if you can reach the last index, and `false` otherwise.
+constraints:
+  - "`nums` holds 1 to 10⁴ numbers."
+  - "0 ≤ `nums[i]` ≤ 10⁵"
+signature:
+  function: canJump
+  params:
+    - { name: nums, type: "int[]" }
+  returns: bool
+examples:
+  - input: { nums: [2, 3, 0, 1, 4] }
+    output: true
+    explanation: "Jump 1 step to index 1, then 3 steps to the last index."
+  - input: { nums: [3, 1, 1, 0, 5] }
+    output: false
+    explanation: "No jump gets past index 3, which holds 0."
+tests:
+  - input: { nums: [0] }
+    output: true
+  - input: { nums: [0, 1] }
+    output: false
+  - input: { nums: [1, 0] }
+    output: true
+  - input: { nums: [5, 0, 0, 0, 0, 0] }
+    output: true
+  - input: { nums: [1, 1, 0, 1] }
+    output: false
+  - input: { nums: [2, 0, 0] }
+    output: true
+generated: { count: 8, seed: 34 }
+hints:
+  - "You don't need to try every route. What single number sums up everywhere you can reach so far?"
+  - "Track the furthest index you can reach. Walking from left to right, every index up to it is reachable too."
+  - "If you arrive at an index beyond the furthest reach, you are stuck. Otherwise stretch the reach to `i + nums[i]` when that is further."
+approach: |
+  Keep `reach`, the furthest index you can get to using the indices seen so far. Every index up to
+  `reach` is reachable, because a jump may be shorter than its maximum.
+
+  Walk from left to right. If the current index `i` is beyond `reach`, nothing before it can get
+  you here, so return `false`. Otherwise stretch `reach` to `i + nums[i]` if that is further. If
+  the walk gets through every index, the last one is reachable.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def can_jump(nums: list[int]) -> bool:
+        reach = 0  # the furthest index reachable so far
+        for i, step in enumerate(nums):
+            if i > reach:
+                return False
+            reach = max(reach, i + step)
+        return True
+  typescript: |
+    function canJump(nums: number[]): boolean {
+      let reach = 0; // the furthest index reachable so far
+      for (let i = 0; i < nums.length; i++) {
+        if (i > reach) return false;
+        reach = Math.max(reach, i + nums[i]);
+      }
+      return true;
+    }
+visualisers: []

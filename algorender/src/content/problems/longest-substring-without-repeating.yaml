@@ -1,0 +1,81 @@
+title: Longest Stretch Without a Repeat
+difficulty: medium
+patterns: [sliding-window]
+why: >-
+  You want the longest contiguous stretch that obeys a rule (no character twice). Grow a window on
+  the right, and when a repeat comes in, move the left edge past the earlier copy.
+summary: Find the length of the longest substring whose characters are all different.
+statement: |
+  You are given a string `s`. Return the length of the longest substring (a contiguous run of
+  characters) in which no character appears more than once.
+constraints:
+  - "`s` holds 0 to 5 × 10⁴ characters."
+  - "Every character is printable ASCII: letters, digits, symbols and spaces."
+signature:
+  function: lengthOfLongestSubstring
+  params:
+    - { name: s, type: string }
+  returns: int
+examples:
+  - input: { s: "abcbdea" }
+    output: 5
+    explanation: "`cbdea` has five different characters. Stretching it left would bring in a second `b`."
+  - input: { s: "zzzz" }
+    output: 1
+  - input: { s: "ab ba" }
+    output: 3
+    explanation: "Spaces are characters too: `ab ` and ` ba` both work."
+tests:
+  - input: { s: "" }
+    output: 0
+  - input: { s: "a" }
+    output: 1
+  - input: { s: "abcabcabc" }
+    output: 3
+  - input: { s: "abba" }
+    output: 2
+  - input: { s: "a1!a2@" }
+    output: 5
+  - input: { s: "xyzw" }
+    output: 4
+generated: { count: 8, seed: 32 }
+hints:
+  - "Checking every substring is O(n²) or worse. If a window has no repeats, what can happen when one more character joins on the right?"
+  - "Keep a window with no repeats. When the new character is already inside it, the window must give up everything up to and including that earlier copy."
+  - "Remember the last index where each character appeared. If it is inside the window, jump the left edge to just after it."
+approach: |
+  Slide a window `[left, right]` along the string, keeping it free of repeats. Keep a hash map from
+  each character to the last index where it appeared. For each `right`, if `s[right]` was last seen
+  at an index `≥ left`, that copy is inside the window: move `left` to one past it. Then record
+  `right` as the character's last index, and update the best length with `right − left + 1`.
+
+  `left` never moves backwards (that's what the `≥ left` check ensures, as in `abba`), so every
+  character joins and leaves the window once.
+complexity: { time: "O(n)", space: "O(k) for k different characters" }
+solutions:
+  python: |
+    def length_of_longest_substring(s: str) -> int:
+        last = {}
+        left = 0
+        best = 0
+        for right, ch in enumerate(s):
+            if last.get(ch, -1) >= left:
+                left = last[ch] + 1
+            last[ch] = right
+            best = max(best, right - left + 1)
+        return best
+  typescript: |
+    function lengthOfLongestSubstring(s: string): number {
+      const last = new Map<string, number>();
+      let left = 0;
+      let best = 0;
+      for (let right = 0; right < s.length; right++) {
+        const ch = s[right];
+        const seen = last.get(ch) ?? -1;
+        if (seen >= left) left = seen + 1;
+        last.set(ch, right);
+        best = Math.max(best, right - left + 1);
+      }
+      return best;
+    }
+visualisers: [sliding-window, hash-table]

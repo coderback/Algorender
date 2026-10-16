@@ -1,0 +1,93 @@
+title: Drive Once Around a Ring Road
+difficulty: medium
+patterns: [greedy]
+why: >-
+  If the tank runs dry on the way from station a to station b, no start between a and b can do any
+  better, so the start can jump straight past b: one greedy pass decides it.
+summary: Find the fuel station from which a car can drive all the way round a circular road.
+statement: |
+  Fuel stations stand around a circular road, numbered `0` to `n − 1`. At station `i` you can take
+  `gas[i]` units of fuel, and driving from station `i` to the next one (station `i + 1`, or station
+  `0` after the last) uses `cost[i]` units.
+
+  Your car's tank holds any amount and starts empty. Return the index of the station where you can
+  start, fill up, and drive once around the whole road, filling up at every station on the way,
+  without the tank ever going below zero. Return `-1` if no starting station works.
+
+  The tests are chosen so that when a starting station exists, it is the only one.
+constraints:
+  - "`gas` and `cost` have the same length n, from 1 to 10⁴."
+  - "0 ≤ `gas[i]`, `cost[i]` ≤ 10⁴"
+  - "When a starting station exists, exactly one does."
+signature:
+  function: canCompleteCircuit
+  params:
+    - { name: gas, type: "int[]" }
+    - { name: cost, type: "int[]" }
+  returns: int
+examples:
+  - input: { gas: [1, 6, 2, 3], cost: [3, 1, 3, 4] }
+    output: 1
+    explanation: "Starting at station 1, the tank holds 5, 4, 3 and finally 1 unit after each stretch of road."
+  - input: { gas: [3, 2], cost: [2, 4] }
+    output: -1
+    explanation: "The stations hold 5 units in all, but the whole road costs 6."
+tests:
+  - input: { gas: [5], cost: [5] }
+    output: 0
+  - input: { gas: [4], cost: [6] }
+    output: -1
+  - input: { gas: [0, 0, 7], cost: [1, 1, 3] }
+    output: 2
+  - input: { gas: [1, 1, 1], cost: [1, 1, 2] }
+    output: -1
+  - input: { gas: [4, 0, 1, 2], cost: [1, 1, 2, 3] }
+    output: 0
+  - input: { gas: [1, 2, 3, 10], cost: [2, 3, 4, 6] }
+    output: 3
+generated: { count: 9, seed: 35 }
+hints:
+  - "If the stations hold less fuel in all than the road costs, no start works. When there is enough in all, does some start always work?"
+  - "Simulate from a station `start`. Suppose the tank goes below zero on the way from station `i` to `i + 1`. Could any station between `start` and `i` have been a better start?"
+  - "No: you reached each of them with a tank of zero or more, and starting there means starting with zero. So restart at `i + 1` with an empty tank. When the total fuel is enough, the last restart is the answer."
+approach: |
+  First, if `sum(gas) < sum(cost)` no start can work, so return `-1`.
+
+  Otherwise, drive from station 0 keeping the tank level, and remember the current `start`. If the
+  tank drops below zero on the stretch after station `i`, then no station from `start` to `i` can
+  be the answer: you arrived at each of them with a tank of zero or more, and starting there
+  instead would mean arriving at the same stretch with no more fuel than now. So set `start` to
+  `i + 1` and empty the tank.
+
+  When the total fuel is enough, the last `start` gets to the end of the list, and the surplus
+  gathered before it covers the stretches from station 0 back round to it. So that `start` is the
+  answer.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def can_complete_circuit(gas: list[int], cost: list[int]) -> int:
+        if sum(gas) < sum(cost):
+            return -1
+        start, tank = 0, 0
+        for i in range(len(gas)):
+            tank += gas[i] - cost[i]
+            if tank < 0:  # no station from start to i can get past here
+                start, tank = i + 1, 0
+        return start
+  typescript: |
+    function canCompleteCircuit(gas: number[], cost: number[]): number {
+      const sum = (values: number[]) => values.reduce((total, x) => total + x, 0);
+      if (sum(gas) < sum(cost)) return -1;
+      let start = 0;
+      let tank = 0;
+      for (let i = 0; i < gas.length; i++) {
+        tank += gas[i] - cost[i];
+        if (tank < 0) {
+          // No station from start to i can get past here.
+          start = i + 1;
+          tank = 0;
+        }
+      }
+      return start;
+    }
+visualisers: []

@@ -1,0 +1,85 @@
+title: Product of Everything Else
+difficulty: medium
+patterns: [prefix-sum]
+why: >-
+  Each answer is the product of everything to its left times everything to its right. Running
+  products from each end, the multiplying cousin of prefix sums, give both in two passes.
+summary: For each position, multiply together every other number in the list, without dividing.
+statement: |
+  You are given a list of integers `nums`. Return a list `answer` of the same length, where
+  `answer[i]` is the product of every number in `nums` except `nums[i]`.
+
+  Don't use division, and aim for O(n) time. (Dividing the total by `nums[i]` would fail anyway
+  when the list holds a zero.)
+constraints:
+  - "`nums` holds 2 to 10⁵ numbers."
+  - "Every number is between −30 and 30."
+  - "The product of any run of numbers in `nums` fits in a 32-bit signed integer (−2³¹ to 2³¹ − 1)."
+signature:
+  function: productExceptSelf
+  params:
+    - { name: nums, type: "int[]" }
+  returns: "int[]"
+examples:
+  - input: { nums: [2, 3, 4, 5] }
+    output: [60, 40, 30, 24]
+    explanation: "`answer[1]` is 2 × 4 × 5 = 40."
+  - input: { nums: [3, 0, -2, 1] }
+    output: [0, -6, 0, 0]
+    explanation: "Every product except `answer[1]` includes the zero."
+tests:
+  - input: { nums: [5, 7] }
+    output: [7, 5]
+  - input: { nums: [0, 0, 3] }
+    output: [0, 0, 0]
+  - input: { nums: [-1, -1, -1] }
+    output: [1, 1, 1]
+  - input: { nums: [1, 2, 0, 4] }
+    output: [0, 0, 8, 0]
+  - input: { nums: [-3, 2, -5, 1, 1] }
+    output: [-10, 15, -6, 30, 30]
+generated: { count: 8, seed: 24 }
+hints:
+  - "`answer[i]` splits into two parts: the product of everything before `i`, and the product of everything after it."
+  - "Fill `answer` from left to right with a running product of the numbers before each position."
+  - "Then walk from right to left with a second running product, of the numbers after each position, and multiply it in."
+approach: |
+  Use two running products. On a left-to-right pass, set `answer[i]` to `before`, the product of
+  `nums[0..i−1]` (1 for the first position), then multiply `before` by `nums[i]`. On a right-to-left
+  pass, keep `after`, the product of the numbers to the right of `i`: multiply `answer[i]` by it,
+  then multiply `after` by `nums[i]`.
+
+  Each position ends up with (product before it) × (product after it), which is everything except
+  itself. There is no division, so zeros cause no trouble.
+complexity: { time: "O(n)", space: "O(1) besides the answer" }
+solutions:
+  python: |
+    def product_except_self(nums: list[int]) -> list[int]:
+        n = len(nums)
+        answer = [1] * n
+        before = 1
+        for i in range(n):
+            answer[i] = before
+            before *= nums[i]
+        after = 1
+        for i in range(n - 1, -1, -1):
+            answer[i] *= after
+            after *= nums[i]
+        return answer
+  typescript: |
+    function productExceptSelf(nums: number[]): number[] {
+      const n = nums.length;
+      const answer: number[] = new Array(n).fill(1);
+      let before = 1;
+      for (let i = 0; i < n; i++) {
+        answer[i] = before;
+        before *= nums[i];
+      }
+      let after = 1;
+      for (let i = n - 1; i >= 0; i--) {
+        answer[i] *= after;
+        after *= nums[i];
+      }
+      return answer;
+    }
+visualisers: []

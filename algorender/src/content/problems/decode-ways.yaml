@@ -1,0 +1,90 @@
+title: Count Ways to Decode Digits
+difficulty: medium
+patterns: [dp-1d]
+why: >-
+  The last letter of any decoding comes from the last digit or from the last two, so the count for
+  a prefix is built from the counts for the two shorter prefixes.
+summary: Count how many ways a string of digits can be read as letters, with 1 for A up to 26 for Z.
+statement: |
+  A message of capital letters was turned into digits with `A` → `1`, `B` → `2`, …, `Z` → `26`,
+  and the codes were written one after another with no gaps. So `"126"` could have come from `ABF`
+  (1 2 6), `AZ` (1 26) or `LF` (12 6).
+
+  Given the string of digits `s`, return the number of ways to decode it. No code starts with `0`:
+  `"06"` can't be read as `F`, and a `0` can't stand on its own, so some strings can't be decoded
+  at all and the answer is 0.
+constraints:
+  - "`s` holds 1 to 70 digits, and may contain `0`s anywhere, including at the start."
+  - "The answer is below 2⁵³."
+signature:
+  function: numDecodings
+  params:
+    - { name: s, type: string }
+  returns: int
+examples:
+  - input: { s: "126" }
+    output: 3
+    explanation: "`ABF` (1 2 6), `AZ` (1 26) and `LF` (12 6)."
+  - input: { s: "2101" }
+    output: 1
+    explanation: "The `0` must pair with the `1` before it, which leaves only 2 10 1 (`BJA`)."
+  - input: { s: "30" }
+    output: 0
+    explanation: "30 is not a code, and `0` can't be read on its own."
+tests:
+  - input: { s: "0" }
+    output: 0
+  - input: { s: "7" }
+    output: 1
+  - input: { s: "10" }
+    output: 1
+  - input: { s: "100" }
+    output: 0
+  - input: { s: "06" }
+    output: 0
+  - input: { s: "2627" }
+    output: 2
+  - input: { s: "1111111111" }
+    output: 89
+  - input: { s: "1111111111111111111111111111111111111111111111111111111111111111111111" }
+    output: 308061521170129
+generated: { count: 10, seed: 27 }
+hints:
+  - "Look at the end of the string. The last letter came from the last digit alone or from the last two digits together. When is each one allowed?"
+  - "Let `ways[i]` be the number of decodings of the first i digits. The last digit alone adds `ways[i − 1]` when it isn't `0`; the last two together add `ways[i − 2]` when they read 10 to 26."
+  - "Start from `ways[0] = 1`: the empty prefix has exactly one decoding, the empty message. Only the last two values are ever needed."
+approach: |
+  Let `ways[i]` be the number of decodings of the first `i` digits. Every decoding of that prefix
+  ends with a letter made from either:
+
+  - the last digit alone, allowed when it isn't `0`: that adds `ways[i − 1]`;
+  - the last two digits together, allowed when they read a number from 10 to 26 (so not `05`):
+    that adds `ways[i − 2]`.
+
+  Start with `ways[0] = 1` and walk along the string. Each value needs only the two before it, so
+  keep two variables instead of the table. A `0` that can't pair with the digit before it makes
+  the count 0, and it stays 0 from then on.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def num_decodings(s: str) -> int:
+        before, ways = 0, 1  # decodings of the prefix one digit shorter, and of the prefix so far
+        for i, digit in enumerate(s):
+            count = ways if digit != '0' else 0  # the last letter uses this digit alone
+            if i > 0 and 10 <= int(s[i - 1:i + 1]) <= 26:
+                count += before  # or this digit together with the one before
+            before, ways = ways, count
+        return ways
+  typescript: |
+    function numDecodings(s: string): number {
+      let before = 0; // decodings of the prefix one digit shorter
+      let ways = 1; // decodings of the prefix so far (the empty prefix has one)
+      for (let i = 0; i < s.length; i++) {
+        let count = s[i] !== '0' ? ways : 0; // the last letter uses this digit alone
+        const pair = i > 0 ? Number(s.slice(i - 1, i + 1)) : 0;
+        if (pair >= 10 && pair <= 26) count += before; // or this digit together with the one before
+        [before, ways] = [ways, count];
+      }
+      return ways;
+    }
+visualisers: []

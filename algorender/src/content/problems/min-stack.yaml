@@ -1,0 +1,92 @@
+title: Stack with Minimum
+difficulty: medium
+patterns: [stack]
+why: >-
+  The minimum can only change when you push or pop, and popping restores the minimum from before
+  that push. Remembering the minimum alongside each item, stack-style, keeps every answer at hand.
+summary: Build a stack that also reports its smallest item in constant time.
+statement: |
+  Write a class `MinStack`, a stack of integers with four methods:
+
+  - `push(val)` puts `val` on top.
+  - `pop()` removes the top item.
+  - `top()` returns the top item.
+  - `getMin()` returns the smallest item currently on the stack.
+
+  Every method must take constant time, so `getMin` can't search the stack. `pop`, `top` and
+  `getMin` are only called when the stack isn't empty.
+
+  Each test is a list of calls, starting with the constructor; the expected answer lists what each
+  call returns (`null` for the constructor and for methods that return nothing).
+constraints:
+  - "Values are between −2³¹ and 2³¹ − 1."
+  - "A test makes at most 3 × 10⁴ calls."
+design:
+  class: MinStack
+  methods:
+    - { name: push, params: [{ name: val, type: int }], returns: void }
+    - { name: pop, returns: void }
+    - { name: top, returns: int }
+    - { name: getMin, returns: int }
+examples:
+  - calls: [[MinStack], [push, 5], [push, 2], [push, 8], [getMin], [pop], [top], [getMin]]
+    output: [null, null, null, null, 2, null, 2, 2]
+  - calls: [[MinStack], [push, 3], [push, 1], [pop], [getMin]]
+    output: [null, null, null, null, 3]
+    explanation: Popping 1 brings back the minimum from before it was pushed.
+tests:
+  - calls: [[MinStack], [push, -1], [top], [getMin]]
+    output: [null, null, -1, -1]
+  - calls: [[MinStack], [push, 2], [push, 2], [push, 3], [pop], [pop], [getMin], [top]]
+    output: [null, null, null, null, null, null, 2, 2]
+  - calls: [[MinStack], [push, 0], [push, -5], [push, 4], [getMin], [pop], [getMin], [pop], [getMin]]
+    output: [null, null, null, null, -5, null, -5, null, 0]
+generated: { count: 6, seed: 8 }
+hints:
+  - "After a pop, how could you know the minimum without searching what's left?"
+  - "The minimum after pushing x is min(x, the minimum before). Could each item remember the minimum at the time it was pushed?"
+approach: |
+  Keep one stack of pairs `(value, minimum so far)`. Pushing `x` stores `(x, min(x, current minimum))`;
+  the current minimum is the top pair's second half. Popping removes a pair, which brings back the
+  previous minimum automatically. Every method touches only the top.
+complexity: { time: "O(1) per call", space: "O(n)" }
+solutions:
+  python: |
+    class MinStack:
+        def __init__(self):
+            self.items = []
+
+        def push(self, val: int) -> None:
+            smallest = val if not self.items else min(val, self.items[-1][1])
+            self.items.append((val, smallest))
+
+        def pop(self) -> None:
+            self.items.pop()
+
+        def top(self) -> int:
+            return self.items[-1][0]
+
+        def get_min(self) -> int:
+            return self.items[-1][1]
+  typescript: |
+    class MinStack {
+      private items: [number, number][] = [];
+
+      push(val: number): void {
+        const smallest = this.items.length === 0 ? val : Math.min(val, this.items[this.items.length - 1][1]);
+        this.items.push([val, smallest]);
+      }
+
+      pop(): void {
+        this.items.pop();
+      }
+
+      top(): number {
+        return this.items[this.items.length - 1][0];
+      }
+
+      getMin(): number {
+        return this.items[this.items.length - 1][1];
+      }
+    }
+visualisers: [stack]

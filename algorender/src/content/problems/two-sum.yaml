@@ -1,0 +1,74 @@
+title: Two Sum
+difficulty: easy
+patterns: [hashing]
+why: >-
+  For each number you need to know, instantly, whether its partner (target minus it) has already
+  appeared. That is a lookup, and a hash map answers lookups in constant time.
+summary: Find the two positions in a list whose numbers add up to a target.
+statement: |
+  You are given a list of integers `nums` and an integer `target`. Exactly two different
+  positions in `nums` hold numbers that add up to `target`.
+
+  Return those two positions (indices, counting from 0) as a list of two numbers, in either order.
+  You may not use the same position twice, although two positions may hold equal numbers.
+constraints:
+  - "`nums` holds 2 to 10⁴ numbers."
+  - "Every number, and `target`, is between −10⁹ and 10⁹."
+  - "At least one pair adds up to `target`; if several do, any one of them is accepted."
+signature:
+  function: twoSum
+  params:
+    - { name: nums, type: "int[]" }
+    - { name: target, type: int }
+  returns: "int[]"
+check: pair-sum
+examples:
+  - input: { nums: [3, 9, 14, 5], target: 8 }
+    output: [0, 3]
+    explanation: "`nums[0] + nums[3]` is 3 + 5 = 8."
+  - input: { nums: [6, 2, 6], target: 12 }
+    output: [0, 2]
+    explanation: Two positions can hold the same number.
+tests:
+  - input: { nums: [1, 4], target: 5 }
+    output: [0, 1]
+  - input: { nums: [-7, 20, 3, -2], target: -9 }
+    output: [0, 3]
+  - input: { nums: [0, 5, 0], target: 0 }
+    output: [0, 2]
+  - input: { nums: [1000000000, -1000000000, 7], target: 0 }
+    output: [0, 1]
+  - input: { nums: [5, 5, 1, 4], target: 10 }
+    output: [0, 1]
+generated: { count: 10, seed: 11 }
+hints:
+  - "The direct way checks every pair: that is about n²/2 additions. What do you need to know about each number to avoid that?"
+  - "For a number `x`, the partner you need is `target - x`. Could you look up whether you've seen it already?"
+  - "Walk the list once, keeping a map from each number seen so far to its index. Check for the partner before adding `x`."
+approach: |
+  Walk through the list once, keeping a hash map from each number seen so far to its position.
+  For the number `x` at position `i`, its partner is `target - x`. If the partner is already in the
+  map, return its position with `i`. Otherwise record `x → i` and move on.
+
+  Checking for the partner *before* recording `x` is what stops a number pairing with itself.
+complexity: { time: "O(n)", space: "O(n)" }
+solutions:
+  python: |
+    def two_sum(nums: list[int], target: int) -> list[int]:
+        seen = {}
+        for i, x in enumerate(nums):
+            if target - x in seen:
+                return [seen[target - x], i]
+            seen[x] = i
+        return []
+  typescript: |
+    function twoSum(nums: number[], target: number): number[] {
+      const seen = new Map<number, number>();
+      for (let i = 0; i < nums.length; i++) {
+        const partner = target - nums[i];
+        if (seen.has(partner)) return [seen.get(partner)!, i];
+        seen.set(nums[i], i);
+      }
+      return [];
+    }
+visualisers: [hash-table]

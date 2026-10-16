@@ -1,0 +1,99 @@
+title: Evaluate a Postfix Expression
+difficulty: medium
+patterns: [stack]
+why: >-
+  In postfix notation an operator always works on the two most recent values that haven't been
+  used yet. "Most recent first" is exactly what a stack gives you.
+summary: Work out the value of an arithmetic expression written in reverse Polish notation.
+statement: |
+  You are given `tokens`, an arithmetic expression in reverse Polish (postfix) notation: each
+  operator comes *after* the two values it works on. So `["4", "2", "-"]` means 4 − 2, and
+  `["1", "2", "+", "5", "*"]` means (1 + 2) × 5. No brackets are ever needed.
+
+  Each token is either an integer, written in decimal (perhaps with a leading `-`), or one of the
+  operators `+`, `-`, `*` and `/`. Return the value of the expression.
+
+  Division keeps only the whole-number part, rounding towards zero: 7 / 2 is 3 and −7 / 2 is −3.
+  The expression is always valid, never divides by zero, and every value along the way fits in a
+  32-bit signed integer.
+constraints:
+  - "`tokens` holds 1 to 10⁴ tokens."
+  - "Every number in `tokens` is between −200 and 200."
+  - "Every intermediate result is between −2³¹ and 2³¹ − 1."
+signature:
+  function: evalRPN
+  params:
+    - { name: tokens, type: "string[]" }
+  returns: int
+examples:
+  - input: { tokens: ["2", "3", "4", "*", "+", "10", "5", "-", "/"] }
+    output: 2
+    explanation: "This is (2 + 3 × 4) / (10 − 5) = 14 / 5, and 2.8 rounds towards zero to 2."
+  - input: { tokens: ["9", "-4", "/"] }
+    output: -2
+    explanation: "9 / −4 is −2.25; rounding towards zero gives −2, not −3."
+tests:
+  - input: { tokens: ["17"] }
+    output: 17
+  - input: { tokens: ["0", "3", "-"] }
+    output: -3
+  - input: { tokens: ["6", "-3", "*", "4", "+"] }
+    output: -14
+  - input: { tokens: ["1", "2", "3", "4", "+", "+", "+"] }
+    output: 10
+  - input: { tokens: ["-7", "7", "/", "5", "*"] }
+    output: -5
+  - input: { tokens: ["3", "10", "/"] }
+    output: 0
+  - input: { tokens: ["200", "200", "*", "200", "*", "200", "*"] }
+    output: 1600000000
+generated: { count: 8, seed: 31 }
+hints:
+  - "Read the tokens from left to right. When you meet an operator, which two values does it combine?"
+  - "It always combines the two most recent values not yet used. Keep the values on a stack."
+  - "Push numbers. For an operator, pop the right operand first, then the left one, and push the result. The order matters for `-` and `/`."
+  - "To divide rounding towards zero, use `Math.trunc(a / b)` in JavaScript and `int(a / b)` in Python. Python's `//` rounds down, which differs for negative results."
+approach: |
+  Scan the tokens with a stack of values. A number is pushed. An operator pops two values (the
+  first one popped is the *right* operand), combines them, and pushes the result. When the tokens
+  run out, the stack holds a single value: the answer.
+
+  Each token is pushed or popped a constant number of times, so one pass does it.
+complexity: { time: "O(n)", space: "O(n)" }
+solutions:
+  python: |
+    def eval_rpn(tokens: list[str]) -> int:
+        stack = []
+        for token in tokens:
+            if token in ('+', '-', '*', '/'):
+                right = stack.pop()
+                left = stack.pop()
+                if token == '+':
+                    stack.append(left + right)
+                elif token == '-':
+                    stack.append(left - right)
+                elif token == '*':
+                    stack.append(left * right)
+                else:
+                    stack.append(int(left / right))
+            else:
+                stack.append(int(token))
+        return stack.pop()
+  typescript: |
+    function evalRPN(tokens: string[]): number {
+      const stack: number[] = [];
+      for (const token of tokens) {
+        if (token === '+' || token === '-' || token === '*' || token === '/') {
+          const right = stack.pop()!;
+          const left = stack.pop()!;
+          if (token === '+') stack.push(left + right);
+          else if (token === '-') stack.push(left - right);
+          else if (token === '*') stack.push(left * right);
+          else stack.push(Math.trunc(left / right));
+        } else {
+          stack.push(Number(token));
+        }
+      }
+      return stack.pop()!;
+    }
+visualisers: [stack]

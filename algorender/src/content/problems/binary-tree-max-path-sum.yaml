@@ -1,0 +1,94 @@
+title: Largest Path Sum in a Binary Tree
+difficulty: hard
+patterns: [trees]
+why: >-
+  The best path turns at some highest node and takes the best downward chain on each side, but only
+  when that chain helps. A post-order pass returns each node's best downward chain and scores every
+  turn on the way.
+summary: Find the largest total of the values along any path in a binary tree.
+statement: |
+  You are given `root`, the root of a non-empty binary tree whose values may be negative.
+
+  A **path** is a sequence of nodes, each linked to the next by a parent–child edge, that never
+  visits a node twice. It has at least one node and need not pass through the root. Its sum is the
+  total of its nodes' values.
+
+  Return the largest sum of any path.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds 1 to 1000 nodes."
+  - "Every value is between −1000 and 1000."
+signature:
+  function: maxPathSum
+  params:
+    - { name: root, type: TreeNode }
+  returns: int
+examples:
+  - input: { root: [4, -7, 6, 3, 2, 5, -1] }
+    output: 15
+    explanation: "The best path is 4 → 6 → 5. Going into the left subtree could only lower the sum."
+  - input: { root: [-5, -2, -9] }
+    output: -2
+    explanation: "Every value is negative, so the best path is the single largest node."
+tests:
+  - input: { root: [7] }
+    output: 7
+  - input: { root: [-1000] }
+    output: -1000
+  - input: { root: [1, 2, 3] }
+    output: 6
+  - input: { root: [10, -20, 5] }
+    output: 15
+  - input: { root: [2, -1, -2, 8, 9] }
+    output: 16
+  - input: { root: [1, -2, 3, 4, null, -6, 2] }
+    output: 8
+generated: { count: 9, seed: 50 }
+hints:
+  - "Every path has one highest node. If you knew that node, what would the best path through it be?"
+  - "It's the node's value, plus the best chain going down into the left subtree, plus the best going down into the right, each only if it's positive."
+  - "Write a recursion that returns the best chain starting at a node and going down (its value plus the better child chain, or nothing if both are negative), and that updates a running best with `value + left + right` at every node."
+approach: |
+  For each node, let `gain(node)` be the best sum of a path that starts at the node and goes
+  straight down. It is the node's value plus the better of its children's gains, where a child's
+  gain only counts if it is positive (an empty child counts as 0).
+
+  Every path has a highest node, where it may turn. The best path turning at a node is its value
+  plus the positive part of each child's gain. A post-order recursion computes `gain` for every
+  node and updates the best turning sum as it goes. Start the best at the root's value rather
+  than 0, since a path must hold at least one node and every value may be negative.
+complexity: { time: "O(n)", space: "O(h) for the recursion, h the tree's height" }
+solutions:
+  python: |
+    def max_path_sum(root: TreeNode | None) -> int:
+        best = root.val
+
+        def gain(node: TreeNode | None) -> int:
+            """The best sum of a path that starts at node and goes down."""
+            nonlocal best
+            if node is None:
+                return 0
+            left = max(0, gain(node.left))
+            right = max(0, gain(node.right))
+            best = max(best, node.val + left + right)  # the best path turning here
+            return node.val + max(left, right)
+
+        gain(root)
+        return best
+  typescript: |
+    function maxPathSum(root: TreeNode | null): number {
+      let best = root!.val;
+      // The best sum of a path that starts at node and goes down.
+      const gain = (node: TreeNode | null): number => {
+        if (node === null) return 0;
+        const left = Math.max(0, gain(node.left));
+        const right = Math.max(0, gain(node.right));
+        best = Math.max(best, node.val + left + right); // the best path turning here
+        return node.val + Math.max(left, right);
+      };
+      gain(root);
+      return best;
+    }
+visualisers: [binary-tree]

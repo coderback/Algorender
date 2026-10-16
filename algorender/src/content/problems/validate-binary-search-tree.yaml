@@ -1,0 +1,88 @@
+title: Check a Binary Search Tree
+difficulty: medium
+patterns: [trees]
+why: >-
+  Each node must fit between bounds set by all of its ancestors, not just its parent. Passing those
+  bounds down a depth-first recursion checks every node against everything above it.
+summary: Decide whether a binary tree keeps the binary search tree order everywhere.
+statement: |
+  You are given `root`, the root of a non-empty binary tree.
+
+  Return `true` if it is a valid binary search tree, and `false` otherwise. In a valid binary
+  search tree, for **every** node:
+
+  - every value in its left subtree is strictly smaller than the node's value, and
+  - every value in its right subtree is strictly larger.
+
+  So no value may appear twice, and the rule covers whole subtrees, not only a node's children.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds 1 to 1000 nodes."
+  - "Every value is between −2³¹ and 2³¹ − 1."
+signature:
+  function: isValidBST
+  params:
+    - { name: root, type: TreeNode }
+  returns: bool
+examples:
+  - input: { root: [8, 4, 12, 2, 6, 10, 14] }
+    output: true
+  - input: { root: [8, 4, 12, 2, 6, 7, 14] }
+    output: false
+    explanation: "7 is a fine left child for 12, but it is in 8's right subtree, so it must be larger than 8."
+tests:
+  - input: { root: [1] }
+    output: true
+  - input: { root: [2, 2] }
+    output: false
+  - input: { root: [5, 1, 9] }
+    output: true
+  - input: { root: [5, 9, 1] }
+    output: false
+  - input: { root: [2147483647] }
+    output: true
+  - input: { root: [-2147483648, null, 2147483647] }
+    output: true
+  - input: { root: [10, 5, 15, null, 12, 11, 20] }
+    output: false
+  - input: { root: [3, 1, 5, 0, 2, 4, 6] }
+    output: true
+generated: { count: 9, seed: 46 }
+hints:
+  - "Checking each node only against its parent isn't enough. Can you draw a tree that passes that check but is still wrong?"
+  - "Every node must lie within a range: above every ancestor whose right subtree it is in, and below every ancestor whose left subtree it is in."
+  - "Recurse with the allowed range (`low`, `high`), starting unbounded. Going left, the node's value becomes the new `high`; going right, the new `low`."
+  - "Another way: an in-order traversal of a valid tree visits the values in strictly increasing order."
+approach: |
+  Give each node the open range (`low`, `high`) its value must lie in. The root's range has no
+  bounds. A node is fine when `low < val < high`; its left subtree must then lie in (`low`, `val`)
+  and its right subtree in (`val`, `high`). Recurse, and the tree is valid when every node is fine.
+  An empty subtree is always fine.
+
+  The bounds carry every ancestor's constraint down at once, so a node deep in the tree is checked
+  against all the nodes above it. (An in-order traversal that checks the values strictly increase
+  works too.)
+complexity: { time: "O(n)", space: "O(h) for the recursion, h the tree's height" }
+solutions:
+  python: |
+    def is_valid_bst(root: TreeNode | None) -> bool:
+        def fits(node: TreeNode | None, low: float, high: float) -> bool:
+            if node is None:
+                return True
+            if not low < node.val < high:
+                return False
+            return fits(node.left, low, node.val) and fits(node.right, node.val, high)
+
+        return fits(root, float('-inf'), float('inf'))
+  typescript: |
+    function isValidBST(root: TreeNode | null): boolean {
+      const fits = (node: TreeNode | null, low: number, high: number): boolean => {
+        if (node === null) return true;
+        if (node.val <= low || node.val >= high) return false;
+        return fits(node.left, low, node.val) && fits(node.right, node.val, high);
+      };
+      return fits(root, -Infinity, Infinity);
+    }
+visualisers: [binary-tree]

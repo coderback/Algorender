@@ -1,0 +1,64 @@
+title: Depth of a Binary Tree
+difficulty: easy
+patterns: [trees]
+why: >-
+  A tree's depth is one more than the deeper of its two subtrees' depths. Each node's answer comes
+  straight from its children's answers: recursion.
+summary: Count the nodes on the longest path from the root down to a leaf.
+statement: |
+  You are given `root`, the root of a binary tree (or nothing, for an empty tree).
+
+  Return its depth: the number of nodes on the longest path from the root down to a leaf. An empty
+  tree has depth 0, and a tree with only a root has depth 1.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds 0 to 1000 nodes."
+  - "Every value is between −100 and 100."
+signature:
+  function: maxDepth
+  params:
+    - { name: root, type: TreeNode }
+  returns: int
+examples:
+  - input: { root: [6, 2, 8, 1, null, 7, 9, null, null, 5] }
+    output: 4
+    explanation: "The longest path down is 6 → 8 → 7 → 5, which has four nodes."
+  - input: { root: [1, null, 2] }
+    output: 2
+tests:
+  - input: { root: [] }
+    output: 0
+  - input: { root: [42] }
+    output: 1
+  - input: { root: [1, 2, null, 3, null, 4] }
+    output: 4
+  - input: { root: [5, 3, 8, 1, 4, 7, 9] }
+    output: 3
+  - input: { root: [0, null, 1, null, 2, null, 3, null, 4] }
+    output: 5
+generated: { count: 8, seed: 40 }
+hints:
+  - "If you knew the depth of the left subtree and the depth of the right subtree, what would the depth of the whole tree be?"
+  - "It's one, for the root, plus the larger of the two. An empty tree has depth 0, which ends the recursion."
+  - "Without recursion: go level by level with a queue and count the levels."
+approach: |
+  Recurse. An empty tree has depth 0. Otherwise the depth is `1 + max(depth(left), depth(right))`:
+  the root, plus the deeper of its two subtrees. Each node is visited once.
+
+  Going level by level with a queue and counting the levels gives the same answer without
+  recursion.
+complexity: { time: "O(n)", space: "O(h) for the recursion, h the tree's height" }
+solutions:
+  python: |
+    def max_depth(root: TreeNode | None) -> int:
+        if root is None:
+            return 0
+        return 1 + max(max_depth(root.left), max_depth(root.right))
+  typescript: |
+    function maxDepth(root: TreeNode | null): number {
+      if (root === null) return 0;
+      return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));
+    }
+visualisers: [binary-tree]

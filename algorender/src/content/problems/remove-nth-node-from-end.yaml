@@ -1,0 +1,82 @@
+title: Remove the Nth Node from the End
+difficulty: medium
+patterns: [linked-list]
+why: >-
+  "n from the end" in a list you can only walk forwards: send one pointer n nodes ahead, then move
+  both together, and the trailing one stops just before the node to remove.
+summary: Delete the node n places from the end of a linked list, in one pass.
+statement: |
+  You are given `head`, the first node of a singly linked list, and a number `n`.
+
+  Remove the `n`th node counting from the end of the list (`n = 1` is the last node), and return
+  the head of what remains. If the list had only one node, what remains is empty. Try to do it in
+  a single pass over the list.
+
+  Linked lists are written as their values from head to tail, so `[1, 4, 6]` is 1 → 4 → 6.
+constraints:
+  - "The list holds 1 to 5000 nodes."
+  - "1 ≤ `n` ≤ the number of nodes."
+  - "Every value is between −10⁴ and 10⁴."
+signature:
+  function: removeNthFromEnd
+  params:
+    - { name: head, type: ListNode }
+    - { name: n, type: int }
+  returns: ListNode
+examples:
+  - input: { head: [10, 20, 30, 40, 50], n: 2 }
+    output: [10, 20, 30, 50]
+    explanation: Counting from the end, 50 is first and 40 is second.
+  - input: { head: [7, 8], n: 2 }
+    output: [8]
+    explanation: The second node from the end is the head itself, so 8 becomes the new head.
+tests:
+  - input: { head: [5], n: 1 }
+    output: []
+  - input: { head: [1, 2], n: 1 }
+    output: [1]
+  - input: { head: [3, 3, 3], n: 3 }
+    output: [3, 3]
+  - input: { head: [1, 2, 3, 4, 5, 6], n: 6 }
+    output: [2, 3, 4, 5, 6]
+  - input: { head: [-4, 0, 9, 2], n: 3 }
+    output: [-4, 9, 2]
+generated: { count: 8, seed: 35 }
+hints:
+  - "With two passes it's easy: count the nodes, then walk to the node just before the one to remove. Can you manage with one pass?"
+  - "Move a `fast` pointer n nodes ahead first. Then move `fast` and `slow` together until `fast` is on the last node. Where is `slow` now?"
+  - "Start both pointers at a dummy node placed in front of the head, so removing the head itself needs no special case."
+approach: |
+  Put a dummy node in front of the head and start two pointers, `fast` and `slow`, on it. Move
+  `fast` forward `n` nodes. Then move both one node at a time until `fast` is on the last node.
+  They stay `n` nodes apart, so `slow` is now just before the node to remove: skip it with
+  `slow.next = slow.next.next`.
+
+  Return `dummy.next`. It is the right head even when the old head was the node removed.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def remove_nth_from_end(head: ListNode | None, n: int) -> ListNode | None:
+        dummy = ListNode(0, head)
+        fast = slow = dummy
+        for _ in range(n):
+            fast = fast.next
+        while fast.next:
+            fast = fast.next
+            slow = slow.next
+        slow.next = slow.next.next
+        return dummy.next
+  typescript: |
+    function removeNthFromEnd(head: ListNode | null, n: number): ListNode | null {
+      const dummy = new ListNode(0, head);
+      let fast: ListNode = dummy;
+      let slow: ListNode = dummy;
+      for (let k = 0; k < n; k++) fast = fast.next!;
+      while (fast.next) {
+        fast = fast.next;
+        slow = slow.next!;
+      }
+      slow.next = slow.next!.next;
+      return dummy.next;
+    }
+visualisers: [linked-list]

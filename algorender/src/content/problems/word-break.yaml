@@ -1,0 +1,89 @@
+title: Split a String into Words
+difficulty: medium
+patterns: [dp-1d]
+why: >-
+  Whether the first i characters split into words depends only on whether some shorter prefix does
+  and the piece after it is a word: one yes-or-no answer per position, built from left to right.
+summary: Decide whether a string can be cut into pieces that are all dictionary words.
+statement: |
+  You are given a string `s` and a list of words `wordDict`. Return `true` if `s` can be cut into
+  pieces so that every piece is a word in `wordDict`, and `false` otherwise.
+
+  You may use a word as many times as you like, and you don't have to use every word.
+constraints:
+  - "`s` holds 1 to 300 lowercase letters."
+  - "`wordDict` holds 1 to 1000 different words, each of 1 to 20 lowercase letters."
+signature:
+  function: wordBreak
+  params:
+    - { name: s, type: string }
+    - { name: wordDict, type: "string[]" }
+  returns: bool
+examples:
+  - input: { s: "sunflowerpot", wordDict: ["flower", "sun", "pot", "flowerpot"] }
+    output: true
+    explanation: "`sun` + `flower` + `pot` works, and so does `sun` + `flowerpot`."
+  - input: { s: "carpet", wordDict: ["car", "carp", "pe"] }
+    output: false
+    explanation: "After `car` or `carp`, what is left (`pet` or `et`) can't be made from the words."
+  - input: { s: "aaaaaaa", wordDict: ["aaa", "aaaa"] }
+    output: true
+    explanation: "`aaa` + `aaaa`."
+tests:
+  - input: { s: "a", wordDict: ["b"] }
+    output: false
+  - input: { s: "a", wordDict: ["a"] }
+    output: true
+  - input: { s: "abab", wordDict: ["ab"] }
+    output: true
+  - input: { s: "goalgoal", wordDict: ["go", "goal", "al"] }
+    output: true
+  - input: { s: "abcd", wordDict: ["a", "abc", "b", "cd"] }
+    output: true
+  - input: { s: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab", wordDict: ["a", "aa", "aaa", "aaaa", "aaaaa"] }
+    output: false
+generated: { count: 8, seed: 26 }
+hints:
+  - "Trying every way to cut the string takes exponential time. Which smaller question does the whole question depend on?"
+  - "Let `ok[i]` say whether the first i characters can be cut into words. `ok[0]` is true: the empty prefix needs no words."
+  - "`ok[end]` is true when some `start < end` has `ok[start]` true and `s[start:end]` in the dictionary. Put the words in a set for fast lookups, and only try pieces up to the length of the longest word."
+approach: |
+  Let `ok[i]` be true when the first `i` characters of `s` can be cut into words. The empty prefix
+  needs no words, so `ok[0]` is true. A longer prefix of length `end` splits when its last piece,
+  `s[start:end]`, is a word and the prefix before that piece, of length `start`, splits too.
+
+  Fill `ok` from left to right, trying each `start` that leaves a last piece no longer than the
+  longest word, and looking the piece up in a set of the words. The answer is `ok[len(s)]`.
+
+  Plain recursion without the table tries the same suffixes over and over: a string of many `a`s
+  ending in `b` makes it take exponential time.
+complexity: { time: "O(n × L²) for a longest word of length L (n × L pieces, each up to L long)", space: "O(n) plus the set of words" }
+solutions:
+  python: |
+    def word_break(s: str, word_dict: list[str]) -> bool:
+        words = set(word_dict)
+        longest = max(len(word) for word in words)
+        ok = [True] + [False] * len(s)  # ok[i]: the first i characters split into words
+        for end in range(1, len(s) + 1):
+            for start in range(max(0, end - longest), end):
+                if ok[start] and s[start:end] in words:
+                    ok[end] = True
+                    break
+        return ok[len(s)]
+  typescript: |
+    function wordBreak(s: string, wordDict: string[]): boolean {
+      const words = new Set(wordDict);
+      const longest = Math.max(...wordDict.map((word) => word.length));
+      const ok = new Array<boolean>(s.length + 1).fill(false); // ok[i]: the first i characters split into words
+      ok[0] = true;
+      for (let end = 1; end <= s.length; end++) {
+        for (let start = Math.max(0, end - longest); start < end; start++) {
+          if (ok[start] && words.has(s.slice(start, end))) {
+            ok[end] = true;
+            break;
+          }
+        }
+      }
+      return ok[s.length];
+    }
+visualisers: []

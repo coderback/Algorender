@@ -1,0 +1,100 @@
+title: Zero Out Rows and Columns
+difficulty: medium
+patterns: [math]
+why: >-
+  It is bookkeeping by row and column index: record which rows and columns hold a zero before
+  writing any, so the new zeros never spread further. The first row and column can even hold that
+  record themselves.
+summary: Wherever a grid holds a 0, set that cell's whole row and column to 0, in place.
+statement: |
+  You are given `matrix`, a grid of integers with m rows and n columns. For every cell that holds
+  0, set every value in its row and every value in its column to 0.
+
+  Only the zeros that are there at the start count: a zero you write must not clear any more rows
+  or columns. Change `matrix` in place; there is nothing to return.
+
+  Using O(m + n) extra memory is fine. Using only a constant amount is a stretch goal.
+constraints:
+  - "1 ≤ m, n ≤ 200"
+  - "−2³¹ ≤ `matrix[r][c]` ≤ 2³¹ − 1, so any value, negative ones included, can sit next to a zero."
+signature:
+  function: setZeroes
+  params:
+    - { name: matrix, type: "int[][]" }
+  returns: void
+  inPlace: matrix
+examples:
+  - input: { matrix: [[5, 2, 7], [3, 0, 8], [6, 4, 9]] }
+    output: [[5, 0, 7], [0, 0, 0], [6, 0, 9]]
+    explanation: The 0 in the middle clears row 1 and column 1.
+  - input: { matrix: [[0, 4, 2, 0], [3, 5, 1, 6], [7, 8, -1, 9]] }
+    output: [[0, 0, 0, 0], [0, 5, 1, 0], [0, 8, -1, 0]]
+    explanation: "The two zeros in row 0 clear that row, and columns 0 and 3."
+tests:
+  - input: { matrix: [[0]] }
+    output: [[0]]
+  - input: { matrix: [[4]] }
+    output: [[4]]
+  - input: { matrix: [[1, 0, 3]] }
+    output: [[0, 0, 0]]
+  - input: { matrix: [[1], [0], [3]] }
+    output: [[0], [0], [0]]
+  - input: { matrix: [[-1, -2], [-3, -4]] }
+    output: [[-1, -2], [-3, -4]]
+  - input: { matrix: [[1, 2, 3], [4, 5, 6], [7, 8, 0]] }
+    output: [[1, 2, 0], [4, 5, 0], [0, 0, 0]]
+  - input: { matrix: [[2147483647, 1], [0, -2147483648]] }
+    output: [[0, 1], [0, 0]]
+generated: { count: 8, seed: 40 }
+hints:
+  - "If you write zeros as soon as you find them, the new zeros look just like the original ones. How can you avoid that?"
+  - "Make two passes: first note which rows and which columns hold a zero, then set every cell in those rows and columns."
+  - "For constant extra memory, keep the marks in the first row and the first column themselves, and remember separately whether the first row and the first column held a zero to begin with."
+approach: |
+  Writing zeros while you scan goes wrong: a zero you have just written looks like an original
+  one and would clear even more. So split the work into two passes.
+
+  First pass: find every original zero, and mark its row and its column (two lists of booleans,
+  or two sets). Second pass: set every cell whose row or column is marked to 0.
+
+  For the stretch goal, use the first row and first column as the marks: a zero at (r, c) sets
+  `matrix[r][0]` and `matrix[0][c]` to 0. Note first, in two booleans, whether the first row and the
+  first column held a zero themselves. Then clear the inner cells by reading the marks, and clear
+  the first row and column last, according to the two booleans.
+complexity: { time: "O(m × n)", space: "O(m + n), or O(1) with the first row and column as marks" }
+solutions:
+  python: |
+    def set_zeroes(matrix: list[list[int]]) -> None:
+        rows, cols = len(matrix), len(matrix[0])
+        zero_row = [False] * rows  # rows that held a zero at the start
+        zero_col = [False] * cols  # columns that held a zero at the start
+        for r in range(rows):
+            for c in range(cols):
+                if matrix[r][c] == 0:
+                    zero_row[r] = True
+                    zero_col[c] = True
+        for r in range(rows):
+            for c in range(cols):
+                if zero_row[r] or zero_col[c]:
+                    matrix[r][c] = 0
+  typescript: |
+    function setZeroes(matrix: number[][]): void {
+      const rows = matrix.length;
+      const cols = matrix[0].length;
+      const zeroRow = new Array<boolean>(rows).fill(false); // rows that held a zero at the start
+      const zeroCol = new Array<boolean>(cols).fill(false); // columns that held a zero at the start
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (matrix[r][c] === 0) {
+            zeroRow[r] = true;
+            zeroCol[c] = true;
+          }
+        }
+      }
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (zeroRow[r] || zeroCol[c]) matrix[r][c] = 0;
+        }
+      }
+    }
+visualisers: []

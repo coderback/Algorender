@@ -1,0 +1,142 @@
+title: Kth Largest in a Stream
+difficulty: easy
+patterns: [heap]
+why: >-
+  A new value only matters if it beats the current k-th largest. A min-heap of the k largest values
+  so far keeps that cut-off on top, ready to compare with and replace.
+summary: Report the k-th largest value seen so far each time a new value arrives.
+statement: |
+  Write a class `KthLargest` that follows a stream of integers:
+
+  - `KthLargest(k, nums)` starts with the integer `k` and the values already in `nums`.
+  - `add(val)` adds `val` to the stream and returns the k-th largest value seen so far, counting
+    from 1, largest first, with equal values counted separately.
+
+  `nums` may hold fewer than `k` values, but there are always at least `k` values once `add` has
+  added its own.
+
+  Each test is a list of calls, starting with the constructor; the expected answer lists what each
+  call returns (`null` for the constructor).
+constraints:
+  - "1 ≤ `k` ≤ 10⁴"
+  - "`nums` holds 0 to 10⁴ values."
+  - "Every value is between −10⁴ and 10⁴."
+  - "A test makes at most 10⁴ calls to `add`."
+design:
+  class: KthLargest
+  init:
+    - { name: k, type: int }
+    - { name: nums, type: "int[]" }
+  methods:
+    - { name: add, params: [{ name: val, type: int }], returns: int }
+examples:
+  - calls: [[KthLargest, 2, [6, 1, 3]], [add, 2], [add, 7], [add, 5], [add, 9]]
+    output: [null, 3, 6, 6, 7]
+    explanation: "Only the two largest values matter. They are 6 and 3 at first, so adding 2 returns 3; after 7 arrives they are 7 and 6; 5 changes nothing; after 9 they are 9 and 7."
+  - calls: [[KthLargest, 1, []], [add, -3], [add, -2], [add, -4]]
+    output: [null, -3, -2, -2]
+    explanation: With k = 1 each call returns the largest value so far.
+tests:
+  - calls: [[KthLargest, 2, [0]], [add, -1], [add, 1], [add, -2], [add, -4], [add, 3]]
+    output: [null, -1, 0, 0, 0, 1]
+  - calls: [[KthLargest, 3, [5, 5, 5]], [add, 5], [add, 6]]
+    output: [null, 5, 5]
+  - calls: [[KthLargest, 1, [10000]], [add, -10000]]
+    output: [null, 10000]
+  - calls: [[KthLargest, 4, [7, 1, 3]], [add, 2], [add, 8], [add, 0]]
+    output: [null, 1, 2, 2]
+generated: { count: 6, seed: 36 }
+hints:
+  - "Do you need to remember values that are already too small to ever be the answer again?"
+  - "Keep only the k largest values. The answer is the smallest of them."
+  - "Use a min-heap capped at k values: push the new value, pop if the heap holds more than k, and return the top."
+approach: |
+  Keep a min-heap of the k largest values seen so far. The constructor adds each value of `nums`
+  the same way `add` does. `add(val)` pushes `val`, pops the smallest if the heap now holds k + 1
+  values (it can never be among the k largest again), and returns the top: the smallest of the k
+  largest, which is the k-th largest overall.
+complexity: { time: "O(n log k) to start, O(log k) per add", space: "O(k)" }
+solutions:
+  python: |
+    import heapq
+
+    class KthLargest:
+        def __init__(self, k: int, nums: list[int]):
+            self.k = k
+            self.heap = []  # the k largest so far, smallest on top
+            for x in nums:
+                self.add(x)
+
+        def add(self, val: int) -> int:
+            heapq.heappush(self.heap, val)
+            if len(self.heap) > self.k:
+                heapq.heappop(self.heap)
+            return self.heap[0]
+  typescript: |
+    class Heap<T> {
+      private items: T[] = [];
+      private before: (a: T, b: T) => boolean;
+
+      // before(a, b) is true when a belongs nearer the top than b.
+      constructor(before: (a: T, b: T) => boolean) {
+        this.before = before;
+      }
+
+      size(): number {
+        return this.items.length;
+      }
+
+      peek(): T {
+        return this.items[0];
+      }
+
+      push(item: T): void {
+        const a = this.items;
+        a.push(item);
+        let i = a.length - 1;
+        while (i > 0) {
+          const parent = (i - 1) >> 1;
+          if (!this.before(a[i], a[parent])) break;
+          [a[i], a[parent]] = [a[parent], a[i]];
+          i = parent;
+        }
+      }
+
+      pop(): T {
+        const a = this.items;
+        const top = a[0];
+        const last = a.pop()!;
+        if (a.length > 0) {
+          a[0] = last;
+          let i = 0;
+          while (true) {
+            const left = 2 * i + 1;
+            const right = left + 1;
+            let first = i;
+            if (left < a.length && this.before(a[left], a[first])) first = left;
+            if (right < a.length && this.before(a[right], a[first])) first = right;
+            if (first === i) break;
+            [a[i], a[first]] = [a[first], a[i]];
+            i = first;
+          }
+        }
+        return top;
+      }
+    }
+
+    class KthLargest {
+      private k: number;
+      private heap = new Heap<number>((a, b) => a < b); // the k largest so far, smallest on top
+
+      constructor(k: number, nums: number[]) {
+        this.k = k;
+        for (const x of nums) this.add(x);
+      }
+
+      add(val: number): number {
+        this.heap.push(val);
+        if (this.heap.size() > this.k) this.heap.pop();
+        return this.heap.peek();
+      }
+    }
+visualisers: [heap]
