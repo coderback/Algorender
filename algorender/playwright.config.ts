@@ -10,6 +10,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${port}`,
     trace: 'retain-on-failure',
+    // The production build registers a service worker (offline support); only the offline test wants it.
+    serviceWorkers: 'block',
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },

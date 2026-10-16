@@ -14,6 +14,8 @@ const pages = [
   ...lessons.map((l) => `/learn/${l.slug}`),
   '/compare',
   '/code',
+  '/account',
+  '/review',
   ...exercises.map((e) => `/code/${e.slug}`),
   '/embed/bubble-sort',
   '/visualisers/bubble-sort?mode=predict',
