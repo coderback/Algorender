@@ -763,12 +763,22 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
   - Unit tests cover the runtimes and trace conversion.
   - Every exercise solution is checked in all three languages, and they must do the same things to the array.
   - `e2e/workspace.spec.ts` covers JS and Python runs, errors, storage and axe in both themes.
-- **Phase 2b, still to do:**
-  - Exercise formats: Parsons, fill-in, faded worked examples, bug-hunt, and the PRIMM template as lesson widgets.
-  - Visual grids, graphs and trees for learner code.
-  - Python-Tutor-style generic tracing.
-  - A service worker that caches Pyodide.
-  - Sandboxing learner code in an iframe before code sharing or accounts.
+- **Phase 2b (branch `revamp/phase-2b`):**
+  - **Done:**
+    - **The fading ladder** on every write exercise: put the lines in order (Parsons, with distractors; Python asks for indentation too), fill the gaps (1 to 5 gaps per level), then write it.
+    - **Hints:** "point out a misplaced line" and "reveal a gap" are opt-in.
+    - **Verdicts come from running the tests,** so any working answer passes.
+    - **New exercises:** three bug hunts and a Modify exercise.
+    - **PRIMM:** `PredictCode` (running is locked until the learner predicts) and `CodeExercise` lesson widgets, plus PRIMM section steps, with the lesson "Bubble sort in code" (`/learn/sorting-in-code`).
+    - **Visual grids:**
+      - `table()` and `array()` work in both runtimes.
+      - Cell writes carry their dependencies, and the run plays on GridView with arrows.
+      - New exercise: "Count the paths through a grid".
+  - **Still to do:**
+    - **Python-Tutor-style line tracing**, for intro lessons.
+    - **Graphs and trees** for learner code.
+    - **Sandbox learner code** in an iframe, before code sharing or accounts (Phase 3).
+  - **Deferred, with a reason: a service worker for Pyodide.** The browser already caches the CDN download. A repeat visit still takes about 6 s, but that is WebAssembly compile and start-up, which a service worker can't speed up. It would only add offline use.
 
 ### Phase 3 — Practice and progress
 
