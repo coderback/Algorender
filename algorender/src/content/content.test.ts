@@ -58,6 +58,15 @@ describe('lessons', () => {
     expect(lesson.minutes).toBeGreaterThan(0);
   });
 
+  it('only embeds code exercises that exist', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { getExercise } = await import('./exercises');
+    for (const { slug } of lessons) {
+      const body = readFileSync(fileURLToPath(new URL(`./lessons/${slug}.mdx`, import.meta.url)), 'utf8');
+      for (const [, used] of body.matchAll(/exercise="([a-z0-9-]+)"/g)) expect(getExercise(used), `${slug} embeds exercise ${used}`).toBeDefined();
+    }
+  });
+
   it('only embeds visualisers that are registered', async () => {
     const { readFileSync } = await import('node:fs');
     for (const { slug } of lessons) {

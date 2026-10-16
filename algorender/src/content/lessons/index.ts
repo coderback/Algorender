@@ -41,6 +41,13 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'Shortest paths by greedily settling nodes in order of distance, and the one assumption that makes it work.',
     minutes: 20,
   },
+  {
+    slug: 'sorting-in-code',
+    title: 'Bubble sort in code: read it, run it, change it',
+    concept: 'quadratic-sorts',
+    summary: 'Predict what real code does, run it to check, then change it and write a sort of your own, in Python, JavaScript or TypeScript.',
+    minutes: 25,
+  },
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

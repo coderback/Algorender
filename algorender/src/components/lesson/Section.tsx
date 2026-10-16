@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { FiAlertTriangle, FiCheckSquare, FiEye, FiFlag, FiHelpCircle, FiKey, FiList, FiTool } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheckSquare, FiCode, FiEdit3, FiEye, FiFlag, FiHelpCircle, FiKey, FiList, FiPlay, FiSearch, FiTool } from 'react-icons/fi';
 
 // The learning loop every lesson follows (REVAMP_PLAN.md §3.1). Each stage has
 // a fixed label and icon, so learners always know what kind of step they're on.
@@ -9,6 +9,11 @@ export const STEPS = {
   see: { label: 'See it work', icon: FiEye },
   predict: { label: 'Predict', icon: FiHelpCircle },
   do: { label: 'Try it', icon: FiTool },
+  // PRIMM (Sentance et al. 2019): read and run code before changing and writing it.
+  run: { label: 'Run it', icon: FiPlay },
+  investigate: { label: 'Investigate', icon: FiSearch },
+  modify: { label: 'Modify', icon: FiEdit3 },
+  make: { label: 'Make', icon: FiCode },
   check: { label: 'Check yourself', icon: FiCheckSquare },
   recap: { label: 'Recap', icon: FiKey },
 } as const;
