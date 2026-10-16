@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { ServiceWorker } from "@/components/ServiceWorker";
 import { SITE_URL } from "@/lib/site";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
         <Script id="theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
         {children}
         <Analytics />
+        <ServiceWorker />
       </body>
     </html>
   );
