@@ -115,6 +115,112 @@ const BINARY_JS = `function binarySearch(arr, target) {
 }
 `;
 
+
+// Fill-in blanks: each solution with spans marked «n:text». Fades blank the
+// decision first, then the action, then the bounds, so each level asks for a
+// little more of the algorithm.
+
+const BUBBLE_PY_BLANKS = `def bubble_sort(arr):
+    n = len(arr)
+    for i in range(«3:n - 1»):
+        for j in range(«2:n - 1 - i»):
+            if «1:arr[j] > arr[j + 1]»:
+                «4:arr[j], arr[j + 1] = arr[j + 1], arr[j]»
+`;
+const BUBBLE_JS_BLANKS = `function bubbleSort(arr) {
+  const n = arr.length;
+  for (let i = 0; i < «3:n - 1»; i++) {
+    for (let j = 0; j < «2:n - 1 - i»; j++) {
+      if («1:arr[j] > arr[j + 1]») {
+        «4:[arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];»
+      }
+    }
+  }
+}
+`;
+
+const INSERTION_PY_BLANKS = `def insertion_sort(arr):
+    for i in range(«3:1», len(arr)):
+        key = «1:arr[i]»
+        j = i - 1
+        while j >= 0 and «2:arr[j] > key»:
+            «4:arr[j + 1] = arr[j]»
+            j -= 1
+        «5:arr[j + 1] = key»
+`;
+const INSERTION_JS_BLANKS = `function insertionSort(arr) {
+  for (let i = «3:1»; i < arr.length; i++) {
+    const key = «1:arr[i]»;
+    let j = i - 1;
+    while (j >= 0 && «2:arr[j] > key») {
+      «4:arr[j + 1] = arr[j];»
+      j--;
+    }
+    «5:arr[j + 1] = key;»
+  }
+}
+`;
+
+const SELECTION_PY_BLANKS = `def selection_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        smallest = «3:i»
+        for j in range(«2:i + 1», n):
+            if «1:arr[j] < arr[smallest]»:
+                smallest = «4:j»
+        if smallest != i:
+            «5:arr[i], arr[smallest] = arr[smallest], arr[i]»
+`;
+const SELECTION_JS_BLANKS = `function selectionSort(arr) {
+  const n = arr.length;
+  for (let i = 0; i < n - 1; i++) {
+    let smallest = «3:i»;
+    for (let j = «2:i + 1»; j < n; j++) {
+      if («1:arr[j] < arr[smallest]») {
+        smallest = «4:j»;
+      }
+    }
+    if (smallest !== i) {
+      «5:[arr[i], arr[smallest]] = [arr[smallest], arr[i]];»
+    }
+  }
+}
+`;
+
+const BINARY_PY_BLANKS = `def binary_search(arr, target):
+    lo = 0
+    hi = «4:len(arr) - 1»
+    while «3:lo <= hi»:
+        mid = «1:(lo + hi) // 2»
+        if arr[mid] == target:
+            return mid
+        if arr[mid] < target:
+            lo = «2:mid + 1»
+        else:
+            hi = «5:mid - 1»
+    return -1
+`;
+const BINARY_JS_BLANKS = `function binarySearch(arr, target) {
+  let lo = 0;
+  let hi = «4:arr.length - 1»;
+  while («3:lo <= hi») {
+    const mid = «1:Math.floor((lo + hi) / 2)»;
+    if (arr[mid] === target) {
+      return mid;
+    }
+    if (arr[mid] < target) {
+      lo = «2:mid + 1»;
+    } else {
+      hi = «5:mid - 1»;
+    }
+  }
+  return -1;
+}
+`;
+
+/** The same distractors for JavaScript and TypeScript. */
+const jsAndTs = (python: string[], js: string[]) => ({ python, javascript: js, typescript: js });
+
 export const arrayExercises: Exercise<ArrayInput>[] = [
   {
     slug: 'bubble-sort',
@@ -140,6 +246,13 @@ export const arrayExercises: Exercise<ArrayInput>[] = [
       javascript: BUBBLE_JS,
       typescript: ts(BUBBLE_JS, 'function bubbleSort(arr) {', 'function bubbleSort(arr: number[]): void {'),
     },
+    blanks: {
+      python: BUBBLE_PY_BLANKS,
+      javascript: BUBBLE_JS_BLANKS,
+      typescript: ts(BUBBLE_JS_BLANKS, 'function bubbleSort(arr) {', 'function bubbleSort(arr: number[]): void {'),
+    },
+    fades: [[1], [1, 4], [1, 2, 4], [1, 2, 3, 4]],
+    distractors: jsAndTs(['if arr[j] < arr[j + 1]:', 'arr[j] = arr[j + 1]'], ['if (arr[j] < arr[j + 1]) {', 'arr[j] = arr[j + 1];']),
     examples: SORT_EXAMPLES,
     tests: SORT_TESTS,
     check: checkSorted,
@@ -178,6 +291,13 @@ export const arrayExercises: Exercise<ArrayInput>[] = [
       javascript: INSERTION_JS,
       typescript: ts(INSERTION_JS, 'function insertionSort(arr) {', 'function insertionSort(arr: number[]): void {'),
     },
+    blanks: {
+      python: INSERTION_PY_BLANKS,
+      javascript: INSERTION_JS_BLANKS,
+      typescript: ts(INSERTION_JS_BLANKS, 'function insertionSort(arr) {', 'function insertionSort(arr: number[]): void {'),
+    },
+    fades: [[2], [2, 4], [1, 2, 4, 5], [1, 2, 3, 4, 5]],
+    distractors: jsAndTs(['arr[j] = key', 'while j >= 0 and arr[j] < key:'], ['arr[j] = key;', 'while (j >= 0 && arr[j] < key) {']),
     examples: SORT_EXAMPLES,
     tests: SORT_TESTS,
     check: checkSorted,
@@ -217,6 +337,13 @@ export const arrayExercises: Exercise<ArrayInput>[] = [
       javascript: SELECTION_JS,
       typescript: ts(SELECTION_JS, 'function selectionSort(arr) {', 'function selectionSort(arr: number[]): void {'),
     },
+    blanks: {
+      python: SELECTION_PY_BLANKS,
+      javascript: SELECTION_JS_BLANKS,
+      typescript: ts(SELECTION_JS_BLANKS, 'function selectionSort(arr) {', 'function selectionSort(arr: number[]): void {'),
+    },
+    fades: [[1], [1, 4], [1, 2, 4, 5], [1, 2, 3, 4, 5]],
+    distractors: jsAndTs(['if arr[j] > arr[smallest]:', 'smallest = i + 1'], ['if (arr[j] > arr[smallest]) {', 'smallest = i + 1;']),
     examples: SORT_EXAMPLES,
     tests: SORT_TESTS,
     check: checkSorted,
@@ -262,6 +389,13 @@ export const arrayExercises: Exercise<ArrayInput>[] = [
       javascript: BINARY_JS,
       typescript: ts(BINARY_JS, 'function binarySearch(arr, target) {', 'function binarySearch(arr: number[], target: number): number {'),
     },
+    blanks: {
+      python: BINARY_PY_BLANKS,
+      javascript: BINARY_JS_BLANKS,
+      typescript: ts(BINARY_JS_BLANKS, 'function binarySearch(arr, target) {', 'function binarySearch(arr: number[], target: number): number {'),
+    },
+    fades: [[1], [1, 2, 5], [1, 2, 3, 5], [1, 2, 3, 4, 5]],
+    distractors: jsAndTs(['lo = mid', 'while lo < hi:'], ['lo = mid;', 'while (lo < hi) {']),
     examples: [
       { id: 'found', label: 'Find 23', input: { values: [2, 5, 8, 12, 16, 23, 38, 56, 72, 91], target: 23 } },
       { id: 'missing', label: 'Look for 40', input: { values: [2, 5, 8, 12, 16, 23, 38, 56, 72, 91], target: 40 } },
@@ -307,5 +441,138 @@ export const arrayExercises: Exercise<ArrayInput>[] = [
       'If `arr[mid]` is too small, the target can only be to its right, so move `lo` past `mid`, not onto it, or the loop may never end.',
     ],
     legend: [{ neutral: 'Element' }, { mark: 'compare', label: 'Probed' }],
+  },
+];
+
+/** A bug hunt: the write-it exercise's solution and tests, starting from code with one bug. */
+function bugHunt(
+  base: Exercise<ArrayInput>,
+  bug: { slug: string; title: string; summary: string; starter: Record<Language, string>; symptom: string; explanation: string; hints: string[] },
+): Exercise<ArrayInput> {
+  return {
+    ...base,
+    slug: bug.slug,
+    title: bug.title,
+    kind: 'bug',
+    summary: bug.summary,
+    task: [bug.symptom, 'Run it, watch what it really does on the array, and fix it. One small change is enough.'],
+    starter: bug.starter,
+    bug: { symptom: bug.symptom, explanation: bug.explanation },
+    hints: bug.hints,
+    blanks: undefined,
+    fades: undefined,
+    distractors: undefined,
+  };
+}
+
+const writeIt = (slug: string) => arrayExercises.find((e) => e.slug === slug)!;
+
+const INSERTION_BUG_PY = `def insertion_sort(arr):
+    for i in range(1, len(arr)):
+        j = i - 1
+        while j >= 0 and arr[j] > arr[i]:
+            arr[j + 1] = arr[j]
+            j -= 1
+        arr[j + 1] = arr[i]
+`;
+const INSERTION_BUG_JS = `function insertionSort(arr) {
+  for (let i = 1; i < arr.length; i++) {
+    let j = i - 1;
+    while (j >= 0 && arr[j] > arr[i]) {
+      arr[j + 1] = arr[j];
+      j--;
+    }
+    arr[j + 1] = arr[i];
+  }
+}
+`;
+
+export const bugHunts: Exercise<ArrayInput>[] = [
+  bugHunt(writeIt('bubble-sort'), {
+    slug: 'bubble-sort-bug',
+    title: 'Fix the crashing bubble sort',
+    summary: 'This bubble sort crashes on its first pass. Watch where, and fix it.',
+    starter: {
+      python: writeIt('bubble-sort').solution.python.replace('range(n - 1 - i)', 'range(n - i)'),
+      javascript: BUBBLE_JS.replace('j < n - 1 - i', 'j < n - i'),
+      typescript: ts(BUBBLE_JS.replace('j < n - 1 - i', 'j < n - i'), 'function bubbleSort(arr) {', 'function bubbleSort(arr: number[]): void {'),
+    },
+    symptom: 'It crashes with an index error on its very first pass.',
+    explanation:
+      'The inner loop let `j` reach the last index, so `arr[j + 1]` read one past the end. A pass compares neighbours, so `j` must stop one short: `n - 1 - i`.',
+    hints: ['Step to the last comparison of the first pass. Which two cells is it trying to compare?', 'How many neighbouring pairs does an array of n elements have?'],
+  }),
+  bugHunt(writeIt('binary-search'), {
+    slug: 'binary-search-bug',
+    title: 'Fix the binary search that never finishes',
+    summary: 'Searching for some values never ends. Find the window that stops shrinking.',
+    starter: {
+      python: writeIt('binary-search').solution.python.replace('lo = mid + 1', 'lo = mid'),
+      javascript: BINARY_JS.replace('lo = mid + 1;', 'lo = mid;'),
+      typescript: ts(BINARY_JS.replace('lo = mid + 1;', 'lo = mid;'), 'function binarySearch(arr, target) {', 'function binarySearch(arr: number[], target: number): number {'),
+    },
+    symptom: 'Searching for a value bigger than everything in the array never finishes.',
+    explanation:
+      'When `arr[mid]` is too small, `mid` itself is ruled out, so the window must move past it: `lo = mid + 1`. With `lo = mid`, a window of two cells never gets smaller.',
+    hints: ['Watch lo, mid and hi on the array near the end of the run. Which one stops moving?', 'Once `arr[mid]` is too small, can the answer still be at `mid`?'],
+  }),
+  bugHunt(writeIt('insertion-sort'), {
+    slug: 'insertion-sort-bug',
+    title: 'Fix the insertion sort that loses values',
+    summary: 'Values vanish and others appear twice. Catch the moment one is overwritten.',
+    starter: {
+      python: INSERTION_BUG_PY,
+      javascript: INSERTION_BUG_JS,
+      typescript: ts(INSERTION_BUG_JS, 'function insertionSort(arr) {', 'function insertionSort(arr: number[]): void {'),
+    },
+    symptom: 'After it runs, some values have vanished and others appear twice.',
+    explanation:
+      'The first shift writes over `arr[i]`, so the value being inserted is lost before it is placed. Save it first (`key = arr[i]`), then compare with and insert `key`.',
+    hints: ['Step to the first write of each pass. Which value disappears from the array?', 'The value you are inserting needs to survive the shifts: where could you keep it?'],
+  }),
+];
+
+/** Sorted in place, largest first, by code that compares elements. */
+function checkSortedDescending(input: ArrayInput, result: RunResult): Verdict {
+  const failed = crashed(result);
+  if (failed) return failed;
+  const expected = [...input.values].sort((a, b) => b - a);
+  const got = result.arrays.arr ?? [];
+  if (got.join() !== expected.join()) return { pass: false, message: `Expected ${list(expected)}, largest first, but arr ended as ${list(got)}.` };
+  if (input.values.length > 1 && comparisons(result) === 0) {
+    return { pass: false, message: 'The array is in order, but your code never compared two elements.' };
+  }
+  return { pass: true, message: `Sorted ${list(input.values)} into ${list(got)}, largest first.` };
+}
+
+const descending = (code: string) => code.replace('arr[j] > arr[j + 1]', 'arr[j] < arr[j + 1]');
+
+/** PRIMM's Modify step: working code to change, not a blank page. */
+export const modifyExercises: Exercise<ArrayInput>[] = [
+  {
+    ...writeIt('bubble-sort'),
+    slug: 'bubble-sort-descending',
+    title: 'Make bubble sort put the largest first',
+    kind: 'modify',
+    summary: 'The same algorithm, the other way round: change it to sort from largest to smallest.',
+    task: [
+      'This bubble sort works: it sorts `arr` smallest first. Change it so it sorts **largest first** instead.',
+      'Before you edit, predict: how many characters need to change? Then run it and watch the big values sink to the front.',
+    ],
+    starter: writeIt('bubble-sort').solution,
+    solution: {
+      python: descending(writeIt('bubble-sort').solution.python),
+      javascript: descending(writeIt('bubble-sort').solution.javascript),
+      typescript: descending(writeIt('bubble-sort').solution.typescript),
+    },
+    blanks: undefined,
+    fades: undefined,
+    distractors: undefined,
+    check: checkSortedDescending,
+    markSortedAtEnd: false,
+    hints: [
+      'Which line decides whether two neighbours are in the wrong order?',
+      'For largest first, a pair is out of order when the left one is smaller.',
+    ],
   },
 ];

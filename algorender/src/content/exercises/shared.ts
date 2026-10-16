@@ -17,8 +17,11 @@ export type Verdict = { pass: boolean; message: string };
 export type Exercise<I = any> = {
   slug: string;
   title: string;
-  /** 'write' asks for the algorithm; 'bug' hands over code with one bug to find and fix. */
-  kind: 'write' | 'bug';
+  /**
+   * 'write' asks for the algorithm; 'bug' hands over code with one bug to find
+   * and fix; 'modify' hands over working code to change (PRIMM's Modify step).
+   */
+  kind: 'write' | 'bug' | 'modify';
   /** The visualiser that shows the reference algorithm. */
   visualiser: string;
   /** One line for lists and link previews. */

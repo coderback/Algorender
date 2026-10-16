@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { runJs } from '@/workspace/js/runtime';
 import { HARNESS } from '@/workspace/python/harness';
 import { DEFAULT_LIMITS, LANGUAGES, type Language, type RunEvent, type RunRequest, type RunResult } from '@/workspace/protocol';
-import { traceRun } from '@/workspace/trace';
+import { traceFor } from '@/workspace/trace';
 import { exercises, stripBlanks, type Exercise } from '.';
 
 let runPython: (json: string) => string;
@@ -66,9 +66,10 @@ describe.each(exercises.map((e) => [e.slug, e] as const))('%s', (_slug, exercise
       }
     });
 
-    it(`${language}: the starter runs but doesn't pass`, () => {
+    it(`${language}: the starter doesn't pass`, () => {
       const results = exercise.tests.map((t) => run(exercise, language, exercise.starter[language], t.input));
-      expect(results.map((r) => r.error)).toEqual(results.map(() => null));
+      // A stub runs cleanly and just doesn't do the job; a bug hunt's code may crash or never finish.
+      if (exercise.kind !== 'bug') expect(results.map((r) => r.error)).toEqual(results.map(() => null));
       expect(exercise.tests.some((t, i) => !exercise.check(t.input, results[i]).pass)).toBe(true);
     });
 
@@ -76,12 +77,12 @@ describe.each(exercises.map((e) => [e.slug, e] as const))('%s', (_slug, exercise
       for (const example of exercise.examples) {
         const result = run(exercise, language, exercise.solution[language], example.input);
         expect(result.error).toBeNull();
-        expect(traceRun(result, { markSortedAtEnd: exercise.markSortedAtEnd })!.frames.length).toBeGreaterThan(1);
+        expect(traceFor(result, { markSortedAtEnd: exercise.markSortedAtEnd })!.trace.frames.length).toBeGreaterThan(1);
       }
     });
   }
 
-  it('Python, JavaScript and TypeScript solutions do the same things to the array', () => {
+  it('Python, JavaScript and TypeScript solutions do the same things to the arrays and tables', () => {
     for (const { input } of [...exercise.examples, ...exercise.tests]) {
       const python = actions(run(exercise, 'python', exercise.solution.python, input));
       expect(actions(run(exercise, 'javascript', exercise.solution.javascript, input))).toEqual(python);
