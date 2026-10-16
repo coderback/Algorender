@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { Frame } from '@/engine/types';
 import { cell, stateProblems, table } from '@/viz/grid/testing';
 import type { GridState } from '@/viz/grid/types';
-import { CONTRACT } from './contract';
-import type { RunEvent, RunResult } from './protocol';
-import { GRID_STATS, printed, RUN_STATS, traceFor, traceRun, type RunTrace } from './trace';
+import type { MemoryState } from '@/viz/memory/types';
+import { CONTRACT, entryFor } from './contract';
+import { runJs } from './js/runtime';
+import { type Arg, DEFAULT_LIMITS, type Limits, type RunEvent, type RunResult } from './protocol';
+import { GRID_STATS, LINE_STATS, printed, RUN_STATS, testedCondition, traceFor, traceLines, traceRun, type RunTrace } from './trace';
 
 const contract = (name: string) => CONTRACT.find((c) => c.name.startsWith(name))!;
 
@@ -263,5 +265,334 @@ describe('traceFor', () => {
     expect(long.truncated).toBe(true);
     expect(long.frames).toHaveLength(11);
     expect(long.frames.at(-1)!.note).toBe('Your function finished.');
+  });
+});
+
+describe('traceLines', () => {
+  /** A JS program run line by line: real steps, as the memory view gets them. */
+  const lines = (code: string, entry = '', args: Arg[] = [], limits: Partial<Limits> = {}) =>
+    runJs({ language: 'javascript', code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode: 'lines' });
+  const traced = (r: RunResult) => traceLines(r)!;
+  const notes = (r: RunResult) => traced(r).frames.map((f) => f.note);
+  const local = (state: MemoryState, name: string) => state.frames.find((f) => f.active)!.locals.find((l) => l.name === name);
+
+  it('says what a condition tested, given the code', () => {
+    const code = `function sign(n) {
+  if (n < 0) {
+    return -1;
+  } else if (n > 0) {
+    return 1;
+  }
+  return 0;
+}
+sign(5);
+`;
+    expect(traceLines(lines(code), { code })!.frames.map((f) => f.note)).toEqual([
+      'The program starts at line 1.',
+      'Line 1 defines sign.',
+      'Line 9 calls sign(5).',
+      'Line 2: n < 0? No, so line 4 is next.',
+      'Line 4: n > 0? Yes, so line 5 runs next.',
+      'sign returns 1.',
+      'Line 9 runs.',
+      'The program finished.',
+    ]);
+    // Without the code, the same step is still narrated.
+    expect(notes(lines(code))[3]).toBe('Line 2 runs, and line 4 is next.');
+  });
+
+  it('finds the condition on if, elif and while lines whose body follows', () => {
+    expect(testedCondition('    if arr[j] > arr[j + 1]:')).toBe('arr[j] > arr[j + 1]');
+    expect(testedCondition('  } else if ((a + b) * 2 > c) {')).toBe('(a + b) * 2 > c');
+    expect(testedCondition('while (lo <= hi) {')).toBe('lo <= hi');
+    expect(testedCondition('    elif x == 1:')).toBe('x == 1');
+    expect(testedCondition('if (f(a) && g(b)) {')).toBe('f(a) && g(b)');
+    expect(testedCondition('if (n <= 1) return 1;')).toBeNull();
+    expect(testedCondition('for (let i = 0; i < n; i++) {')).toBeNull();
+    expect(testedCondition(undefined)).toBeNull();
+  });
+
+  it('narrates what each line did: assignments, new objects, calls, returns and prints', () => {
+    const r = lines(`function add(a, b) {
+  const total = a + b;
+  return total;
+}
+const nums = [1, 2];
+const result = add(2, 3);
+console.log("done");
+`);
+    const trace = traced(r);
+    expect(trace.frames.map((f) => f.note)).toEqual([
+      'The program starts at line 1.',
+      'Line 1 defines add.',
+      'Line 5 sets nums to a new array [1, 2].',
+      'Line 6 calls add(2, 3).',
+      'Line 2 sets total to 5.',
+      'add returns 5.',
+      'Line 6 sets result to 5.',
+      'Line 7 prints “done”.',
+      'The program finished.',
+    ]);
+    // Each frame highlights the line about to run (0-based for the code panel); the ending highlights none.
+    expect(trace.frames.map((f) => f.line)).toEqual([0, 4, 5, 1, 2, 2, 6, 6, null]);
+    expect(trace.frames.map((f) => f.stats)).toEqual([
+      { steps: 1, calls: 0 },
+      { steps: 2, calls: 0 },
+      { steps: 3, calls: 0 },
+      { steps: 4, calls: 1 },
+      { steps: 5, calls: 1 },
+      { steps: 6, calls: 1 },
+      { steps: 7, calls: 1 },
+      { steps: 8, calls: 1 },
+      { steps: 8, calls: 1 },
+    ]);
+    expect(trace.truncated).toBe(false);
+  });
+
+  it('flags the names a step changed, and objects that are new or changed since the step before', () => {
+    const trace = traced(
+      lines(`const nums = [1, 2];
+const other = nums;
+other.push(3);
+const n = 1;
+`),
+    );
+    const [, made, aliased, pushed, end] = trace.frames;
+    expect(made.state.heap).toMatchObject([{ fresh: true, changed: false, object: { kind: 'list', type: 'Array' } }]);
+    expect(local(made.state, 'nums')).toMatchObject({ changed: true });
+    // The new name is flagged; the old one, and the object they share, are not.
+    expect(aliased.note).toBe('Line 2 makes nums and other name the same array.');
+    expect([local(aliased.state, 'nums')!.changed, local(aliased.state, 'other')!.changed]).toEqual([false, true]);
+    expect(aliased.state.heap).toMatchObject([{ fresh: false, changed: false }]);
+    expect(local(aliased.state, 'nums')!.value).toEqual(local(aliased.state, 'other')!.value);
+    expect(pushed.note).toBe('Line 3 appends 3 to nums.');
+    expect(pushed.state.heap).toMatchObject([{ fresh: false, changed: true }]);
+    expect(pushed.state.frames[0].locals.map((l) => l.changed)).toEqual([false, false]);
+    expect(end.note).toBe('Line 4 sets n to 1.');
+    // The closing frame settles: nothing is flagged as just changed.
+    const closing = trace.frames.at(-1)!.state;
+    expect(closing.frames[0].locals.some((l) => l.changed)).toBe(false);
+    expect(closing.heap.some((h) => h.changed || h.fresh)).toBe(false);
+  });
+
+  it('describes changes inside objects: items, swaps, pops, fields, nested lists', () => {
+    const said = notes(
+      lines(`const nums = [5, 6, 7];
+nums[1] = 9;
+[nums[0], nums[2]] = [nums[2], nums[0]];
+nums.pop();
+const point = { x: 1 };
+point.y = 2;
+const grid = [[1, 2], [3, 4]];
+grid[0][1] = 8;
+`),
+    );
+    expect(said.slice(2, -1)).toEqual([
+      'Line 2 sets nums[1] to 9.',
+      'Line 3 swaps nums[0] and nums[2].',
+      'Line 4 removes 5 from the end of nums.',
+      'Line 5 sets point to a new object {x: 1}.',
+      'Line 6 sets point.y to 2.',
+      'Line 7 sets grid to a new array [[…], […]].',
+      'Line 8 sets grid[0][1] to 8.',
+    ]);
+  });
+
+  it('stacks a frame per recursive call, marks the innermost active, and unwinds with returns', () => {
+    const trace = traced(
+      lines(`function fact(n) {
+  if (n <= 1) {
+    return 1;
+  }
+  return n * fact(n - 1);
+}
+const answer = fact(3);
+`),
+    );
+    const fns = (f: Frame<MemoryState>) =>
+      f.state.frames.map((x) => `${x.fn}${x.active ? '*' : ''}${x.returning && 'prim' in x.returning ? ` → ${x.returning.prim}` : ''}`);
+    expect(trace.frames.map(fns)).toEqual([
+      ['Global frame*'],
+      ['Global frame*'],
+      ['Global frame', 'fact*'],
+      ['Global frame', 'fact*'],
+      ['Global frame', 'fact', 'fact*'],
+      ['Global frame', 'fact', 'fact*'],
+      ['Global frame', 'fact', 'fact', 'fact*'],
+      ['Global frame', 'fact', 'fact', 'fact*'],
+      ['Global frame', 'fact', 'fact', 'fact* → 1'],
+      ['Global frame', 'fact', 'fact* → 2'],
+      ['Global frame', 'fact* → 6'],
+      ['Global frame*'],
+      ['Global frame*'],
+    ]);
+    expect(trace.frames.map((f) => f.note).slice(2, 12)).toEqual([
+      'Line 7 calls fact(3).',
+      'Line 2 runs, and line 5 is next.',
+      'Line 5 calls fact(2).',
+      'Line 2 runs, and line 5 is next.',
+      'Line 5 calls fact(1).',
+      'Line 2 runs, and line 3 is next.',
+      'fact returns 1.',
+      'fact returns 2.',
+      'fact returns 6.',
+      'Line 7 sets answer to 6.',
+    ]);
+    // Three calls, each its own frame for as long as it lives.
+    expect(trace.frames.at(-1)!.stats.calls).toBe(3);
+    expect(new Set(trace.frames.flatMap((f) => f.state.frames.map((x) => x.id))).size).toBe(4);
+  });
+
+  it('names a reference argument by the caller’s name for it, and an entry call by its arguments', () => {
+    const grow = lines(`function grow(items) {
+  items.push(4);
+}
+const nums = [1, 2, 3];
+grow(nums);
+`);
+    expect(notes(grow)).toContain('Line 5 calls grow(nums).');
+    // Falling off the end after a change says both.
+    expect(notes(grow)).toContain('Line 2 appends 4 to items, and grow returns undefined.');
+    const first = lines(
+      `function first(arr, n) {
+  return arr[n];
+}
+`,
+      'first',
+      [
+        { kind: 'array', name: 'arr', values: [4, 5] },
+        { kind: 'value', name: 'n', value: 1 },
+      ],
+    );
+    expect(notes(first)).toEqual([
+      'The program starts at line 1.',
+      'Line 1 defines first.',
+      'Your function is called: first([4, 5], 1).',
+      'first returns 5.',
+      'Your function finished and returned 5.',
+    ]);
+  });
+
+  it('follows an exception out of each frame, says when it is caught, and ends on the error', () => {
+    const trace = traced(
+      lines(`function check(n) {
+  if (n < 0) {
+    throw new RangeError("negative");
+  }
+  return n;
+}
+function outer(n) {
+  return check(n);
+}
+try {
+  outer(-1);
+} catch (e) {
+  console.log("caught");
+}
+outer(-2);
+`),
+    );
+    const said = trace.frames.map((f) => f.note);
+    expect(said.slice(6, 12)).toEqual([
+      'Line 2 runs, and line 3 is next.',
+      'Line 3 raises RangeError: negative.',
+      "The RangeError isn't caught in check, so it passes up to line 8 in outer.",
+      'The RangeError is caught, so line 13 runs next.',
+      'Line 13 prints “caught”.',
+      'Line 15 calls outer(-2).',
+    ]);
+    expect(said.slice(-3)).toEqual([
+      "The RangeError isn't caught in check, so it passes up to line 8 in outer.",
+      "The RangeError isn't caught in outer, so it passes up to line 15 in the top-level code.",
+      'Line 3: RangeError: negative',
+    ]);
+    // The ending points at the error's line and keeps the memory as the error left it.
+    expect(trace.frames.at(-1)!.line).toBe(2);
+    expect(trace.frames.at(-1)!.state.output).toEqual(['caught']);
+    expect(trace.truncated).toBe(false);
+  });
+
+  it('keeps everything printed so far, one entry per print', () => {
+    const trace = traced(
+      lines(`for (let i = 0; i < 3; i++) {
+  console.log("tick", i);
+}
+`),
+    );
+    expect(trace.frames.map((f) => f.state.output.length)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 3]);
+    expect(trace.frames.at(-1)!.state.output).toEqual(['tick 0', 'tick 1', 'tick 2']);
+  });
+
+  it('ends a limit stop cleanly, on the stop, marked as truncated', () => {
+    const r = lines(
+      `let n = 0;
+while (n >= 0) {
+  n += 1;
+}
+`,
+      '',
+      [],
+      { maxEvents: 12 },
+    );
+    const trace = traced(r);
+    expect(trace.truncated).toBe(true);
+    expect(trace.frames).toHaveLength(13);
+    const end = trace.frames.at(-1)!;
+    expect(end.note).toMatch(/^Line [23]: Stopped after 12 steps: is there a loop that never ends\?$/);
+    expect(end.state.frames).toHaveLength(1);
+    expect(trace.frames.slice(1, 5).map((f) => f.note)).toEqual([
+      'Line 1 sets n to 0.',
+      'Line 2 runs, and line 3 is next.',
+      'Line 3 sets n to 1.',
+      'Line 2 runs, and line 3 is next.',
+    ]);
+  });
+
+  it('cuts long runs at maxFrames but always shows the ending', () => {
+    const r = lines(`let n = 0;
+for (let i = 0; i < 50; i++) {
+  n += i;
+}
+`);
+    const trace = traceLines(r, { maxFrames: 10 })!;
+    expect(trace.truncated).toBe(true);
+    expect(trace.frames).toHaveLength(11);
+    expect(trace.frames.at(-1)!.note).toBe('The program finished.');
+  });
+
+  it('narrates every step of every lines contract case in one sentence, with steady stats', () => {
+    for (const c of CONTRACT.filter((c) => c.mode === 'lines')) {
+      const r = runJs({
+        language: 'javascript',
+        code: c.code.javascript!,
+        entry: entryFor(c, 'javascript'),
+        args: c.args,
+        limits: { ...DEFAULT_LIMITS, ...c.limits },
+        mode: 'lines',
+      });
+      const trace = traceLines(r)!;
+      expect(trace.frames.length, c.name).toBe(r.events.filter((e) => e.kind === 'step').length + 1);
+      for (const [k, f] of trace.frames.entries()) {
+        // One sentence; an error ending reads like the other views' ("Line 3: ValueError: negative").
+        const error = r.error && k === trace.frames.length - 1;
+        expect(f.note, `${c.name}, frame ${k}`).toMatch(error ? /^Line \d+: \S[^\n]*$/ : /^\S[^\n]*[.?]$/);
+        expect(f.state.frames.filter((x) => x.active), `${c.name}, frame ${k}`).toHaveLength(1);
+        if (k > 0) {
+          const before = trace.frames[k - 1].stats;
+          expect(f.stats.steps >= before.steps && f.stats.calls >= before.calls, `${c.name}, frame ${k}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('plays on the memory view through traceFor, and not at all when nothing ran', () => {
+    const r = lines('const x = 1;\n');
+    const run = traceFor(r)!;
+    expect(run.view).toBe('memory');
+    expect(run.stats).toBe(LINE_STATS);
+    expect(run.trace).toEqual(traceLines(r));
+    const broken = lines('const x = ;\n');
+    expect(traceLines(broken)).toBeNull();
+    expect(traceFor(broken)).toBeNull();
   });
 });

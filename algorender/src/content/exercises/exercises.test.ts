@@ -7,7 +7,7 @@ import { loadPyodide } from 'pyodide';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { runJs } from '@/workspace/js/runtime';
 import { HARNESS } from '@/workspace/python/harness';
-import { DEFAULT_LIMITS, LANGUAGES, type Language, type RunEvent, type RunRequest, type RunResult } from '@/workspace/protocol';
+import { DEFAULT_LIMITS, LANGUAGES, LINE_LIMITS, type Language, type RunEvent, type RunMode, type RunRequest, type RunResult } from '@/workspace/protocol';
 import { traceFor } from '@/workspace/trace';
 import { exercises, stripBlanks, type Exercise } from '.';
 
@@ -21,13 +21,14 @@ beforeAll(async () => {
 
 const LANGS = Object.keys(LANGUAGES) as Language[];
 
-function run(exercise: Exercise, language: Language, code: string, input: unknown): RunResult {
+function run(exercise: Exercise, language: Language, code: string, input: unknown, mode: RunMode = 'visual'): RunResult {
   const request: RunRequest = {
     language,
     code,
     entry: language === 'python' ? exercise.entry.python : exercise.entry.js,
     args: exercise.args(input),
-    limits: DEFAULT_LIMITS,
+    limits: mode === 'lines' ? LINE_LIMITS : DEFAULT_LIMITS,
+    mode,
   };
   return language === 'python' ? JSON.parse(runPython(JSON.stringify(request))) : runJs(request);
 }
@@ -35,7 +36,7 @@ function run(exercise: Exercise, language: Language, code: string, input: unknow
 /** What the learner sees happen to the array, without the language-specific lines and variables. */
 const actions = (r: RunResult) =>
   r.events.map((e: RunEvent) => {
-    const rest: Partial<RunEvent> = { ...e };
+    const rest: Record<string, unknown> = { ...e };
     delete rest.line;
     delete rest.vars;
     return rest;
@@ -78,6 +79,14 @@ describe.each(exercises.map((e) => [e.slug, e] as const))('%s', (_slug, exercise
         const result = run(exercise, language, exercise.solution[language], example.input);
         expect(result.error).toBeNull();
         expect(traceFor(result, { markSortedAtEnd: exercise.markSortedAtEnd })!.trace.frames.length).toBeGreaterThan(1);
+      }
+    });
+
+    it(`${language}: every example plays line by line within the limits`, () => {
+      for (const example of exercise.examples) {
+        const result = run(exercise, language, exercise.solution[language], example.input, 'lines');
+        expect(result.error, example.id).toBeNull();
+        expect(traceFor(result)?.view).toBe('memory');
       }
     });
   }

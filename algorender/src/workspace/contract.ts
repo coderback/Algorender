@@ -1,8 +1,14 @@
 // Shared cases every runtime must pass, so Python and JS/TS behave the same.
 // Each runtime's test file runs these through its own run() and compares.
 // The programs are written line-for-line alike, so expected lines match too.
+//
+// 'lines' mode cases describe each step with Shapes (see below): what both
+// languages must agree on (the line, each frame's function and its names in
+// order, the values' kinds and contents, and which names share an object),
+// spelled per language when compared, plus the few names only one language
+// has (JS block scope ends where Python's function scope goes on).
 
-import type { Arg, Json, Language, Limits, RunError, RunEvent } from './protocol';
+import type { Arg, HeapObject, Json, Language, Limits, MemValue, RunError, RunEvent, RunMode } from './protocol';
 
 export type ContractCase = {
   name: string;
@@ -11,7 +17,14 @@ export type ContractCase = {
   entry: { python: string; js: string };
   args: Arg[];
   limits?: Partial<Limits>;
+  /** 'lines' cases record memory at every step. */
+  mode?: RunMode;
   expect: {
+    /** 'lines' mode: every step in order (only the first steps.length with `firstSteps`). */
+    steps?: StepShape[];
+    firstSteps?: boolean;
+    /** Everything printed, one entry per print. */
+    prints?: string[];
     /** The exact event list, when the case pins it. */
     events?: RunEvent[];
     /** Only the kinds, in order, when exact values don't matter. */
@@ -35,6 +48,71 @@ const cell = (index: number, value: number) => ({ array: 'arr', index, value });
 /** A cell of grid `grid` as a comparison operand, or (without a value) as a `from` entry. */
 const gcell = (grid: string, row: number, col: number, value: number | null) => ({ grid, row, col, value });
 const read = (grid: string, row: number, col: number) => ({ grid, row, col });
+
+// ---------------------------------------------------------------------------
+// 'lines' mode shapes
+// ---------------------------------------------------------------------------
+
+/** None in Python, undefined in JS: what a function without a return gives back. */
+export const NOTHING = { nothing: true } as const;
+
+/**
+ * A value as both runtimes must draw it. A number, boolean or string is a
+ * primitive, spelled per language when compared (True/true, 'hi'/"hi"); null
+ * is None/null. An object is a reference with its contents: `ref` labels it,
+ * and names with one label must share one object (different labels, different
+ * objects) for the whole run. `list` is a Python list / JS Array; `map` a
+ * Python dict with string keys / a plain JS object; `fn` a function by name.
+ */
+export type Shape =
+  | number
+  | boolean
+  | string
+  | null
+  | typeof NOTHING
+  | { ref: string; list: Shape[] }
+  | { ref: string; map: [string, Shape][] }
+  | { ref: string; fn: string };
+
+type Side = 'python' | 'js';
+
+/** A name only one language has at this step. */
+export type Local = Shape | { only: Side; value: Shape };
+
+export type StepShape = {
+  /** 'line' when left out. */
+  event?: 'line' | 'return' | 'exception';
+  line: number;
+  /** Each frame, outermost first: its function ('Global frame' for the top level) and its names, in order. */
+  stack: [fn: string, locals: Record<string, Local>][];
+  /** What the innermost frame returns, on a function's 'return' step. */
+  returning?: Shape;
+  /** An exception step's message per language. */
+  error?: Record<Side, string>;
+};
+
+/** A value as the tests compare it: a primitive as written, or an object in full, labelled by first appearance. */
+export type Drawn =
+  | { prim: string; type: string }
+  | { ref: string; type: string; items: Drawn[] }
+  | { ref: string; type: string; entries: [Drawn, Drawn][] }
+  | { ref: string; type: string; fields: [string, Drawn][] }
+  | { ref: string; type: string; name: string }
+  | { ref: string; type: string };
+
+export type DrawnStep = {
+  event: 'line' | 'return' | 'exception';
+  line: number;
+  stack: [string, [string, Drawn][]][];
+  returning?: Drawn;
+  message?: string;
+};
+
+const pythonOnly = (value: Shape): Local => ({ only: 'python', value });
+const list = (ref: string, ...items: Shape[]): Shape => ({ ref, list: items });
+const map = (ref: string, ...entries: [string, Shape][]): Shape => ({ ref, map: entries });
+const fn = (name: string): Shape => ({ ref: name, fn: name });
+const G = 'Global frame';
 
 const UNIQUE_PATHS_PY = `def unique_paths(rows, cols):
     dp = table(rows, cols)
@@ -684,7 +762,543 @@ function count(rows, cols) {
     args: [{ kind: 'array', name: 'arr', values: [1] }],
     expect: { kinds: [], error: { kind: 'runtime', line: null, message: 'bubble' } },
   },
+
+  // 'lines' mode ----------------------------------------------------------------
+
+  {
+    name: 'lines: straight-line top-level code, with no entry function',
+    code: {
+      python: `x = 5
+y = x * 2
+x = y - 1
+`,
+      javascript: `let x = 5;
+let y = x * 2;
+x = y - 1;
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        // A let in its temporal dead zone isn't shown, as a Python name isn't before it's bound.
+        { line: 1, stack: [[G, {}]] },
+        { line: 2, stack: [[G, { x: 5 }]] },
+        { line: 3, stack: [[G, { x: 5, y: 10 }]] },
+        // The top level's end is a step of its own, so the last line's effect is seen.
+        { event: 'return', line: 3, stack: [[G, { x: 9, y: 10 }]] },
+      ],
+      prints: [],
+      returned: null,
+    },
+  },
+  {
+    name: 'lines: primitives are written as each language prints them',
+    code: {
+      python: `word = "hi"
+ok = True
+nothing = None
+half = 2.5
+`,
+      javascript: `const word = "hi";
+const ok = true;
+const nothing = null;
+const half = 2.5;
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 2, stack: [[G, { word: 'hi' }]] },
+        { line: 3, stack: [[G, { word: 'hi', ok: true }]] },
+        { line: 4, stack: [[G, { word: 'hi', ok: true, nothing: null }]] },
+        { event: 'return', line: 4, stack: [[G, { word: 'hi', ok: true, nothing: null, half: 2.5 }]] },
+      ],
+    },
+  },
+  {
+    name: 'lines: a loop comes back to its line after every pass, and once more to finish',
+    code: {
+      python: `total = 0
+for i in range(3):
+    total += i
+# (line 4: the JS closes its loop here)
+print(total)
+`,
+      javascript: `let total = 0;
+for (let i = 0; i < 3; i++) {
+  total += i;
+}
+console.log(total);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 2, stack: [[G, { total: 0 }]] },
+        { line: 3, stack: [[G, { total: 0, i: 0 }]] },
+        { line: 2, stack: [[G, { total: 0, i: 0 }]] },
+        { line: 3, stack: [[G, { total: 0, i: 1 }]] },
+        { line: 2, stack: [[G, { total: 1, i: 1 }]] },
+        { line: 3, stack: [[G, { total: 1, i: 2 }]] },
+        { line: 2, stack: [[G, { total: 3, i: 2 }]] },
+        // Python's loop variable outlives the loop; JS's let i ends with it.
+        { line: 5, stack: [[G, { total: 3, i: pythonOnly(2) }]] },
+        { event: 'return', line: 5, stack: [[G, { total: 3, i: pythonOnly(2) }]] },
+      ],
+      prints: ['3'],
+    },
+  },
+  {
+    name: 'lines: a call stacks a frame on top, and its return value goes back to the caller',
+    code: {
+      python: `def add(a, b):
+    total = a + b
+    return total
+# (line 4: the JS closes add here)
+result = add(2, 3)
+`,
+      javascript: `function add(a, b) {
+  const total = a + b;
+  return total;
+}
+const result = add(2, 3);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        // A function's name is bound once its definition has run (JS hoisting aside).
+        { line: 1, stack: [[G, {}]] },
+        { line: 5, stack: [[G, { add: fn('add') }]] },
+        { line: 2, stack: [[G, { add: fn('add') }], ['add', { a: 2, b: 3 }]] },
+        { line: 3, stack: [[G, { add: fn('add') }], ['add', { a: 2, b: 3, total: 5 }]] },
+        { event: 'return', line: 3, stack: [[G, { add: fn('add') }], ['add', { a: 2, b: 3, total: 5 }]], returning: 5 },
+        { event: 'return', line: 5, stack: [[G, { add: fn('add'), result: 5 }]] },
+      ],
+    },
+  },
+  {
+    name: 'lines: recursion stacks a frame per call and unwinds them in turn',
+    code: {
+      python: `def fact(n):
+    if n <= 1:
+        return 1
+    # (line 4: the JS closes its if here)
+    return n * fact(n - 1)
+# (line 6: the JS closes fact here)
+answer = fact(3)
+`,
+      javascript: `function fact(n) {
+  if (n <= 1) {
+    return 1;
+  }
+  return n * fact(n - 1);
+}
+const answer = fact(3);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: ((): StepShape[] => {
+        const g = [G, { fact: fn('fact') }] as [string, Record<string, Local>];
+        const f = (n: number) => ['fact', { n }] as [string, Record<string, Local>];
+        return [
+          { line: 1, stack: [[G, {}]] },
+          { line: 7, stack: [g] },
+          { line: 2, stack: [g, f(3)] },
+          { line: 5, stack: [g, f(3)] },
+          { line: 2, stack: [g, f(3), f(2)] },
+          { line: 5, stack: [g, f(3), f(2)] },
+          { line: 2, stack: [g, f(3), f(2), f(1)] },
+          { line: 3, stack: [g, f(3), f(2), f(1)] },
+          { event: 'return', line: 3, stack: [g, f(3), f(2), f(1)], returning: 1 },
+          { event: 'return', line: 5, stack: [g, f(3), f(2)], returning: 2 },
+          { event: 'return', line: 5, stack: [g, f(3)], returning: 6 },
+          { event: 'return', line: 7, stack: [[G, { fact: fn('fact'), answer: 6 }]] },
+        ];
+      })(),
+    },
+  },
+  {
+    name: 'lines: two names for one list share one object, and a change shows through both',
+    code: {
+      python: `nums = [1, 2]
+other = nums
+other.append(3)
+nums[0] = 9
+`,
+      javascript: `const nums = [1, 2];
+const other = nums;
+other.push(3);
+nums[0] = 9;
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 2, stack: [[G, { nums: list('L', 1, 2) }]] },
+        { line: 3, stack: [[G, { nums: list('L', 1, 2), other: list('L', 1, 2) }]] },
+        { line: 4, stack: [[G, { nums: list('L', 1, 2, 3), other: list('L', 1, 2, 3) }]] },
+        { event: 'return', line: 4, stack: [[G, { nums: list('L', 9, 2, 3), other: list('L', 9, 2, 3) }]] },
+      ],
+    },
+  },
+  {
+    name: 'lines: a dict (Python) or object (JS) gains and changes keys',
+    code: {
+      python: `point = {"x": 1}
+point["y"] = 2
+point["x"] = 5
+`,
+      javascript: `const point = { x: 1 };
+point.y = 2;
+point.x = 5;
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 2, stack: [[G, { point: map('P', ['x', 1]) }]] },
+        { line: 3, stack: [[G, { point: map('P', ['x', 1], ['y', 2]) }]] },
+        { event: 'return', line: 3, stack: [[G, { point: map('P', ['x', 5], ['y', 2]) }]] },
+      ],
+    },
+  },
+  {
+    name: 'lines: a function changes its caller’s list through its parameter, and prints are kept',
+    code: {
+      python: `def grow(items):
+    items.append(4)
+# (line 3: the JS closes grow here)
+nums = [1, 2, 3]
+grow(nums)
+print(nums)
+`,
+      javascript: `function grow(items) {
+  items.push(4);
+}
+const nums = [1, 2, 3];
+grow(nums);
+console.log(nums);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 4, stack: [[G, { grow: fn('grow') }]] },
+        { line: 5, stack: [[G, { grow: fn('grow'), nums: list('L', 1, 2, 3) }]] },
+        { line: 2, stack: [[G, { grow: fn('grow'), nums: list('L', 1, 2, 3) }], ['grow', { items: list('L', 1, 2, 3) }]] },
+        {
+          event: 'return',
+          line: 2,
+          stack: [[G, { grow: fn('grow'), nums: list('L', 1, 2, 3, 4) }], ['grow', { items: list('L', 1, 2, 3, 4) }]],
+          returning: NOTHING,
+        },
+        { line: 6, stack: [[G, { grow: fn('grow'), nums: list('L', 1, 2, 3, 4) }]] },
+        { event: 'return', line: 6, stack: [[G, { grow: fn('grow'), nums: list('L', 1, 2, 3, 4) }]] },
+      ],
+      prints: ['[1, 2, 3, 4]'],
+    },
+  },
+  {
+    name: 'lines: an uncaught exception leaves each frame it passes through, innermost first',
+    code: {
+      python: `def check(n):
+    if n < 0:
+        raise ValueError("negative")
+    # (line 4: the JS closes its if here)
+    return n
+# (line 6: the JS closes check here)
+a = check(2)
+b = check(-1)
+`,
+      javascript: `function check(n) {
+  if (n < 0) {
+    throw new RangeError("negative");
+  }
+  return n;
+}
+const a = check(2);
+const b = check(-1);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: ((): StepShape[] => {
+        const error = { python: 'ValueError: negative', js: 'RangeError: negative' };
+        const g = (more: Record<string, Local> = {}) => [G, { check: fn('check'), ...more }] as [string, Record<string, Local>];
+        return [
+          { line: 1, stack: [[G, {}]] },
+          { line: 7, stack: [g()] },
+          { line: 2, stack: [g(), ['check', { n: 2 }]] },
+          { line: 5, stack: [g(), ['check', { n: 2 }]] },
+          { event: 'return', line: 5, stack: [g(), ['check', { n: 2 }]], returning: 2 },
+          { line: 8, stack: [g({ a: 2 })] },
+          { line: 2, stack: [g({ a: 2 }), ['check', { n: -1 }]] },
+          { line: 3, stack: [g({ a: 2 }), ['check', { n: -1 }]] },
+          { event: 'exception', line: 3, stack: [g({ a: 2 }), ['check', { n: -1 }]], error },
+          { event: 'exception', line: 8, stack: [g({ a: 2 })], error },
+        ];
+      })(),
+      error: { kind: 'runtime', line: 3, message: 'negative' },
+    },
+  },
+  {
+    name: 'lines: with an entry function, the top level runs first, then the call with its arguments',
+    code: {
+      python: `def greet(name):
+    print("hi", name)
+    return len(name)
+`,
+      javascript: `function greet(name) {
+  console.log("hi", name);
+  return name.length;
+}
+`,
+    },
+    entry: { python: 'greet', js: 'greet' },
+    args: [{ kind: 'value', name: 'name', value: 'Ada' }],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { event: 'return', line: 1, stack: [[G, { greet: fn('greet') }]] },
+        { line: 2, stack: [[G, { greet: fn('greet') }], ['greet', { name: 'Ada' }]] },
+        { line: 3, stack: [[G, { greet: fn('greet') }], ['greet', { name: 'Ada' }]] },
+        { event: 'return', line: 3, stack: [[G, { greet: fn('greet') }], ['greet', { name: 'Ada' }]], returning: 3 },
+      ],
+      prints: ['hi Ada'],
+      returned: 3,
+    },
+  },
+  {
+    name: 'lines: an array argument is a plain list (Python) or Array (JS), and its visual events still come',
+    code: {
+      python: `def first(arr):
+    x = arr[0]
+    return x
+`,
+      javascript: `function first(arr) {
+  const x = arr[0];
+  return x;
+}
+`,
+    },
+    entry: { python: 'first', js: 'first' },
+    args: [{ kind: 'array', name: 'arr', values: [4, 5] }],
+    mode: 'lines',
+    expect: {
+      kinds: ['step', 'step', 'array', 'step', 'step', 'step'],
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { event: 'return', line: 1, stack: [[G, { first: fn('first') }]] },
+        { line: 2, stack: [[G, { first: fn('first') }], ['first', { arr: list('A', 4, 5) }]] },
+        { line: 3, stack: [[G, { first: fn('first') }], ['first', { arr: list('A', 4, 5), x: 4 }]] },
+        { event: 'return', line: 3, stack: [[G, { first: fn('first') }], ['first', { arr: list('A', 4, 5), x: 4 }]], returning: 4 },
+      ],
+      returned: 4,
+    },
+  },
+  {
+    name: 'lines: an endless loop stops at maxEvents, which counts steps',
+    code: {
+      python: `n = 0
+while n >= 0:
+    n += 1
+`,
+      javascript: `let n = 0;
+while (n >= 0) {
+  n += 1;
+}
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    limits: { maxEvents: 20 },
+    expect: {
+      count: 20,
+      firstSteps: true,
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 2, stack: [[G, { n: 0 }]] },
+        { line: 3, stack: [[G, { n: 0 }]] },
+        { line: 2, stack: [[G, { n: 1 }]] },
+        { line: 3, stack: [[G, { n: 1 }]] },
+      ],
+      error: { kind: 'limit', message: 'Stopped after 20 steps', hasLine: true },
+    },
+  },
 ];
 
 /** The entry name for a language. */
 export const entryFor = (c: ContractCase, language: Language) => (language === 'python' ? c.entry.python : c.entry.js);
+
+type Step = Extract<RunEvent, { kind: 'step' }>;
+
+const isStep = (e: RunEvent): e is Step => e.kind === 'step';
+
+/** Labels in order of first appearance, so two runs compare by which names share objects, not by their ids. */
+function labeller() {
+  const labels = new Map<string, string>();
+  return (key: string) => {
+    let label = labels.get(key);
+    if (label === undefined) labels.set(key, (label = `#${labels.size + 1}`));
+    return label;
+  };
+}
+
+/** A case's steps as a language must draw them. */
+export function expectedSteps(steps: readonly StepShape[], language: Language): DrawnStep[] {
+  const side: Side = language === 'python' ? 'python' : 'js';
+  const py = side === 'python';
+  const label = labeller();
+  const draw = (s: Shape): Drawn => {
+    if (s === null) return { prim: py ? 'None' : 'null', type: 'none' };
+    if (typeof s === 'number') return { prim: String(s), type: 'number' };
+    if (typeof s === 'boolean') return { prim: py ? (s ? 'True' : 'False') : String(s), type: 'boolean' };
+    if (typeof s === 'string') return { prim: py ? `'${s}'` : JSON.stringify(s), type: 'string' };
+    if ('nothing' in s) return { prim: py ? 'None' : 'undefined', type: 'none' };
+    const ref = label(s.ref);
+    if ('list' in s) return { ref, type: py ? 'list' : 'Array', items: s.list.map(draw) };
+    if ('map' in s) {
+      return py
+        ? { ref, type: 'dict', entries: s.map.map(([k, v]): [Drawn, Drawn] => [draw(k), draw(v)]) }
+        : { ref, type: 'Object', fields: s.map.map(([k, v]): [string, Drawn] => [k, draw(v)]) };
+    }
+    return { ref, type: 'function', name: s.fn };
+  };
+  return steps.map((step) => {
+    const stack = step.stack.map(([name, locals]): [string, [string, Drawn][]] => [
+      name,
+      Object.entries(locals).flatMap(([local, v]): [string, Drawn][] => {
+        if (v !== null && typeof v === 'object' && 'only' in v) return v.only === side ? [[local, draw(v.value)]] : [];
+        return [[local, draw(v)]];
+      }),
+    ]);
+    const out: DrawnStep = { event: step.event ?? 'line', line: step.line, stack };
+    if (step.returning !== undefined) out.returning = draw(step.returning);
+    if (step.error) out.message = step.error[side];
+    return out;
+  });
+}
+
+/** A run's steps as the tests compare them: each value drawn in full from its step's heap. */
+export function drawnSteps(events: readonly RunEvent[]): DrawnStep[] {
+  const label = labeller();
+  return events.filter(isStep).map((e) => {
+    const heap = new Map(e.heap.map((o) => [o.id, o]));
+    const draw = (v: MemValue, path: readonly string[] = []): Drawn => {
+      if ('prim' in v) return { prim: v.prim, type: v.type };
+      const ref = label(v.ref);
+      const o = heap.get(v.ref);
+      if (!o) return { ref, type: 'missing' };
+      if (path.includes(v.ref)) return { ref, type: o.type };
+      const inner = [...path, v.ref];
+      switch (o.kind) {
+        case 'list':
+        case 'tuple':
+        case 'set':
+          return { ref, type: o.type, items: o.items.map((x) => draw(x, inner)) };
+        case 'dict':
+          return { ref, type: o.type, entries: o.entries.map(([k, x]): [Drawn, Drawn] => [draw(k, inner), draw(x, inner)]) };
+        case 'object':
+          return { ref, type: o.type, fields: o.fields.map(([k, x]): [string, Drawn] => [k, draw(x, inner)]) };
+        case 'function':
+          return { ref, type: o.type, name: o.name };
+      }
+    };
+    const stack = e.stack.map((f): [string, [string, Drawn][]] => [f.fn, f.locals.map(([name, v]): [string, Drawn] => [name, draw(v)])]);
+    const out: DrawnStep = { event: e.event, line: e.line, stack };
+    const returning = e.stack.at(-1)?.returning;
+    if (returning) out.returning = draw(returning);
+    if (e.message !== undefined) out.message = e.message;
+    return out;
+  });
+}
+
+/**
+ * What every run's steps must satisfy, whatever the program: the Global frame
+ * first and always the same; frame ids unique, each keeping its function and,
+ * once gone, never back; the step's line the innermost frame's; `returning`
+ * only on a function's 'return' step and a message on every 'exception' step;
+ * a heap of exactly the objects the stack reaches, each once, each id keeping
+ * its kind. Returns the problems found.
+ */
+export function stepProblems(events: readonly RunEvent[]): string[] {
+  const problems: string[] = [];
+  const fns = new Map<string, string>();
+  const gone = new Set<string>();
+  const kinds = new Map<string, HeapObject['kind']>();
+  let live: string[] = [];
+  let globalId: string | null = null;
+  events.filter(isStep).forEach((e, k) => {
+    const at = `step ${k} (line ${e.line})`;
+    const ids = e.stack.map((f) => f.id);
+    if (e.stack.length === 0 || e.stack[0].fn !== 'Global frame') problems.push(`${at}: doesn't start with the Global frame`);
+    globalId ??= ids[0];
+    if (ids[0] !== globalId) problems.push(`${at}: the Global frame's id changed`);
+    if (new Set(ids).size !== ids.length) problems.push(`${at}: repeats a frame id`);
+    for (const f of e.stack) {
+      if (gone.has(f.id)) problems.push(`${at}: frame ${f.id} came back`);
+      if ((fns.get(f.id) ?? f.fn) !== f.fn) problems.push(`${at}: frame ${f.id} changed function`);
+      fns.set(f.id, f.fn);
+    }
+    for (const id of live) if (!ids.includes(id)) gone.add(id);
+    live = ids;
+    const top = e.stack.at(-1)!;
+    if (e.line !== top.line) problems.push(`${at}: the line isn't the innermost frame's`);
+    e.stack.forEach((f, i) => {
+      const allowed = e.event === 'return' && i === e.stack.length - 1 && e.stack.length > 1;
+      if (allowed !== (f.returning !== undefined)) problems.push(`${at}: ${f.fn} ${allowed ? 'has no' : 'has a'} returning value`);
+    });
+    if ((e.event === 'exception') !== (e.message !== undefined)) problems.push(`${at}: message on the wrong kind of step`);
+    // The heap: each object once, and exactly those the stack reaches.
+    const heap = new Map<string, HeapObject>();
+    for (const o of e.heap) {
+      if (heap.has(o.id)) problems.push(`${at}: object ${o.id} listed twice`);
+      heap.set(o.id, o);
+      if ((kinds.get(o.id) ?? o.kind) !== o.kind) problems.push(`${at}: object ${o.id} changed kind`);
+      kinds.set(o.id, o.kind);
+    }
+    const reached = new Set<string>();
+    const reach = (v: MemValue) => {
+      if ('prim' in v || reached.has(v.ref)) return;
+      reached.add(v.ref);
+      const o = heap.get(v.ref);
+      if (!o) return void problems.push(`${at}: ${v.ref} isn't in the heap`);
+      if (o.kind === 'dict') o.entries.forEach(([a, b]) => (reach(a), reach(b)));
+      else if (o.kind === 'object') o.fields.forEach(([, b]) => reach(b));
+      else if (o.kind !== 'function') o.items.forEach(reach);
+    };
+    for (const f of e.stack) {
+      f.locals.forEach(([, v]) => reach(v));
+      if (f.returning) reach(f.returning);
+    }
+    if (reached.size !== heap.size) problems.push(`${at}: the heap holds objects nothing reaches`);
+  });
+  return problems;
+}

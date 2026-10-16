@@ -23,6 +23,23 @@
 // The code runs in strict mode (parsed as such, so strict-only errors are
 // syntax errors): sloppy mode would let `i = 0` create a global in the worker
 // that outlives the run.
+//
+// 'lines' mode (Python-Tutor-style memory at every line) adds:
+// - Markers become __viz.step(n, capture), which also records memory, at the
+//   top level and in ordinary functions. Generators and async functions
+//   (which suspend mid-body) and static blocks keep __viz.line: they get no
+//   frame of their own, and their lines aren't steps.
+// - Function bodies become `const __vizD = __viz.enter("name"); try { … }
+//   catch (e) { __viz.unwind(__vizD, e); throw e } finally { __viz.exit(__vizD) }`,
+//   so a frame is drawn from its call until it returns or an exception leaves it.
+// - Loops come back to their own line between passes, as Python's do: a for
+//   loop steps before its update, a while loop before every test (instead of a
+//   marker), and for…of iterates through __viz.each, which steps before each
+//   fetch after the first.
+// - A function declaration is a step, and its name is left out of the
+//   variables until that line has passed, like Python's def: hoisting would
+//   otherwise show every function before the code reaches it.
+// - Captures include `_names` (visual events still leave them out).
 
 import { parse } from 'acorn';
 import { generate } from 'astring';
@@ -55,7 +72,12 @@ const COMPARISONS = new Set(['<', '<=', '>', '>=', '==', '===', '!=', '!==']);
 /** The helpers that make visual collections (runtime.ts). */
 const HELPERS = new Set(['table', 'array']);
 
-export function instrument(code: string, language: SourceLanguage): { code: string } {
+export type InstrumentOptions = {
+  /** 'lines' mode: steps that record memory, frames around function bodies, loops that step at their line. */
+  lines?: boolean;
+};
+
+export function instrument(code: string, language: SourceLanguage, { lines = false }: InstrumentOptions = {}): { code: string } {
   const source = language === 'typescript' ? stripTypes(code) : code;
   let program: ES.Program;
   try {
@@ -63,7 +85,7 @@ export function instrument(code: string, language: SourceLanguage): { code: stri
   } catch (e) {
     throw syntaxError(e);
   }
-  new Instrumenter().program(program);
+  new Instrumenter(lines).program(program);
   return { code: generate(program) };
 }
 
@@ -102,6 +124,7 @@ const declare = (kind: 'const' | 'let', target: ES.Pattern, init: ES.Expression)
   kind,
   declarations: [{ type: 'VariableDeclarator', id: target, init }],
 });
+const sequence = (...expressions: ES.Expression[]): ES.SequenceExpression => ({ type: 'SequenceExpression', expressions });
 
 const lineOf = (node: ES.Node): number => node.loc!.start.line;
 
@@ -109,6 +132,12 @@ const isDirective = (s: ES.Node): boolean =>
   s.type === 'ExpressionStatement' && typeof (s as ES.Directive).directive === 'string';
 
 type AnyFunction = ES.FunctionDeclaration | ES.FunctionExpression | ES.ArrowFunctionExpression;
+
+const isFunctionValue = (n: ES.Node | null | undefined): n is ES.FunctionExpression | ES.ArrowFunctionExpression =>
+  n?.type === 'FunctionExpression' || n?.type === 'ArrowFunctionExpression';
+
+/** A statement under any labels: `outer: while (…)` is still a while loop. */
+const unlabelled = (s: ES.Statement): ES.Statement => (s.type === 'LabeledStatement' ? unlabelled(s.body) : s);
 
 // ---------------------------------------------------------------------------
 // Which names are bound where
@@ -207,7 +236,14 @@ function functionNames(body: ES.Node[]): string[] {
 // The rewrite
 // ---------------------------------------------------------------------------
 
-type Scope = { names: string[]; parent: Scope | null; fn: boolean; visible?: string[] };
+type Scope = {
+  names: string[];
+  parent: Scope | null;
+  fn: boolean;
+  visible?: string[];
+  /** 'lines' mode: function declarations here whose line hasn't been passed yet. */
+  pending?: Set<string>;
+};
 
 /** Node keys that never hold child nodes (others are checked with isNode). */
 const SKIP_KEYS = new Set(['type', 'loc', 'start', 'end', 'range']);
@@ -219,12 +255,27 @@ class Instrumenter {
   private scope: Scope = { names: [], parent: null, fn: true };
   /** Whether `return` in the current function restores the caller's line. */
   private tracked = false;
+  /** 'lines' mode: whether statements here are steps (the top level and tracked functions). */
+  private stepping = true;
+  private readonly lines: boolean;
   private readonly markers = new WeakSet<ES.Node>();
   private readonly captures = new Map<string, ES.Expression>();
+  /** Names for anonymous functions, from the variable, property or method they're assigned to. */
+  private readonly names = new WeakMap<ES.Node, string>();
+
+  constructor(lines: boolean) {
+    this.lines = lines;
+  }
 
   program(p: ES.Program) {
     this.scope = { names: functionNames(p.body), parent: null, fn: true };
     p.body = this.statements(p.body as ES.Statement[]);
+    // The top level's names as it ends, every function declared by then, for its last step.
+    if (this.lines) p.body.push(exprStmt(vizCall('ended', [this.capture()])));
+  }
+
+  private get steps(): boolean {
+    return this.lines && this.stepping;
   }
 
   // Scopes ------------------------------------------------------------------
@@ -240,26 +291,32 @@ class Instrumenter {
     }
   }
 
-  /** The current function's names in scope here, outermost first; `_names` are never shown. */
+  /**
+   * The current function's names in scope here, outermost first. Visual
+   * events never show `_names`, so only 'lines' mode reads them; it also
+   * leaves out function declarations whose line hasn't been passed.
+   */
   private visible(): string[] {
     const scope = this.scope;
-    if (scope.visible) return scope.visible;
     const chain: Scope[] = [];
     for (let s: Scope | null = scope; s; s = s.parent) {
       chain.push(s);
       if (s.fn) break;
     }
-    const seen = new Set<string>();
-    const out: string[] = [];
-    for (let k = chain.length - 1; k >= 0; k--) {
-      for (const name of chain[k].names) {
-        if (seen.has(name) || name.startsWith('_')) continue;
-        seen.add(name);
-        out.push(name);
+    if (!scope.visible) {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (let k = chain.length - 1; k >= 0; k--) {
+        for (const name of chain[k].names) {
+          if (seen.has(name) || (!this.lines && name.startsWith('_'))) continue;
+          seen.add(name);
+          out.push(name);
+        }
       }
+      scope.visible = out;
     }
-    scope.visible = out;
-    return out;
+    const pending = chain.flatMap((s) => [...(s.pending ?? [])]);
+    return pending.length === 0 ? scope.visible : scope.visible.filter((name) => !pending.includes(name));
   }
 
   /**
@@ -294,23 +351,46 @@ class Instrumenter {
   }
 
   private marker(line: number): ES.Statement {
-    const m = exprStmt(vizCall('line', [lit(line), this.capture()]));
+    const m = exprStmt(this.stepCall(line));
     this.markers.add(m);
     return m;
+  }
+
+  /**
+   * __viz.step(n, capture) where lines are steps ('lines' mode), else
+   * __viz.line(n, capture). A loop coming back to its line is __viz.loop: a
+   * step even when the line hasn't changed.
+   */
+  private stepCall(line: number, loop = false): ES.CallExpression {
+    return vizCall(this.steps ? (loop ? 'loop' : 'step') : 'line', [lit(line), this.capture()]);
   }
 
   // Statements --------------------------------------------------------------
 
   private statements(list: ES.Statement[]): ES.Statement[] {
+    if (this.lines) {
+      for (const s of list) {
+        if (s.type === 'FunctionDeclaration' && s.id) (this.scope.pending ??= new Set()).add(s.id.name);
+      }
+    }
     const out: ES.Statement[] = [];
     for (const s of list) {
       if (isDirective(s)) out.push(s);
       else if (s.type === 'EmptyStatement') continue;
-      // Hoisted: nothing runs where it is written.
-      else if (s.type === 'FunctionDeclaration') out.push(this.statement(s));
-      else out.push(this.marker(lineOf(s)), this.statement(s));
+      else if (s.type === 'FunctionDeclaration') {
+        // Hoisted: nothing runs where it is written, but a step passes over it, like a def.
+        if (this.steps) out.push(this.marker(lineOf(s)));
+        if (s.id) this.scope.pending?.delete(s.id.name);
+        out.push(this.statement(s));
+      } else out.push(...this.marked(s));
     }
     return out;
+  }
+
+  /** A statement after its marker; in 'lines' mode a while loop steps in its test instead. */
+  private marked(s: ES.Statement): ES.Statement[] {
+    if (this.steps && unlabelled(s).type === 'WhileStatement') return [this.statement(s)];
+    return [this.marker(lineOf(s)), this.statement(s)];
   }
 
   private statement(s: ES.Statement): ES.Statement {
@@ -350,7 +430,9 @@ class Instrumenter {
           }
           if (s.test) s.test = this.node(s.test);
           if (s.update) s.update = this.node(s.update);
-          s.body = this.loopBody(s.body, lineOf(s));
+          // Back on the loop's line after each pass, before the update, as Python's for is.
+          if (this.steps) s.update = s.update ? sequence(this.stepCall(lineOf(s), true), s.update) : this.stepCall(lineOf(s), true);
+          s.body = this.loopBody(s.body, lineOf(s), true);
           return s;
         });
       }
@@ -358,21 +440,27 @@ class Instrumenter {
       case 'ForOfStatement': {
         const left = s.left;
         const names = left.type === 'VariableDeclaration' && left.kind !== 'var' ? declarationNames(left) : null;
+        // for…in can't be wrapped, so only for…of comes back to its line between passes.
+        const header = this.steps && s.type === 'ForOfStatement' && !s.await;
         return this.within(names, false, () => {
           if (left.type === 'VariableDeclaration') this.declaration(left);
           else s.left = this.node(left);
           s.right = this.node(s.right);
-          s.body = this.loopBody(s.body, lineOf(s));
+          if (header) s.right = vizCall('each', [lit(lineOf(s)), s.right]);
+          s.body = this.loopBody(s.body, lineOf(s), header);
           return s;
         });
       }
       case 'WhileStatement':
         s.test = this.node(s.test);
-        s.body = this.loopBody(s.body, lineOf(s));
+        // A step before every test: the first replaces the statement's marker (see marked()).
+        if (this.steps) s.test = sequence(this.stepCall(lineOf(s), true), s.test);
+        s.body = this.loopBody(s.body, lineOf(s), true);
         return s;
       case 'DoWhileStatement':
-        s.body = this.loopBody(s.body, lineOf(s));
+        s.body = this.loopBody(s.body, lineOf(s), true);
         s.test = this.node(s.test);
+        if (this.steps) s.test = sequence(this.stepCall(lineOf(s.test), true), s.test);
         return s;
       case 'TryStatement':
         s.block = this.block(s.block);
@@ -417,22 +505,26 @@ class Instrumenter {
   private branch(s: ES.Statement): ES.Statement {
     if (s.type === 'BlockStatement') return this.block(s);
     if (s.type === 'EmptyStatement') return s;
-    return block([this.marker(lineOf(s)), this.statement(s)]);
+    return block(this.marked(s));
   }
 
-  /** A loop body always holds a marker, so every iteration counts a step. */
-  private loopBody(s: ES.Statement, loopLine: number): ES.BlockStatement {
+  /**
+   * A loop body always holds a marker, so every iteration counts a step,
+   * unless the loop's header is itself a step every pass (`header`, in 'lines' mode).
+   */
+  private loopBody(s: ES.Statement, loopLine: number, header = false): ES.BlockStatement {
     let body: ES.BlockStatement;
     if (s.type === 'BlockStatement') body = this.block(s);
     else if (s.type === 'EmptyStatement') body = block([]);
-    else body = block([this.marker(lineOf(s)), this.statement(s)]);
-    if (!body.body.some((x) => this.markers.has(x))) body.body.unshift(this.marker(loopLine));
+    else body = block(this.marked(s));
+    if (!(header && this.steps) && !body.body.some((x) => this.markers.has(x))) body.body.unshift(this.marker(loopLine));
     return body;
   }
 
   private declaration(d: ES.VariableDeclaration) {
     for (const decl of d.declarations) {
       decl.id = this.node(decl.id);
+      if (decl.id.type === 'Identifier' && isFunctionValue(decl.init)) this.names.set(decl.init, decl.id.name);
       if (decl.init) decl.init = this.node(decl.init);
       this.nameHelper(decl.id, decl.init);
     }
@@ -472,44 +564,68 @@ class Instrumenter {
 
   private func(f: AnyFunction) {
     if (f.type !== 'ArrowFunctionExpression' && f.id) this.node(f.id);
+    const name = (f.type !== 'ArrowFunctionExpression' && f.id?.name) || this.names.get(f) || '(anonymous)';
     const body = f.body;
     const names = boundNames({ type: 'ArrayPattern', elements: f.params });
     if (body.type === 'BlockStatement') names.push(...functionNames(body.body));
     const savedScope = this.scope;
     const savedTracked = this.tracked;
+    const savedStepping = this.stepping;
     this.scope = { names, parent: savedScope, fn: true };
     // A generator or async function suspends mid-body and resumes from
-    // elsewhere, so it can't save and restore its caller's line.
+    // elsewhere, so it can't save and restore its caller's line, or have a frame.
     this.tracked = !f.generator && !f.async;
+    this.stepping = this.tracked;
     try {
       f.params = f.params.map((p) => this.node(p));
       if (body.type === 'BlockStatement') {
         const statements = this.statements(body.body);
-        body.body = this.tracked ? this.framed(statements) : statements;
+        body.body = this.tracked ? this.framed(statements, name) : statements;
       } else {
         // An expression body becomes `{ marker; return expr }`, so its events get its line.
         const line = lineOf(body);
         const value = this.node(body);
         const marker = this.marker(line);
         const ret: ES.ReturnStatement = { type: 'ReturnStatement', argument: this.tracked ? vizCall('leave', [id(FRAME), value]) : value };
-        f.body = block(this.tracked ? [this.enterFrame(), marker, ret] : [marker, ret]);
+        if (!this.tracked) f.body = block([marker, ret]);
+        else if (this.lines) f.body = block(this.framed([marker, ret], name));
+        else f.body = block([this.enterFrame(name), marker, ret]);
         (f as ES.ArrowFunctionExpression).expression = false;
       }
     } finally {
       this.scope = savedScope;
       this.tracked = savedTracked;
+      this.stepping = savedStepping;
     }
   }
 
-  private enterFrame(): ES.Statement {
-    return declare('const', id(FRAME), vizCall('enter', []));
+  /** `const __vizD = __viz.enter()`; in 'lines' mode the call is named, for its frame. */
+  private enterFrame(name: string): ES.Statement {
+    return declare('const', id(FRAME), vizCall('enter', this.lines ? [lit(name)] : []));
   }
 
-  /** Directives stay first; then save the caller's line, run, and restore it on falling off the end. */
-  private framed(statements: ES.Statement[]): ES.Statement[] {
+  /**
+   * Directives stay first; then save the caller's line, run, and restore it on
+   * falling off the end. In 'lines' mode the rest runs in a try whose catch
+   * notes an exception leaving the frame and whose finally ends the frame
+   * (recording its return), after any finally blocks of the learner's own.
+   */
+  private framed(statements: ES.Statement[], name: string): ES.Statement[] {
     let k = 0;
     while (k < statements.length && isDirective(statements[k])) k++;
-    return [...statements.slice(0, k), this.enterFrame(), ...statements.slice(k), exprStmt(vizCall('leave', [id(FRAME)]))];
+    const body = [...statements.slice(k), exprStmt(vizCall('leave', [id(FRAME)]))];
+    if (!this.lines) return [...statements.slice(0, k), this.enterFrame(name), ...body];
+    const guarded: ES.TryStatement = {
+      type: 'TryStatement',
+      block: block(body),
+      handler: {
+        type: 'CatchClause',
+        param: id(CAUGHT),
+        body: block([exprStmt(vizCall('unwind', [id(FRAME), id(CAUGHT)])), { type: 'ThrowStatement', argument: id(CAUGHT) }]),
+      },
+      finalizer: block([exprStmt(vizCall('exit', [id(FRAME)]))]),
+    };
+    return [...statements.slice(0, k), this.enterFrame(name), guarded];
   }
 
   private cls(c: ES.ClassDeclaration | ES.ClassExpression) {
@@ -518,20 +634,25 @@ class Instrumenter {
     for (const m of c.body.body) {
       if (m.type === 'MethodDefinition') {
         if (m.computed) m.key = this.node(m.key as ES.Expression);
+        else if (m.key.type === 'Identifier') this.names.set(m.value, m.key.name);
         this.func(m.value);
       } else if (m.type === 'PropertyDefinition') {
         if (m.computed) m.key = this.node(m.key as ES.Expression);
+        else if (m.key.type === 'Identifier' && isFunctionValue(m.value)) this.names.set(m.value, m.key.name);
         const value = m.value;
         if (value) m.value = this.within([], true, () => this.node(value));
       } else if (m.type === 'StaticBlock') {
         const savedTracked = this.tracked;
+        const savedStepping = this.stepping;
         this.tracked = false;
+        this.stepping = false;
         try {
           this.within(functionNames(m.body), true, () => {
             m.body = this.statements(m.body);
           });
         } finally {
           this.tracked = savedTracked;
+          this.stepping = savedStepping;
         }
       }
     }
@@ -557,6 +678,13 @@ class Instrumenter {
       case 'ClassExpression':
         this.cls(n);
         return n;
+      // Name anonymous functions after what they're assigned to, for their frames.
+      case 'AssignmentExpression':
+        if (n.left.type === 'Identifier' && isFunctionValue(n.right)) this.names.set(n.right, n.left.name);
+        break;
+      case 'Property':
+        if (!n.computed && n.key.type === 'Identifier' && isFunctionValue(n.value)) this.names.set(n.value, n.key.name);
+        break;
       default:
         break;
     }

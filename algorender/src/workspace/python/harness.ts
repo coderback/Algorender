@@ -19,16 +19,27 @@
 // - Every event takes its line and variables from the innermost frame of the
 //   learner's code, so helpers and while-condition re-checks get them right.
 // - sys.settrace counts executed lines, so an endless loop stops with a message.
+// - In 'lines' mode the same tracer records memory as `step` events: before
+//   each line, when a learner function returns (its last instruction a return,
+//   not an exception unwinding it), and when an exception leaves a frame. The
+//   stack is the learner's frames under a Global frame drawn from the module's
+//   namespace, so it outlives the module's own frame when an entry function is
+//   called afterwards; the heap is what those frames reach, breadth first.
+//   Every object given an id is kept alive for the run, so id() is never
+//   reused and two names for one list always share an id.
 
 export const HARNESS = String.raw`
 import ast
 import builtins
+import dis
 import functools
+import itertools
 import json
 import math
 import operator
 import sys
 import time
+import types
 
 LEARNER = '<learner>'
 
@@ -40,6 +51,17 @@ MAX_SAFE_INT = 2 ** 53 - 1
 # As protocol.ts: cells one table()/array() call may make, and cells a write's 'from' lists.
 MAX_CELLS = 10000
 MAX_FROM = 32
+# 'lines' mode, as protocol.ts: items a heap object lists, objects one step
+# lists, and how deep calls may nest.
+MAX_ITEMS = 20
+MAX_OBJECTS = 100
+MAX_DEPTH = 100
+# A frame left by a return or a yield ends on one of these; any other last
+# instruction means an exception unwound it.
+_RETURNS = {dis.opmap[name] for name in ('RETURN_VALUE', 'RETURN_CONST', 'YIELD_VALUE') if name in dis.opmap}
+# co_flags of a function's code (CO_OPTIMIZED): set for functions, not for a
+# module or a class body.
+_OPTIMIZED = 0x0001
 
 _OPS = {
     '<': operator.lt, '<=': operator.le, '>': operator.gt,
@@ -54,7 +76,9 @@ _SKIP = object()
 
 class _Stop(BaseException):
     """Ends a run at a limit. A BaseException, so 'except Exception:' in the
-    learner's code can't swallow it."""
+    learner's code can't swallow it. Its line, when set, is where to report it."""
+
+    line = None
 
 
 # The run in progress; the instrumented code and VisualList report to it.
@@ -785,7 +809,11 @@ def _marked(stmt):
         return [stmt]  # must stay first
     clear = ast.Expr(ast.Call(func=ast.Attribute(ast.Name('_viz_reads', ast.Load()), 'clear', ast.Load()),
                               args=[], keywords=[]))
-    return [ast.copy_location(clear, stmt), stmt]
+    # On the statement's first line only: spanning a def's whole body would
+    # make the tracer see its last line run too.
+    clear.lineno = clear.end_lineno = stmt.lineno
+    clear.col_offset = clear.end_col_offset = stmt.col_offset
+    return [clear, stmt]
 
 
 class _Statements(ast.NodeTransformer):
@@ -799,6 +827,121 @@ class _Statements(ast.NodeTransformer):
             if isinstance(block, list) and block and isinstance(block[0], ast.stmt):
                 setattr(node, field, [x for stmt in block for x in _marked(stmt)])
         return node
+
+
+# ---------------------------------------------------------------------------
+# Memory, for 'lines' mode
+# ---------------------------------------------------------------------------
+
+def _prim(value):
+    """A value drawn inline, written as Python prints it, or None for an object."""
+    kind = type(value)
+    if value is None:
+        return {'prim': 'None', 'type': 'none'}
+    if kind is bool:
+        return {'prim': repr(value), 'type': 'boolean'}
+    if kind is int or kind is float or kind is complex:
+        return {'prim': _number_text(value), 'type': 'number'}
+    if kind is str:
+        return {'prim': _quoted(value), 'type': 'string'}
+    return None
+
+
+def _number_text(x):
+    try:
+        text = repr(x)
+    except ValueError:  # an int too long to turn into text
+        return 'a number too long to show'
+    return text if len(text) <= STR_SHOWN else f'{text[:STR_SHOWN // 2]}… ({len(text)} digits)'
+
+
+def _quoted(text):
+    """A string as repr writes it, cut to STR_SHOWN characters inside its quotes."""
+    if len(text) <= STR_SHOWN:
+        return repr(text)
+    cut = repr(text[:STR_SHOWN - 1])
+    return cut[:-1] + '…' + cut[-1]
+
+
+def _shown(name, value):
+    """Whether a frame's name belongs in the diagram: not the harness's own
+    names, dunders, modules, or the table() and array() helpers."""
+    if not isinstance(name, str) or not name.isidentifier() or name.startswith('_viz'):
+        return False
+    if name.startswith('__') and name.endswith('__'):
+        return False
+    return not isinstance(value, types.ModuleType) and value is not table and value is not array
+
+
+_FUNCTIONS = (types.FunctionType, types.BuiltinFunctionType, types.MethodType)
+
+
+class _Heap:
+    """The objects one step reaches from its frames, breadth first, each listed
+    once under its id for the run. Past MAX_OBJECTS a reference shows as …."""
+
+    def __init__(self, run):
+        self.run = run
+        self.objects = []
+        self.slot = {}
+        self.queue = []
+
+    def value(self, x):
+        prim = _prim(x)
+        if prim is not None:
+            return prim
+        oid = self.run.object_id(x)
+        if oid not in self.slot:
+            if len(self.slot) >= MAX_OBJECTS:
+                return {'prim': '…', 'type': 'none'}
+            self.slot[oid] = len(self.objects)
+            self.objects.append(None)
+            self.queue.append((oid, x))
+        return {'ref': oid}
+
+    def fill(self):
+        """Describes every object reached so far, and whatever those reach."""
+        k = 0
+        while k < len(self.queue):
+            oid, x = self.queue[k]
+            k += 1
+            self.objects[self.slot[oid]] = self.describe(oid, x)
+        return self.objects
+
+    def items(self, oid, kind, name, values):
+        shown = [self.value(v) for v in itertools.islice(values, MAX_ITEMS)]
+        return {'id': oid, 'kind': kind, 'type': name, 'items': shown, 'more': max(0, len(values) - MAX_ITEMS)}
+
+    def describe(self, oid, x):
+        kind = type(x)
+        # Visual collections are lists to the learner; their cells are read
+        # directly, so drawing them records no reads.
+        if kind is VisualList or kind is VisualRow:
+            return self.items(oid, 'list', 'list', x._values)
+        if kind is VisualGrid:
+            return self.items(oid, 'list', 'list', x._rows)
+        if isinstance(x, list):
+            return self.items(oid, 'list', kind.__name__, x)
+        if isinstance(x, tuple):
+            return self.items(oid, 'tuple', kind.__name__, x)
+        if isinstance(x, (set, frozenset)):
+            return self.items(oid, 'set', kind.__name__, x)
+        if isinstance(x, dict):
+            entries = [[self.value(k), self.value(v)] for k, v in itertools.islice(x.items(), MAX_ITEMS)]
+            return {'id': oid, 'kind': 'dict', 'type': kind.__name__, 'entries': entries, 'more': max(0, len(x) - MAX_ITEMS)}
+        if isinstance(x, type):
+            return {'id': oid, 'kind': 'function', 'type': 'class', 'name': x.__name__}
+        if isinstance(x, _FUNCTIONS):
+            return {'id': oid, 'kind': 'function', 'type': 'function', 'name': getattr(x, '__name__', 'function')}
+        # Anything else is drawn by its attributes, read without running the
+        # learner's __getattr__ or properties.
+        try:
+            attrs = object.__getattribute__(x, '__dict__')
+        except Exception:
+            attrs = None
+        named = [(k, v) for k, v in attrs.items() if isinstance(k, str) and not k.startswith('__')] if isinstance(attrs, dict) else []
+        fields = [[k, self.value(v)] for k, v in named[:MAX_ITEMS]]
+        return {'id': oid, 'kind': 'object', 'type': kind.__name__, 'fields': fields, 'more': max(0, len(named) - MAX_ITEMS)}
 
 
 # ---------------------------------------------------------------------------
@@ -826,6 +969,23 @@ class _Run:
         self.steps = 0
         # Set when a limit stopped the run, even if the learner's code caught it.
         self.stopped = None
+        # 'lines' mode: memory at every step.
+        self.lines = request.get('mode') == 'lines'
+        # The compiled module: its frame is the Global frame.
+        self.code = None
+        self.global_line = 1
+        # Objects get 'o1', 'o2'… in the order first seen, and are kept alive so
+        # no other object can take their id() during the run.
+        self.object_ids = {}
+        self.kept = []
+        # Each live call's frame id ('f1', 'f2'…), by id(frame), and each
+        # frame's names in the order first bound (a dict used as an ordered set).
+        self.frame_ids = {}
+        self.order = {}
+        self.calls = 0
+        self.depth = 0
+        # The exception passing through each frame, by id(frame).
+        self.raised = {}
 
     def new_id(self, name, kind):
         """(name, id) for a new collection: the variable's name, or table1, array2…;
@@ -867,16 +1027,23 @@ class _Run:
                 caller[key] = None
         self._bind_reads(caller)
 
-    def stop(self, message):
+    def stop(self, message, line=None):
         self.stopped = message
-        raise _Stop(message)
+        stop = _Stop(message)
+        stop.line = line
+        raise stop
+
+    def limit_message(self):
+        if self.lines:
+            return f'Stopped after {self.max_events:,} steps: is there a loop that never ends?'
+        return (f'Stopped after {self.max_events:,} events: '
+                'the code changed the array more times than the visual can show.')
 
     def emit(self, kind, line=_SKIP, **fields):
         if self.stopped is not None:
             raise _Stop(self.stopped)
         if len(self.events) >= self.max_events:
-            self.stop(f'Stopped after {self.max_events:,} events: '
-                      'the code changed the array more times than the visual can show.')
+            self.stop(self.limit_message())
         event = {'kind': kind, **fields}
         if line is _SKIP:
             frame = _learner_frame()
@@ -893,6 +1060,8 @@ class _Run:
     def trace_calls(self, frame, event, arg):
         if frame.f_code.co_filename == LEARNER:
             self.enter()
+            if self.drawn(frame.f_code):
+                self.called(frame)
             return self.trace_lines
         return None
 
@@ -901,9 +1070,101 @@ class _Run:
             self.steps += 1
             if self.steps > self.max_steps:
                 self.stop(f'Stopped after {self.max_steps:,} steps: is there a loop that never ends?')
+            if self.drawn(frame.f_code):
+                self.step('line', frame)
         elif event == 'return':
             self.leave()
+            if self.drawn(frame.f_code):
+                self.returned(frame, arg)
+        elif event == 'exception' and self.drawn(frame.f_code):
+            self.raised[id(frame)] = arg[1]
         return self.trace_lines
+
+    # 'lines' mode --------------------------------------------------------------
+
+    def drawn(self, code):
+        """In 'lines' mode, whether code's frame is drawn and stepped through:
+        the module and every function, but not a class body, which runs as
+        one step of the frame that defines the class (as in JS)."""
+        return self.lines and (code is self.code or bool(code.co_flags & _OPTIMIZED))
+
+    def called(self, frame):
+        if frame.f_code is self.code:
+            return
+        if self.depth >= MAX_DEPTH:
+            # Reported on the line that made the call, not the refused function's def.
+            caller = frame.f_back
+            while caller is not None and caller.f_code.co_filename != LEARNER:
+                caller = caller.f_back
+            self.stop(f'Stopped at {MAX_DEPTH} nested calls: is there a recursion that never ends?',
+                      caller.f_lineno if caller is not None else None)
+        self.depth += 1
+        self.calls += 1
+        self.frame_ids[id(frame)] = f'f{self.calls}'
+
+    def returned(self, frame, value):
+        key = id(frame)
+        error = self.raised.pop(key, None)
+        module = frame.f_code is self.code
+        try:
+            if self.stopped is None:
+                if frame.f_code.co_code[frame.f_lasti] in _RETURNS:
+                    self.step('return', frame, _SKIP if module else value)
+                elif error is not None and not isinstance(error, _Stop):
+                    self.step('exception', frame, message=_message(error))
+        finally:
+            if not module:
+                self.depth -= 1
+                self.order.pop(self.frame_ids.pop(key, None), None)
+
+    def object_id(self, x):
+        key = id(x)
+        oid = self.object_ids.get(key)
+        if oid is None:
+            self.kept.append(x)
+            oid = self.object_ids[key] = f'o{len(self.kept)}'
+        return oid
+
+    def step(self, event, frame, returning=_SKIP, message=None):
+        """Records memory as frame (the innermost learner frame) stands now."""
+        if self.stopped is not None:
+            raise _Stop(self.stopped)
+        if len(self.events) >= self.max_events:
+            self.stop(self.limit_message())
+        heap = _Heap(self)
+        stack = self.stack(frame, heap)
+        if returning is not _SKIP:
+            stack[-1]['returning'] = heap.value(returning)
+        record = {'kind': 'step', 'event': event, 'line': stack[-1]['line'], 'stack': stack, 'heap': heap.fill()}
+        if message is not None:
+            record['message'] = message
+        self.events.append(record)
+
+    def stack(self, frame, heap):
+        """The Global frame, then the learner's calls outward-in; harness frames left out."""
+        calls = []
+        while frame is not None:
+            code = frame.f_code
+            if code is self.code:
+                self.global_line = frame.f_lineno or self.global_line
+            elif code.co_filename == LEARNER and self.drawn(code):
+                calls.append(frame)
+            frame = frame.f_back
+        stack = [self.frame('global', 'Global frame', self.global_line, self.namespace, heap)]
+        for f in reversed(calls):
+            fid = self.frame_ids.get(id(f), 'f0')
+            stack.append(self.frame(fid, f.f_code.co_name, f.f_lineno or 0, f.f_locals, heap))
+        return stack
+
+    def frame(self, fid, fn, line, scope, heap):
+        order = self.order.setdefault(fid, {})
+        shown = {}
+        for name, value in list(scope.items()):
+            if _shown(name, value):
+                shown[name] = value
+                order.setdefault(name, None)
+        names = [name for name in order if name in shown]
+        return {'id': fid, 'fn': fn, 'line': line, 'locals': [[name, heap.value(shown[name])] for name in names]}
 
     def print(self, *args, sep=' ', end='\n', file=None, flush=False):
         if sep is None:
@@ -965,6 +1226,7 @@ def _run(request):
                  '_viz_cmp': _viz_cmp, '_viz_cell': _viz_cell, '_viz_named': _viz_named,
                  '_viz_reads': run.reads, 'table': table, 'array': array}
     run.namespace = namespace
+    run.code = code
     returned = None
     error = None
     real_print = builtins.print
@@ -977,16 +1239,17 @@ def _run(request):
         sys.settrace(run.trace_calls)
         try:
             exec(code, namespace)
-            fn = namespace.get(entry)
-            if not callable(fn):
+            # No entry: the top-level code was the whole program.
+            fn = namespace.get(entry) if entry else None
+            if entry and not callable(fn):
                 error = _error('runtime', f'Define a function called {entry}.', None)
-            else:
+            elif entry:
                 args = [run.arg(spec) for spec in request.get('args') or []]
                 returned = fn(*args)
         finally:
             sys.settrace(None)
     except _Stop as e:
-        error = _error('limit', str(e), _error_line(e))
+        error = _error('limit', str(e), e.line if e.line is not None else _error_line(e))
     except BaseException as e:
         error = _error('runtime', _message(e), _error_line(e))
     finally:

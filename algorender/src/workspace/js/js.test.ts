@@ -2,13 +2,33 @@
 
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { CONTRACT, entryFor } from '../contract';
-import { type Arg, DEFAULT_LIMITS, type Language, type Limits, MAX_FROM, type RunEvent, type RunResult } from '../protocol';
+import { CONTRACT, drawnSteps, entryFor, expectedSteps, stepProblems } from '../contract';
+import {
+  type Arg,
+  DEFAULT_LIMITS,
+  type Language,
+  type Limits,
+  MAX_DEPTH,
+  MAX_FROM,
+  MAX_ITEMS,
+  MAX_OBJECTS,
+  type MemValue,
+  type RunEvent,
+  type RunMode,
+  type RunResult,
+} from '../protocol';
 import { instrument } from './instrument';
 import { runJs } from './runtime';
 
-function run(code: string, entry: string, args: Arg[] = [], limits: Partial<Limits> = {}, language: Language = 'javascript'): RunResult {
-  return runJs({ language, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits } });
+function run(
+  code: string,
+  entry: string,
+  args: Arg[] = [],
+  limits: Partial<Limits> = {},
+  language: Language = 'javascript',
+  mode?: RunMode,
+): RunResult {
+  return runJs({ language, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode });
 }
 
 const arr = (values: number[], name = 'arr'): Arg => ({ kind: 'array', name, values });
@@ -23,11 +43,17 @@ for (const language of ['javascript', 'typescript'] as const) {
     for (const c of CONTRACT.filter((c) => c.code[language] ?? c.code.javascript)) {
       it(c.name, () => {
         const code = c.code[language] ?? c.code.javascript!;
-        const r = run(code, entryFor(c, language), c.args, c.limits, language);
+        const r = run(code, entryFor(c, language), c.args, c.limits, language, c.mode);
         const want = c.expect;
         if (want.events) expect(r.events).toEqual(want.events);
         else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
         if (want.count !== undefined) expect(r.events).toHaveLength(want.count);
+        if (want.steps) {
+          const steps = drawnSteps(r.events);
+          expect(want.firstSteps ? steps.slice(0, want.steps.length) : steps).toEqual(expectedSteps(want.steps, language));
+        }
+        if (c.mode === 'lines') expect(stepProblems(r.events)).toEqual([]);
+        if (want.prints) expect(texts(r)).toEqual(want.prints);
         if (want.arrays) expect(r.arrays).toEqual(want.arrays);
         if (want.grids) expect(r.grids).toEqual(want.grids);
         if ('returned' in want) expect(r.returned).toEqual(want.returned);
@@ -725,6 +751,216 @@ function mergeSort(a) {
   return out.concat(left.slice(i), right.slice(j));
 }`,
 };
+
+describe('lines mode', () => {
+  type Step = Extract<RunEvent, { kind: 'step' }>;
+  const lines = (code: string, entry = '', args: Arg[] = [], limits: Partial<Limits> = {}, language: Language = 'javascript') =>
+    run(code, entry, args, limits, language, 'lines');
+  const steps = (r: RunResult) => only(r, 'step');
+  /** The innermost frame's names at a step, as name → value. */
+  const names = (s: Step) => Object.fromEntries(s.stack.at(-1)!.locals);
+  const object = (s: Step, value: MemValue) => s.heap.find((o) => 'ref' in value && o.id === value.ref)!;
+  const end = (r: RunResult) => steps(r).at(-1)!;
+  const where = (r: RunResult) => steps(r).map((s) => `${s.event === 'line' ? '' : `${s.event} `}${s.line}`);
+
+  it('writes primitives as JS prints them', () => {
+    const r = lines(`const word = "it's";
+const flag = false;
+const nothing = null;
+let unset;
+const half = 0.1 + 0.2;
+const neg = -0;
+const big = 10n;
+const long = "x".repeat(50);
+const nan = NaN;
+`);
+    expect(r.error).toBeNull();
+    expect(names(end(r))).toEqual({
+      word: { prim: `"it's"`, type: 'string' },
+      flag: { prim: 'false', type: 'boolean' },
+      nothing: { prim: 'null', type: 'none' },
+      unset: { prim: 'undefined', type: 'none' },
+      half: { prim: '0.30000000000000004', type: 'number' },
+      neg: { prim: '-0', type: 'number' },
+      big: { prim: '10n', type: 'number' },
+      long: { prim: `"${'x'.repeat(39)}…"`, type: 'string' },
+      nan: { prim: 'NaN', type: 'number' },
+    });
+  });
+
+  it('draws arrays, objects, Maps, Sets, instances, errors, functions and classes, without running getters', () => {
+    const r = lines(`class Point {
+  constructor(x) {
+    this.x = x;
+  }
+}
+const square = (v) => v * v;
+const m = new Map([["k", [1]]]);
+const s = new Set([3]);
+const p = new Point(4);
+Object.defineProperty(p, "boom", { enumerable: true, get() { throw new Error("read"); } });
+const err = new RangeError("bad");
+`);
+    expect(r.error).toBeNull();
+    const last = end(r);
+    const drawn = Object.fromEntries(Object.entries(names(last)).map(([name, v]) => [name, object(last, v)]));
+    expect(drawn.Point).toMatchObject({ kind: 'function', type: 'class', name: 'Point' });
+    expect(drawn.square).toMatchObject({ kind: 'function', type: 'function', name: 'square' });
+    expect(drawn.m).toMatchObject({ kind: 'dict', type: 'Map', entries: [[{ prim: '"k"' }, { ref: expect.any(String) }]], more: 0 });
+    expect(drawn.s).toMatchObject({ kind: 'set', type: 'Set', items: [{ prim: '3' }] });
+    expect(drawn.p).toEqual({ id: expect.any(String), kind: 'object', type: 'Point', fields: [['x', { prim: '4', type: 'number' }]], more: 0 });
+    expect(drawn.err).toMatchObject({ kind: 'object', type: 'RangeError', fields: [['message', { prim: '"bad"' }]] });
+  });
+
+  it('leaves out names in their temporal dead zone, shows a var as hoisted, and a function from its line on', () => {
+    const r = lines(`console.log(1);
+var v = 2;
+let t = 3;
+function f() {}
+`);
+    // Each step is memory before its line runs: t appears after line 3, f after line 4.
+    expect(steps(r).map((s) => Object.keys(names(s)))).toEqual([['v'], ['v'], ['v'], ['v', 't'], ['v', 't', 'f']]);
+    expect(names(steps(r)[0]).v).toEqual({ prim: 'undefined', type: 'none' });
+  });
+
+  it('shows _names, which the visual events leave out', () => {
+    const r = lines(`const _x = 1;
+console.log(_x);
+`);
+    expect(Object.keys(names(end(r)))).toEqual(['_x']);
+    expect(only(r, 'print')[0].vars).toEqual({});
+  });
+
+  it('lists the first MAX_ITEMS items and counts the rest, and at most MAX_OBJECTS objects a step', () => {
+    const r = lines(`const nums = Array.from({ length: 25 }, (_, i) => i);
+const cube = Array.from({ length: 20 }, () => Array.from({ length: 20 }, (_, j) => [j]));
+`);
+    expect(r.error).toBeNull();
+    const last = end(r);
+    const nums = object(last, names(last).nums);
+    expect(nums).toMatchObject({ kind: 'list', more: 25 - MAX_ITEMS });
+    expect(nums.kind === 'list' && nums.items).toHaveLength(MAX_ITEMS);
+    expect(last.heap).toHaveLength(MAX_OBJECTS);
+    expect(stepProblems(r.events)).toEqual([]);
+  });
+
+  it('keeps ids stable for the run and never reuses one', () => {
+    const r = lines(`let x;
+for (let i = 0; i < 3; i++) {
+  x = [i];
+}
+const y = x;
+`);
+    const ids = new Set(steps(r).flatMap((s) => names(s).x ?? []).flatMap((x) => ('ref' in x ? [x.ref] : [])));
+    expect(ids.size).toBe(3);
+    expect(names(end(r)).y).toEqual(names(end(r)).x);
+  });
+
+  it('shows array and grid arguments as plain Arrays, a row kept in a name as the grid’s own row', () => {
+    const r = lines(`function f(arr, grid) {
+  const row = grid[1];
+  row[0] = arr[0];
+  return row;
+}
+`, 'f', [arr([7]), { kind: 'grid', name: 'grid', values: [[1, 2], [3, 4]] }]);
+    expect(r.error).toBeNull();
+    const last = end(r);
+    const { arr: a, grid, row } = names(last);
+    expect(object(last, a)).toMatchObject({ kind: 'list', type: 'Array', items: [{ prim: '7' }] });
+    const rows = object(last, grid);
+    expect(rows.kind === 'list' && rows.items[1]).toEqual(row);
+    expect(object(last, row)).toMatchObject({ kind: 'list', type: 'Array', items: [{ prim: '7' }, { prim: '4' }] });
+    // The visual events still come, and drawing memory recorded no reads.
+    expect(only(r, 'cellWrite')).toMatchObject([{ grid: 'grid', row: 1, col: 0, value: 7, from: [] }]);
+    expect(last.stack.at(-1)!.returning).toEqual(row);
+  });
+
+  it('comes back to a for…of loop’s line with the item it just used, but not after a break', () => {
+    const r = lines(`let total = 0;
+for (const x of [1, 2, 3]) {
+  if (x === 2) break;
+  total += x;
+}
+`);
+    expect(where(r)).toEqual(['1', '2', '3', '4', '2', '3', 'return 3']);
+    expect(names(steps(r)[4]).x).toEqual({ prim: '1', type: 'number' });
+  });
+
+  it('makes statements sharing a line one step, but a loop on one line still steps every pass', () => {
+    const r = lines(`let a = 1; let b = 2;
+let n = 0; while (n < 2) n++;
+`);
+    expect(where(r)).toEqual(['1', '2', '2', '2', '2', 'return 2']);
+    expect(steps(r).slice(2).map((s) => names(s).n)).toEqual([0, 1, 2, 2].map((n) => ({ prim: String(n), type: 'number' })));
+  });
+
+  it('records a return after the function’s own finally block has run', () => {
+    const r = lines(`function f() {
+  try {
+    return 1;
+  } finally {
+    console.log("cleanup");
+  }
+}
+f();
+`);
+    expect(where(r)).toEqual(['1', '8', '2', '3', '5', 'return 5', 'return 8']);
+    expect(steps(r)[5].stack.at(-1)!.returning).toEqual({ prim: '1', type: 'number' });
+    expect(kinds(r).indexOf('print')).toBe(5);
+  });
+
+  it('runs generators and async functions without frames or steps of their own', () => {
+    const r = lines(`function* count(n) {
+  for (let i = 0; i < n; i++) {
+    yield i;
+  }
+}
+let total = 0;
+for (const k of count(2)) {
+  total += k;
+}
+`);
+    expect(r.error).toBeNull();
+    expect(steps(r).every((s) => s.stack.length === 1)).toBe(true);
+    expect(names(end(r)).total).toEqual({ prim: '1', type: 'number' });
+    expect(stepProblems(r.events)).toEqual([]);
+  });
+
+  it('names frames after the function, variable, property or method; callbacks are anonymous', () => {
+    const r = lines(`const half = function (n) { return n / 2; };
+const obj = { twice: (n) => n * 2 };
+class C { m() { return 1; } }
+half(2);
+obj.twice(2);
+new C().m();
+[1].map((v) => v);
+`);
+    expect(new Set(steps(r).flatMap((s) => s.stack.slice(1).map((f) => f.fn)))).toEqual(new Set(['half', 'twice', 'm', '(anonymous)']));
+  });
+
+  it('stops a runaway recursion at MAX_DEPTH calls, on the line that made the call', () => {
+    const r = lines(`function down(n) {
+  return down(n + 1);
+}
+down(0);
+`);
+    expect(r.error).toEqual({ kind: 'limit', line: 2, message: `Stopped at ${MAX_DEPTH} nested calls: is there a recursion that never ends?` });
+    expect(Math.max(...steps(r).map((s) => s.stack.length))).toBe(MAX_DEPTH + 1);
+    expect(stepProblems(r.events)).toEqual([]);
+  });
+
+  it('keeps TypeScript’s lines, and leaves visual mode as it was', () => {
+    const ts = lines(`const n: number = 1;
+interface Shape { size: number }
+const s: Shape = { size: n };
+`, '', [], {}, 'typescript');
+    expect(where(ts)).toEqual(['1', '3', 'return 3']);
+    expect(steps(run(`function f() { return 1; }`, 'f'))).toEqual([]);
+    const visual = instrument('function f() { return 1; }', 'javascript').code;
+    expect(visual).not.toMatch(/__viz\.(step|loop|exit|unwind|ended)/);
+    expect(instrument('function f() { return 1; }', 'javascript', { lines: true }).code).toMatch(/__viz\.exit\(__vizD\)/);
+  });
+});
 
 describe('property: events replay to the final arrays', () => {
   for (const [name, code] of Object.entries(SORTS)) {

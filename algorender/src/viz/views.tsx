@@ -7,6 +7,7 @@ import { GraphView } from './graph/GraphView';
 import { GridView } from './grid/GridView';
 import { HashView } from './hash/HashView';
 import { LinearView } from './linear/LinearView';
+import { MemoryView } from './memory/MemoryView';
 import { TextView } from './text/TextView';
 import { TreeView } from './tree/TreeView';
 
@@ -23,4 +24,5 @@ export const VIEWS: Record<ViewKind, ComponentType<{ state: any }>> = {
   linear: LinearView,
   hash: HashView,
   text: TextView,
+  memory: MemoryView,
 };

@@ -5,7 +5,7 @@ import type { MarkKey } from '@/viz/marks';
  * Which renderer draws a module's state. Each kind maps to one component in
  * src/viz/views.tsx, and the module's state type must match that view.
  */
-export type ViewKind = 'array' | 'grid' | 'graph' | 'tree' | 'linear' | 'hash' | 'text';
+export type ViewKind = 'array' | 'grid' | 'graph' | 'tree' | 'linear' | 'hash' | 'text' | 'memory';
 
 // ───────────────────────────── inputs ─────────────────────────────
 

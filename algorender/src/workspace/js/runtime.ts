@@ -12,21 +12,34 @@
 // line()) and writes, and neither can be replaced or resized. Every event is
 // recorded before its change is applied, so the final collections always
 // match the events, even when that event is the one that stops the run.
+//
+// In 'lines' mode the runtime also keeps a stack of frames (the Global frame,
+// then one per call from enter() to exit()), each with the line it is on and
+// its latest capture, and records a `step` with every frame's variables and
+// the objects they reach at each step(), return and exception. Objects get
+// ids from a WeakMap, in the order first seen, so ids are stable for the run
+// and never reused.
 
 import type { VarValue } from '@/engine/types';
 import {
   MAX_CELLS,
+  MAX_DEPTH,
   MAX_FROM,
+  MAX_ITEMS,
+  MAX_OBJECTS,
   type Arg,
   type CompareOp,
   type GridCell,
+  type HeapObject,
   type Json,
   type Limits,
+  type MemValue,
   type Operand,
   type RunError,
   type RunEvent,
   type RunRequest,
   type RunResult,
+  type StackFrame,
 } from '../protocol';
 import { instrument, LearnerSyntaxError } from './instrument';
 
@@ -76,10 +89,61 @@ const isCell = (x: unknown): x is Cell | GridCellValue => x instanceof Cell || x
 type Capture = (() => Record<string, unknown>) | null;
 /** What a visual Proxy stands for. `id` is unique in the run; `name` is the learner's variable, for messages. */
 type ArrayInfo = { kind: 'array'; id: string; name: string; data: number[] };
-type GridInfo = { kind: 'grid'; id: string; name: string; data: (number | null)[][] };
+/** `rows` are the row Proxies the learner's code sees, so a row kept in a variable is the same object in memory. */
+type GridInfo = { kind: 'grid'; id: string; name: string; data: (number | null)[][]; rows: unknown[] };
 type RowInfo = { kind: 'row'; grid: GridInfo; r: number; data: (number | null)[] };
 type Visual = ArrayInfo | GridInfo | RowInfo;
 type At = { line: number | null; vars: Record<string, VarValue> };
+
+/** 'lines' mode: a call as the memory diagram draws it. */
+type MemFrame = {
+  id: string;
+  fn: string;
+  /** enter()'s handle for the call (0 for the Global frame). */
+  depth: number;
+  line: number;
+  /** Reads the frame's variables as its latest step left them. */
+  capture: Capture;
+  /** Names in the order first bound. */
+  order: string[];
+  seen: Set<string>;
+  returned?: { value: unknown };
+  threw?: { error: unknown };
+};
+
+/** The objects one step reaches, breadth first: each listed once, at the slot it was first reached in. */
+type Heap = { objects: HeapObject[]; slot: Map<string, number>; queue: [string, object][] };
+
+/** A value drawn inline, written as JS prints it, or null for an object. */
+function primitive(v: unknown): MemValue | null {
+  switch (typeof v) {
+    case 'number':
+      return { prim: Object.is(v, -0) ? '-0' : String(v), type: 'number' };
+    case 'bigint':
+      return { prim: `${v}n`, type: 'number' };
+    case 'string':
+      return { prim: v.length <= STR_SHOWN ? JSON.stringify(v) : `${JSON.stringify(v.slice(0, STR_SHOWN - 1)).slice(0, -1)}…"`, type: 'string' };
+    case 'boolean':
+      return { prim: String(v), type: 'boolean' };
+    case 'undefined':
+      return { prim: 'undefined', type: 'none' };
+    case 'symbol':
+      return { prim: v.toString(), type: 'string' };
+    default:
+      return v === null ? { prim: 'null', type: 'none' } : null;
+  }
+}
+
+/** Past MAX_OBJECTS in one step, a reference shows as this. */
+const NOT_SHOWN: MemValue = { prim: '…', type: 'none' };
+
+/** An object's constructor name, read without running getters. */
+function typeName(x: object, fallback: string): string {
+  const proto: unknown = Object.getPrototypeOf(x);
+  if (proto === null || typeof proto !== 'object') return fallback;
+  const ctor: unknown = Object.getOwnPropertyDescriptor(proto, 'constructor')?.value;
+  return typeof ctor === 'function' && ctor.name ? ctor.name : fallback;
+}
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 /** Values as the learner reads them in a message: `[1, null]`. */
@@ -186,9 +250,19 @@ class Run {
   private readonly frames: unknown[] = [];
   private readonly visual = new WeakMap<object, Visual>();
   private readonly limits: Limits;
+  /** 'lines' mode: memory at every step. */
+  private readonly lines: boolean;
+  /** 'lines' mode: the Global frame, then the calls in progress. */
+  private readonly stack: MemFrame[] = [];
+  private calls = 0;
+  private readonly objectIds = new WeakMap<object, string>();
+  private objectCount = 0;
+  /** Set while memory is read, so a getter or Proxy trap of the learner's records no steps of its own. */
+  private reading = false;
 
-  constructor(limits: Limits) {
+  constructor(limits: Limits, lines = false) {
     this.limits = limits;
+    this.lines = lines;
   }
 
   /** The `__viz` object the instrumented code calls. */
@@ -236,13 +310,22 @@ class Run {
       if (fn === this.helpers.array) return (values: unknown, fill: unknown = 0) => this.makeArray(name, values, fill);
       return fn;
     },
-    enter: (): number => {
+    enter: (name?: string): number => {
+      if (this.lines && this.stack.length > MAX_DEPTH) {
+        this.stop(`Stopped at ${MAX_DEPTH} nested calls: is there a recursion that never ends?`, this.line);
+      }
       this.frames.push(this.line, this.capture);
       this.callerReads.push(this.reads);
       this.reads = new Map();
-      return this.frames.length;
+      const depth = this.frames.length;
+      if (this.lines) {
+        this.stack.push({ id: `f${++this.calls}`, fn: name ?? '(anonymous)', depth, line: this.line ?? 0, capture: null, order: [], seen: new Set() });
+      }
+      return depth;
     },
     leave: (depth: number, value?: unknown): unknown => {
+      const frame = this.stack.at(-1);
+      if (frame?.depth === depth) frame.returned = { value };
       // Frames that threw never left, so restore by depth, dropping theirs too.
       if (depth >= 2 && depth <= this.frames.length) {
         this.line = this.frames[depth - 2] as number | null;
@@ -262,7 +345,223 @@ class Run {
     rethrow: (e: unknown) => {
       if (e instanceof StopSignal || this.stopped || this.done) throw STOP;
     },
+
+    // 'lines' mode ----------------------------------------------------------------
+
+    /**
+     * line(), and a step of the innermost frame. Statements sharing a line are
+     * one step, as in Python: a step just like the one before isn't repeated.
+     */
+    step: (n: number, capture: Capture) => {
+      const last = this.events.at(-1);
+      const top = this.stack.at(-1);
+      const same = last?.kind === 'step' && last.event === 'line' && last.line === n && last.stack.at(-1)?.id === top?.id;
+      this.stepAt(n, capture, !same);
+    },
+    /** A loop back at its line: always a step, even on the line it just ran. */
+    loop: (n: number, capture: Capture) => this.stepAt(n, capture, true),
+    /** The top level's names as it ends, for its 'return' step. */
+    ended: (capture: Capture) => {
+      if (this.stack.length === 1) this.stack[0].capture = capture;
+    },
+    /** for…of's iterable: before each fetch after the first, the loop's line is a step again. */
+    each: (n: number, iterable: unknown): unknown => {
+      const make = iterable == null ? undefined : (iterable as { [Symbol.iterator]?: unknown })[Symbol.iterator];
+      if (typeof make !== 'function') return iterable; // for…of throws its own error
+      const it = make.call(iterable) as Iterator<unknown>;
+      let started = false;
+      return {
+        [Symbol.iterator]() {
+          return this;
+        },
+        next: (...args: [] | [unknown]) => {
+          if (started) this.again(n);
+          started = true;
+          return it.next(...args);
+        },
+        return: (value?: unknown) => (typeof it.return === 'function' ? it.return(value) : { done: true, value }),
+      };
+    },
+    /** An exception is leaving the frame entered at `depth`. */
+    unwind: (depth: number, error: unknown) => {
+      const frame = this.stack.at(-1);
+      if (frame?.depth === depth) frame.threw = { error };
+    },
+    /** The frame entered at `depth` ends: a 'return' step, or an 'exception' step if one is leaving it. */
+    exit: (depth: number) => {
+      const k = this.stack.findLastIndex((f) => f.depth === depth);
+      if (k < 1) return;
+      const frame = this.stack[k];
+      try {
+        if (k === this.stack.length - 1 && !this.stopped && !this.done && !this.reading) {
+          const thrown = frame.threw?.error;
+          if (!frame.threw) this.record('return', { returning: frame.returned?.value });
+          else if (!(thrown instanceof StopSignal)) this.record('exception', { message: errorMessage(thrown, this) });
+        }
+      } finally {
+        this.stack.length = k;
+      }
+    },
   };
+
+  private stepAt(n: number, capture: Capture, recorded: boolean) {
+    this.viz.line(n, capture);
+    const frame = this.stack.at(-1);
+    if (!frame) return;
+    frame.line = n;
+    frame.capture = capture;
+    if (recorded) this.record('line');
+  }
+
+  /** A for…of loop's line again, with memory as the last pass left it (the frame's latest capture). */
+  private again(n: number) {
+    this.stepAt(n, this.stack.at(-1)?.capture ?? null, true);
+  }
+
+  /**
+   * Runs the learner's top level; in 'lines' mode as the Global frame, which
+   * records a 'return' step when it finishes, or an 'exception' step when an
+   * error leaves it.
+   */
+  topLevel(program: () => unknown): unknown {
+    if (!this.lines) return program();
+    this.stack.push({ id: 'global', fn: 'Global frame', depth: 0, line: 1, capture: null, order: [], seen: new Set() });
+    let entry: unknown;
+    try {
+      entry = program();
+    } catch (e) {
+      if (!(e instanceof StopSignal) && !this.stopped) {
+        this.stack.length = 1;
+        this.record('exception', { message: errorMessage(e, this) });
+      }
+      throw e;
+    }
+    this.stack.length = 1;
+    this.record('return');
+    return entry;
+  }
+
+  /** A step: the stack as it stands, the objects it reaches, and (for a return) the value going back. */
+  private record(event: 'line' | 'return' | 'exception', extra: { returning?: unknown; message?: string } = {}) {
+    if (this.reading) return;
+    if (this.stopped || this.done) throw STOP;
+    const top = this.stack.at(-1)!;
+    if (this.events.length >= this.limits.maxEvents) this.stop(this.limitMessage(), top.line);
+    this.reading = true;
+    try {
+      const heap: Heap = { objects: [], slot: new Map(), queue: [] };
+      const stack = this.stack.map((f) => this.stackFrame(f, heap));
+      if ('returning' in extra) stack.at(-1)!.returning = this.memValue(extra.returning, heap);
+      const step: Extract<RunEvent, { kind: 'step' }> = { kind: 'step', event, line: top.line, stack, heap: this.fillHeap(heap) };
+      if (extra.message !== undefined) step.message = extra.message;
+      this.events.push(step);
+    } finally {
+      this.reading = false;
+    }
+  }
+
+  private stackFrame(f: MemFrame, heap: Heap): StackFrame {
+    let raw: Record<string, unknown> = {};
+    try {
+      raw = f.capture?.() ?? {};
+    } catch {
+      // A learner's own getter that throws: show the frame without its names.
+    }
+    for (const name of Object.keys(raw)) {
+      if (f.seen.has(name)) continue;
+      f.seen.add(name);
+      f.order.push(name);
+    }
+    const locals: [string, MemValue][] = [];
+    for (const name of f.order) {
+      if (Object.hasOwn(raw, name)) locals.push([name, this.memValue(raw[name], heap)]);
+    }
+    return { id: f.id, fn: f.fn, line: f.line, locals };
+  }
+
+  /** A value in memory: a primitive, or a reference to an object, which joins this step's heap. */
+  private memValue(v: unknown, heap: Heap): MemValue {
+    const prim = primitive(v);
+    if (prim) return prim;
+    const obj = v as object;
+    let oid = this.objectIds.get(obj);
+    if (oid === undefined) {
+      oid = `o${++this.objectCount}`;
+      this.objectIds.set(obj, oid);
+    }
+    if (!heap.slot.has(oid)) {
+      if (heap.slot.size >= MAX_OBJECTS) return NOT_SHOWN;
+      heap.slot.set(oid, heap.objects.length);
+      heap.objects.push(null as unknown as HeapObject); // described by fillHeap
+      heap.queue.push([oid, obj]);
+    }
+    return { ref: oid };
+  }
+
+  /** Describes every object reached so far, and whatever those reach. */
+  private fillHeap(heap: Heap): HeapObject[] {
+    for (let k = 0; k < heap.queue.length; k++) {
+      const [oid, obj] = heap.queue[k];
+      heap.objects[heap.slot.get(oid)!] = this.describe(oid, obj, heap);
+    }
+    return heap.objects;
+  }
+
+  /** An object as the diagram draws it, read through property descriptors so no getter runs. */
+  private describe(id: string, x: object, heap: Heap): HeapObject {
+    const value = (v: unknown) => this.memValue(v, heap);
+    const listed = (items: readonly unknown[], n: number) => ({ items: items.slice(0, MAX_ITEMS).map(value), more: Math.max(0, n - MAX_ITEMS) });
+    // A visual collection is a plain Array to the learner; its cells are read directly, so drawing it records no reads.
+    const visual = this.visual.get(x);
+    if (visual) {
+      const items = visual.kind === 'grid' ? visual.rows : visual.data;
+      return { id, kind: 'list', type: 'Array', ...listed(items, items.length) };
+    }
+    if (Array.isArray(x)) {
+      const items: unknown[] = [];
+      for (let i = 0; i < Math.min(x.length, MAX_ITEMS); i++) items.push(Object.getOwnPropertyDescriptor(x, i)?.value);
+      return { id, kind: 'list', type: typeName(x, 'Array'), ...listed(items, x.length) };
+    }
+    // Maps and Sets through the built-in methods, so a subclass's overrides don't run.
+    if (x instanceof Map) {
+      const entries: [MemValue, MemValue][] = [];
+      let n = 0;
+      Map.prototype.forEach.call(x, (v: unknown, k: unknown) => {
+        if (n++ < MAX_ITEMS) entries.push([value(k), value(v)]);
+      });
+      return { id, kind: 'dict', type: typeName(x, 'Map'), entries, more: Math.max(0, n - MAX_ITEMS) };
+    }
+    if (x instanceof Set) {
+      const items: unknown[] = [];
+      let n = 0;
+      Set.prototype.forEach.call(x, (v: unknown) => {
+        if (n++ < MAX_ITEMS) items.push(v);
+      });
+      return { id, kind: 'set', type: typeName(x, 'Set'), ...listed(items, n) };
+    }
+    if (typeof x === 'function') {
+      const isClass = /^class\b/.test(Function.prototype.toString.call(x));
+      return { id, kind: 'function', type: isClass ? 'class' : 'function', name: x.name || '(anonymous)' };
+    }
+    const fields: [string, MemValue][] = [];
+    const keys = Object.keys(x);
+    // An error's message isn't enumerable, but it is what the error says.
+    if (x instanceof Error && !keys.includes('message')) keys.unshift('message');
+    let n = 0;
+    for (const key of keys) {
+      const d = Object.getOwnPropertyDescriptor(x, key);
+      if (!d || !('value' in d)) continue; // a getter: reading it would run the learner's code
+      if (n++ < MAX_ITEMS) fields.push([key, value(d.value)]);
+    }
+    return { id, kind: 'object', type: typeName(x, 'Object'), fields, more: Math.max(0, n - MAX_ITEMS) };
+  }
+
+  private limitMessage(): string {
+    const n = withCommas(this.limits.maxEvents);
+    return this.lines
+      ? `Stopped after ${n} steps: is there a loop that never ends?`
+      : `Stopped after ${n} events: the code changed the array more times than the visual can show.`;
+  }
 
   private print = (...args: unknown[]) => {
     this.emit({ kind: 'print', text: args.map((a) => this.show(a)).join(' '), ...this.at() });
@@ -288,12 +587,7 @@ class Run {
 
   private emit(event: RunEvent) {
     if (this.stopped || this.done) throw STOP;
-    if (this.events.length >= this.limits.maxEvents) {
-      this.stop(
-        `Stopped after ${withCommas(this.limits.maxEvents)} events: the code changed the array more times than the visual can show.`,
-        event.line ?? this.errorLine,
-      );
-    }
+    if (this.events.length >= this.limits.maxEvents) this.stop(this.limitMessage(), event.line ?? this.errorLine);
     this.events.push(event);
   }
 
@@ -464,8 +758,9 @@ class Run {
   /** A Proxy over an array of row Proxies, so dp.length, iteration and dp.map(…) work as usual. */
   private visualGrid(id: string, name: string, values: (number | null)[][]): unknown {
     const data = values;
-    const grid: GridInfo = { kind: 'grid', id, name, data };
+    const grid: GridInfo = { kind: 'grid', id, name, data, rows: [] };
     const rows = data.map((row, r) => this.visualRow(grid, r, row));
+    grid.rows = rows;
     const methods: Record<string, unknown> = {};
     for (const [method, why] of Object.entries(GRID_REFUSED)) {
       methods[method] = () => {
@@ -735,29 +1030,34 @@ function execute(request: RunRequest): RunResult {
   if (language !== 'javascript' && language !== 'typescript') {
     return failed('internal', `The JavaScript runner can't run ${language}.`);
   }
+  const lines = request.mode === 'lines';
   let code: string;
   try {
-    code = instrument(request.code, language).code;
+    code = instrument(request.code, language, { lines }).code;
   } catch (e) {
     if (e instanceof LearnerSyntaxError) return failed('syntax', e.message, e.line);
     throw e;
   }
-  // The entry name is pasted into the code below, so it must be a plain name.
-  if (!IDENTIFIER.test(entry)) return failed('internal', `“${entry}” isn't a valid function name.`);
+  // The entry name is pasted into the code below, so it must be a plain name;
+  // none at all runs only the top level.
+  if (entry !== '' && !IDENTIFIER.test(entry)) return failed('internal', `“${entry}” isn't a valid function name.`);
+  const lookup = entry === '' ? 'return undefined;' : `return typeof ${entry} === "function" ? ${entry} : undefined;`;
 
-  const run = new Run(request.limits);
+  const run = new Run(request.limits, lines);
   // The learner's top level runs inside a function: its declarations stay
   // local to this run, and `entry` is looked up once it has finished. The
   // helpers are parameters, so the learner's own `table` or `array` shadows them.
-  const factory = new Function('__viz', 'console', 'table', 'array', `return function () {\n${code}\nreturn typeof ${entry} === "function" ? ${entry} : undefined;\n};`);
+  const factory = new Function('__viz', 'console', 'table', 'array', `return function () {\n${code}\n${lookup}\n};`);
   const program = factory(run.viz, run.console, run.helpers.table, run.helpers.array) as () => unknown;
 
   let returned: unknown = undefined;
   let error: RunError | null = null;
   const started = performance.now();
   try {
-    const fn = program();
-    if (typeof fn !== 'function') {
+    const fn = run.topLevel(program);
+    if (entry === '') {
+      // The top level was the whole program.
+    } else if (typeof fn !== 'function') {
       error = { kind: 'runtime', message: `Define a function called ${entry}.`, line: null };
     } else {
       const args = request.args.map((a) => run.arg(a));

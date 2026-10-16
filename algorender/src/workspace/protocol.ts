@@ -43,7 +43,7 @@ export type Arg =
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
 export type Limits = {
-  /** Visual events (compare, write, …) before the run is stopped. */
+  /** Events (compare, write, …, and every step in 'lines' mode) before the run is stopped. */
   maxEvents: number;
   /** Executed lines before the run is stopped, so an endless loop ends with a message. */
   maxSteps: number;
@@ -52,6 +52,12 @@ export type Limits = {
 };
 
 export const DEFAULT_LIMITS: Limits = { maxEvents: 5_000, maxSteps: 200_000, timeoutMs: 8_000 };
+
+/**
+ * 'lines' mode: every step carries the whole stack and heap, and nobody steps
+ * through thousands of lines by hand, so stop sooner.
+ */
+export const LINE_LIMITS: Limits = { ...DEFAULT_LIMITS, maxEvents: 2_000 };
 
 /** The most cells one table() or array() call may make: more can't be shown, and is almost always a bug. */
 export const MAX_CELLS = 10_000;
@@ -63,6 +69,23 @@ export const MAX_CELLS = 10_000;
  */
 export const MAX_FROM = 32;
 
+/** 'lines' mode: the most items, entries or fields a heap object lists; the rest are counted in `more`. */
+export const MAX_ITEMS = 20;
+
+/**
+ * 'lines' mode: the most objects one step lists. A reference to an object
+ * past it shows as the primitive `…` (type 'none'), so a long linked list or
+ * a big tree stays drawable.
+ */
+export const MAX_OBJECTS = 100;
+
+/**
+ * 'lines' mode: the deepest the learner's calls may nest. Every step records
+ * the whole stack, so a runaway recursion is stopped here (a limit) rather
+ * than recording thousands of frames at every line.
+ */
+export const MAX_DEPTH = 100;
+
 /**
  * The helpers as TypeScript declarations, for an editor that checks types.
  * The runner never checks them: sucrase only strips types.
@@ -73,14 +96,58 @@ declare function table(rows: number, cols: number, fill?: number | null): number
 declare function array(valuesOrLength: number | readonly number[], fill?: number): number[];
 `;
 
+/**
+ * 'visual' (the default) records what the code does to its visual collections.
+ * 'lines' also records memory at every executed line, Python-Tutor style, for
+ * reading short programs step by step: each step is a `step` event.
+ */
+export type RunMode = 'visual' | 'lines';
+
 export type RunRequest = {
   language: Language;
   /** The learner's source. Defines the entry function; may define helpers. */
   code: string;
-  /** Name of the function to call, e.g. `bubble_sort` (Python) or `bubbleSort` (JS/TS). */
+  /**
+   * Name of the function to call, e.g. `bubble_sort` (Python) or `bubbleSort`
+   * (JS/TS). In 'lines' mode it may be '' to run only the top-level code.
+   */
   entry: string;
   args: Arg[];
   limits: Limits;
+  mode?: RunMode;
+};
+
+/**
+ * A value as a memory diagram draws it: a primitive inline, written the way the
+ * language prints it (Python `'hi'`, `True`, `None`; JS `"hi"`, `true`,
+ * `null`, `undefined`), or a reference to a heap object.
+ */
+export type MemValue = { prim: string; type: 'number' | 'string' | 'boolean' | 'none' } | { ref: string };
+
+/**
+ * An object in the memory diagram. Ids are stable for the whole run, so two
+ * names for one list show as two arrows to the same box. `type` is the
+ * language's own name for it (list, dict, Array, Map, Point…). `more` counts
+ * items left out past the display limit.
+ */
+export type HeapObject =
+  | { id: string; kind: 'list' | 'tuple' | 'set'; type: string; items: MemValue[]; more: number }
+  | { id: string; kind: 'dict'; type: string; entries: [MemValue, MemValue][]; more: number }
+  | { id: string; kind: 'object'; type: string; fields: [string, MemValue][]; more: number }
+  | { id: string; kind: 'function'; type: string; name: string };
+
+/** One call on the stack, outermost first in a step's `stack`. */
+export type StackFrame = {
+  /** Unique per call for the whole run, so a frame keeps its identity while it lives. */
+  id: string;
+  /** The function's name; the top level is 'Global frame'. */
+  fn: string;
+  /** The line this frame is on. */
+  line: number;
+  /** Local names in the order they were first bound; harness names and helpers left out. */
+  locals: [string, MemValue][];
+  /** On a 'return' step, what the innermost frame is returning. */
+  returning?: MemValue;
 };
 
 /**
@@ -145,7 +212,28 @@ export type RunEvent =
   /** arr.pop() (last element) or arr.pop(i) in Python. */
   | ({ kind: 'pop'; array: string; index: number } & At)
   /** Something the learner printed (print / console.log), as one line of text. */
-  | ({ kind: 'print'; text: string } & At);
+  | ({ kind: 'print'; text: string } & At)
+  /**
+   * 'lines' mode only: memory just before `line` runs ('line'), as a function
+   * returns ('return'), or as an exception leaves a frame ('exception'). `heap`
+   * holds only objects reachable from the stack. Steps count toward maxEvents.
+   *
+   * The top level's frame is always first. It has a 'return' step of its own
+   * (no `returning`) when the top-level code finishes, so the last line's
+   * effect is seen; with an entry function, that function's call then follows
+   * on top of it. An exception that nothing catches leaves every frame it
+   * passes through, innermost first, one 'exception' step each (the top level
+   * too, when it was running); one caught in its own frame leaves none.
+   */
+  | {
+      kind: 'step';
+      event: 'line' | 'return' | 'exception';
+      line: number;
+      stack: StackFrame[];
+      heap: HeapObject[];
+      /** On an 'exception' step, the error as one line: "ValueError: negative". */
+      message?: string;
+    };
 
 export type RunError = {
   /**
