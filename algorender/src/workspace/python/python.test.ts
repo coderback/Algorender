@@ -13,6 +13,7 @@ import {
   MAX_ITEMS,
   MAX_OBJECTS,
   type MemValue,
+  type MethodCall,
   type RunEvent,
   type RunMode,
   type RunResult,
@@ -29,8 +30,8 @@ beforeAll(async () => {
   runRequest = pyodide.globals.get('run_request');
 }, 120_000);
 
-function run(code: string, entry: string, args: Arg[] = [], limits: Partial<Limits> = {}, mode?: RunMode): RunResult {
-  const request = { language: 'python' as const, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode };
+function run(code: string, entry: string, args: Arg[] = [], limits: Partial<Limits> = {}, mode?: RunMode, calls?: MethodCall[]): RunResult {
+  const request = { language: 'python' as const, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls };
   return JSON.parse(runRequest(JSON.stringify(request)));
 }
 
@@ -42,7 +43,7 @@ const only = <K extends RunEvent['kind']>(r: RunResult, kind: K) =>
 describe('contract', () => {
   for (const c of CONTRACT.filter((c) => c.code.python)) {
     it(c.name, () => {
-      const r = run(c.code.python!, entryFor(c, 'python'), c.args, c.limits, c.mode);
+      const r = run(c.code.python!, entryFor(c, 'python'), c.args, c.limits, c.mode, c.calls);
       const want = c.expect;
       if (want.events) expect(r.events).toEqual(want.events);
       else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
@@ -56,6 +57,7 @@ describe('contract', () => {
       if (want.arrays) expect(r.arrays).toEqual(want.arrays);
       if (want.grids) expect(r.grids).toEqual(want.grids);
       if ('returned' in want) expect(r.returned).toEqual(want.returned);
+      if (want.args) expect(r.args).toEqual(want.args);
       if (want.error) {
         expect(r.error?.kind).toBe(want.error.kind);
         if (want.error.line !== undefined) expect(r.error?.line).toBe(want.error.line);
@@ -328,7 +330,8 @@ describe('returned values', () => {
     ['return (1, (2, 3))', [1, [2, 3]]],
     ['return {"a": [1], "b": None}', { a: [1], b: null }],
     ['return {1: 2}', '{1: 2}'],
-    ['return {1, 2}', '{1, 2}'],
+    // A set as a list, in iteration order, as JS gives a Set.
+    ['return {1, 2}', [1, 2]],
     // Exact as text: as a JS number it would round.
     ['return 2 ** 60', '1152921504606846976'],
     ['return float("nan")', 'nan'],

@@ -8,7 +8,7 @@
 // spelled per language when compared, plus the few names only one language
 // has (JS block scope ends where Python's function scope goes on).
 
-import type { Arg, HeapObject, Json, Language, Limits, MemValue, RunError, RunEvent, RunMode } from './protocol';
+import { MAX_PRINTS, type Arg, type HeapObject, type Json, type Language, type Limits, type MemValue, type MethodCall, type RunError, type RunEvent, type RunMode } from './protocol';
 
 export type ContractCase = {
   name: string;
@@ -17,8 +17,10 @@ export type ContractCase = {
   entry: { python: string; js: string };
   args: Arg[];
   limits?: Partial<Limits>;
-  /** 'lines' cases record memory at every step. */
+  /** 'lines' cases record memory at every step; 'judge' cases run the code as written. */
   mode?: RunMode;
+  /** A design problem's calls (the entry is a class). */
+  calls?: MethodCall[];
   expect: {
     /** 'lines' mode: every step in order (only the first steps.length with `firstSteps`). */
     steps?: StepShape[];
@@ -34,6 +36,8 @@ export type ContractCase = {
     arrays?: Record<string, number[]>;
     grids?: Record<string, (number | null)[][]>;
     returned?: Json;
+    /** 'judge' mode: each argument's final value. */
+    args?: Json[];
     /**
      * Error kind and line; `message` must contain this text when given;
      * `hasLine` asks for some learner line without pinning which (a limit
@@ -1375,6 +1379,323 @@ while (n >= 0) {
       ],
       error: { kind: 'limit', message: 'Stopped after 20 steps', hasLine: true },
     },
+  },
+  {
+    name: 'judge: plain arguments, an answer in place, and prints',
+    code: {
+      python: `def f(nums, k):
+    print('k is', k)
+    nums.sort()
+    nums.reverse()
+    return len(nums) + k
+`,
+      javascript: `function f(nums, k) {
+  console.log('k is', k);
+  nums.sort((a, b) => a - b);
+  nums.reverse();
+  return nums.length + k;
+}
+`,
+    },
+    entry: { python: 'f', js: 'f' },
+    args: [
+      { kind: 'array', name: 'nums', values: [3, 1, 2] },
+      { kind: 'value', name: 'k', value: 10 },
+    ],
+    mode: 'judge',
+    expect: {
+      events: [{ kind: 'print', text: 'k is 10', line: null, vars: {} }],
+      returned: 13,
+      args: [[3, 2, 1], 10],
+    },
+  },
+  {
+    name: 'judge: a linked list in, a linked list out',
+    code: {
+      python: `def reverse(head):
+    prev = None
+    while head:
+        nxt = head.next
+        head.next = prev
+        prev = head
+        head = nxt
+    return prev
+`,
+      javascript: `function reverse(head) {
+  let prev = null;
+  while (head) {
+    const nxt = head.next;
+    head.next = prev;
+    prev = head;
+    head = nxt;
+  }
+  return prev;
+}
+`,
+    },
+    entry: { python: 'reverse', js: 'reverse' },
+    args: [{ kind: 'list', name: 'head', values: [1, 2, 3] }],
+    mode: 'judge',
+    expect: { events: [], returned: [3, 2, 1], args: [[1]] },
+  },
+  {
+    name: 'judge: trees in and out; TreeNode and ListNode are in scope',
+    code: {
+      python: `def mirror(root):
+    if root is None:
+        return None
+    return TreeNode(root.val, mirror(root.right), mirror(root.left))
+
+def f(root):
+    return [mirror(root), ListNode(1, ListNode(2))]
+`,
+      javascript: `function mirror(root) {
+  if (root === null) {
+    return null;
+  }
+  return new TreeNode(root.val, mirror(root.right), mirror(root.left));
+}
+function f(root) {
+  return [mirror(root), new ListNode(1, new ListNode(2))];
+}
+`,
+    },
+    entry: { python: 'f', js: 'f' },
+    args: [{ kind: 'tree', name: 'root', values: [4, 2, 7, 1, 3] }],
+    mode: 'judge',
+    expect: { events: [], returned: [[4, 7, 2, null, null, 3, 1], [1, 2]] },
+  },
+  {
+    name: 'judge: a graph argument is a plain dict of neighbour lists',
+    code: {
+      python: `def f(graph, roads):
+    return [graph['A'], roads['A']]
+`,
+      javascript: `function f(graph, roads) {
+  return [graph['A'], roads['A']];
+}
+`,
+    },
+    entry: { python: 'f', js: 'f' },
+    args: [GRAPH, WEIGHTED],
+    mode: 'judge',
+    expect: { events: [], returned: [['B', 'C'], [['B', 4], ['C', 1]]] },
+  },
+  {
+    name: 'judge: an error names the innermost line of the learner’s code',
+    code: {
+      python: `def check(x):
+    if x > 2:
+        raise ValueError('too big: ' + str(x))
+    return x
+
+def f(nums):
+    return [check(x) for x in nums]
+`,
+      javascript: `function check(x) {
+  if (x > 2) {
+    throw new Error('too big: ' + x);
+  }
+  return x;
+}
+function f(nums) {
+  return nums.map(check);
+}
+`,
+    },
+    entry: { python: 'f', js: 'f' },
+    args: [{ kind: 'value', name: 'nums', value: [1, 2, 3] }],
+    mode: 'judge',
+    expect: { events: [], returned: null, args: [], error: { kind: 'runtime', line: 3, message: 'too big: 3' } },
+  },
+  {
+    name: 'judge: a syntax error',
+    code: {
+      python: `def f(nums)
+    return nums
+`,
+      javascript: `function f(nums) {
+  return nums +;
+}
+`,
+    },
+    entry: { python: 'f', js: 'f' },
+    args: [{ kind: 'value', name: 'nums', value: [] }],
+    mode: 'judge',
+    expect: { events: [], error: { kind: 'syntax', hasLine: true } },
+  },
+  {
+    name: 'judge: printing stops after MAX_PRINTS lines',
+    code: {
+      python: `def f(n):
+    for i in range(n):
+        print(i)
+    return n
+`,
+      javascript: `function f(n) {
+  for (let i = 0; i < n; i++) {
+    console.log(i);
+  }
+  return n;
+}
+`,
+    },
+    entry: { python: 'f', js: 'f' },
+    args: [{ kind: 'value', name: 'n', value: MAX_PRINTS + 50 }],
+    mode: 'judge',
+    expect: {
+      prints: [...Array.from({ length: MAX_PRINTS }, (_, i) => String(i)), '… (the rest of the output is cut)'],
+      returned: MAX_PRINTS + 50,
+    },
+  },
+  {
+    name: 'judge: a design problem calls its methods in turn',
+    code: {
+      python: `class Counter:
+    def __init__(self, start):
+        self.n = start
+        self.seen = [start]
+
+    def add(self, k):
+        self.n += k
+        self.seen.append(self.n)
+
+    def get(self):
+        return self.n
+
+    def history(self):
+        return self.seen
+`,
+      javascript: `class Counter {
+  constructor(start) {
+    this.n = start;
+    this.seen = [start];
+  }
+  add(k) {
+    this.n += k;
+    this.seen.push(this.n);
+  }
+  get() {
+    return this.n;
+  }
+  history() {
+    return this.seen;
+  }
+}
+`,
+    },
+    entry: { python: 'Counter', js: 'Counter' },
+    args: [],
+    calls: [
+      { method: 'Counter', args: [5] },
+      { method: 'add', args: [2] },
+      { method: 'history', args: [] },
+      { method: 'add', args: [-10] },
+      { method: 'get', args: [] },
+    ],
+    mode: 'judge',
+    // history() is copied when it returns, so the later add doesn't change it.
+    expect: { events: [], returned: [null, null, [5, 7], null, -3] },
+  },
+  {
+    name: 'judge: a missing method stops a design problem, keeping the answers before it',
+    code: {
+      python: `class Counter:
+    def __init__(self):
+        self.n = 0
+
+    def get(self):
+        return self.n
+`,
+      javascript: `class Counter {
+  constructor() {
+    this.n = 0;
+  }
+  get() {
+    return this.n;
+  }
+}
+`,
+    },
+    entry: { python: 'Counter', js: 'Counter' },
+    args: [],
+    calls: [
+      { method: 'Counter', args: [] },
+      { method: 'get', args: [] },
+      { method: 'reset', args: [] },
+      { method: 'get', args: [] },
+    ],
+    mode: 'judge',
+    expect: { returned: [null, 0], error: { kind: 'runtime', line: null, message: 'Counter has no method called reset.' } },
+  },
+  {
+    name: 'judge: the entry must exist',
+    code: { python: `def g():\n    return 1\n`, javascript: `function g() {\n  return 1;\n}\n` },
+    entry: { python: 'f', js: 'f' },
+    args: [],
+    mode: 'judge',
+    expect: { error: { kind: 'runtime', message: 'Define a function called f.' } },
+  },
+  {
+    name: 'lines: a linked list argument, reversed, comes back as its values',
+    code: {
+      python: `def reverse(head):
+    prev = None
+    while head:
+        nxt = head.next
+        head.next = prev
+        prev = head
+        head = nxt
+    return prev
+`,
+      javascript: `function reverse(head) {
+  let prev = null;
+  while (head) {
+    const nxt = head.next;
+    head.next = prev;
+    prev = head;
+    head = nxt;
+  }
+  return prev;
+}
+`,
+    },
+    entry: { python: 'reverse', js: 'reverse' },
+    args: [{ kind: 'list', name: 'head', values: [1, 2] }],
+    mode: 'lines',
+    expect: { returned: [2, 1] },
+  },
+  {
+    name: 'lines: a design problem’s calls are stepped through',
+    code: {
+      python: `class Counter:
+    def __init__(self):
+        self.n = 0
+
+    def add(self, k):
+        self.n += k
+        return self.n
+`,
+      javascript: `class Counter {
+  constructor() {
+    this.n = 0;
+  }
+  add(k) {
+    this.n += k;
+    return this.n;
+  }
+}
+`,
+    },
+    entry: { python: 'Counter', js: 'Counter' },
+    args: [],
+    calls: [
+      { method: 'Counter', args: [] },
+      { method: 'add', args: [3] },
+      { method: 'add', args: [4] },
+    ],
+    mode: 'lines',
+    expect: { returned: [null, 3, 7] },
   },
 ];
 

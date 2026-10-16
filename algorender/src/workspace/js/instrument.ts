@@ -92,6 +92,20 @@ export function instrument(code: string, language: SourceLanguage, { lines = fal
   return { code: generate(program) };
 }
 
+/**
+ * The code as 'judge' mode runs it: TypeScript stripped and strict mode on,
+ * nothing added, on the learner's own lines. Throws LearnerSyntaxError.
+ */
+export function prepare(code: string, language: SourceLanguage): string {
+  const source = STRICT + (language === 'typescript' ? stripTypes(code) : code);
+  try {
+    parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
+  } catch (e) {
+    throw syntaxError(e);
+  }
+  return source;
+}
+
 function stripTypes(code: string): string {
   try {
     return transform(code, { transforms: ['typescript'], disableESTransforms: true }).code;

@@ -27,6 +27,10 @@
 //   called afterwards; the heap is what those frames reach, breadth first.
 //   Every object given an id is kept alive for the run, so id() is never
 //   reused and two names for one list always share an id.
+// - 'judge' mode (_judge) runs the code as written: no AST rewrite and no
+//   tracer, so a big test runs at full speed and only the worker's timeout
+//   stops an endless loop. Arguments are plain lists, printing is capped, and
+//   the result carries every argument's final value.
 
 export const HARNESS = String.raw`
 import ast
@@ -57,6 +61,11 @@ MAX_FROM = 32
 MAX_ITEMS = 20
 MAX_OBJECTS = 100
 MAX_DEPTH = 100
+# 'judge' mode, as protocol.ts: lines of printed output kept, and characters per line.
+MAX_PRINTS = 100
+MAX_PRINT_CHARS = 1000
+# The longest linked list returned as JSON.
+MAX_LIST = 1000000
 # A frame left by a return or a yield ends on one of these; any other last
 # instruction means an exception unwound it.
 _RETURNS = {dis.opmap[name] for name in ('RETURN_VALUE', 'RETURN_CONST', 'YIELD_VALUE') if name in dis.opmap}
@@ -169,7 +178,9 @@ def _json(value, path=()):
         return [_json(x, inner) for x in list.__iter__(value)]
     if isinstance(value, TreeNode):
         return _tree_json(value, inner)
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, ListNode):
+        return _list_json(value, inner)
+    if isinstance(value, (list, tuple, set, frozenset)):
         return [_json(x, inner) for x in value]
     if isinstance(value, dict) and all(isinstance(k, str) for k in value):
         return {k: _json(v, inner) for k, v in value.items()}
@@ -847,6 +858,48 @@ def _tree_json(root, path):
 
 
 # ---------------------------------------------------------------------------
+# Linked lists: LeetCode's ListNode
+# ---------------------------------------------------------------------------
+
+class ListNode:
+    """A linked list node: ListNode(val, next=None)."""
+
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+    def __repr__(self):
+        return f'ListNode({self.val!r})'
+
+
+def _build_list(values):
+    """The head of a linked list holding these values, or None."""
+    head = None
+    for value in reversed(values):
+        head = ListNode(value, head)
+    return head
+
+
+def _list_json(head, path):
+    """A linked list as the list of its values: [1, 2, 3]."""
+    out = []
+    seen = set()
+    node = head
+    while node is not None:
+        if not isinstance(node, ListNode):
+            out.append(_json(node, path))
+            break
+        if id(node) in seen:
+            return 'not a list: it loops back to a node it already passed'
+        if len(seen) >= MAX_LIST:
+            return f'not a list: longer than {MAX_LIST:,} nodes'
+        seen.add(id(node))
+        out.append(_json(node.val, path))
+        node = node.next
+    return out
+
+
+# ---------------------------------------------------------------------------
 # The helpers the learner's code can call: table() and array()
 # ---------------------------------------------------------------------------
 
@@ -1097,12 +1150,12 @@ def _quoted(text):
 
 def _shown(name, value):
     """Whether a frame's name belongs in the diagram: not the harness's own
-    names, dunders, modules, or the table() and array() helpers."""
+    names, dunders, modules, or the helpers (table, array, TreeNode, ListNode)."""
     if not isinstance(name, str) or not name.isidentifier() or name.startswith('_viz'):
         return False
     if name.startswith('__') and name.endswith('__'):
         return False
-    return not isinstance(value, types.ModuleType) and value is not table and value is not array and value is not TreeNode
+    return not isinstance(value, types.ModuleType) and value is not table and value is not array and value is not TreeNode and value is not ListNode
 
 
 _FUNCTIONS = (types.FunctionType, types.BuiltinFunctionType, types.MethodType)
@@ -1445,6 +1498,8 @@ class _Run:
             values = list(spec.get('values') or [])
             self.emit('tree', line=None, name=spec['name'], values=values)
             return _build_tree(values)
+        if kind == 'list':
+            return _build_list(list(spec.get('values') or []))
         return spec.get('value')
 
     def result(self, returned, error, ms):
@@ -1477,7 +1532,8 @@ def _run(request):
 
     namespace = {'__name__': '__main__', '__builtins__': builtins,
                  '_viz_cmp': _viz_cmp, '_viz_cell': _viz_cell, '_viz_named': _viz_named,
-                 '_viz_reads': run.reads, 'table': table, 'array': array, 'TreeNode': TreeNode}
+                 '_viz_reads': run.reads, 'table': table, 'array': array, 'TreeNode': TreeNode,
+                 'ListNode': ListNode}
     run.namespace = namespace
     run.code = code
     returned = None
@@ -1494,8 +1550,12 @@ def _run(request):
             exec(code, namespace)
             # No entry: the top-level code was the whole program.
             fn = namespace.get(entry) if entry else None
+            calls = request.get('calls')
             if entry and not callable(fn):
-                error = _error('runtime', f'Define a function called {entry}.', None)
+                error = _error('runtime', f"Define {'a class' if calls else 'a function'} called {entry}.", None)
+            elif entry and calls:
+                returned = []
+                _call_methods(fn, entry, calls, returned)
             elif entry:
                 args = [run.arg(spec) for spec in request.get('args') or []]
                 returned = fn(*args)
@@ -1515,7 +1575,133 @@ def _run(request):
         # The learner's code caught the stop (a bare except); it still stopped.
         error = _error('limit', run.stopped, None)
         returned = None
-    return run.result(returned, error, ms)
+    result = run.result(returned, error, ms)
+    if request.get('calls') and returned is not None:
+        result['returned'] = returned  # already JSON, call by call, even when one raised
+    return result
+
+
+def _call_methods(cls, name, calls, out):
+    """A design problem: constructs the class with the first call's arguments,
+    then calls each method in turn, appending what each returned (as JSON, at
+    once, so a later call can't change it) to out."""
+    first, rest = (calls[0], calls[1:]) if calls else ({'args': []}, [])
+    instance = cls(*json.loads(json.dumps(first['args'])))
+    out.append(None)
+    for call in rest:
+        method = getattr(instance, call['method'], None)
+        if not callable(method):
+            raise AttributeError(f"{name} has no method called {call['method']}.")
+        out.append(_json(method(*json.loads(json.dumps(call['args'])))))
+
+
+# ---------------------------------------------------------------------------
+# 'judge' mode
+# ---------------------------------------------------------------------------
+
+class _Prints:
+    """What a judged run printed: the first MAX_PRINTS lines, then a note."""
+
+    def __init__(self):
+        self.events = []
+        self.count = 0
+
+    def print(self, *args, sep=' ', end='\n', file=None, flush=False):
+        if sep is None:
+            sep = ' '
+        elif not isinstance(sep, str):
+            raise TypeError(f'sep must be None or a string, not {type(sep).__name__}')
+        if self.count > MAX_PRINTS:
+            return
+        self.count += 1
+        if self.count > MAX_PRINTS:
+            text = '… (the rest of the output is cut)'
+        else:
+            text = sep.join(str(a) for a in args)
+            if len(text) > MAX_PRINT_CHARS:
+                text = text[:MAX_PRINT_CHARS] + '…'
+        self.events.append({'kind': 'print', 'text': text, 'line': None, 'vars': {}})
+
+
+def _plain_table(rows, cols, fill=0):
+    """table() in a judged run: a plain list of lists."""
+    _whole(rows, 'table(rows, cols)')
+    _whole(cols, 'table(rows, cols)')
+    if rows < 0 or cols < 0:
+        raise ValueError(f"table() can't make {rows if rows < 0 else cols} {'rows' if rows < 0 else 'columns'}.")
+    return [[fill] * cols for _ in range(rows)]
+
+
+def _plain_array(values, fill=0):
+    """array() in a judged run: a plain list."""
+    if isinstance(values, int) and not isinstance(values, bool):
+        if values < 0:
+            raise ValueError(f"array() can't make {values} cells.")
+        return [fill] * values
+    return list(values)
+
+
+def _judge_arg(spec):
+    kind = spec.get('kind')
+    if kind == 'tree':
+        return _build_tree(list(spec.get('values') or []))
+    if kind == 'list':
+        return _build_list(list(spec.get('values') or []))
+    if kind == 'graph':
+        weighted = spec.get('weighted')
+        return {row['node']: [[n['to'], n['weight']] if weighted else n['to'] for n in row['neighbours']]
+                for row in spec.get('adjacency') or []}
+    if kind in ('array', 'grid'):
+        return json.loads(json.dumps(spec.get('values') or []))
+    return spec.get('value')
+
+
+def _judge(request):
+    entry = request['entry']
+    calls = request.get('calls')
+    prints = _Prints()
+
+    def result(returned, error, ms, args=()):
+        return {'events': prints.events, 'arrays': {}, 'grids': {}, 'returned': returned,
+                'error': error, 'ms': ms, 'args': [] if error else [_json(a) for a in args]}
+
+    try:
+        code = compile(request['code'], LEARNER, 'exec')
+    except SyntaxError as e:
+        return result(None, _error('syntax', f'{type(e).__name__}: {e.msg}', e.lineno), 0)
+    except ValueError as e:  # e.g. a null byte in the source
+        return result(None, _error('syntax', f'SyntaxError: {e}', None), 0)
+
+    namespace = {'__name__': '__main__', '__builtins__': builtins, 'table': _plain_table,
+                 'array': _plain_array, 'TreeNode': TreeNode, 'ListNode': ListNode}
+    returned = None
+    args = []
+    error = None
+    real_print = builtins.print
+    real_input = builtins.input
+    builtins.print = prints.print
+    builtins.input = _no_input
+    started = time.perf_counter()
+    try:
+        exec(code, namespace)
+        fn = namespace.get(entry)
+        if not callable(fn):
+            error = _error('runtime', f"Define {'a class' if calls else 'a function'} called {entry}.", None)
+        elif calls:
+            returned = []
+            _call_methods(fn, entry, calls, returned)
+        else:
+            args = [_judge_arg(spec) for spec in request.get('args') or []]
+            returned = _json(fn(*args))
+    except BaseException as e:
+        error = _error('runtime', _message(e), _error_line(e))
+        if not calls:
+            returned = None
+    finally:
+        builtins.print = real_print
+        builtins.input = real_input
+    ms = (time.perf_counter() - started) * 1000
+    return result(returned, error, ms, args)
 
 
 def _no_input(prompt=''):
@@ -1526,7 +1712,8 @@ def _no_input(prompt=''):
 def run_request(request_json):
     """Runs one RunRequest (JSON) and returns its RunResult (JSON)."""
     try:
-        return json.dumps(_run(json.loads(request_json)), allow_nan=False)
+        request = json.loads(request_json)
+        return json.dumps(_judge(request) if request.get('mode') == 'judge' else _run(request), allow_nan=False)
     except BaseException as e:  # a bug here, not in the learner's code
         sys.settrace(None)
         return json.dumps({

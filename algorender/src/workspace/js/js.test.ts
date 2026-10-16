@@ -13,6 +13,7 @@ import {
   MAX_ITEMS,
   MAX_OBJECTS,
   type MemValue,
+  type MethodCall,
   type RunEvent,
   type RunMode,
   type RunResult,
@@ -27,8 +28,9 @@ function run(
   limits: Partial<Limits> = {},
   language: Language = 'javascript',
   mode?: RunMode,
+  calls?: MethodCall[],
 ): RunResult {
-  return runJs({ language, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode });
+  return runJs({ language, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls });
 }
 
 const arr = (values: number[], name = 'arr'): Arg => ({ kind: 'array', name, values });
@@ -43,7 +45,7 @@ for (const language of ['javascript', 'typescript'] as const) {
     for (const c of CONTRACT.filter((c) => c.code[language] ?? c.code.javascript)) {
       it(c.name, () => {
         const code = c.code[language] ?? c.code.javascript!;
-        const r = run(code, entryFor(c, language), c.args, c.limits, language, c.mode);
+        const r = run(code, entryFor(c, language), c.args, c.limits, language, c.mode, c.calls);
         const want = c.expect;
         if (want.events) expect(r.events).toEqual(want.events);
         else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
@@ -57,6 +59,7 @@ for (const language of ['javascript', 'typescript'] as const) {
         if (want.arrays) expect(r.arrays).toEqual(want.arrays);
         if (want.grids) expect(r.grids).toEqual(want.grids);
         if ('returned' in want) expect(r.returned).toEqual(want.returned);
+        if (want.args) expect(r.args).toEqual(want.args);
         if (want.error) {
           expect(r.error?.kind).toBe(want.error.kind);
           if (want.error.line !== undefined) expect(r.error?.line).toBe(want.error.line);

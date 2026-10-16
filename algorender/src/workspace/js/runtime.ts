@@ -19,6 +19,11 @@
 // the objects they reach at each step(), return and exception. Objects get
 // ids from a WeakMap, in the order first seen, so ids are stable for the run
 // and never reused.
+//
+// 'judge' mode runs the code as written (TypeScript stripped, nothing added),
+// so a big test runs at full speed; the worker's timeout is the only limit.
+// Arguments are plain values, printing is capped, an error's line comes from
+// the stack trace, and the result carries every argument's final value.
 
 import type { VarValue } from '@/engine/types';
 import {
@@ -27,6 +32,8 @@ import {
   MAX_FROM,
   MAX_ITEMS,
   MAX_OBJECTS,
+  MAX_PRINT_CHARS,
+  MAX_PRINTS,
   type Arg,
   type CompareOp,
   type GridCell,
@@ -34,20 +41,24 @@ import {
   type Json,
   type Limits,
   type MemValue,
+  type MethodCall,
   type Operand,
   type RunError,
   type RunEvent,
+  type RunMode,
   type RunRequest,
   type RunResult,
   type StackFrame,
 } from '../protocol';
-import { instrument, LearnerSyntaxError } from './instrument';
+import { instrument, LearnerSyntaxError, prepare } from './instrument';
 
 /** Lists longer than this show their first items, then the length (as the Python runtime does). */
 const LIST_SHOWN = 12;
 /** Strings longer than this are cut, ellipsis included. */
 const STR_SHOWN = 40;
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+/** The longest linked list returned as JSON; past it the answer is reported as not a list. */
+const MAX_LIST = 1_000_000;
 
 const REPORTED_OP: Record<string, CompareOp> = {
   '<': '<', '<=': '<=', '>': '>', '>=': '>=', '==': '==', '!=': '!=', '===': '==', '!==': '!=',
@@ -256,6 +267,10 @@ class Run {
   private readonly limits: Limits;
   /** 'lines' mode: memory at every step. */
   private readonly lines: boolean;
+  /** 'judge' mode: plain arguments and helpers, capped printing, no events but prints. */
+  readonly judging: boolean;
+  /** 'judge' mode: lines printed so far. */
+  private printed = 0;
   /** 'lines' mode: the Global frame, then the calls in progress. */
   private readonly stack: MemFrame[] = [];
   private calls = 0;
@@ -264,9 +279,10 @@ class Run {
   /** Set while memory is read, so a getter or Proxy trap of the learner's records no steps of its own. */
   private reading = false;
 
-  constructor(limits: Limits, lines = false) {
+  constructor(limits: Limits, mode: RunMode = 'visual') {
     this.limits = limits;
-    this.lines = lines;
+    this.lines = mode === 'lines';
+    this.judging = mode === 'judge';
   }
 
   /** The `__viz` object the instrumented code calls. */
@@ -583,7 +599,15 @@ class Run {
   }
 
   private print = (...args: unknown[]) => {
-    this.emit({ kind: 'print', text: args.map((a) => this.show(a)).join(' '), ...this.at() });
+    const text = args.map((a) => this.show(a)).join(' ');
+    if (!this.judging) {
+      this.emit({ kind: 'print', text, ...this.at() });
+      return;
+    }
+    // A judged run can print a lot (a loop over a big test): keep the start.
+    if (this.printed > MAX_PRINTS) return;
+    const kept = ++this.printed > MAX_PRINTS ? '… (the rest of the output is cut)' : text.length > MAX_PRINT_CHARS ? `${text.slice(0, MAX_PRINT_CHARS)}…` : text;
+    this.events.push({ kind: 'print', text: kept, line: null, vars: {} });
   };
 
   private ignore = () => {};
@@ -618,9 +642,16 @@ class Run {
 
   arg(a: Arg): unknown {
     if (a.kind === 'value') return structuredClone(a.value);
+    if (a.kind === 'list') return this.buildList(a.values);
     if (a.kind === 'tree') {
-      this.emit({ kind: 'tree', name: a.name, values: [...a.values], line: null, vars: {} });
+      if (!this.judging) this.emit({ kind: 'tree', name: a.name, values: [...a.values], line: null, vars: {} });
       return this.buildTree(a.values);
+    }
+    if (this.judging) {
+      if (a.kind === 'graph') {
+        return Object.fromEntries(a.adjacency.map(({ node, neighbours }) => [node, neighbours.map(({ to, weight }) => (a.weighted ? [to, weight] : to))]));
+      }
+      return structuredClone(a.values);
     }
     this.ids.add(a.name);
     if (a.kind === 'graph') {
@@ -638,10 +669,18 @@ class Run {
     return this.visualArray(a.name, a.values);
   }
 
-  /** table(), array() and TreeNode as the learner's code sees them (globals it may shadow). */
+  /** table(), array(), TreeNode and ListNode as the learner's code sees them (globals it may shadow). */
   readonly helpers = {
     table: (rows: unknown, cols: unknown, fill: unknown = 0) => this.makeTable(null, rows, cols, fill),
     array: (values: unknown, fill: unknown = 0) => this.makeArray(null, values, fill),
+    ListNode: class ListNode {
+      val: unknown;
+      next: unknown;
+      constructor(val: unknown = 0, next: unknown = null) {
+        this.val = val;
+        this.next = next;
+      }
+    },
     // A class of this run's own, so a learner's change to it can't outlive the run.
     TreeNode: class TreeNode {
       val: unknown;
@@ -682,6 +721,7 @@ class Run {
       throw new RangeError(`table(${r}, ${c}) would make ${withCommas(r * c)} cells; a visual table holds at most ${withCommas(MAX_CELLS)}.`);
     }
     const value = this.fillValue(fill, true);
+    if (this.judging) return Array.from({ length: r }, () => Array<number | null>(c).fill(value));
     const [label, id] = this.newId(name, 'table');
     const values = Array.from({ length: r }, () => Array<number | null>(c).fill(value));
     this.emit({ kind: 'grid', grid: id, name: label, rows: r, cols: c, values: values.map((row) => [...row]), ...this.at() });
@@ -709,6 +749,7 @@ class Run {
       }
       items = (list as number[]).map(zero);
     }
+    if (this.judging) return items;
     const [label, id] = this.newId(name, 'array');
     this.emit({ kind: 'array', array: id, name: label, values: [...items], ...this.at() });
     return this.visualArray(id, items, label);
@@ -979,6 +1020,32 @@ class Run {
     return root;
   }
 
+  /** The head of a linked list holding these values, or null. */
+  private buildList(values: readonly number[]): unknown {
+    const Node = this.helpers.ListNode;
+    let head: unknown = null;
+    for (let i = values.length - 1; i >= 0; i--) head = new Node(values[i], head);
+    return head;
+  }
+
+  /** A linked list as the JSON list of its values: [1, 2, 3]. */
+  private listJson(head: object, path: object[]): Json {
+    const out: Json[] = [];
+    const seen = new Set<object>();
+    for (let node: unknown = head; node != null; ) {
+      if (!(node instanceof this.helpers.ListNode)) {
+        out.push(this.json(node, path));
+        break;
+      }
+      if (seen.has(node)) return 'not a list: it loops back to a node it already passed';
+      if (seen.size >= MAX_LIST) return `not a list: longer than ${withCommas(MAX_LIST)} nodes`;
+      seen.add(node);
+      out.push(this.json(node.val, path));
+      node = node.next;
+    }
+    return out;
+  }
+
   /** A tree in level order, trailing gaps dropped, as JSON: [4, 2, 7, null, 3]. */
   private treeJson(root: object, path: object[]): Json {
     const out: Json[] = [];
@@ -1096,6 +1163,7 @@ class Run {
       if (visual?.kind === 'graph' || visual?.kind === 'neighbours') return this.show(plainData(visual), nested, seen);
       if (visual) return visual.kind === 'grid' ? `[${visual.data.map(cellsText).join(', ')}]` : cellsText(visual.data);
       if (v instanceof this.helpers.TreeNode) return `TreeNode(${this.show(v.val, true, seen)})`;
+      if (v instanceof this.helpers.ListNode) return `ListNode(${this.show(v.val, true, seen)})`;
       if (Array.isArray(v)) return `[${Array.from(v, (x) => this.show(x, true, seen)).join(', ')}]`;
       if (v instanceof Error) return `${v.name}: ${v.message}`;
       if (v instanceof Set) return `Set(${v.size}) {${Array.from(v, (x) => this.show(x, true, seen)).join(', ')}}`;
@@ -1133,6 +1201,7 @@ class Run {
     if (visual?.kind === 'graph' || visual?.kind === 'neighbours') return this.json(plainData(visual), inner);
     if (visual) return plainData(visual) as Json;
     if (v instanceof this.helpers.TreeNode) return this.treeJson(v, inner);
+    if (v instanceof this.helpers.ListNode) return this.listJson(v, inner);
     if (Array.isArray(v)) return Array.from(v, (x) => this.json(x, inner));
     if (v instanceof Set) return Array.from(v, (x) => this.json(x, inner));
     if (v instanceof Map) return Array.from(v, ([k, x]) => [this.json(k, inner), this.json(x, inner)]);
@@ -1195,10 +1264,10 @@ function execute(request: RunRequest): RunResult {
   if (language !== 'javascript' && language !== 'typescript') {
     return failed('internal', `The JavaScript runner can't run ${language}.`);
   }
-  const lines = request.mode === 'lines';
+  const mode = request.mode ?? 'visual';
   let code: string;
   try {
-    code = instrument(request.code, language, { lines }).code;
+    code = mode === 'judge' ? prepare(request.code, language) : instrument(request.code, language, { lines: mode === 'lines' }).code;
   } catch (e) {
     if (e instanceof LearnerSyntaxError) return failed('syntax', e.message, e.line);
     throw e;
@@ -1208,14 +1277,17 @@ function execute(request: RunRequest): RunResult {
   if (entry !== '' && !IDENTIFIER.test(entry)) return failed('internal', `“${entry}” isn't a valid function name.`);
   const lookup = entry === '' ? 'return undefined;' : `return typeof ${entry} === "function" ? ${entry} : undefined;`;
 
-  const run = new Run(request.limits, lines);
+  const run = new Run(request.limits, mode);
   // The learner's top level runs inside a function: its declarations stay
   // local to this run, and `entry` is looked up once it has finished. The
   // helpers are parameters, so the learner's own `table` or `array` shadows them.
-  const factory = new Function('__viz', 'console', 'table', 'array', 'TreeNode', `return function () {\n${code}\n${lookup}\n};`);
-  const program = factory(run.viz, run.console, run.helpers.table, run.helpers.array, run.helpers.TreeNode) as () => unknown;
+  const factory = new Function(...FACTORY_PARAMS, wrap(code, lookup));
+  const { table, array, TreeNode, ListNode } = run.helpers;
+  const program = factory(run.viz, run.console, table, array, TreeNode, ListNode) as () => unknown;
 
   let returned: unknown = undefined;
+  let args: unknown[] = [];
+  let calls: Json[] | null = null;
   let error: RunError | null = null;
   const started = performance.now();
   try {
@@ -1223,16 +1295,19 @@ function execute(request: RunRequest): RunResult {
     if (entry === '') {
       // The top level was the whole program.
     } else if (typeof fn !== 'function') {
-      error = { kind: 'runtime', message: `Define a function called ${entry}.`, line: null };
+      error = { kind: 'runtime', message: `Define ${request.calls ? 'a class' : 'a function'} called ${entry}.`, line: null };
+    } else if (request.calls) {
+      calls = [];
+      callMethods(run, fn as new (...args: unknown[]) => Record<string, unknown>, entry, request.calls, calls);
     } else {
-      const args = request.args.map((a) => run.arg(a));
+      args = request.args.map((a) => run.arg(a));
       returned = (fn as (...args: unknown[]) => unknown)(...args);
     }
   } catch (e) {
     error =
       e instanceof StopSignal
         ? (run.stopped ?? { kind: 'internal', message: 'The run stopped without a reason.', line: null })
-        : { kind: 'runtime', message: errorMessage(e, run), line: run.errorLine };
+        : { kind: 'runtime', message: errorMessage(e, run), line: run.judging ? stackLine(e) : run.errorLine };
   }
   const ms = performance.now() - started;
   run.done = true;
@@ -1246,17 +1321,74 @@ function execute(request: RunRequest): RunResult {
     returned = undefined;
   }
 
-  let json: Json = null;
-  if (!error) {
+  const toJson = (value: unknown): Json => {
     try {
-      json = run.json(returned);
+      return run.json(value);
     } catch {
-      json = run.show(returned); // a throwing toJSON or getter
+      return run.show(value); // a throwing toJSON or getter
     }
-  }
+  };
+  // A design problem's answer is what its calls returned, even the ones before an error.
+  const json: Json = calls ?? (error ? null : toJson(returned));
   const arrays: Record<string, number[]> = {};
   for (const [id, data] of run.arrays) arrays[id] = [...data];
   const grids: Record<string, (number | null)[][]> = {};
   for (const [id, data] of run.grids) grids[id] = data.map((row) => [...row]);
-  return { events: run.events, arrays, grids, returned: json, error, ms };
+  return { events: run.events, arrays, grids, returned: json, error, ms, ...(run.judging && { args: error ? [] : args.map(toJson) }) };
+}
+
+/**
+ * A design problem: constructs the class with the first call's arguments, then
+ * calls each method in turn, pushing what each returned (as JSON, at once, so a
+ * later call can't change it) onto `out`.
+ */
+function callMethods(run: Run, cls: new (...args: unknown[]) => Record<string, unknown>, name: string, calls: MethodCall[], out: Json[]) {
+  const [first, ...rest] = calls;
+  const instance = new cls(...structuredClone(first?.args ?? []));
+  out.push(null);
+  for (const { method, args } of rest) {
+    const fn = instance[method];
+    if (typeof fn !== 'function') throw new TypeError(`${name} has no method called ${method}.`);
+    const value = (fn as (...args: unknown[]) => unknown).apply(instance, structuredClone(args));
+    out.push(run.json(value));
+  }
+}
+
+/** The helpers, in the order the program factory takes them. */
+const FACTORY_PARAMS = ['__viz', 'console', 'table', 'array', 'TreeNode', 'ListNode'];
+/** The program factory's body: the learner's code starts on its second line. */
+const wrap = (code: string, lookup: string) => `return function () {\n${code}\n${lookup}\n};`;
+
+/**
+ * Where the learner's line 1 sits in a factory's stack traces, found once by
+ * throwing from it: engines number the lines of a `new Function` body
+ * differently (V8 adds two for its header).
+ */
+let lineOffset: number | null | undefined;
+
+/**
+ * 'judge' mode: the learner's line an error came from, read from its stack
+ * trace (the innermost frame in code made by `new Function`), or null.
+ */
+function stackLine(e: unknown): number | null {
+  if (lineOffset === undefined) lineOffset = probeLine();
+  const line = lineIn(e);
+  return line == null || lineOffset == null || line - lineOffset < 1 ? null : line - lineOffset;
+}
+
+function lineIn(e: unknown): number | null {
+  const stack = typeof e === 'object' && e !== null && 'stack' in e ? String(e.stack) : '';
+  // V8: "at f (eval at …, <anonymous>:4:11)"; Firefox: "f@… > Function:4:11".
+  const match = /(?:<anonymous>|> Function):(\d+):\d+/.exec(stack);
+  return match ? Number(match[1]) : null;
+}
+
+function probeLine(): number | null {
+  try {
+    (new Function(...FACTORY_PARAMS, wrap('throw new Error("probe");', '')) as () => () => void)()();
+  } catch (e) {
+    const line = lineIn(e);
+    return line == null ? null : line - 1;
+  }
+  return null;
 }

@@ -34,9 +34,19 @@
 //           TreeNode(val, left, right) is in scope too, LeetCode style, for
 //           code that builds nodes. A TreeNode returned (or inside what is
 //           returned) arrives as its level-order list, [4, 2, 7, null, 3].
+//   list    the head ListNode of a singly linked list (None/null when empty).
+//           ListNode(val, next) is in scope too. A ListNode returned arrives
+//           as the list of its values, [1, 2, 3].
 // Graph and tree runs are watched in 'lines' mode: the steps show the
 // learner's own sets, queues and stacks, and the trace draws them on the
 // graph or tree view (traceGraph.ts, traceTree.ts).
+//
+// 'judge' mode checks answers (src/content/problems): the code runs as
+// written, with no instrumentation and no step limit (only the time budget),
+// so a big test runs at full speed. Array and grid arguments arrive as plain
+// lists, the only events are prints, and the result also carries every
+// argument's final value, for a function that answers in place. A design
+// problem (`calls`) constructs the entry class and calls its methods in turn.
 
 import type { VarValue } from '@/engine/types';
 
@@ -58,6 +68,8 @@ export type Arg =
   | ({ kind: 'graph'; name: string } & GraphSpec)
   /** A binary tree in level order, LeetCode style (null: no node there). The function gets its root. */
   | { kind: 'tree'; name: string; values: (number | null)[] }
+  /** A singly linked list, LeetCode style. The function gets its head ListNode (null when empty). */
+  | { kind: 'list'; name: string; values: number[] }
   /** A plain JSON value (a number, a target, a flag). Not tracked. */
   | { kind: 'value'; name: string; value: Json };
 
@@ -133,14 +145,31 @@ declare class TreeNode {
   right: TreeNode | null;
   constructor(val?: number, left?: TreeNode | null, right?: TreeNode | null);
 }
+/** A linked list node, as LeetCode defines it. */
+declare class ListNode {
+  val: number;
+  next: ListNode | null;
+  constructor(val?: number, next?: ListNode | null);
+}
 `;
 
 /**
  * 'visual' (the default) records what the code does to its visual collections.
  * 'lines' also records memory at every executed line, Python-Tutor style, for
  * reading short programs step by step: each step is a `step` event.
+ * 'judge' runs the code as written and records only what it prints, for
+ * checking answers on big inputs (see the top of this file).
  */
-export type RunMode = 'visual' | 'lines';
+export type RunMode = 'visual' | 'lines' | 'judge';
+
+/** 'judge' mode: the most lines of printed output kept; one more line says the rest was cut. */
+export const MAX_PRINTS = 100;
+
+/** 'judge' mode: the longest printed line kept, in characters. */
+export const MAX_PRINT_CHARS = 1_000;
+
+/** One call a design problem makes: the method's name (the class's own name for the constructor) and its arguments. */
+export type MethodCall = { method: string; args: Json[] };
 
 export type RunRequest = {
   language: Language;
@@ -154,6 +183,13 @@ export type RunRequest = {
   args: Arg[];
   limits: Limits;
   mode?: RunMode;
+  /**
+   * A design problem: `entry` names a class, which the run constructs with
+   * the first call's arguments (`args` is ignored) and then calls each later
+   * method in turn. `returned` is the list of what each call returned, null
+   * for the constructor. A thrown error stops the run there.
+   */
+  calls?: MethodCall[];
 };
 
 /**
@@ -303,6 +339,8 @@ export type RunResult = {
   grids?: Record<string, (number | null)[][]>;
   /** The entry function's return value as JSON (null when it returned nothing). */
   returned: Json;
+  /** 'judge' mode: each argument's value once the function returned, as JSON. */
+  args?: Json[];
   error: RunError | null;
   /** Wall-clock time spent running the learner's code, in ms. */
   ms: number;
