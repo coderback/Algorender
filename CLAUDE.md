@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Algorender is a Next.js 16 app for learning algorithms and data structures visually, and is being rebuilt into a broader platform (DS&A → math → ML → systems). `REVAMP_PLAN.md` at the repo root is the plan: read its roadmap and decisions before proposing architecture. Every visualiser now runs on the trace engine (one dynamic route, `app/visualisers/[slug]`); there are no legacy per-page visualisers left. Other routes: `/learn` (concept map and lessons), `/code` (exercises), `/practice` (interview-style problems with a local judge), `/compare` (sorting race + growth chart), `/embed/[slug]` (chrome-less iframe embeds), `sitemap.xml`, `robots.txt`.
+Algorender is a Next.js 16 app for learning algorithms and data structures visually, and is being rebuilt into a broader platform (DS&A → math → ML → systems). `REVAMP_PLAN.md` at the repo root is the plan: read its roadmap and decisions before proposing architecture. Every visualiser now runs on the trace engine (one dynamic route, `app/visualisers/[slug]`); there are no legacy per-page visualisers left. Other routes: `/learn` (concept map and lessons), `/code` (exercises), `/practice` (interview-style problems with a local judge), `/review` (the daily spaced-review queue), `/account` (sign in, sync), `/api/auth/*` and `/api/progress` (the only server routes), `/compare` (sorting race + growth chart), `/embed/[slug]` (chrome-less iframe embeds), `sitemap.xml`, `robots.txt`.
 
 ## Development Commands
 
@@ -18,11 +18,15 @@ npm run typecheck    # tsc --noEmit
 npm test             # Vitest unit + property tests (src/**/*.test.ts)
 npm run e2e          # Playwright (e2e/); reuses a dev server on E2E_PORT (default 3100), else starts `npm run dev`
 npm run workers      # bundle the JS runner's worker (runs before dev and build; add -- --watch while editing src/workspace/js)
+npm run db:generate  # write a migration into drizzle/ after changing src/server/db/schema.ts
+npm run db:migrate   # apply drizzle/ to the Postgres in DATABASE_URL (PGlite migrates itself)
 ```
 
 The user's global `~/.npmrc` sets `os=linux`, which makes npm skip Windows native binaries (Tailwind's oxide, lightningcss, Next's SWC). Run installs with `npm_config_os=win32` set in the environment; don't add that to a project `.npmrc` (Vercel builds on Linux).
 
-The full e2e suite (~320 tests, including axe scans of every page in both themes) is heavy next to `next dev`. On a low-memory machine, run it against a production build instead: `npm run build`, `npx next start -p 3100`, then `npm run e2e -- --workers=2`. Playwright reuses whatever already listens on the port, so stop any stale server first.
+The full e2e suite (~330 tests, including axe scans of every page in both themes) is heavy next to `next dev`. On a low-memory machine, run it against a production build instead: `npm run build`, then `BETTER_AUTH_RATE_LIMIT=off PGLITE_DIR=<a fresh folder> npx next start -p 3100` (the account tests sign up many learners from one address, and the offline test needs the production service worker), then `npm run e2e -- --workers=1`. Playwright reuses whatever already listens on the port, so stop any stale server first.
+
+**Environment:** nothing is needed locally: the database is PGlite in `.data/pglite` (git-ignored) and auth uses a development secret. On Vercel set `DATABASE_URL` (any Postgres, e.g. Neon; run `npm run db:migrate` against it first) and `BETTER_AUTH_SECRET`; optionally `BETTER_AUTH_URL` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for those sign-in buttons.
 
 ## Architecture
 
@@ -50,7 +54,7 @@ The full e2e suite (~320 tests, including axe scans of every page in both themes
 - `src/content/concepts.yaml` (validated by Zod in `concepts.ts`) is the concept graph: tracks, concepts with prerequisites, the visualisers that teach each, an optional lesson, and planned concepts for the roadmap. `src/content/content.test.ts` rejects unknown ids, cycles, untaught visualisers, and planned concepts that link anywhere.
 - Lessons are MDX in `src/content/lessons/<slug>.mdx`, listed with their metadata in `src/content/lessons/index.ts`, served by `app/learn/[lesson]`. Every lesson follows the learning loop with `<Section step="hook|parts|see|predict|do|check|recap">`, and uses the widgets registered in `src/mdx-components.tsx`: `Terms`/`Term` (pre-training), `Explore` (a visualiser; `settings` take the same keys as the page URL), `PredictChallenge` (predict mode with a goal; make sure the run has at least that many questions), `Quiz` (retrieval practice with explanations), `KeyIdea`, `Misconception`. Math uses `$…$` (KaTeX).
 - Visualisers inside lessons run with `variant="lesson"`: they start from their settings, never write the URL, keep keyboard shortcuts to the focused stage, stack their panels, and ask at every decision in Predict mode.
-- Progress (completed lessons, best quiz and prediction scores) lives in localStorage (`src/components/lesson/progress.ts`) until accounts arrive.
+- Progress (completed lessons, best quiz and prediction scores, and each quiz answer, which starts that question in the review queue) is recorded as events through `src/components/lesson/progress.ts` (see Accounts and progress).
 
 ### Code workspace (learner code drives the views)
 
@@ -95,7 +99,16 @@ The full e2e suite (~320 tests, including axe scans of every page in both themes
 - **Judge mode (`mode: 'judge'` in the protocol):** the code runs as written (TypeScript stripped, no instrumentation, no step counter), so big tests run at full speed and only the worker's timeout stops a loop. Arguments are plain values (trees and lists as `TreeNode`/`ListNode`), printing is capped (`MAX_PRINTS`), an error's line comes from the stack or traceback, and the result carries each argument's final value. Design problems pass `calls`. Contract cases cover all of it.
 - **Pages:** `/practice` (grouped by main pattern, or mixed with the patterns hidden; difficulty and solved filters), `/practice/[slug]` (statement beside `ProblemWorkspace`: Run examples, Submit, a chip per test, the selected test's input, expected answer, yours and its prints), `/practice/drills` (name the pattern for a mixed round of statements; wrong options come from `CONFUSED_WITH` in `patterns.ts`).
 - **Watching a test:** `watchRequest` replays one test on the problem's `view`: an `int[]` argument line by line on the array view (`traceArray.ts`: a frame per line, the learner's index variables from `POINTERS` drawn under the array, compares and writes marked and narrated), an `int[][]` from its cell reads and writes on the grid, a tree on TreeView, anything else on the memory view, which the learner can always switch to.
-- **Progress:** solved problems and languages live in localStorage (`src/problems/progress.ts`) until Phase 3b. Code is saved per problem under `algorender:code:problem:<slug>:<language>`.
+- **Progress:** every submission is a `problem.submitted` event (`src/problems/progress.ts`); a first solve starts the problem in the review queue. Code drafts stay in localStorage under `algorender:code:problem:<slug>:<language>`.
+
+### Accounts and progress (`src/server/`, `src/progress/`)
+
+- **Server:** the only server code. Drizzle over Postgres (`src/server/db/`): `DATABASE_URL` → node-postgres, otherwise PGlite in `PGLITE_DIR` (default `.data/pglite`), migrated on start from `drizzle/`. Better Auth (`src/server/auth.ts`, served by `app/api/auth/[...all]`): email and password, GitHub/Google when keys are set, database sessions, rate limits counted in the database (off with `BETTER_AUTH_RATE_LIMIT=off`, outside Vercel only), and the Origin check forced on everywhere, test runners included. `src/server/providers.ts` says which social buttons exist without loading the database.
+- **Progress is an event log** (`src/progress/events.ts`, Zod-validated on both sides): `lesson.completed`, `lesson.scored`, `quiz.answered`, `exercise.passed`, `problem.submitted`, `review.rated`, each with a UUIDv7 id and the device's time. Never change what an existing kind means; add a kind. Everything else is a pure projection of the events (`projections.ts`, `review.ts`), so devices merge by taking the union.
+- **The device store** (`store.ts`): events in IndexedDB (Dexie; memory if unavailable), recorded instantly and synced in the background (`POST /api/progress`: push unsent events idempotently, pull from a cursor; `src/server/progress.ts`). Events have an owner: `anon` until sign-in, which claims them for the account. Explicit sign-out syncs, then removes the account's events from the device; an expired session only hides them. Progress saved before the event log is imported once (`legacy.ts`). `hooks.ts` gives React the snapshot and projections; anything that depends on progress at mount (the exercise ladder) waits for `ready`.
+- **Review (FSRS via ts-fsrs, day-based, no fuzz):** a solved problem makes `problem:<slug>` (first review Good, Hard after failed submissions); a quiz question's first answer makes `quiz:<lesson>:<quiz>:<n>` (Good or Again). `/review` shows due cards; its card faces are built on the server (`lessonQuizzes()` in `src/content/lessons/quizzes.ts` reads `<Quiz>` questions from the MDX with acorn) and ship with the page. The header shows how many are due (`AccountMenu`, which also tells the store who is signed in).
+- **Offline:** `public/sw.js` (registered in production by `ServiceWorker.tsx`) caches hashed assets for good and pages network-first; `/review` is precached. Playwright blocks service workers except in the offline test.
+- **Tests:** `src/server/server.test.ts` (accounts, rate limits, origin checks and sync on in-memory PGlite), `src/progress/store.test.ts` (two devices against the real sync code, offline, sign-out, an expired session), `progress.test.ts` (projections, scheduling, quiz extraction), `e2e/accounts.spec.ts`.
 
 ### Registry
 
@@ -136,3 +149,4 @@ State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-s
 - Vitest 5 + fast-check (property tests), Playwright 1.64 (e2e), @axe-core/playwright 4.13 (accessibility scans)
 - react-icons, Radix UI (tabs), Vercel Analytics
 - react-markdown 10 (problem statements, with remark-math and rehype-katex), yaml + Zod (content)
+- better-auth 1.7, drizzle-orm 0.45 + drizzle-kit, pg (Postgres) and @electric-sql/pglite (local Postgres), Dexie 4 (IndexedDB), uuidv7, ts-fsrs 5 (spaced review), fake-indexeddb (tests)

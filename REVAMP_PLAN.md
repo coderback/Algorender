@@ -821,6 +821,14 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
   - **Accounts:** Drizzle over Postgres (PGlite in development and tests, any Postgres through `DATABASE_URL`) and Better Auth.
   - **Progress:** the local-first event log (IndexedDB, UUIDv7) with an idempotent sync route. Existing localStorage progress moves into it.
   - **Review:** the FSRS review queue (`ts-fsrs`) with cards generated from solved problems and lesson quizzes, and `/review` working offline.
+  - **Status (2026-10-16): 3b is done.**
+    - **Accounts:** Better Auth with email and password (GitHub and Google when their keys are set), database sessions, rate limits counted in the database, and Origin checks on every state-changing request. `/account` signs in, shows sync and a progress summary, signs out and deletes the account (with its progress).
+    - **Database:** Drizzle over PGlite locally (no setup) or any Postgres through `DATABASE_URL`, with `npm run db:migrate` for real databases.
+    - **Progress:** an event log, not tables of totals. Six event kinds, each a fact with a UUIDv7 id and the device's time; solved problems, lesson scores, exercise stages and review schedules are all computed from the events. This replaces the plan's `attempts`/`review_cards`/`review_logs` tables (§6.7): one table holds everything, two devices merge by union, and the device works the same online and off.
+    - **Sync:** the device keeps its events in IndexedDB, claims anonymous work on sign-in, pushes unsent events (idempotent) and pulls from a cursor, offline included. Explicit sign-out removes the account's events from the device; an expired session only hides them. Progress from localStorage is imported once.
+    - **Review:** FSRS, day-based and deterministic. Solving a problem makes a recall card ("which pattern, what key idea?", self-rated); a lesson quiz answer makes that question come back. `/review` shows due cards with keyboard ratings and the next interval on each button, and the header shows how many are due.
+    - **Offline:** a service worker caches pages network-first and hashed assets for good, and precaches `/review`. e2e covers rating offline and syncing once back.
+    - **Left for later:** email verification and password reset (they need an email provider), and a mastery model over the concept graph (Phase 5).
 - **3c: the server judge** (`revamp/phase-3c`).
   - **Drivers:** generated drivers for Java, C++ and Go, which read typed tests on stdin and write answers to a side channel.
   - **Sandbox:** Vercel Sandbox behind sign-in and quotas, with server-written verdicts.
