@@ -774,8 +774,13 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
       - `table()` and `array()` work in both runtimes.
       - Cell writes carry their dependencies, and the run plays on GridView with arrows.
       - New exercise: "Count the paths through a grid".
+    - **Python-Tutor-style line tracing (`mode: 'lines'`):**
+      - Both runtimes record the call stack and the reachable heap before every line, at every return, and as an exception unwinds. Object ids stay stable for the run, so aliases share an arrow. Twelve shared contract cases compare the steps across languages.
+      - `MemoryView` (`src/viz/memory/`) draws frames, objects and arrows, with change cues and a full spoken description.
+      - The narration says what each line did, and quotes the condition an `if` or `while` tested.
+      - Every exercise has a "Line by line, with memory" switch.
+      - The `TraceCode` lesson widget traces short snippets (`src/content/snippets.ts`), with an optional predict-first lock. The new lesson "Recursion: watch the call stack" (`/learn/recursion`) is built on it.
   - **Still to do:**
-    - **Python-Tutor-style line tracing**, for intro lessons.
     - **Graphs and trees** for learner code.
     - **Sandbox learner code** in an iframe, before code sharing or accounts (Phase 3).
   - **Deferred, with a reason: a service worker for Pyodide.** The browser already caches the CDN download. A repeat visit still takes about 6 s, but that is WebAssembly compile and start-up, which a service worker can't speed up. It would only add offline use.
