@@ -129,4 +129,71 @@ solutions:
       while (heap.size() > 0) closest.push(heap.pop());
       return closest;
     }
+  java: |
+    class Solution {
+        public List<List<Integer>> kClosest(int[][] points, int k) {
+            // The k closest so far, farthest on top.
+            PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(distance(b), distance(a)));
+            for (int[] p : points) {
+                heap.add(p);
+                if (heap.size() > k) heap.poll();
+            }
+            List<List<Integer>> closest = new ArrayList<>();
+            for (int[] p : heap) closest.add(List.of(p[0], p[1]));
+            return closest;
+        }
+
+        private static int distance(int[] p) {
+            return p[0] * p[0] + p[1] * p[1];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> kClosest(vector<vector<int>>& points, int k) {
+            auto distance = [](const vector<int>& p) { return p[0] * p[0] + p[1] * p[1]; };
+            auto fartherFirst = [&](const vector<int>& a, const vector<int>& b) { return distance(a) < distance(b); };
+            // The k closest so far, farthest on top.
+            priority_queue<vector<int>, vector<vector<int>>, decltype(fartherFirst)> heap(fartherFirst);
+            for (auto& p : points) {
+                heap.push(p);
+                if ((int)heap.size() > k) heap.pop();
+            }
+            vector<vector<int>> closest;
+            while (!heap.empty()) {
+                closest.push_back(heap.top());
+                heap.pop();
+            }
+            return closest;
+        }
+    };
+  go: |
+    func distance(p []int) int {
+    	return p[0]*p[0] + p[1]*p[1]
+    }
+
+    // farthestFirst is a max-heap of points by their distance from the origin.
+    type farthestFirst [][]int
+
+    func (h farthestFirst) Len() int           { return len(h) }
+    func (h farthestFirst) Less(i, j int) bool { return distance(h[i]) > distance(h[j]) }
+    func (h farthestFirst) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *farthestFirst) Push(x any)        { *h = append(*h, x.([]int)) }
+    func (h *farthestFirst) Pop() any {
+    	old := *h
+    	last := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return last
+    }
+
+    func kClosest(points [][]int, k int) [][]int {
+    	closest := &farthestFirst{} // the k closest so far, farthest on top
+    	for _, p := range points {
+    		heap.Push(closest, p)
+    		if closest.Len() > k {
+    			heap.Pop(closest)
+    		}
+    	}
+    	return *closest
+    }
 visualisers: [heap]

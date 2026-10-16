@@ -79,4 +79,51 @@ solutions:
       }
       return fewest[amount] === impossible ? -1 : fewest[amount];
     }
+  java: |
+    class Solution {
+        public int coinChange(int[] coins, int amount) {
+            int impossible = amount + 1; // more coins than any real answer needs
+            int[] fewest = new int[amount + 1];
+            Arrays.fill(fewest, impossible);
+            fewest[0] = 0;
+            for (int total = 1; total <= amount; total++) {
+                for (int coin : coins) {
+                    if (coin <= total) fewest[total] = Math.min(fewest[total], fewest[total - coin] + 1);
+                }
+            }
+            return fewest[amount] == impossible ? -1 : fewest[amount];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int coinChange(vector<int>& coins, int amount) {
+            int impossible = amount + 1; // more coins than any real answer needs
+            vector<int> fewest(amount + 1, impossible);
+            fewest[0] = 0;
+            for (int total = 1; total <= amount; total++) {
+                for (int coin : coins) {
+                    if (coin <= total) fewest[total] = min(fewest[total], fewest[total - coin] + 1);
+                }
+            }
+            return fewest[amount] == impossible ? -1 : fewest[amount];
+        }
+    };
+  go: |
+    func coinChange(coins []int, amount int) int {
+    	impossible := amount + 1 // more coins than any real answer needs
+    	fewest := make([]int, amount+1)
+    	for total := 1; total <= amount; total++ {
+    		fewest[total] = impossible
+    		for _, coin := range coins {
+    			if coin <= total {
+    				fewest[total] = min(fewest[total], fewest[total-coin]+1)
+    			}
+    		}
+    	}
+    	if fewest[amount] == impossible {
+    		return -1
+    	}
+    	return fewest[amount]
+    }
 visualisers: [coin-change]

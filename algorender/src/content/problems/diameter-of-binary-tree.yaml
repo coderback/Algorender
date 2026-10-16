@@ -82,4 +82,57 @@ solutions:
       height(root);
       return best;
     }
+  java: |
+    class Solution {
+        private int best;
+
+        public int diameterOfBinaryTree(TreeNode root) {
+            best = 0;
+            height(root);
+            return best;
+        }
+
+        private int height(TreeNode node) {
+            if (node == null) return 0;
+            int left = height(node.left);
+            int right = height(node.right);
+            best = Math.max(best, left + right); // the longest path turning at this node
+            return 1 + Math.max(left, right);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int diameterOfBinaryTree(TreeNode* root) {
+            best = 0;
+            height(root);
+            return best;
+        }
+
+    private:
+        int best = 0;
+
+        int height(TreeNode* node) {
+            if (!node) return 0;
+            int left = height(node->left);
+            int right = height(node->right);
+            best = max(best, left + right); // the longest path turning at this node
+            return 1 + max(left, right);
+        }
+    };
+  go: |
+    func diameterOfBinaryTree(root *TreeNode) int {
+    	best := 0
+    	var height func(node *TreeNode) int
+    	height = func(node *TreeNode) int {
+    		if node == nil {
+    			return 0
+    		}
+    		left, right := height(node.Left), height(node.Right)
+    		best = max(best, left+right) // the longest path turning at this node
+    		return 1 + max(left, right)
+    	}
+    	height(root)
+    	return best
+    }
 visualisers: [binary-tree]

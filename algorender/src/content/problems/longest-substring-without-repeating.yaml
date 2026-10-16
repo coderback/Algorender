@@ -78,4 +78,50 @@ solutions:
       }
       return best;
     }
+  java: |
+    class Solution {
+        public int lengthOfLongestSubstring(String s) {
+            Map<Character, Integer> last = new HashMap<>(); // where each character was last seen
+            int left = 0;
+            int best = 0;
+            for (int right = 0; right < s.length(); right++) {
+                char ch = s.charAt(right);
+                int seen = last.getOrDefault(ch, -1);
+                if (seen >= left) left = seen + 1;
+                last.put(ch, right);
+                best = Math.max(best, right - left + 1);
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int lengthOfLongestSubstring(string& s) {
+            unordered_map<char, int> last; // where each character was last seen
+            int left = 0;
+            int best = 0;
+            for (int right = 0; right < (int)s.size(); right++) {
+                char ch = s[right];
+                auto seen = last.find(ch);
+                if (seen != last.end() && seen->second >= left) left = seen->second + 1;
+                last[ch] = right;
+                best = max(best, right - left + 1);
+            }
+            return best;
+        }
+    };
+  go: |
+    func lengthOfLongestSubstring(s string) int {
+    	last := map[byte]int{} // where each character was last seen
+    	left, best := 0, 0
+    	for right := 0; right < len(s); right++ {
+    		if seen, ok := last[s[right]]; ok && seen >= left {
+    			left = seen + 1
+    		}
+    		last[s[right]] = right
+    		best = max(best, right-left+1)
+    	}
+    	return best
+    }
 visualisers: [sliding-window, hash-table]

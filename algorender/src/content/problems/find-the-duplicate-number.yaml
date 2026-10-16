@@ -90,4 +90,59 @@ solutions:
       }
       return slow;
     }
+  java: |
+    class Solution {
+        public int findDuplicate(int[] nums) {
+            // Position i points to nums[i]. Find where the slow and fast walks meet...
+            int slow = nums[0];
+            int fast = nums[nums[0]];
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[nums[fast]];
+            }
+            // ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+            slow = 0;
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[fast];
+            }
+            return slow;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int findDuplicate(vector<int>& nums) {
+            // Position i points to nums[i]. Find where the slow and fast walks meet...
+            int slow = nums[0];
+            int fast = nums[nums[0]];
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[nums[fast]];
+            }
+            // ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+            slow = 0;
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[fast];
+            }
+            return slow;
+        }
+    };
+  go: |
+    func findDuplicate(nums []int) int {
+    	// Position i points to nums[i]. Find where the slow and fast walks meet...
+    	slow, fast := nums[0], nums[nums[0]]
+    	for slow != fast {
+    		slow = nums[slow]
+    		fast = nums[nums[fast]]
+    	}
+    	// ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+    	slow = 0
+    	for slow != fast {
+    		slow = nums[slow]
+    		fast = nums[fast]
+    	}
+    	return slow
+    }
 visualisers: [linked-list, binary-search]

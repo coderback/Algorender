@@ -9,8 +9,9 @@ import { transform } from 'sucrase';
 import { parse } from 'yaml';
 import { GENERATORS } from '@/content/problems/generators';
 import { runJs } from '@/workspace/js/runtime';
-import type { Json, Language } from '@/workspace/protocol';
+import type { Json } from '@/workspace/protocol';
 import { answerOf, judgeRequest, type JudgeCase, type ProblemSpec, type ReplayView } from './judge';
+import type { ProblemLanguage } from './languages';
 import { PATTERN_IDS } from './patterns';
 import { Rng } from './random';
 import { ProblemSchema, type Problem } from './schema';
@@ -103,10 +104,9 @@ function randomCases(problem: Problem, spec: ProblemSpec): JudgeCase[] {
 }
 
 /** The reference solution in a language: JavaScript is the TypeScript one with its types stripped. */
-export function solutionIn(problem: Problem, language: Language): string {
-  if (language === 'python') return problem.solutions.python;
-  if (language === 'typescript') return problem.solutions.typescript;
-  return transform(problem.solutions.typescript, { transforms: ['typescript'], disableESTransforms: true }).code;
+export function solutionIn(problem: Problem, language: ProblemLanguage): string {
+  if (language === 'javascript') return transform(problem.solutions.typescript, { transforms: ['typescript'], disableESTransforms: true }).code;
+  return problem.solutions[language];
 }
 
 /** The reference answer to a test: the TypeScript solution's, run in judge mode. */

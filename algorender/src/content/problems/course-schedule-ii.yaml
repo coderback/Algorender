@@ -94,4 +94,77 @@ solutions:
       }
       return order.length === numCourses ? order : [];
     }
+  java: |
+    class Solution {
+        public int[] findOrder(int numCourses, int[][] prerequisites) {
+            List<List<Integer>> unlocks = new ArrayList<>();
+            for (int c = 0; c < numCourses; c++) unlocks.add(new ArrayList<>());
+            int[] waiting = new int[numCourses]; // prerequisites not yet taken
+            for (int[] pair : prerequisites) {
+                unlocks.get(pair[1]).add(pair[0]);
+                waiting[pair[0]]++;
+            }
+            int[] order = new int[numCourses];
+            int size = 0;
+            for (int c = 0; c < numCourses; c++) if (waiting[c] == 0) order[size++] = c;
+            // order doubles as the queue: courses are taken in the order they become ready
+            for (int k = 0; k < size; k++) {
+                for (int next : unlocks.get(order[k])) {
+                    if (--waiting[next] == 0) order[size++] = next;
+                }
+            }
+            return size == numCourses ? order : new int[0];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> findOrder(int numCourses, vector<vector<int>>& prerequisites) {
+            vector<vector<int>> unlocks(numCourses);
+            vector<int> waiting(numCourses, 0); // prerequisites not yet taken
+            for (auto& pair : prerequisites) {
+                unlocks[pair[1]].push_back(pair[0]);
+                waiting[pair[0]]++;
+            }
+            vector<int> order;
+            for (int c = 0; c < numCourses; c++) if (waiting[c] == 0) order.push_back(c);
+            // order doubles as the queue: courses are taken in the order they become ready
+            for (size_t k = 0; k < order.size(); k++) {
+                for (int next : unlocks[order[k]]) {
+                    if (--waiting[next] == 0) order.push_back(next);
+                }
+            }
+            if ((int)order.size() != numCourses) return {};
+            return order;
+        }
+    };
+  go: |
+    func findOrder(numCourses int, prerequisites [][]int) []int {
+    	unlocks := make([][]int, numCourses)
+    	waiting := make([]int, numCourses) // prerequisites not yet taken
+    	for _, pair := range prerequisites {
+    		course, before := pair[0], pair[1]
+    		unlocks[before] = append(unlocks[before], course)
+    		waiting[course]++
+    	}
+    	order := []int{}
+    	for c := range numCourses {
+    		if waiting[c] == 0 {
+    			order = append(order, c)
+    		}
+    	}
+    	// order doubles as the queue: courses are taken in the order they become ready
+    	for k := 0; k < len(order); k++ {
+    		for _, next := range unlocks[order[k]] {
+    			waiting[next]--
+    			if waiting[next] == 0 {
+    				order = append(order, next)
+    			}
+    		}
+    	}
+    	if len(order) != numCourses {
+    		return []int{}
+    	}
+    	return order
+    }
 visualisers: [topological-sort]

@@ -78,4 +78,53 @@ solutions:
       }
       return best;
     }
+  java: |
+    class Solution {
+        public int longestConsecutive(int[] nums) {
+            Set<Integer> values = new HashSet<>();
+            for (int x : nums) values.add(x);
+            int best = 0;
+            for (int x : values) {
+                if (values.contains(x - 1)) continue; // only count from the start of a run
+                int length = 1;
+                while (values.contains(x + length)) length++;
+                best = Math.max(best, length);
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int longestConsecutive(vector<int>& nums) {
+            unordered_set<int> values(nums.begin(), nums.end());
+            int best = 0;
+            for (int x : values) {
+                if (values.count(x - 1)) continue; // only count from the start of a run
+                int length = 1;
+                while (values.count(x + length)) length++;
+                best = max(best, length);
+            }
+            return best;
+        }
+    };
+  go: |
+    func longestConsecutive(nums []int) int {
+    	values := make(map[int]bool, len(nums))
+    	for _, x := range nums {
+    		values[x] = true
+    	}
+    	best := 0
+    	for x := range values {
+    		if values[x-1] {
+    			continue // only count from the start of a run
+    		}
+    		length := 1
+    		for values[x+length] {
+    			length++
+    		}
+    		best = max(best, length)
+    	}
+    	return best
+    }
 visualisers: [hash-set]

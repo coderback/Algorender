@@ -89,4 +89,65 @@ solutions:
       }
       return true;
     }
+  java: |
+    class Solution {
+        public boolean isPalindrome(String s) {
+            int left = 0, right = s.length() - 1;
+            while (left < right) {
+                char a = s.charAt(left), b = s.charAt(right);
+                if (!Character.isLetterOrDigit(a)) {
+                    left++;
+                } else if (!Character.isLetterOrDigit(b)) {
+                    right--;
+                } else if (Character.toLowerCase(a) != Character.toLowerCase(b)) {
+                    return false;
+                } else {
+                    left++;
+                    right--;
+                }
+            }
+            return true;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isPalindrome(string& s) {
+            int left = 0, right = s.size() - 1;
+            while (left < right) {
+                unsigned char a = s[left], b = s[right];
+                if (!isalnum(a)) {
+                    left++;
+                } else if (!isalnum(b)) {
+                    right--;
+                } else if (tolower(a) != tolower(b)) {
+                    return false;
+                } else {
+                    left++;
+                    right--;
+                }
+            }
+            return true;
+        }
+    };
+  go: |
+    import "unicode"
+
+    func isPalindrome(s string) bool {
+    	left, right := 0, len(s)-1
+    	for left < right {
+    		a, b := rune(s[left]), rune(s[right])
+    		if !unicode.IsLetter(a) && !unicode.IsDigit(a) {
+    			left++
+    		} else if !unicode.IsLetter(b) && !unicode.IsDigit(b) {
+    			right--
+    		} else if unicode.ToLower(a) != unicode.ToLower(b) {
+    			return false
+    		} else {
+    			left++
+    			right--
+    		}
+    	}
+    	return true
+    }
 visualisers: [two-pointers]

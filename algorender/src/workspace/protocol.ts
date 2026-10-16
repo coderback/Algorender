@@ -322,9 +322,10 @@ export type RunError = {
   /**
    * syntax: the code doesn't parse. runtime: it threw. limit: too many events
    * or steps (probably an endless loop). timeout: the worker was stopped.
-   * internal: a bug in the runtime itself, not the learner's code.
+   * internal: a bug in the runtime itself, not the learner's code. compile:
+   * the server judge's compiler refused it (Java, C++, Go).
    */
-  kind: 'syntax' | 'runtime' | 'limit' | 'timeout' | 'internal';
+  kind: 'syntax' | 'compile' | 'runtime' | 'limit' | 'timeout' | 'internal';
   /** One line, learner-facing: "IndexError: list index out of range". */
   message: string;
   line: number | null;

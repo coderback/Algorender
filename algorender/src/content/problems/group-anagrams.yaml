@@ -64,4 +64,46 @@ solutions:
       }
       return [...groups.values()];
     }
+  java: |
+    class Solution {
+        public List<List<String>> groupAnagrams(String[] strs) {
+            Map<String, List<String>> groups = new LinkedHashMap<>();
+            for (String word : strs) {
+                char[] letters = word.toCharArray();
+                Arrays.sort(letters);
+                groups.computeIfAbsent(new String(letters), key -> new ArrayList<>()).add(word);
+            }
+            return new ArrayList<>(groups.values());
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<string>> groupAnagrams(vector<string>& strs) {
+            unordered_map<string, vector<string>> groups;
+            for (const string& word : strs) {
+                string key = word;
+                sort(key.begin(), key.end());
+                groups[key].push_back(word);
+            }
+            vector<vector<string>> result;
+            for (auto& [key, group] : groups) result.push_back(move(group));
+            return result;
+        }
+    };
+  go: |
+    func groupAnagrams(strs []string) [][]string {
+    	groups := map[string][]string{}
+    	for _, word := range strs {
+    		letters := []byte(word)
+    		slices.Sort(letters)
+    		key := string(letters)
+    		groups[key] = append(groups[key], word)
+    	}
+    	result := make([][]string, 0, len(groups))
+    	for _, group := range groups {
+    		result = append(result, group)
+    	}
+    	return result
+    }
 visualisers: [hash-table]

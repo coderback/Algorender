@@ -85,4 +85,52 @@ solutions:
       }
       return least;
     }
+  java: |
+    class Solution {
+        public int minEatingSpeed(int[] piles, int h) {
+            int least = 1;
+            int most = Arrays.stream(piles).max().getAsInt();
+            while (least < most) {
+                int speed = least + (most - least) / 2;
+                long hours = 0; // can pass 2^31 when the speed is slow
+                for (int pile : piles) hours += (pile + speed - 1) / speed; // pile / speed, rounded up
+                if (hours <= h) most = speed;
+                else least = speed + 1;
+            }
+            return least;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int minEatingSpeed(vector<int>& piles, int h) {
+            int least = 1;
+            int most = *max_element(piles.begin(), piles.end());
+            while (least < most) {
+                int speed = least + (most - least) / 2;
+                long long hours = 0; // can pass 2^31 when the speed is slow
+                for (int pile : piles) hours += (pile + speed - 1) / speed; // pile / speed, rounded up
+                if (hours <= h) most = speed;
+                else least = speed + 1;
+            }
+            return least;
+        }
+    };
+  go: |
+    func minEatingSpeed(piles []int, h int) int {
+    	least, most := 1, slices.Max(piles)
+    	for least < most {
+    		speed := least + (most-least)/2
+    		hours := 0
+    		for _, pile := range piles {
+    			hours += (pile + speed - 1) / speed // pile / speed, rounded up
+    		}
+    		if hours <= h {
+    			most = speed
+    		} else {
+    			least = speed + 1
+    		}
+    	}
+    	return least
+    }
 visualisers: [binary-search]

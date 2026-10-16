@@ -66,4 +66,51 @@ solutions:
       }
       return merged;
     }
+  java: |
+    class Solution {
+        public List<List<Integer>> merge(int[][] intervals) {
+            Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+            List<int[]> merged = new ArrayList<>();
+            for (int[] range : intervals) {
+                if (!merged.isEmpty() && range[0] <= merged.get(merged.size() - 1)[1]) {
+                    int[] last = merged.get(merged.size() - 1);
+                    last[1] = Math.max(last[1], range[1]);
+                } else {
+                    merged.add(new int[] {range[0], range[1]});
+                }
+            }
+            List<List<Integer>> result = new ArrayList<>();
+            for (int[] range : merged) result.add(List.of(range[0], range[1]));
+            return result;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> merge(vector<vector<int>>& intervals) {
+            sort(intervals.begin(), intervals.end());
+            vector<vector<int>> merged;
+            for (auto& range : intervals) {
+                if (!merged.empty() && range[0] <= merged.back()[1]) {
+                    merged.back()[1] = max(merged.back()[1], range[1]);
+                } else {
+                    merged.push_back({range[0], range[1]});
+                }
+            }
+            return merged;
+        }
+    };
+  go: |
+    func merge(intervals [][]int) [][]int {
+    	sort.Slice(intervals, func(i, j int) bool { return intervals[i][0] < intervals[j][0] })
+    	merged := [][]int{}
+    	for _, r := range intervals {
+    		if n := len(merged); n > 0 && r[0] <= merged[n-1][1] {
+    			merged[n-1][1] = max(merged[n-1][1], r[1])
+    		} else {
+    			merged = append(merged, []int{r[0], r[1]})
+    		}
+    	}
+    	return merged
+    }
 visualisers: [merge-intervals]

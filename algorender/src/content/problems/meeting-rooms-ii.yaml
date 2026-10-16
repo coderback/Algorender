@@ -106,4 +106,55 @@ solutions:
       }
       return ends.length;
     }
+  java: |
+    class Solution {
+        public int minMeetingRooms(int[][] intervals) {
+            Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+            PriorityQueue<Integer> ends = new PriorityQueue<>(); // end times of the rooms in use
+            for (int[] meeting : intervals) {
+                if (!ends.isEmpty() && ends.peek() <= meeting[0]) ends.poll(); // that room is free again
+                ends.offer(meeting[1]);
+            }
+            return ends.size();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int minMeetingRooms(vector<vector<int>>& intervals) {
+            sort(intervals.begin(), intervals.end());
+            priority_queue<int, vector<int>, greater<int>> ends; // end times of the rooms in use
+            for (auto& meeting : intervals) {
+                if (!ends.empty() && ends.top() <= meeting[0]) ends.pop(); // that room is free again
+                ends.push(meeting[1]);
+            }
+            return ends.size();
+        }
+    };
+  go: |
+    // intHeap is a min-heap of ints for container/heap.
+    type intHeap []int
+
+    func (h intHeap) Len() int           { return len(h) }
+    func (h intHeap) Less(i, j int) bool { return h[i] < h[j] }
+    func (h intHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *intHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *intHeap) Pop() any {
+    	old := *h
+    	x := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return x
+    }
+
+    func minMeetingRooms(intervals [][]int) int {
+    	sort.Slice(intervals, func(i, j int) bool { return intervals[i][0] < intervals[j][0] })
+    	ends := &intHeap{} // end times of the rooms in use
+    	for _, meeting := range intervals {
+    		if ends.Len() > 0 && (*ends)[0] <= meeting[0] {
+    			heap.Pop(ends) // that room is free again
+    		}
+    		heap.Push(ends, meeting[1])
+    	}
+    	return ends.Len()
+    }
 visualisers: [meeting-rooms, heap]

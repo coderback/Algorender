@@ -97,4 +97,83 @@ solutions:
       }
       return groups;
     }
+  java: |
+    class Solution {
+        private int[] parent;
+
+        public int countComponents(int n, int[][] edges) {
+            parent = new int[n];
+            for (int i = 0; i < n; i++) parent[i] = i;
+            int groups = n;
+            for (int[] edge : edges) {
+                int rootA = find(edge[0]);
+                int rootB = find(edge[1]);
+                if (rootA != rootB) {
+                    parent[rootA] = rootB;
+                    groups--;
+                }
+            }
+            return groups;
+        }
+
+        private int find(int x) {
+            while (parent[x] != x) {
+                parent[x] = parent[parent[x]]; // halve the path as we go
+                x = parent[x];
+            }
+            return x;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int countComponents(int n, vector<vector<int>>& edges) {
+            parent.resize(n);
+            iota(parent.begin(), parent.end(), 0);
+            int groups = n;
+            for (auto& edge : edges) {
+                int rootA = find(edge[0]);
+                int rootB = find(edge[1]);
+                if (rootA != rootB) {
+                    parent[rootA] = rootB;
+                    groups--;
+                }
+            }
+            return groups;
+        }
+
+    private:
+        vector<int> parent;
+
+        int find(int x) {
+            while (parent[x] != x) {
+                parent[x] = parent[parent[x]]; // halve the path as we go
+                x = parent[x];
+            }
+            return x;
+        }
+    };
+  go: |
+    func countComponents(n int, edges [][]int) int {
+    	parent := make([]int, n)
+    	for i := range parent {
+    		parent[i] = i
+    	}
+    	find := func(x int) int {
+    		for parent[x] != x {
+    			parent[x] = parent[parent[x]] // halve the path as we go
+    			x = parent[x]
+    		}
+    		return x
+    	}
+    	groups := n
+    	for _, edge := range edges {
+    		rootA, rootB := find(edge[0]), find(edge[1])
+    		if rootA != rootB {
+    			parent[rootA] = rootB
+    			groups--
+    		}
+    	}
+    	return groups
+    }
 visualisers: [union-find]

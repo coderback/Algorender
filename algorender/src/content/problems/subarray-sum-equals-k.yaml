@@ -77,4 +77,44 @@ solutions:
       }
       return count;
     }
+  java: |
+    class Solution {
+        public int subarraySum(int[] nums, int k) {
+            Map<Integer, Integer> seen = new HashMap<>(); // running total -> how often it has occurred
+            seen.put(0, 1);
+            int total = 0, count = 0;
+            for (int x : nums) {
+                total += x;
+                count += seen.getOrDefault(total - k, 0);
+                seen.merge(total, 1, Integer::sum);
+            }
+            return count;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int subarraySum(vector<int>& nums, int k) {
+            unordered_map<int, int> seen{{0, 1}}; // running total -> how often it has occurred
+            int total = 0, count = 0;
+            for (int x : nums) {
+                total += x;
+                auto it = seen.find(total - k);
+                if (it != seen.end()) count += it->second;
+                seen[total]++;
+            }
+            return count;
+        }
+    };
+  go: |
+    func subarraySum(nums []int, k int) int {
+    	seen := map[int]int{0: 1} // running total -> how often it has occurred
+    	total, count := 0, 0
+    	for _, x := range nums {
+    		total += x
+    		count += seen[total-k]
+    		seen[total]++
+    	}
+    	return count
+    }
 visualisers: [hash-table]

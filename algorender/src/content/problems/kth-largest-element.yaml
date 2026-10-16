@@ -124,4 +124,52 @@ solutions:
       }
       return heap.peek();
     }
+  java: |
+    class Solution {
+        public int findKthLargest(int[] nums, int k) {
+            PriorityQueue<Integer> heap = new PriorityQueue<>(); // the k largest so far, smallest on top
+            for (int x : nums) {
+                heap.add(x);
+                if (heap.size() > k) heap.poll();
+            }
+            return heap.peek();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int findKthLargest(vector<int>& nums, int k) {
+            priority_queue<int, vector<int>, greater<int>> heap; // the k largest so far, smallest on top
+            for (int x : nums) {
+                heap.push(x);
+                if ((int)heap.size() > k) heap.pop();
+            }
+            return heap.top();
+        }
+    };
+  go: |
+    // minHeap is a container/heap of ints, smallest on top.
+    type minHeap []int
+
+    func (h minHeap) Len() int           { return len(h) }
+    func (h minHeap) Less(i, j int) bool { return h[i] < h[j] }
+    func (h minHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *minHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *minHeap) Pop() any {
+    	old := *h
+    	last := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return last
+    }
+
+    func findKthLargest(nums []int, k int) int {
+    	largest := &minHeap{} // the k largest so far, smallest on top
+    	for _, x := range nums {
+    		heap.Push(largest, x)
+    		if largest.Len() > k {
+    			heap.Pop(largest)
+    		}
+    	}
+    	return (*largest)[0]
+    }
 visualisers: [heap]

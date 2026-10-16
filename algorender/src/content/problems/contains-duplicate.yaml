@@ -69,4 +69,36 @@ solutions:
       }
       return false;
     }
+  java: |
+    class Solution {
+        public boolean containsDuplicate(int[] nums) {
+            Set<Integer> seen = new HashSet<>();
+            for (int x : nums) {
+                if (!seen.add(x)) return true;
+            }
+            return false;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool containsDuplicate(vector<int>& nums) {
+            unordered_set<int> seen;
+            for (int x : nums) {
+                if (!seen.insert(x).second) return true;
+            }
+            return false;
+        }
+    };
+  go: |
+    func containsDuplicate(nums []int) bool {
+    	seen := map[int]bool{}
+    	for _, x := range nums {
+    		if seen[x] {
+    			return true
+    		}
+    		seen[x] = true
+    	}
+    	return false
+    }
 visualisers: [hash-set]

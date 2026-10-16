@@ -75,4 +75,51 @@ solutions:
       }
       return answer;
     }
+  java: |
+    class Solution {
+        public int[] dailyTemperatures(int[] temperatures) {
+            int[] answer = new int[temperatures.length];
+            Deque<Integer> waiting = new ArrayDeque<>(); // days with no warmer day yet, temperatures falling
+            for (int day = 0; day < temperatures.length; day++) {
+                while (!waiting.isEmpty() && temperatures[waiting.peek()] < temperatures[day]) {
+                    int earlier = waiting.pop();
+                    answer[earlier] = day - earlier;
+                }
+                waiting.push(day);
+            }
+            return answer;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> dailyTemperatures(vector<int>& temperatures) {
+            int n = temperatures.size();
+            vector<int> answer(n, 0);
+            vector<int> waiting; // days with no warmer day yet, temperatures falling
+            for (int day = 0; day < n; day++) {
+                while (!waiting.empty() && temperatures[waiting.back()] < temperatures[day]) {
+                    int earlier = waiting.back();
+                    waiting.pop_back();
+                    answer[earlier] = day - earlier;
+                }
+                waiting.push_back(day);
+            }
+            return answer;
+        }
+    };
+  go: |
+    func dailyTemperatures(temperatures []int) []int {
+    	answer := make([]int, len(temperatures))
+    	var waiting []int // days with no warmer day yet, temperatures falling
+    	for day, temperature := range temperatures {
+    		for len(waiting) > 0 && temperatures[waiting[len(waiting)-1]] < temperature {
+    			earlier := waiting[len(waiting)-1]
+    			waiting = waiting[:len(waiting)-1]
+    			answer[earlier] = day - earlier
+    		}
+    		waiting = append(waiting, day)
+    	}
+    	return answer
+    }
 visualisers: [monotonic-stack]

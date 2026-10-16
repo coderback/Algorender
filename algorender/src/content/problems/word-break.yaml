@@ -86,4 +86,64 @@ solutions:
       }
       return ok[s.length];
     }
+  java: |
+    class Solution {
+        public boolean wordBreak(String s, String[] wordDict) {
+            Set<String> words = new HashSet<>(Arrays.asList(wordDict));
+            int longest = 0;
+            for (String word : words) longest = Math.max(longest, word.length());
+            boolean[] ok = new boolean[s.length() + 1]; // ok[i]: the first i characters split into words
+            ok[0] = true;
+            for (int end = 1; end <= s.length(); end++) {
+                for (int start = Math.max(0, end - longest); start < end; start++) {
+                    if (ok[start] && words.contains(s.substring(start, end))) {
+                        ok[end] = true;
+                        break;
+                    }
+                }
+            }
+            return ok[s.length()];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool wordBreak(string& s, vector<string>& wordDict) {
+            unordered_set<string> words(wordDict.begin(), wordDict.end());
+            int longest = 0;
+            for (auto& word : words) longest = max(longest, (int)word.size());
+            int n = s.size();
+            vector<bool> ok(n + 1, false); // ok[i]: the first i characters split into words
+            ok[0] = true;
+            for (int end = 1; end <= n; end++) {
+                for (int start = max(0, end - longest); start < end; start++) {
+                    if (ok[start] && words.count(s.substr(start, end - start))) {
+                        ok[end] = true;
+                        break;
+                    }
+                }
+            }
+            return ok[n];
+        }
+    };
+  go: |
+    func wordBreak(s string, wordDict []string) bool {
+    	words := map[string]bool{}
+    	longest := 0
+    	for _, word := range wordDict {
+    		words[word] = true
+    		longest = max(longest, len(word))
+    	}
+    	ok := make([]bool, len(s)+1) // ok[i]: the first i characters split into words
+    	ok[0] = true
+    	for end := 1; end <= len(s); end++ {
+    		for start := max(0, end-longest); start < end; start++ {
+    			if ok[start] && words[s[start:end]] {
+    				ok[end] = true
+    				break
+    			}
+    		}
+    	}
+    	return ok[len(s)]
+    }
 visualisers: []

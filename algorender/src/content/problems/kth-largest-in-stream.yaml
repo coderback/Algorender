@@ -139,4 +139,72 @@ solutions:
         return this.heap.peek();
       }
     }
+  java: |
+    class KthLargest {
+        private final int k;
+        private final PriorityQueue<Integer> heap = new PriorityQueue<>(); // the k largest so far, smallest on top
+
+        public KthLargest(int k, int[] nums) {
+            this.k = k;
+            for (int x : nums) add(x);
+        }
+
+        public int add(int val) {
+            heap.add(val);
+            if (heap.size() > k) heap.poll();
+            return heap.peek();
+        }
+    }
+  cpp: |
+    class KthLargest {
+    public:
+        KthLargest(int k, vector<int>& nums) : k(k) {
+            for (int x : nums) add(x);
+        }
+
+        int add(int val) {
+            heap.push(val);
+            if ((int)heap.size() > k) heap.pop();
+            return heap.top();
+        }
+
+    private:
+        int k;
+        priority_queue<int, vector<int>, greater<int>> heap; // the k largest so far, smallest on top
+    };
+  go: |
+    // minHeap is a container/heap of ints, smallest on top.
+    type minHeap []int
+
+    func (h minHeap) Len() int           { return len(h) }
+    func (h minHeap) Less(i, j int) bool { return h[i] < h[j] }
+    func (h minHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *minHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *minHeap) Pop() any {
+    	old := *h
+    	last := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return last
+    }
+
+    type KthLargest struct {
+    	k       int
+    	largest minHeap // the k largest so far, smallest on top
+    }
+
+    func Constructor(k int, nums []int) KthLargest {
+    	stream := KthLargest{k: k}
+    	for _, x := range nums {
+    		stream.Add(x)
+    	}
+    	return stream
+    }
+
+    func (this *KthLargest) Add(val int) int {
+    	heap.Push(&this.largest, val)
+    	if this.largest.Len() > this.k {
+    		heap.Pop(&this.largest)
+    	}
+    	return this.largest[0]
+    }
 visualisers: [heap]

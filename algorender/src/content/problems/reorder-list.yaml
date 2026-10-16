@@ -116,4 +116,101 @@ solutions:
         back = backNext;
       }
     }
+  java: |
+    class Solution {
+        public void reorderList(ListNode head) {
+            if (head == null) return;
+            // 1. Find the middle: slow stops on the last node of the front half.
+            ListNode slow = head, fast = head;
+            while (fast.next != null && fast.next.next != null) {
+                slow = slow.next;
+                fast = fast.next.next;
+            }
+            // 2. Cut after it and reverse the back half.
+            ListNode back = slow.next;
+            slow.next = null;
+            ListNode prev = null;
+            while (back != null) {
+                ListNode next = back.next;
+                back.next = prev;
+                prev = back;
+                back = next;
+            }
+            // 3. Weave the halves together.
+            ListNode front = head;
+            back = prev;
+            while (back != null) {
+                ListNode frontNext = front.next, backNext = back.next;
+                front.next = back;
+                back.next = frontNext;
+                front = frontNext;
+                back = backNext;
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        void reorderList(ListNode* head) {
+            if (!head) return;
+            // 1. Find the middle: slow stops on the last node of the front half.
+            ListNode* slow = head;
+            ListNode* fast = head;
+            while (fast->next && fast->next->next) {
+                slow = slow->next;
+                fast = fast->next->next;
+            }
+            // 2. Cut after it and reverse the back half.
+            ListNode* back = slow->next;
+            slow->next = nullptr;
+            ListNode* prev = nullptr;
+            while (back) {
+                ListNode* next = back->next;
+                back->next = prev;
+                prev = back;
+                back = next;
+            }
+            // 3. Weave the halves together.
+            ListNode* front = head;
+            back = prev;
+            while (back) {
+                ListNode* frontNext = front->next;
+                ListNode* backNext = back->next;
+                front->next = back;
+                back->next = frontNext;
+                front = frontNext;
+                back = backNext;
+            }
+        }
+    };
+  go: |
+    func reorderList(head *ListNode) {
+    	if head == nil {
+    		return
+    	}
+    	// 1. Find the middle: slow stops on the last node of the front half.
+    	slow, fast := head, head
+    	for fast.Next != nil && fast.Next.Next != nil {
+    		slow = slow.Next
+    		fast = fast.Next.Next
+    	}
+    	// 2. Cut after it and reverse the back half.
+    	back := slow.Next
+    	slow.Next = nil
+    	var prev *ListNode
+    	for back != nil {
+    		next := back.Next
+    		back.Next = prev
+    		prev = back
+    		back = next
+    	}
+    	// 3. Weave the halves together.
+    	front, back := head, prev
+    	for back != nil {
+    		frontNext, backNext := front.Next, back.Next
+    		front.Next = back
+    		back.Next = frontNext
+    		front, back = frontNext, backNext
+    	}
+    }
 visualisers: [linked-list]

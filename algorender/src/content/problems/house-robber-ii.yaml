@@ -85,4 +85,65 @@ solutions:
       if (n === 1) return nums[0];
       return Math.max(robRow(0, n - 1), robRow(1, n));
     }
+  java: |
+    class Solution {
+        public int robCircle(int[] nums) {
+            int n = nums.length;
+            if (n == 1) return nums[0];
+            // The first and last houses are neighbours, so leave out one or the other.
+            return Math.max(robRow(nums, 0, n - 1), robRow(nums, 1, n));
+        }
+
+        // The best total from houses lo to hi - 1, standing in a straight row.
+        private int robRow(int[] nums, int lo, int hi) {
+            int before = 0;
+            int best = 0;
+            for (int i = lo; i < hi; i++) {
+                int next = Math.max(best, before + nums[i]);
+                before = best;
+                best = next;
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int robCircle(vector<int>& nums) {
+            int n = nums.size();
+            if (n == 1) return nums[0];
+            // The first and last houses are neighbours, so leave out one or the other.
+            return max(robRow(nums, 0, n - 1), robRow(nums, 1, n));
+        }
+
+    private:
+        // The best total from houses lo to hi - 1, standing in a straight row.
+        int robRow(const vector<int>& nums, int lo, int hi) {
+            int before = 0;
+            int best = 0;
+            for (int i = lo; i < hi; i++) {
+                int next = max(best, before + nums[i]);
+                before = best;
+                best = next;
+            }
+            return best;
+        }
+    };
+  go: |
+    func robCircle(nums []int) int {
+    	// robRow returns the best total from a straight row of houses.
+    	robRow := func(row []int) int {
+    		before, best := 0, 0
+    		for _, money := range row {
+    			before, best = best, max(best, before+money)
+    		}
+    		return best
+    	}
+    	n := len(nums)
+    	if n == 1 {
+    		return nums[0]
+    	}
+    	// The first and last houses are neighbours, so leave out one or the other.
+    	return max(robRow(nums[:n-1]), robRow(nums[1:]))
+    }
 visualisers: [house-robber]

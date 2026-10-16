@@ -103,4 +103,74 @@ solutions:
       explore(0, target);
       return result;
     }
+  java: |
+    class Solution {
+        public List<List<Integer>> combinationSum(int[] candidates, int target) {
+            int[] nums = candidates.clone();
+            Arrays.sort(nums);
+            List<List<Integer>> result = new ArrayList<>();
+            explore(nums, 0, target, new ArrayList<>(), result);
+            return result;
+        }
+
+        private void explore(int[] nums, int start, int remaining, List<Integer> chosen, List<List<Integer>> result) {
+            if (remaining == 0) {
+                result.add(new ArrayList<>(chosen));
+                return;
+            }
+            for (int i = start; i < nums.length && nums[i] <= remaining; i++) {
+                chosen.add(nums[i]);
+                explore(nums, i, remaining - nums[i], chosen, result); // i again: it may repeat
+                chosen.remove(chosen.size() - 1);
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> combinationSum(vector<int>& candidates, int target) {
+            nums = candidates;
+            sort(nums.begin(), nums.end());
+            explore(0, target);
+            return result;
+        }
+
+    private:
+        vector<int> nums;
+        vector<int> chosen;
+        vector<vector<int>> result;
+
+        void explore(int start, int remaining) {
+            if (remaining == 0) {
+                result.push_back(chosen);
+                return;
+            }
+            for (int i = start; i < (int)nums.size() && nums[i] <= remaining; i++) {
+                chosen.push_back(nums[i]);
+                explore(i, remaining - nums[i]); // i again: it may repeat
+                chosen.pop_back();
+            }
+        }
+    };
+  go: |
+    func combinationSum(candidates []int, target int) [][]int {
+    	nums := slices.Clone(candidates)
+    	slices.Sort(nums)
+    	result := [][]int{}
+    	var chosen []int
+    	var explore func(start, remaining int)
+    	explore = func(start, remaining int) {
+    		if remaining == 0 {
+    			result = append(result, slices.Clone(chosen))
+    			return
+    		}
+    		for i := start; i < len(nums) && nums[i] <= remaining; i++ {
+    			chosen = append(chosen, nums[i])
+    			explore(i, remaining-nums[i]) // i again: it may repeat
+    			chosen = chosen[:len(chosen)-1]
+    		}
+    	}
+    	explore(0, target)
+    	return result
+    }
 visualisers: [subsets]

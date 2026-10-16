@@ -87,4 +87,50 @@ solutions:
       }
       return tails.length;
     }
+  java: |
+    class Solution {
+        public int lengthOfLIS(int[] nums) {
+            int[] tails = new int[nums.length]; // tails[k]: the smallest last value of an increasing run of length k + 1
+            int size = 0;
+            for (int x : nums) {
+                // Binary search for the first tail that is >= x.
+                int below = 0;
+                int above = size;
+                while (below < above) {
+                    int middle = (below + above) / 2;
+                    if (tails[middle] < x) below = middle + 1;
+                    else above = middle;
+                }
+                tails[below] = x;
+                if (below == size) size++;
+            }
+            return size;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int lengthOfLIS(vector<int>& nums) {
+            vector<int> tails; // tails[k]: the smallest last value of an increasing run of length k + 1
+            for (int x : nums) {
+                auto first = lower_bound(tails.begin(), tails.end(), x); // the first tail that is >= x
+                if (first == tails.end()) tails.push_back(x);
+                else *first = x;
+            }
+            return tails.size();
+        }
+    };
+  go: |
+    func lengthOfLIS(nums []int) int {
+    	var tails []int // tails[k]: the smallest last value of an increasing run of length k + 1
+    	for _, x := range nums {
+    		i, _ := slices.BinarySearch(tails, x) // the first tail that is >= x
+    		if i == len(tails) {
+    			tails = append(tails, x)
+    		} else {
+    			tails[i] = x
+    		}
+    	}
+    	return len(tails)
+    }
 visualisers: [longest-increasing-subsequence, binary-search]

@@ -63,4 +63,33 @@ solutions:
       }
       return bits;
     }
+  java: |
+    class Solution {
+        public int[] countBits(int n) {
+            int[] bits = new int[n + 1];
+            for (int i = 1; i <= n; i++) {
+                bits[i] = bits[i >> 1] + (i & 1); // i without its last bit, plus that bit
+            }
+            return bits;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> countBits(int n) {
+            vector<int> bits(n + 1, 0);
+            for (int i = 1; i <= n; i++) {
+                bits[i] = bits[i >> 1] + (i & 1); // i without its last bit, plus that bit
+            }
+            return bits;
+        }
+    };
+  go: |
+    func countBits(n int) []int {
+    	bits := make([]int, n+1)
+    	for i := 1; i <= n; i++ {
+    		bits[i] = bits[i>>1] + i&1 // i without its last bit, plus that bit
+    	}
+    	return bits
+    }
 visualisers: []

@@ -118,4 +118,80 @@ solutions:
       explore();
       return result;
     }
+  java: |
+    class Solution {
+        public List<List<Integer>> permute(int[] nums) {
+            List<List<Integer>> result = new ArrayList<>();
+            explore(nums, new boolean[nums.length], new ArrayList<>(), result);
+            return result;
+        }
+
+        private void explore(int[] nums, boolean[] used, List<Integer> chosen, List<List<Integer>> result) {
+            if (chosen.size() == nums.length) {
+                result.add(new ArrayList<>(chosen));
+                return;
+            }
+            for (int i = 0; i < nums.length; i++) {
+                if (used[i]) continue;
+                used[i] = true;
+                chosen.add(nums[i]);
+                explore(nums, used, chosen, result);
+                chosen.remove(chosen.size() - 1); // undo, so the next number can take this place
+                used[i] = false;
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> permute(vector<int>& nums) {
+            vector<vector<int>> result;
+            vector<int> chosen;
+            vector<bool> used(nums.size(), false);
+            explore(nums, used, chosen, result);
+            return result;
+        }
+
+    private:
+        void explore(const vector<int>& nums, vector<bool>& used, vector<int>& chosen,
+                     vector<vector<int>>& result) {
+            if (chosen.size() == nums.size()) {
+                result.push_back(chosen);
+                return;
+            }
+            for (size_t i = 0; i < nums.size(); i++) {
+                if (used[i]) continue;
+                used[i] = true;
+                chosen.push_back(nums[i]);
+                explore(nums, used, chosen, result);
+                chosen.pop_back(); // undo, so the next number can take this place
+                used[i] = false;
+            }
+        }
+    };
+  go: |
+    func permute(nums []int) [][]int {
+    	result := [][]int{}
+    	chosen := []int{}
+    	used := make([]bool, len(nums))
+    	var explore func()
+    	explore = func() {
+    		if len(chosen) == len(nums) {
+    			result = append(result, slices.Clone(chosen))
+    			return
+    		}
+    		for i, x := range nums {
+    			if used[i] {
+    				continue
+    			}
+    			used[i] = true
+    			chosen = append(chosen, x)
+    			explore()
+    			chosen = chosen[:len(chosen)-1] // undo, so the next number can take this place
+    			used[i] = false
+    		}
+    	}
+    	explore()
+    	return result
+    }
 visualisers: [permutations]

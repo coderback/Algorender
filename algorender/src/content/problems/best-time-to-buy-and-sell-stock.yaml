@@ -73,4 +73,39 @@ solutions:
       }
       return best;
     }
+  java: |
+    class Solution {
+        public int maxProfit(int[] prices) {
+            int lowest = prices[0];
+            int best = 0;
+            for (int price : prices) {
+                best = Math.max(best, price - lowest);
+                lowest = Math.min(lowest, price);
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int maxProfit(vector<int>& prices) {
+            int lowest = prices[0];
+            int best = 0;
+            for (int price : prices) {
+                best = max(best, price - lowest);
+                lowest = min(lowest, price);
+            }
+            return best;
+        }
+    };
+  go: |
+    func maxProfit(prices []int) int {
+    	lowest := prices[0]
+    	best := 0
+    	for _, price := range prices {
+    		best = max(best, price-lowest)
+    		lowest = min(lowest, price)
+    	}
+    	return best
+    }
 visualisers: [sliding-window]

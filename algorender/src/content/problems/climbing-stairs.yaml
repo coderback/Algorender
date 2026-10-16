@@ -65,4 +65,40 @@ solutions:
       }
       return here;
     }
+  java: |
+    class Solution {
+        public int climbStairs(int n) {
+            int below = 1; // ways to reach the step before
+            int here = 1; // ways to reach the current step (step 1 to begin with)
+            for (int step = 2; step <= n; step++) {
+                int next = below + here;
+                below = here;
+                here = next;
+            }
+            return here;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int climbStairs(int n) {
+            int below = 1; // ways to reach the step before
+            int here = 1; // ways to reach the current step (step 1 to begin with)
+            for (int step = 2; step <= n; step++) {
+                int next = below + here;
+                below = here;
+                here = next;
+            }
+            return here;
+        }
+    };
+  go: |
+    func climbStairs(n int) int {
+    	below := 1 // ways to reach the step before
+    	here := 1  // ways to reach the current step (step 1 to begin with)
+    	for step := 2; step <= n; step++ {
+    		below, here = here, below+here
+    	}
+    	return here
+    }
 visualisers: [fibonacci-memoization]

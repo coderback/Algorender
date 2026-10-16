@@ -77,4 +77,48 @@ solutions:
       }
       return true;
     }
+  java: |
+    class Solution {
+        public boolean isAnagram(String s, String t) {
+            if (s.length() != t.length()) return false;
+            int[] counts = new int[26];
+            for (char ch : s.toCharArray()) counts[ch - 'a']++;
+            for (char ch : t.toCharArray()) {
+                if (counts[ch - 'a'] == 0) return false;
+                counts[ch - 'a']--;
+            }
+            return true;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isAnagram(string& s, string& t) {
+            if (s.size() != t.size()) return false;
+            int counts[26] = {};
+            for (char ch : s) counts[ch - 'a']++;
+            for (char ch : t) {
+                if (counts[ch - 'a'] == 0) return false;
+                counts[ch - 'a']--;
+            }
+            return true;
+        }
+    };
+  go: |
+    func isAnagram(s string, t string) bool {
+    	if len(s) != len(t) {
+    		return false
+    	}
+    	var counts [26]int
+    	for i := 0; i < len(s); i++ {
+    		counts[s[i]-'a']++
+    	}
+    	for i := 0; i < len(t); i++ {
+    		if counts[t[i]-'a'] == 0 {
+    			return false
+    		}
+    		counts[t[i]-'a']--
+    	}
+    	return true
+    }
 visualisers: [hash-table]

@@ -80,4 +80,53 @@ solutions:
       }
       return stack.length === 0;
     }
+  java: |
+    class Solution {
+        public boolean isValid(String s) {
+            Map<Character, Character> partner = Map.of(')', '(', ']', '[', '}', '{');
+            Deque<Character> stack = new ArrayDeque<>();
+            for (char ch : s.toCharArray()) {
+                if (partner.containsKey(ch)) {
+                    if (stack.isEmpty() || !stack.peek().equals(partner.get(ch))) return false;
+                    stack.pop();
+                } else {
+                    stack.push(ch);
+                }
+            }
+            return stack.isEmpty();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isValid(string& s) {
+            unordered_map<char, char> partner = {{')', '('}, {']', '['}, {'}', '{'}};
+            vector<char> stack;
+            for (char ch : s) {
+                if (partner.count(ch)) {
+                    if (stack.empty() || stack.back() != partner[ch]) return false;
+                    stack.pop_back();
+                } else {
+                    stack.push_back(ch);
+                }
+            }
+            return stack.empty();
+        }
+    };
+  go: |
+    func isValid(s string) bool {
+    	partner := map[rune]rune{')': '(', ']': '[', '}': '{'}
+    	stack := []rune{}
+    	for _, ch := range s {
+    		if open, closing := partner[ch]; closing {
+    			if len(stack) == 0 || stack[len(stack)-1] != open {
+    				return false
+    			}
+    			stack = stack[:len(stack)-1]
+    		} else {
+    			stack = append(stack, ch)
+    		}
+    	}
+    	return len(stack) == 0
+    }
 visualisers: [stack]

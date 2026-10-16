@@ -83,4 +83,63 @@ solutions:
       }
       return seen;
     }
+  java: |
+    class Solution {
+        public int[] rightSideView(TreeNode root) {
+            List<Integer> seen = new ArrayList<>();
+            List<TreeNode> level = new ArrayList<>();
+            if (root != null) level.add(root);
+            while (!level.isEmpty()) {
+                seen.add(level.get(level.size() - 1).val);
+                List<TreeNode> nextLevel = new ArrayList<>();
+                for (TreeNode node : level) {
+                    if (node.left != null) nextLevel.add(node.left);
+                    if (node.right != null) nextLevel.add(node.right);
+                }
+                level = nextLevel;
+            }
+            return seen.stream().mapToInt(Integer::intValue).toArray();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> rightSideView(TreeNode* root) {
+            vector<int> seen;
+            vector<TreeNode*> level;
+            if (root) level.push_back(root);
+            while (!level.empty()) {
+                seen.push_back(level.back()->val);
+                vector<TreeNode*> nextLevel;
+                for (TreeNode* node : level) {
+                    if (node->left) nextLevel.push_back(node->left);
+                    if (node->right) nextLevel.push_back(node->right);
+                }
+                level = nextLevel;
+            }
+            return seen;
+        }
+    };
+  go: |
+    func rightSideView(root *TreeNode) []int {
+    	seen := []int{}
+    	var level []*TreeNode
+    	if root != nil {
+    		level = append(level, root)
+    	}
+    	for len(level) > 0 {
+    		seen = append(seen, level[len(level)-1].Val)
+    		var nextLevel []*TreeNode
+    		for _, node := range level {
+    			if node.Left != nil {
+    				nextLevel = append(nextLevel, node.Left)
+    			}
+    			if node.Right != nil {
+    				nextLevel = append(nextLevel, node.Right)
+    			}
+    		}
+    		level = nextLevel
+    	}
+    	return seen
+    }
 visualisers: [binary-tree, breadth-first-search]

@@ -91,4 +91,61 @@ solutions:
       gain(root);
       return best;
     }
+  java: |
+    class Solution {
+        private int best;
+
+        public int maxPathSum(TreeNode root) {
+            best = root.val;
+            gain(root);
+            return best;
+        }
+
+        // The best sum of a path that starts at node and goes down.
+        private int gain(TreeNode node) {
+            if (node == null) return 0;
+            int left = Math.max(0, gain(node.left));
+            int right = Math.max(0, gain(node.right));
+            best = Math.max(best, node.val + left + right); // the best path turning here
+            return node.val + Math.max(left, right);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int maxPathSum(TreeNode* root) {
+            best = root->val;
+            gain(root);
+            return best;
+        }
+
+    private:
+        int best = 0;
+
+        // The best sum of a path that starts at node and goes down.
+        int gain(TreeNode* node) {
+            if (!node) return 0;
+            int left = max(0, gain(node->left));
+            int right = max(0, gain(node->right));
+            best = max(best, node->val + left + right); // the best path turning here
+            return node->val + max(left, right);
+        }
+    };
+  go: |
+    func maxPathSum(root *TreeNode) int {
+    	best := root.Val
+    	// gain returns the best sum of a path that starts at node and goes down.
+    	var gain func(node *TreeNode) int
+    	gain = func(node *TreeNode) int {
+    		if node == nil {
+    			return 0
+    		}
+    		left := max(0, gain(node.Left))
+    		right := max(0, gain(node.Right))
+    		best = max(best, node.Val+left+right) // the best path turning here
+    		return node.Val + max(left, right)
+    	}
+    	gain(root)
+    	return best
+    }
 visualisers: [binary-tree]

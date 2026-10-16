@@ -85,4 +85,62 @@ solutions:
       }
       return top;
     }
+  java: |
+    class Solution {
+        public int[] topKFrequent(int[] nums, int k) {
+            Map<Integer, Integer> counts = new HashMap<>();
+            for (int x : nums) counts.merge(x, 1, Integer::sum);
+            List<List<Integer>> buckets = new ArrayList<>(); // buckets[c]: the values that appear c times
+            for (int c = 0; c <= nums.length; c++) buckets.add(new ArrayList<>());
+            counts.forEach((value, count) -> buckets.get(count).add(value));
+            int[] top = new int[k];
+            int found = 0;
+            for (int count = nums.length; count > 0 && found < k; count--) {
+                for (int value : buckets.get(count)) {
+                    top[found++] = value;
+                    if (found == k) break;
+                }
+            }
+            return top;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> topKFrequent(vector<int>& nums, int k) {
+            unordered_map<int, int> counts;
+            for (int x : nums) counts[x]++;
+            vector<vector<int>> buckets(nums.size() + 1); // buckets[c]: the values that appear c times
+            for (auto [value, count] : counts) buckets[count].push_back(value);
+            vector<int> top;
+            for (int count = nums.size(); count > 0; count--) {
+                for (int value : buckets[count]) {
+                    top.push_back(value);
+                    if ((int)top.size() == k) return top;
+                }
+            }
+            return top;
+        }
+    };
+  go: |
+    func topKFrequent(nums []int, k int) []int {
+    	counts := map[int]int{}
+    	for _, x := range nums {
+    		counts[x]++
+    	}
+    	buckets := make([][]int, len(nums)+1) // buckets[c]: the values that appear c times
+    	for value, count := range counts {
+    		buckets[count] = append(buckets[count], value)
+    	}
+    	top := []int{}
+    	for count := len(nums); count > 0; count-- {
+    		for _, value := range buckets[count] {
+    			top = append(top, value)
+    			if len(top) == k {
+    				return top
+    			}
+    		}
+    	}
+    	return top
+    }
 visualisers: [hash-table, heap]

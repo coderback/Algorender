@@ -65,4 +65,51 @@ solutions:
         }
       }
     }
+  java: |
+    class Solution {
+        public void rotate(int[][] matrix) {
+            int n = matrix.length;
+            for (int r = 0; r < n; r++) { // transpose
+                for (int c = r + 1; c < n; c++) {
+                    int cell = matrix[r][c];
+                    matrix[r][c] = matrix[c][r];
+                    matrix[c][r] = cell;
+                }
+            }
+            for (int[] row : matrix) { // then reverse each row
+                for (int c = 0; c < n / 2; c++) {
+                    int cell = row[c];
+                    row[c] = row[n - 1 - c];
+                    row[n - 1 - c] = cell;
+                }
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        void rotate(vector<vector<int>>& matrix) {
+            int n = matrix.size();
+            for (int r = 0; r < n; r++) { // transpose
+                for (int c = r + 1; c < n; c++) {
+                    swap(matrix[r][c], matrix[c][r]);
+                }
+            }
+            for (auto& row : matrix) { // then reverse each row
+                reverse(row.begin(), row.end());
+            }
+        }
+    };
+  go: |
+    func rotate(matrix [][]int) {
+    	n := len(matrix)
+    	for r := 0; r < n; r++ { // transpose
+    		for c := r + 1; c < n; c++ {
+    			matrix[r][c], matrix[c][r] = matrix[c][r], matrix[r][c]
+    		}
+    	}
+    	for _, row := range matrix { // then reverse each row
+    		slices.Reverse(row)
+    	}
+    }
 visualisers: []

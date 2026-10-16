@@ -90,4 +90,59 @@ solutions:
       }
       return start;
     }
+  java: |
+    class Solution {
+        public int canCompleteCircuit(int[] gas, int[] cost) {
+            if (Arrays.stream(gas).sum() < Arrays.stream(cost).sum()) return -1;
+            int start = 0;
+            int tank = 0;
+            for (int i = 0; i < gas.length; i++) {
+                tank += gas[i] - cost[i];
+                if (tank < 0) {
+                    // No station from start to i can get past here.
+                    start = i + 1;
+                    tank = 0;
+                }
+            }
+            return start;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int canCompleteCircuit(vector<int>& gas, vector<int>& cost) {
+            if (accumulate(gas.begin(), gas.end(), 0) < accumulate(cost.begin(), cost.end(), 0)) return -1;
+            int start = 0;
+            int tank = 0;
+            for (int i = 0; i < (int)gas.size(); i++) {
+                tank += gas[i] - cost[i];
+                if (tank < 0) {
+                    // No station from start to i can get past here.
+                    start = i + 1;
+                    tank = 0;
+                }
+            }
+            return start;
+        }
+    };
+  go: |
+    func canCompleteCircuit(gas []int, cost []int) int {
+    	total := 0
+    	for i := range gas {
+    		total += gas[i] - cost[i]
+    	}
+    	if total < 0 {
+    		return -1
+    	}
+    	start, tank := 0, 0
+    	for i := range gas {
+    		tank += gas[i] - cost[i]
+    		if tank < 0 {
+    			// No station from start to i can get past here.
+    			start = i + 1
+    			tank = 0
+    		}
+    	}
+    	return start
+    }
 visualisers: []

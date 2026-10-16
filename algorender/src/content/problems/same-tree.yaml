@@ -64,4 +64,31 @@ solutions:
       if (p === null || q === null || p.val !== q.val) return false;
       return isSameTree(p.left, q.left) && isSameTree(p.right, q.right);
     }
+  java: |
+    class Solution {
+        public boolean isSameTree(TreeNode p, TreeNode q) {
+            if (p == null && q == null) return true;
+            if (p == null || q == null || p.val != q.val) return false;
+            return isSameTree(p.left, q.left) && isSameTree(p.right, q.right);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isSameTree(TreeNode* p, TreeNode* q) {
+            if (!p && !q) return true;
+            if (!p || !q || p->val != q->val) return false;
+            return isSameTree(p->left, q->left) && isSameTree(p->right, q->right);
+        }
+    };
+  go: |
+    func isSameTree(p *TreeNode, q *TreeNode) bool {
+    	if p == nil && q == nil {
+    		return true
+    	}
+    	if p == nil || q == nil || p.Val != q.Val {
+    		return false
+    	}
+    	return isSameTree(p.Left, q.Left) && isSameTree(p.Right, q.Right)
+    }
 visualisers: [binary-tree]

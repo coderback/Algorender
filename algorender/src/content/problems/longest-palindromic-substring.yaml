@@ -94,4 +94,70 @@ solutions:
       }
       return s.slice(bestStart, bestStart + bestLength);
     }
+  java: |
+    class Solution {
+        public String longestPalindrome(String s) {
+            int bestStart = 0;
+            int bestLength = 1;
+            for (int centre = 0; centre < s.length(); centre++) {
+                for (int width = 0; width <= 1; width++) { // odd, then even length
+                    int lo = centre;
+                    int hi = centre + width;
+                    while (lo >= 0 && hi < s.length() && s.charAt(lo) == s.charAt(hi)) {
+                        lo--;
+                        hi++;
+                    }
+                    int length = hi - lo - 1; // s.substring(lo + 1, hi) is the palindrome around this centre
+                    if (length > bestLength) {
+                        bestStart = lo + 1;
+                        bestLength = length;
+                    }
+                }
+            }
+            return s.substring(bestStart, bestStart + bestLength);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        string longestPalindrome(string& s) {
+            int n = s.size();
+            int bestStart = 0;
+            int bestLength = 1;
+            for (int centre = 0; centre < n; centre++) {
+                for (int width = 0; width <= 1; width++) { // odd, then even length
+                    int lo = centre;
+                    int hi = centre + width;
+                    while (lo >= 0 && hi < n && s[lo] == s[hi]) {
+                        lo--;
+                        hi++;
+                    }
+                    int length = hi - lo - 1; // s[lo + 1 .. hi - 1] is the palindrome around this centre
+                    if (length > bestLength) {
+                        bestStart = lo + 1;
+                        bestLength = length;
+                    }
+                }
+            }
+            return s.substr(bestStart, bestLength);
+        }
+    };
+  go: |
+    func longestPalindrome(s string) string {
+    	bestStart, bestLength := 0, 1
+    	for centre := range len(s) {
+    		for width := 0; width <= 1; width++ { // odd, then even length
+    			lo, hi := centre, centre+width
+    			for lo >= 0 && hi < len(s) && s[lo] == s[hi] {
+    				lo--
+    				hi++
+    			}
+    			length := hi - lo - 1 // s[lo+1:hi] is the palindrome around this centre
+    			if length > bestLength {
+    				bestStart, bestLength = lo+1, length
+    			}
+    		}
+    	}
+    	return s[bestStart : bestStart+bestLength]
+    }
 visualisers: [manacher, two-pointers]

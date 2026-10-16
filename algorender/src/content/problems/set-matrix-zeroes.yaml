@@ -97,4 +97,68 @@ solutions:
         }
       }
     }
+  java: |
+    class Solution {
+        public void setZeroes(int[][] matrix) {
+            int rows = matrix.length, cols = matrix[0].length;
+            boolean[] zeroRow = new boolean[rows]; // rows that held a zero at the start
+            boolean[] zeroCol = new boolean[cols]; // columns that held a zero at the start
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (matrix[r][c] == 0) {
+                        zeroRow[r] = true;
+                        zeroCol[c] = true;
+                    }
+                }
+            }
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (zeroRow[r] || zeroCol[c]) matrix[r][c] = 0;
+                }
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        void setZeroes(vector<vector<int>>& matrix) {
+            int rows = matrix.size(), cols = matrix[0].size();
+            vector<bool> zeroRow(rows, false); // rows that held a zero at the start
+            vector<bool> zeroCol(cols, false); // columns that held a zero at the start
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (matrix[r][c] == 0) {
+                        zeroRow[r] = true;
+                        zeroCol[c] = true;
+                    }
+                }
+            }
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (zeroRow[r] || zeroCol[c]) matrix[r][c] = 0;
+                }
+            }
+        }
+    };
+  go: |
+    func setZeroes(matrix [][]int) {
+    	rows, cols := len(matrix), len(matrix[0])
+    	zeroRow := make([]bool, rows) // rows that held a zero at the start
+    	zeroCol := make([]bool, cols) // columns that held a zero at the start
+    	for r := 0; r < rows; r++ {
+    		for c := 0; c < cols; c++ {
+    			if matrix[r][c] == 0 {
+    				zeroRow[r] = true
+    				zeroCol[c] = true
+    			}
+    		}
+    	}
+    	for r := 0; r < rows; r++ {
+    		for c := 0; c < cols; c++ {
+    			if zeroRow[r] || zeroCol[c] {
+    				matrix[r][c] = 0
+    			}
+    		}
+    	}
+    }
 visualisers: []

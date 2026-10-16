@@ -80,4 +80,47 @@ solutions:
       }
       return [];
     }
+  java: |
+    class Solution {
+        public int[] twoSumSorted(int[] nums, int target) {
+            int left = 0, right = nums.length - 1;
+            while (left < right) {
+                long total = (long) nums[left] + nums[right]; // the sum can exceed an int
+                if (total == target) return new int[] {left, right};
+                if (total < target) left++;
+                else right--;
+            }
+            return new int[0];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> twoSumSorted(vector<int>& nums, int target) {
+            int left = 0, right = nums.size() - 1;
+            while (left < right) {
+                long long total = (long long)nums[left] + nums[right]; // the sum can exceed an int
+                if (total == target) return {left, right};
+                if (total < target) left++;
+                else right--;
+            }
+            return {};
+        }
+    };
+  go: |
+    func twoSumSorted(nums []int, target int) []int {
+    	left, right := 0, len(nums)-1
+    	for left < right {
+    		total := nums[left] + nums[right]
+    		if total == target {
+    			return []int{left, right}
+    		}
+    		if total < target {
+    			left++
+    		} else {
+    			right--
+    		}
+    	}
+    	return []int{}
+    }
 visualisers: [two-pointers]

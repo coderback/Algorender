@@ -111,4 +111,98 @@ solutions:
       }
       return triples;
     }
+  java: |
+    class Solution {
+        public List<List<Integer>> threeSum(int[] nums) {
+            int[] values = nums.clone();
+            Arrays.sort(values);
+            int n = values.length;
+            List<List<Integer>> triples = new ArrayList<>();
+            for (int i = 0; i < n - 2; i++) {
+                if (values[i] > 0) break;
+                if (i > 0 && values[i] == values[i - 1]) continue;
+                int left = i + 1, right = n - 1;
+                while (left < right) {
+                    int total = values[i] + values[left] + values[right];
+                    if (total < 0) {
+                        left++;
+                    } else if (total > 0) {
+                        right--;
+                    } else {
+                        triples.add(List.of(values[i], values[left], values[right]));
+                        left++;
+                        right--;
+                        while (left < right && values[left] == values[left - 1]) left++;
+                        while (left < right && values[right] == values[right + 1]) right--;
+                    }
+                }
+            }
+            return triples;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> threeSum(vector<int>& nums) {
+            vector<int> values = nums;
+            sort(values.begin(), values.end());
+            int n = values.size();
+            vector<vector<int>> triples;
+            for (int i = 0; i < n - 2; i++) {
+                if (values[i] > 0) break;
+                if (i > 0 && values[i] == values[i - 1]) continue;
+                int left = i + 1, right = n - 1;
+                while (left < right) {
+                    int total = values[i] + values[left] + values[right];
+                    if (total < 0) {
+                        left++;
+                    } else if (total > 0) {
+                        right--;
+                    } else {
+                        triples.push_back({values[i], values[left], values[right]});
+                        left++;
+                        right--;
+                        while (left < right && values[left] == values[left - 1]) left++;
+                        while (left < right && values[right] == values[right + 1]) right--;
+                    }
+                }
+            }
+            return triples;
+        }
+    };
+  go: |
+    func threeSum(nums []int) [][]int {
+    	values := slices.Clone(nums)
+    	slices.Sort(values)
+    	n := len(values)
+    	triples := [][]int{}
+    	for i := 0; i < n-2; i++ {
+    		if values[i] > 0 {
+    			break
+    		}
+    		if i > 0 && values[i] == values[i-1] {
+    			continue
+    		}
+    		left, right := i+1, n-1
+    		for left < right {
+    			total := values[i] + values[left] + values[right]
+    			if total < 0 {
+    				left++
+    			} else if total > 0 {
+    				right--
+    			} else {
+    				triples = append(triples, []int{values[i], values[left], values[right]})
+    				left++
+    				right--
+    				for left < right && values[left] == values[left-1] {
+    					left++
+    				}
+    				for left < right && values[right] == values[right+1] {
+    					right--
+    				}
+    			}
+    		}
+    	}
+    	return triples
+    }
 visualisers: [two-pointers]

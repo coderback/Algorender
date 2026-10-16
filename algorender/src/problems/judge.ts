@@ -8,8 +8,9 @@
 
 import { CHECKS } from '@/content/problems/checks';
 import { DEFAULT_LIMITS, LINE_LIMITS, type Arg, type Json, type Language, type RunMode, type RunRequest, type RunResult } from '@/workspace/protocol';
-import { entryName, nameIn } from './codegen';
-import { PYTHON_TIME_FACTOR, type Comparator, type DesignSig, type FunctionSig, type Param } from './schema';
+import { entryName, methodIn, nameIn } from './codegen';
+import { TIME_FACTOR, type ProblemLanguage } from './languages';
+import type { Comparator, DesignSig, FunctionSig, Param } from './schema';
 
 /** One judged test, as the browser gets it. */
 export type JudgeCase = {
@@ -51,7 +52,7 @@ export type CaseVerdict = {
 };
 
 /** The time budget for one test in this language. */
-export const timeLimit = (spec: ProblemSpec, language: Language) => spec.timeLimitMs * (language === 'python' ? PYTHON_TIME_FACTOR : 1);
+export const timeLimit = (spec: ProblemSpec, language: ProblemLanguage) => spec.timeLimitMs * TIME_FACTOR[language];
 
 /** The request that judges one test: the code as written, plain arguments. */
 export function judgeRequest(spec: ProblemSpec, test: JudgeCase, language: Language, code: string): RunRequest {
@@ -118,7 +119,7 @@ export function watchable(test: JudgeCase): boolean {
 }
 
 /** The verdict on one test from its run. */
-export function verdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, language: Language): CaseVerdict {
+export function verdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, language: ProblemLanguage): CaseVerdict {
   const ms = Math.round(result.ms);
   const { error } = result;
   if (error?.kind === 'timeout') {
@@ -145,7 +146,7 @@ export function answerOf(spec: ProblemSpec, result: RunResult): Json {
   return got === null && (type === 'TreeNode' || type === 'ListNode') ? [] : got;
 }
 
-function designVerdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, language: Language): CaseVerdict {
+function designVerdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, language: ProblemLanguage): CaseVerdict {
   const ms = Math.round(result.ms);
   const got = Array.isArray(result.returned) ? result.returned : [];
   const expected = Array.isArray(test.expected) ? test.expected : [];
@@ -170,12 +171,12 @@ function designVerdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, la
   return { status: 'pass', message: 'Correct.', got, ms };
 }
 
-function callText([method, ...args]: [string, ...Json[]], language: Language): string {
-  return `${nameIn(method, language)}(${args.map((a) => formatValue(a, language)).join(', ')})`;
+function callText([method, ...args]: [string, ...Json[]], language: ProblemLanguage): string {
+  return `${methodIn(method, language)}(${args.map((a) => formatValue(a, language)).join(', ')})`;
 }
 
 /** Why an answer is wrong, or null when it is right. */
-function mismatch(spec: ProblemSpec, test: JudgeCase, got: Json, language: Language): string | null {
+function mismatch(spec: ProblemSpec, test: JudgeCase, got: Json, language: ProblemLanguage): string | null {
   if (spec.check) {
     const check = CHECKS[spec.check];
     if (!check) throw new Error(`No check called ${spec.check}`);
@@ -239,7 +240,7 @@ function close(a: Json, b: Json): boolean {
 const SHOWN = 20;
 
 /** A value as the learner's language writes it: None and True in Python, null and true in JS. */
-export function formatValue(v: Json, language: Language): string {
+export function formatValue(v: Json, language: ProblemLanguage): string {
   const py = language === 'python';
   if (v === null) return py ? 'None' : 'null';
   if (typeof v === 'boolean') return py ? (v ? 'True' : 'False') : String(v);

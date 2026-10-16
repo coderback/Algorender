@@ -74,4 +74,43 @@ solutions:
       }
       return row[n - 1];
     }
+  java: |
+    class Solution {
+        public int uniquePaths(int m, int n) {
+            int[] row = new int[n]; // paths to each cell of the current row
+            Arrays.fill(row, 1);    // the top row has one each
+            for (int r = 1; r < m; r++) {
+                for (int c = 1; c < n; c++) {
+                    row[c] += row[c - 1]; // from above (row[c] still holds it) plus from the left
+                }
+            }
+            return row[n - 1];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int uniquePaths(int m, int n) {
+            vector<int> row(n, 1); // paths to each cell of the current row; the top row has one each
+            for (int r = 1; r < m; r++) {
+                for (int c = 1; c < n; c++) {
+                    row[c] += row[c - 1]; // from above (row[c] still holds it) plus from the left
+                }
+            }
+            return row[n - 1];
+        }
+    };
+  go: |
+    func uniquePaths(m int, n int) int {
+    	row := make([]int, n) // paths to each cell of the current row
+    	for c := range row {
+    		row[c] = 1 // the top row has one each
+    	}
+    	for r := 1; r < m; r++ {
+    		for c := 1; c < n; c++ {
+    			row[c] += row[c-1] // from above (row[c] still holds it) plus from the left
+    		}
+    	}
+    	return row[n-1]
+    }
 visualisers: [unique-paths]

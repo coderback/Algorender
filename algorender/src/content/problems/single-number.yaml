@@ -66,4 +66,29 @@ solutions:
       }
       return result;
     }
+  java: |
+    class Solution {
+        public int singleNumber(int[] nums) {
+            int result = 0;
+            for (int x : nums) result ^= x; // pairs cancel: x ^ x == 0
+            return result;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int singleNumber(vector<int>& nums) {
+            int result = 0;
+            for (int x : nums) result ^= x; // pairs cancel: x ^ x == 0
+            return result;
+        }
+    };
+  go: |
+    func singleNumber(nums []int) int {
+    	result := 0
+    	for _, x := range nums {
+    		result ^= x // pairs cancel: x ^ x == 0
+    	}
+    	return result
+    }
 visualisers: []

@@ -96,4 +96,77 @@ solutions:
       }
       return result;
     }
+  java: |
+    class Solution {
+        public List<List<Integer>> insert(int[][] intervals, int[] newInterval) {
+            int start = newInterval[0];
+            int end = newInterval[1];
+            List<List<Integer>> result = new ArrayList<>();
+            int i = 0;
+            // Intervals that end before the new one starts.
+            while (i < intervals.length && intervals[i][1] < start) {
+                result.add(List.of(intervals[i][0], intervals[i][1]));
+                i++;
+            }
+            // Intervals that overlap it merge into it.
+            while (i < intervals.length && intervals[i][0] <= end) {
+                start = Math.min(start, intervals[i][0]);
+                end = Math.max(end, intervals[i][1]);
+                i++;
+            }
+            result.add(List.of(start, end));
+            while (i < intervals.length) {
+                result.add(List.of(intervals[i][0], intervals[i][1]));
+                i++;
+            }
+            return result;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> insert(vector<vector<int>>& intervals, vector<int>& newInterval) {
+            int start = newInterval[0];
+            int end = newInterval[1];
+            vector<vector<int>> result;
+            size_t i = 0;
+            // Intervals that end before the new one starts.
+            while (i < intervals.size() && intervals[i][1] < start) {
+                result.push_back(intervals[i]);
+                i++;
+            }
+            // Intervals that overlap it merge into it.
+            while (i < intervals.size() && intervals[i][0] <= end) {
+                start = min(start, intervals[i][0]);
+                end = max(end, intervals[i][1]);
+                i++;
+            }
+            result.push_back({start, end});
+            while (i < intervals.size()) {
+                result.push_back(intervals[i]);
+                i++;
+            }
+            return result;
+        }
+    };
+  go: |
+    func insert(intervals [][]int, newInterval []int) [][]int {
+    	start, end := newInterval[0], newInterval[1]
+    	result := [][]int{}
+    	i := 0
+    	// Intervals that end before the new one starts.
+    	for i < len(intervals) && intervals[i][1] < start {
+    		result = append(result, intervals[i])
+    		i++
+    	}
+    	// Intervals that overlap it merge into it.
+    	for i < len(intervals) && intervals[i][0] <= end {
+    		start = min(start, intervals[i][0])
+    		end = max(end, intervals[i][1])
+    		i++
+    	}
+    	result = append(result, []int{start, end})
+    	result = append(result, intervals[i:]...)
+    	return result
+    }
 visualisers: [merge-intervals]

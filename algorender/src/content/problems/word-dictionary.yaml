@@ -130,4 +130,127 @@ solutions:
         return match(this.root, 0);
       }
     }
+  java: |
+    class WordDictionary {
+        private static class TrieNode {
+            TrieNode[] children = new TrieNode[26];
+            boolean end; // a stored word ends here
+        }
+
+        private final TrieNode root = new TrieNode();
+
+        public WordDictionary() {}
+
+        public void addWord(String word) {
+            TrieNode node = root;
+            for (char ch : word.toCharArray()) {
+                if (node.children[ch - 'a'] == null) node.children[ch - 'a'] = new TrieNode();
+                node = node.children[ch - 'a'];
+            }
+            node.end = true;
+        }
+
+        public boolean search(String word) {
+            return match(word, root, 0);
+        }
+
+        // Whether word from position i on can be matched starting from node.
+        private boolean match(String word, TrieNode node, int i) {
+            if (i == word.length()) return node.end;
+            char ch = word.charAt(i);
+            if (ch == '.') {
+                for (TrieNode child : node.children) {
+                    if (child != null && match(word, child, i + 1)) return true;
+                }
+                return false;
+            }
+            TrieNode child = node.children[ch - 'a'];
+            return child != null && match(word, child, i + 1);
+        }
+    }
+  cpp: |
+    class WordDictionary {
+        struct TrieNode {
+            array<unique_ptr<TrieNode>, 26> children;
+            bool end = false; // a stored word ends here
+        };
+
+        TrieNode root;
+
+        // Whether word from position i on can be matched starting from node.
+        bool match(const string& word, const TrieNode* node, size_t i) const {
+            if (i == word.size()) return node->end;
+            if (word[i] == '.') {
+                for (auto& child : node->children) {
+                    if (child && match(word, child.get(), i + 1)) return true;
+                }
+                return false;
+            }
+            auto& child = node->children[word[i] - 'a'];
+            return child && match(word, child.get(), i + 1);
+        }
+
+    public:
+        WordDictionary() {}
+
+        void addWord(string& word) {
+            TrieNode* node = &root;
+            for (char ch : word) {
+                auto& child = node->children[ch - 'a'];
+                if (!child) child = make_unique<TrieNode>();
+                node = child.get();
+            }
+            node->end = true;
+        }
+
+        bool search(string& word) {
+            return match(word, &root, 0);
+        }
+    };
+  go: |
+    type trieNode struct {
+    	children [26]*trieNode
+    	end      bool // a stored word ends here
+    }
+
+    type WordDictionary struct {
+    	root *trieNode
+    }
+
+    func Constructor() WordDictionary {
+    	return WordDictionary{root: &trieNode{}}
+    }
+
+    func (this *WordDictionary) AddWord(word string) {
+    	node := this.root
+    	for i := 0; i < len(word); i++ {
+    		k := word[i] - 'a'
+    		if node.children[k] == nil {
+    			node.children[k] = &trieNode{}
+    		}
+    		node = node.children[k]
+    	}
+    	node.end = true
+    }
+
+    func (this *WordDictionary) Search(word string) bool {
+    	// match reports whether word[i:] can be matched starting from node.
+    	var match func(node *trieNode, i int) bool
+    	match = func(node *trieNode, i int) bool {
+    		if i == len(word) {
+    			return node.end
+    		}
+    		if word[i] == '.' {
+    			for _, child := range node.children {
+    				if child != nil && match(child, i+1) {
+    					return true
+    				}
+    			}
+    			return false
+    		}
+    		child := node.children[word[i]-'a']
+    		return child != nil && match(child, i+1)
+    	}
+    	return match(this.root, 0)
+    }
 visualisers: [trie]

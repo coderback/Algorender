@@ -82,4 +82,59 @@ solutions:
       }
       return reachable[half];
     }
+  java: |
+    class Solution {
+        public boolean canPartition(int[] nums) {
+            int total = 0;
+            for (int x : nums) total += x;
+            if (total % 2 == 1) return false;
+            int half = total / 2;
+            boolean[] reachable = new boolean[half + 1]; // reachable[s]: some of the numbers add up to s
+            reachable[0] = true;
+            for (int x : nums) {
+                for (int s = half; s >= x; s--) {
+                    if (reachable[s - x]) reachable[s] = true;
+                }
+            }
+            return reachable[half];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool canPartition(vector<int>& nums) {
+            int total = accumulate(nums.begin(), nums.end(), 0);
+            if (total % 2 == 1) return false;
+            int half = total / 2;
+            vector<bool> reachable(half + 1, false); // reachable[s]: some of the numbers add up to s
+            reachable[0] = true;
+            for (int x : nums) {
+                for (int s = half; s >= x; s--) {
+                    if (reachable[s - x]) reachable[s] = true;
+                }
+            }
+            return reachable[half];
+        }
+    };
+  go: |
+    func canPartition(nums []int) bool {
+    	total := 0
+    	for _, x := range nums {
+    		total += x
+    	}
+    	if total%2 == 1 {
+    		return false
+    	}
+    	half := total / 2
+    	reachable := make([]bool, half+1) // reachable[s]: some of the numbers add up to s
+    	reachable[0] = true
+    	for _, x := range nums {
+    		for s := half; s >= x; s-- {
+    			if reachable[s-x] {
+    				reachable[s] = true
+    			}
+    		}
+    	}
+    	return reachable[half]
+    }
 visualisers: [knapsack-01]

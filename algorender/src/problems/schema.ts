@@ -10,9 +10,14 @@ import { z } from 'zod';
 import type { Json } from '@/workspace/protocol';
 import { PATTERN_IDS } from './patterns';
 
-/** The types a signature may use. Arrays nest at most two deep. */
+/**
+ * The types a signature may use. Arrays nest at most two deep. `long` is a
+ * 64-bit integer (up to 2^53, JavaScript's safe limit): the same as `int` in
+ * Python, JavaScript and Go, but `long` / `long long` in Java and C++.
+ */
 export const VALUE_TYPES = [
   'int',
+  'long',
   'float',
   'bool',
   'string',
@@ -106,10 +111,11 @@ export const ProblemSchema = z
     /** The reference approach, in Markdown, revealed on request. */
     approach: z.string().min(40),
     complexity: z.object({ time: z.string(), space: z.string() }),
-    solutions: z.object({ python: z.string(), typescript: z.string() }),
+    /** Reference solutions; JavaScript is the TypeScript one with its types stripped. Java, C++ and Go run on the server judge. */
+    solutions: z.object({ python: z.string(), typescript: z.string(), java: z.string(), cpp: z.string(), go: z.string() }),
     /** Where a failing test is watched; inferred from the signature when left out. */
     view: z.enum(['array', 'grid', 'tree', 'memory']).optional(),
-    /** Per-test time limit in JavaScript, in ms; Python gets PYTHON_TIME_FACTOR times as long. */
+    /** Per-test time limit in JavaScript, in ms; other languages get TIME_FACTOR times as long (languages.ts). */
     timeLimitMs: z.number().int().min(500).max(10_000).default(2_000),
     /** Visualisers that teach what the problem needs. */
     visualisers: z.array(z.string()).default([]),
@@ -120,5 +126,3 @@ export type Problem = z.infer<typeof ProblemSchema> & { slug: string };
 export type FunctionSig = z.infer<typeof FunctionSignature>;
 export type DesignSig = z.infer<typeof DesignSignature>;
 
-/** Python is slower than JavaScript, and Pyodide slower again. */
-export const PYTHON_TIME_FACTOR = 3;

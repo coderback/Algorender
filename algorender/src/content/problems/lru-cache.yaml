@@ -181,4 +181,153 @@ solutions:
         this.append(fresh);
       }
     }
+  java: |
+    class LRUCache {
+        private static class Node {
+            int key, value;
+            Node prev, next;
+
+            Node(int key, int value) {
+                this.key = key;
+                this.value = value;
+            }
+        }
+
+        private final int capacity;
+        private final Map<Integer, Node> nodes = new HashMap<>();
+        private final Node head = new Node(0, 0); // just before the least recently used
+        private final Node tail = new Node(0, 0); // just after the most recently used
+
+        public LRUCache(int capacity) {
+            this.capacity = capacity;
+            head.next = tail;
+            tail.prev = head;
+        }
+
+        private void unlink(Node node) {
+            node.prev.next = node.next;
+            node.next.prev = node.prev;
+        }
+
+        private void append(Node node) {
+            node.prev = tail.prev;
+            node.next = tail;
+            tail.prev.next = node;
+            tail.prev = node;
+        }
+
+        public int get(int key) {
+            Node node = nodes.get(key);
+            if (node == null) return -1;
+            unlink(node);
+            append(node);
+            return node.value;
+        }
+
+        public void put(int key, int value) {
+            Node node = nodes.get(key);
+            if (node != null) {
+                node.value = value;
+                unlink(node);
+                append(node);
+                return;
+            }
+            if (nodes.size() == capacity) {
+                Node oldest = head.next;
+                unlink(oldest);
+                nodes.remove(oldest.key);
+            }
+            node = new Node(key, value);
+            nodes.put(key, node);
+            append(node);
+        }
+    }
+  cpp: |
+    class LRUCache {
+        int capacity;
+        list<pair<int, int>> order; // (key, value), least recently used at the front
+        unordered_map<int, list<pair<int, int>>::iterator> nodes;
+
+    public:
+        LRUCache(int capacity) : capacity(capacity) {}
+
+        int get(int key) {
+            auto it = nodes.find(key);
+            if (it == nodes.end()) return -1;
+            order.splice(order.end(), order, it->second); // move it to the back
+            return it->second->second;
+        }
+
+        void put(int key, int value) {
+            auto it = nodes.find(key);
+            if (it != nodes.end()) {
+                it->second->second = value;
+                order.splice(order.end(), order, it->second);
+                return;
+            }
+            if ((int)nodes.size() == capacity) {
+                nodes.erase(order.front().first);
+                order.pop_front();
+            }
+            order.emplace_back(key, value);
+            nodes[key] = prev(order.end());
+        }
+    };
+  go: |
+    type cacheNode struct {
+    	key, value int
+    	prev, next *cacheNode
+    }
+
+    type LRUCache struct {
+    	capacity   int
+    	nodes      map[int]*cacheNode
+    	head, tail *cacheNode // dummies at the ends, least recently used just after head
+    }
+
+    func Constructor(capacity int) LRUCache {
+    	head, tail := &cacheNode{}, &cacheNode{}
+    	head.next = tail
+    	tail.prev = head
+    	return LRUCache{capacity: capacity, nodes: map[int]*cacheNode{}, head: head, tail: tail}
+    }
+
+    func (this *LRUCache) unlink(node *cacheNode) {
+    	node.prev.next = node.next
+    	node.next.prev = node.prev
+    }
+
+    func (this *LRUCache) append(node *cacheNode) {
+    	node.prev = this.tail.prev
+    	node.next = this.tail
+    	this.tail.prev.next = node
+    	this.tail.prev = node
+    }
+
+    func (this *LRUCache) Get(key int) int {
+    	node, ok := this.nodes[key]
+    	if !ok {
+    		return -1
+    	}
+    	this.unlink(node)
+    	this.append(node)
+    	return node.value
+    }
+
+    func (this *LRUCache) Put(key int, value int) {
+    	if node, ok := this.nodes[key]; ok {
+    		node.value = value
+    		this.unlink(node)
+    		this.append(node)
+    		return
+    	}
+    	if len(this.nodes) == this.capacity {
+    		oldest := this.head.next
+    		this.unlink(oldest)
+    		delete(this.nodes, oldest.key)
+    	}
+    	node := &cacheNode{key: key, value: value}
+    	this.nodes[key] = node
+    	this.append(node)
+    }
 visualisers: [hash-table, linked-list]

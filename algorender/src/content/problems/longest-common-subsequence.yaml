@@ -82,4 +82,52 @@ solutions:
       }
       return above[text2.length];
     }
+  java: |
+    class Solution {
+        public int longestCommonSubsequence(String text1, String text2) {
+            int n = text2.length();
+            int[] above = new int[n + 1]; // the row for the previous prefix of text1
+            for (char a : text1.toCharArray()) {
+                int[] row = new int[n + 1];
+                for (int j = 0; j < n; j++) {
+                    row[j + 1] = a == text2.charAt(j) ? above[j] + 1 : Math.max(above[j + 1], row[j]);
+                }
+                above = row;
+            }
+            return above[n];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int longestCommonSubsequence(string& text1, string& text2) {
+            int n = text2.size();
+            vector<int> above(n + 1, 0); // the row for the previous prefix of text1
+            for (char a : text1) {
+                vector<int> row(n + 1, 0);
+                for (int j = 0; j < n; j++) {
+                    row[j + 1] = a == text2[j] ? above[j] + 1 : max(above[j + 1], row[j]);
+                }
+                above = move(row);
+            }
+            return above[n];
+        }
+    };
+  go: |
+    func longestCommonSubsequence(text1 string, text2 string) int {
+    	n := len(text2)
+    	above := make([]int, n+1) // the row for the previous prefix of text1
+    	for i := 0; i < len(text1); i++ {
+    		row := make([]int, n+1)
+    		for j := 0; j < n; j++ {
+    			if text1[i] == text2[j] {
+    				row[j+1] = above[j] + 1
+    			} else {
+    				row[j+1] = max(above[j+1], row[j])
+    			}
+    		}
+    		above = row
+    	}
+    	return above[n]
+    }
 visualisers: [longest-common-subsequence]

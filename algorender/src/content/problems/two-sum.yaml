@@ -71,4 +71,40 @@ solutions:
       }
       return [];
     }
+  java: |
+    class Solution {
+        public int[] twoSum(int[] nums, int target) {
+            Map<Integer, Integer> seen = new HashMap<>();
+            for (int i = 0; i < nums.length; i++) {
+                Integer partner = seen.get(target - nums[i]);
+                if (partner != null) return new int[] {partner, i};
+                seen.put(nums[i], i);
+            }
+            return new int[0];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> twoSum(vector<int>& nums, int target) {
+            unordered_map<int, int> seen;
+            for (int i = 0; i < (int)nums.size(); i++) {
+                auto partner = seen.find(target - nums[i]);
+                if (partner != seen.end()) return {partner->second, i};
+                seen[nums[i]] = i;
+            }
+            return {};
+        }
+    };
+  go: |
+    func twoSum(nums []int, target int) []int {
+    	seen := map[int]int{}
+    	for i, x := range nums {
+    		if j, ok := seen[target-x]; ok {
+    			return []int{j, i}
+    		}
+    		seen[x] = i
+    	}
+    	return []int{}
+    }
 visualisers: [hash-table]

@@ -126,4 +126,62 @@ solutions:
       }
       return heap.size() === 1 ? heap.peek() : 0;
     }
+  java: |
+    class Solution {
+        public int lastStoneWeight(int[] stones) {
+            PriorityQueue<Integer> heap = new PriorityQueue<>(Collections.reverseOrder()); // heaviest on top
+            for (int w : stones) heap.add(w);
+            while (heap.size() > 1) {
+                int y = heap.poll();
+                int x = heap.poll();
+                if (y != x) heap.add(y - x);
+            }
+            return heap.isEmpty() ? 0 : heap.peek();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int lastStoneWeight(vector<int>& stones) {
+            priority_queue<int> heap(stones.begin(), stones.end()); // heaviest on top
+            while (heap.size() > 1) {
+                int y = heap.top();
+                heap.pop();
+                int x = heap.top();
+                heap.pop();
+                if (y != x) heap.push(y - x);
+            }
+            return heap.empty() ? 0 : heap.top();
+        }
+    };
+  go: |
+    // maxHeap is a container/heap of ints, largest on top.
+    type maxHeap []int
+
+    func (h maxHeap) Len() int           { return len(h) }
+    func (h maxHeap) Less(i, j int) bool { return h[i] > h[j] }
+    func (h maxHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *maxHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *maxHeap) Pop() any {
+    	old := *h
+    	last := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return last
+    }
+
+    func lastStoneWeight(stones []int) int {
+    	stonesLeft := maxHeap(slices.Clone(stones)) // heaviest on top
+    	heap.Init(&stonesLeft)
+    	for stonesLeft.Len() > 1 {
+    		y := heap.Pop(&stonesLeft).(int)
+    		x := heap.Pop(&stonesLeft).(int)
+    		if y != x {
+    			heap.Push(&stonesLeft, y-x)
+    		}
+    	}
+    	if stonesLeft.Len() == 0 {
+    		return 0
+    	}
+    	return stonesLeft[0]
+    }
 visualisers: [heap]

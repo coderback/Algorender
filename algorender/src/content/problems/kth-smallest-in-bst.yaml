@@ -85,4 +85,56 @@ solutions:
         node = next.right;
       }
     }
+  java: |
+    class Solution {
+        public int kthSmallest(TreeNode root, int k) {
+            Deque<TreeNode> stack = new ArrayDeque<>();
+            TreeNode node = root;
+            while (true) {
+                while (node != null) {
+                    stack.push(node);
+                    node = node.left;
+                }
+                TreeNode next = stack.pop(); // the next smallest value
+                if (--k == 0) return next.val;
+                node = next.right;
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int kthSmallest(TreeNode* root, int k) {
+            vector<TreeNode*> stack;
+            TreeNode* node = root;
+            while (true) {
+                while (node) {
+                    stack.push_back(node);
+                    node = node->left;
+                }
+                TreeNode* next = stack.back(); // the next smallest value
+                stack.pop_back();
+                if (--k == 0) return next->val;
+                node = next->right;
+            }
+        }
+    };
+  go: |
+    func kthSmallest(root *TreeNode, k int) int {
+    	var stack []*TreeNode
+    	node := root
+    	for {
+    		for node != nil {
+    			stack = append(stack, node)
+    			node = node.Left
+    		}
+    		next := stack[len(stack)-1] // the next smallest value
+    		stack = stack[:len(stack)-1]
+    		k--
+    		if k == 0 {
+    			return next.Val
+    		}
+    		node = next.Right
+    	}
+    }
 visualisers: [binary-tree]

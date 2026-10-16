@@ -82,4 +82,57 @@ solutions:
       }
       return answer;
     }
+  java: |
+    class Solution {
+        public int[] productExceptSelf(int[] nums) {
+            int n = nums.length;
+            int[] answer = new int[n];
+            int before = 1;
+            for (int i = 0; i < n; i++) {
+                answer[i] = before;
+                before *= nums[i];
+            }
+            int after = 1;
+            for (int i = n - 1; i >= 0; i--) {
+                answer[i] *= after;
+                after *= nums[i];
+            }
+            return answer;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> productExceptSelf(vector<int>& nums) {
+            int n = nums.size();
+            vector<int> answer(n);
+            int before = 1;
+            for (int i = 0; i < n; i++) {
+                answer[i] = before;
+                before *= nums[i];
+            }
+            int after = 1;
+            for (int i = n - 1; i >= 0; i--) {
+                answer[i] *= after;
+                after *= nums[i];
+            }
+            return answer;
+        }
+    };
+  go: |
+    func productExceptSelf(nums []int) []int {
+    	n := len(nums)
+    	answer := make([]int, n)
+    	before := 1
+    	for i := 0; i < n; i++ {
+    		answer[i] = before
+    		before *= nums[i]
+    	}
+    	after := 1
+    	for i := n - 1; i >= 0; i-- {
+    		answer[i] *= after
+    		after *= nums[i]
+    	}
+    	return answer
+    }
 visualisers: []

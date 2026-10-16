@@ -72,4 +72,36 @@ solutions:
       }
       return best;
     }
+  java: |
+    class Solution {
+        public int maxSubArray(int[] nums) {
+            int best = nums[0], running = nums[0];
+            for (int i = 1; i < nums.length; i++) {
+                running = Math.max(nums[i], running + nums[i]); // start again here, or extend the run
+                best = Math.max(best, running);
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int maxSubArray(vector<int>& nums) {
+            int best = nums[0], running = nums[0];
+            for (size_t i = 1; i < nums.size(); i++) {
+                running = max(nums[i], running + nums[i]); // start again here, or extend the run
+                best = max(best, running);
+            }
+            return best;
+        }
+    };
+  go: |
+    func maxSubArray(nums []int) int {
+    	best, running := nums[0], nums[0]
+    	for _, x := range nums[1:] {
+    		running = max(x, running+x) // start again here, or extend the run
+    		best = max(best, running)
+    	}
+    	return best
+    }
 visualisers: []

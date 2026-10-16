@@ -79,4 +79,41 @@ solutions:
       for (const c of counts.values()) if (c === most) tied++;
       return Math.max(tasks.length, (most - 1) * (n + 1) + tied);
     }
+  java: |
+    class Solution {
+        public int leastInterval(String[] tasks, int n) {
+            int[] counts = new int[26];
+            for (String task : tasks) counts[task.charAt(0) - 'A']++;
+            int most = Arrays.stream(counts).max().getAsInt();
+            int tied = 0;
+            for (int c : counts) if (c == most) tied++;
+            return Math.max(tasks.length, (most - 1) * (n + 1) + tied);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int leastInterval(vector<string>& tasks, int n) {
+            int counts[26] = {};
+            for (auto& task : tasks) counts[task[0] - 'A']++;
+            int most = *max_element(counts, counts + 26);
+            int tied = count(counts, counts + 26, most);
+            return max((int)tasks.size(), (most - 1) * (n + 1) + tied);
+        }
+    };
+  go: |
+    func leastInterval(tasks []string, n int) int {
+    	var counts [26]int
+    	for _, task := range tasks {
+    		counts[task[0]-'A']++
+    	}
+    	most := slices.Max(counts[:])
+    	tied := 0
+    	for _, c := range counts {
+    		if c == most {
+    			tied++
+    		}
+    	}
+    	return max(len(tasks), (most-1)*(n+1)+tied)
+    }
 visualisers: [heap]

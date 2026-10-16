@@ -64,4 +64,29 @@ describe('stubs', () => {
       'class MinStack {\n  constructor() {\n\n  }\n\n  /**\n   * @param {number} val\n   */\n  push(val) {\n\n  }\n\n  /**\n   * @return {number}\n   */\n  getMin() {\n\n  }\n}\n',
     );
   });
+
+  it('writes LeetCode-style classes in Java and C++, and a function in Go', () => {
+    expect(stub({ signature: fn }, 'java')).toBe(
+      '// TreeNode is defined for you: new TreeNode(val, left, right), with fields val, left and right.\n\nclass Solution {\n    public TreeNode invertTree(TreeNode root) {\n\n    }\n}\n',
+    );
+    expect(stub({ signature: inPlace }, 'cpp')).toBe(
+      'class Solution {\npublic:\n    void setZeroes(vector<vector<int>>& matrix) {\n        // Change matrix in place; nothing to return.\n    }\n};\n',
+    );
+    expect(stub({ signature: fn }, 'go')).toContain('func invertTree(root *TreeNode) *TreeNode {\n\n}\n');
+  });
+
+  it('returns lists of lists as List<List<…>> in Java, as LeetCode does', () => {
+    const groups: FunctionSig = { function: 'groupAnagrams', params: [{ name: 'strs', type: 'string[]' }], returns: 'string[][]' };
+    expect(stub({ signature: groups }, 'java')).toContain('public List<List<String>> groupAnagrams(String[] strs) {');
+    expect(stub({ signature: groups }, 'cpp')).toContain('vector<vector<string>> groupAnagrams(vector<string>& strs) {');
+    expect(stub({ signature: groups }, 'go')).toContain('func groupAnagrams(strs []string) [][]string {');
+  });
+
+  it('writes a design problem as a Go struct with Constructor and exported methods', () => {
+    expect(stub({ design }, 'go')).toBe(
+      'type MinStack struct {\n\n}\n\nfunc Constructor() MinStack {\n\n}\n\nfunc (this *MinStack) Push(val int) {\n\n}\n\nfunc (this *MinStack) GetMin() int {\n\n}\n',
+    );
+    expect(stub({ design }, 'java')).toContain('class MinStack {\n    public MinStack() {\n\n    }\n\n    public void push(int val) {');
+    expect(stub({ design }, 'cpp')).toContain('class MinStack {\npublic:\n    MinStack() {\n\n    }\n\n    void push(int val) {');
+  });
 });

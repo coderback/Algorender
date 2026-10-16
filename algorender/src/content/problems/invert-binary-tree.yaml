@@ -64,4 +64,35 @@ solutions:
       root.right = left;
       return root;
     }
+  java: |
+    class Solution {
+        public TreeNode invertTree(TreeNode root) {
+            if (root == null) return null;
+            TreeNode left = invertTree(root.left);
+            TreeNode right = invertTree(root.right);
+            root.left = right;
+            root.right = left;
+            return root;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        TreeNode* invertTree(TreeNode* root) {
+            if (!root) return nullptr;
+            TreeNode* left = invertTree(root->left);
+            TreeNode* right = invertTree(root->right);
+            root->left = right;
+            root->right = left;
+            return root;
+        }
+    };
+  go: |
+    func invertTree(root *TreeNode) *TreeNode {
+    	if root == nil {
+    		return nil
+    	}
+    	root.Left, root.Right = invertTree(root.Right), invertTree(root.Left)
+    	return root
+    }
 visualisers: [binary-tree]

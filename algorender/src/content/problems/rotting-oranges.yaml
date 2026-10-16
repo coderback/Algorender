@@ -116,4 +116,104 @@ solutions:
       }
       return fresh === 0 ? minutes : -1;
     }
+  java: |
+    class Solution {
+        public int orangesRotting(int[][] grid) {
+            int rows = grid.length, cols = grid[0].length;
+            int[][] steps = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            Deque<int[]> queue = new ArrayDeque<>();
+            int fresh = 0;
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (grid[r][c] == 2) queue.offer(new int[] {r, c});
+                    else if (grid[r][c] == 1) fresh++;
+                }
+            }
+            int minutes = 0;
+            while (!queue.isEmpty() && fresh > 0) {
+                for (int i = queue.size(); i > 0; i--) { // the oranges that rotted last minute
+                    int[] cell = queue.poll();
+                    for (int[] step : steps) {
+                        int r = cell[0] + step[0], c = cell[1] + step[1];
+                        if (r >= 0 && r < rows && c >= 0 && c < cols && grid[r][c] == 1) {
+                            grid[r][c] = 2;
+                            fresh--;
+                            queue.offer(new int[] {r, c});
+                        }
+                    }
+                }
+                minutes++;
+            }
+            return fresh == 0 ? minutes : -1;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int orangesRotting(vector<vector<int>>& grid) {
+            int rows = grid.size(), cols = grid[0].size();
+            const int steps[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            queue<pair<int, int>> rotten;
+            int fresh = 0;
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (grid[r][c] == 2) rotten.push({r, c});
+                    else if (grid[r][c] == 1) fresh++;
+                }
+            }
+            int minutes = 0;
+            while (!rotten.empty() && fresh > 0) {
+                for (int i = rotten.size(); i > 0; i--) { // the oranges that rotted last minute
+                    auto [r, c] = rotten.front();
+                    rotten.pop();
+                    for (auto& step : steps) {
+                        int nr = r + step[0], nc = c + step[1];
+                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] == 1) {
+                            grid[nr][nc] = 2;
+                            fresh--;
+                            rotten.push({nr, nc});
+                        }
+                    }
+                }
+                minutes++;
+            }
+            return fresh == 0 ? minutes : -1;
+        }
+    };
+  go: |
+    func orangesRotting(grid [][]int) int {
+    	rows, cols := len(grid), len(grid[0])
+    	steps := [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+    	var queue [][2]int
+    	fresh := 0
+    	for r := 0; r < rows; r++ {
+    		for c := 0; c < cols; c++ {
+    			if grid[r][c] == 2 {
+    				queue = append(queue, [2]int{r, c})
+    			} else if grid[r][c] == 1 {
+    				fresh++
+    			}
+    		}
+    	}
+    	minutes := 0
+    	for len(queue) > 0 && fresh > 0 {
+    		var next [][2]int // the oranges that rot this minute
+    		for _, cell := range queue {
+    			for _, step := range steps {
+    				r, c := cell[0]+step[0], cell[1]+step[1]
+    				if r >= 0 && r < rows && c >= 0 && c < cols && grid[r][c] == 1 {
+    					grid[r][c] = 2
+    					fresh--
+    					next = append(next, [2]int{r, c})
+    				}
+    			}
+    		}
+    		queue = next
+    		minutes++
+    	}
+    	if fresh > 0 {
+    		return -1
+    	}
+    	return minutes
+    }
 visualisers: [breadth-first-search]

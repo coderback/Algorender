@@ -85,4 +85,53 @@ solutions:
       };
       return height(root) >= 0;
     }
+  java: |
+    class Solution {
+        public boolean isBalanced(TreeNode root) {
+            return height(root) >= 0;
+        }
+
+        // The subtree's height, or -1 if it isn't balanced.
+        private int height(TreeNode node) {
+            if (node == null) return 0;
+            int left = height(node.left);
+            int right = height(node.right);
+            if (left < 0 || right < 0 || Math.abs(left - right) > 1) return -1;
+            return 1 + Math.max(left, right);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isBalanced(TreeNode* root) {
+            return height(root) >= 0;
+        }
+
+    private:
+        // The subtree's height, or -1 if it isn't balanced.
+        int height(TreeNode* node) {
+            if (!node) return 0;
+            int left = height(node->left);
+            int right = height(node->right);
+            if (left < 0 || right < 0 || abs(left - right) > 1) return -1;
+            return 1 + max(left, right);
+        }
+    };
+  go: |
+    func isBalanced(root *TreeNode) bool {
+    	return height(root) >= 0
+    }
+
+    // height returns the subtree's height, or -1 if it isn't balanced.
+    func height(node *TreeNode) int {
+    	if node == nil {
+    		return 0
+    	}
+    	left := height(node.Left)
+    	right := height(node.Right)
+    	if left < 0 || right < 0 || left-right > 1 || right-left > 1 {
+    		return -1
+    	}
+    	return 1 + max(left, right)
+    }
 visualisers: [binary-tree, avl-tree]

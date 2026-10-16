@@ -81,4 +81,51 @@ solutions:
       }
       return -1; // not reached: p and q are in the tree
     }
+  java: |
+    class Solution {
+        public int lowestCommonAncestor(TreeNode root, int p, int q) {
+            TreeNode node = root;
+            while (node != null) {
+                if (p < node.val && q < node.val) {
+                    node = node.left;
+                } else if (p > node.val && q > node.val) {
+                    node = node.right;
+                } else {
+                    return node.val;
+                }
+            }
+            return -1; // not reached: p and q are in the tree
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int lowestCommonAncestor(TreeNode* root, int p, int q) {
+            TreeNode* node = root;
+            while (node) {
+                if (p < node->val && q < node->val) {
+                    node = node->left;
+                } else if (p > node->val && q > node->val) {
+                    node = node->right;
+                } else {
+                    return node->val;
+                }
+            }
+            return -1; // not reached: p and q are in the tree
+        }
+    };
+  go: |
+    func lowestCommonAncestor(root *TreeNode, p int, q int) int {
+    	node := root
+    	for node != nil {
+    		if p < node.Val && q < node.Val {
+    			node = node.Left
+    		} else if p > node.Val && q > node.Val {
+    			node = node.Right
+    		} else {
+    			return node.Val
+    		}
+    	}
+    	return -1 // not reached: p and q are in the tree
+    }
 visualisers: [binary-tree]

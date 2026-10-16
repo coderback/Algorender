@@ -65,4 +65,45 @@ solutions:
       }
       return prev;
     }
+  java: |
+    class Solution {
+        public ListNode reverseList(ListNode head) {
+            ListNode prev = null;
+            ListNode node = head;
+            while (node != null) {
+                ListNode next = node.next;
+                node.next = prev;
+                prev = node;
+                node = next;
+            }
+            return prev;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        ListNode* reverseList(ListNode* head) {
+            ListNode* prev = nullptr;
+            ListNode* node = head;
+            while (node) {
+                ListNode* next = node->next;
+                node->next = prev;
+                prev = node;
+                node = next;
+            }
+            return prev;
+        }
+    };
+  go: |
+    func reverseList(head *ListNode) *ListNode {
+    	var prev *ListNode
+    	node := head
+    	for node != nil {
+    		next := node.Next
+    		node.Next = prev
+    		prev = node
+    		node = next
+    	}
+    	return prev
+    }
 visualisers: [linked-list]

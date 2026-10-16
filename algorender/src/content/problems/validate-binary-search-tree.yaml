@@ -85,4 +85,47 @@ solutions:
       };
       return fits(root, -Infinity, Infinity);
     }
+  java: |
+    class Solution {
+        public boolean isValidBST(TreeNode root) {
+            // long bounds, so a node holding Integer.MIN_VALUE or MAX_VALUE still fits
+            return fits(root, Long.MIN_VALUE, Long.MAX_VALUE);
+        }
+
+        private boolean fits(TreeNode node, long low, long high) {
+            if (node == null) return true;
+            if (node.val <= low || node.val >= high) return false;
+            return fits(node.left, low, node.val) && fits(node.right, node.val, high);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isValidBST(TreeNode* root) {
+            // long long bounds, so a node holding INT_MIN or INT_MAX still fits
+            return fits(root, LLONG_MIN, LLONG_MAX);
+        }
+
+    private:
+        bool fits(TreeNode* node, long long low, long long high) {
+            if (!node) return true;
+            if (node->val <= low || node->val >= high) return false;
+            return fits(node->left, low, node->val) && fits(node->right, node->val, high);
+        }
+    };
+  go: |
+    func isValidBST(root *TreeNode) bool {
+    	var fits func(node *TreeNode, low, high int) bool
+    	fits = func(node *TreeNode, low, high int) bool {
+    		if node == nil {
+    			return true
+    		}
+    		if node.Val <= low || node.Val >= high {
+    			return false
+    		}
+    		return fits(node.Left, low, node.Val) && fits(node.Right, node.Val, high)
+    	}
+    	// Go's int is 64-bit, so these bounds lie outside every 32-bit value
+    	return fits(root, math.MinInt, math.MaxInt)
+    }
 visualisers: [binary-tree]

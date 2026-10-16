@@ -106,4 +106,83 @@ solutions:
       }
       return order;
     }
+  java: |
+    class Solution {
+        public int[] spiralOrder(int[][] matrix) {
+            int top = 0, bottom = matrix.length - 1;
+            int left = 0, right = matrix[0].length - 1;
+            int[] order = new int[matrix.length * matrix[0].length];
+            int k = 0;
+            while (top <= bottom && left <= right) {
+                // top row, left to right; then right column, downwards
+                for (int c = left; c <= right; c++) order[k++] = matrix[top][c];
+                top++;
+                for (int r = top; r <= bottom; r++) order[k++] = matrix[r][right];
+                right--;
+                if (top <= bottom) { // bottom row, right to left
+                    for (int c = right; c >= left; c--) order[k++] = matrix[bottom][c];
+                    bottom--;
+                }
+                if (left <= right) { // left column, upwards
+                    for (int r = bottom; r >= top; r--) order[k++] = matrix[r][left];
+                    left++;
+                }
+            }
+            return order;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> spiralOrder(vector<vector<int>>& matrix) {
+            int top = 0, bottom = matrix.size() - 1;
+            int left = 0, right = matrix[0].size() - 1;
+            vector<int> order;
+            while (top <= bottom && left <= right) {
+                // top row, left to right; then right column, downwards
+                for (int c = left; c <= right; c++) order.push_back(matrix[top][c]);
+                top++;
+                for (int r = top; r <= bottom; r++) order.push_back(matrix[r][right]);
+                right--;
+                if (top <= bottom) { // bottom row, right to left
+                    for (int c = right; c >= left; c--) order.push_back(matrix[bottom][c]);
+                    bottom--;
+                }
+                if (left <= right) { // left column, upwards
+                    for (int r = bottom; r >= top; r--) order.push_back(matrix[r][left]);
+                    left++;
+                }
+            }
+            return order;
+        }
+    };
+  go: |
+    func spiralOrder(matrix [][]int) []int {
+    	top, bottom := 0, len(matrix)-1
+    	left, right := 0, len(matrix[0])-1
+    	order := []int{}
+    	for top <= bottom && left <= right {
+    		for c := left; c <= right; c++ { // top row, left to right
+    			order = append(order, matrix[top][c])
+    		}
+    		top++
+    		for r := top; r <= bottom; r++ { // right column, downwards
+    			order = append(order, matrix[r][right])
+    		}
+    		right--
+    		if top <= bottom {
+    			for c := right; c >= left; c-- { // bottom row, right to left
+    				order = append(order, matrix[bottom][c])
+    			}
+    			bottom--
+    		}
+    		if left <= right {
+    			for r := bottom; r >= top; r-- { // left column, upwards
+    				order = append(order, matrix[r][left])
+    			}
+    			left++
+    		}
+    	}
+    	return order
+    }
 visualisers: []

@@ -67,4 +67,33 @@ solutions:
       }
       return missing;
     }
+  java: |
+    class Solution {
+        public int missingNumber(int[] nums) {
+            int missing = nums.length; // n is never an index, so start with it
+            for (int i = 0; i < nums.length; i++) {
+                missing ^= i ^ nums[i]; // every number present appears twice and cancels
+            }
+            return missing;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int missingNumber(vector<int>& nums) {
+            int missing = nums.size(); // n is never an index, so start with it
+            for (int i = 0; i < (int)nums.size(); i++) {
+                missing ^= i ^ nums[i]; // every number present appears twice and cancels
+            }
+            return missing;
+        }
+    };
+  go: |
+    func missingNumber(nums []int) int {
+    	missing := len(nums) // n is never an index, so start with it
+    	for i, x := range nums {
+    		missing ^= i ^ x // every number present appears twice and cancels
+    	}
+    	return missing
+    }
 visualisers: []

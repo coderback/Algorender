@@ -147,4 +147,83 @@ solutions:
         return (this.low.peek() + this.high.peek()) / 2;
       }
     }
+  java: |
+    class MedianFinder {
+        private final PriorityQueue<Integer> low = new PriorityQueue<>(Collections.reverseOrder()); // smaller half
+        private final PriorityQueue<Integer> high = new PriorityQueue<>(); // larger half
+
+        public MedianFinder() {}
+
+        public void addNum(int num) {
+            low.offer(num);
+            high.offer(low.poll());
+            if (high.size() > low.size()) low.offer(high.poll());
+        }
+
+        public double findMedian() {
+            if (low.size() > high.size()) return low.peek();
+            return ((double) low.peek() + high.peek()) / 2;
+        }
+    }
+  cpp: |
+    class MedianFinder {
+        priority_queue<int> low;                             // the smaller half, largest on top
+        priority_queue<int, vector<int>, greater<int>> high; // the larger half, smallest on top
+
+    public:
+        MedianFinder() {}
+
+        void addNum(int num) {
+            low.push(num);
+            high.push(low.top());
+            low.pop();
+            if (high.size() > low.size()) {
+                low.push(high.top());
+                high.pop();
+            }
+        }
+
+        double findMedian() {
+            if (low.size() > high.size()) return low.top();
+            return ((double)low.top() + high.top()) / 2;
+        }
+    };
+  go: |
+    // minHeap implements heap.Interface. The smaller half is stored negated, so its largest is on top.
+    type minHeap []int
+
+    func (h minHeap) Len() int           { return len(h) }
+    func (h minHeap) Less(i, j int) bool { return h[i] < h[j] }
+    func (h minHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *minHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *minHeap) Pop() any {
+    	old := *h
+    	x := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return x
+    }
+
+    type MedianFinder struct {
+    	low  *minHeap // the smaller half, negated
+    	high *minHeap // the larger half
+    }
+
+    func Constructor() MedianFinder {
+    	return MedianFinder{low: &minHeap{}, high: &minHeap{}}
+    }
+
+    func (this *MedianFinder) AddNum(num int) {
+    	heap.Push(this.low, -num)
+    	heap.Push(this.high, -heap.Pop(this.low).(int))
+    	if this.high.Len() > this.low.Len() {
+    		heap.Push(this.low, -heap.Pop(this.high).(int))
+    	}
+    }
+
+    func (this *MedianFinder) FindMedian() float64 {
+    	if this.low.Len() > this.high.Len() {
+    		return float64(-(*this.low)[0])
+    	}
+    	return float64(-(*this.low)[0]+(*this.high)[0]) / 2
+    }
 visualisers: [heap]

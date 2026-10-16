@@ -68,4 +68,40 @@ solutions:
       }
       return best;
     }
+  java: |
+    class Solution {
+        public int rob(int[] nums) {
+            int before = 0; // best total from every house seen but the last
+            int best = 0; // best total from every house seen
+            for (int money : nums) {
+                int next = Math.max(best, before + money);
+                before = best;
+                best = next;
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int rob(vector<int>& nums) {
+            int before = 0; // best total from every house seen but the last
+            int best = 0; // best total from every house seen
+            for (int money : nums) {
+                int next = max(best, before + money);
+                before = best;
+                best = next;
+            }
+            return best;
+        }
+    };
+  go: |
+    func rob(nums []int) int {
+    	before := 0 // best total from every house seen but the last
+    	best := 0   // best total from every house seen
+    	for _, money := range nums {
+    		before, best = best, max(best, before+money)
+    	}
+    	return best
+    }
 visualisers: [house-robber]

@@ -155,6 +155,7 @@ function Results({ outcome, exercise }: { outcome: Outcome; exercise: Exercise }
 
 const ERROR_TITLE: Record<RunError['kind'], string> = {
   syntax: 'Your code doesn’t parse',
+  compile: 'Your code didn’t compile',
   runtime: 'Your code raised an error',
   limit: 'Stopped early',
   timeout: 'Stopped: it took too long',
@@ -170,8 +171,8 @@ export function ErrorCard({ error }: { error: RunError }) {
           {ERROR_TITLE[error.kind]}
           {error.line != null && ` on line ${error.line}`}
         </p>
-        <p className="font-mono text-[13px] break-words text-ink">{error.message}</p>
-        {error.kind !== 'syntax' && error.kind !== 'internal' && (
+        <p className="font-mono text-[13px] break-words whitespace-pre-wrap text-ink">{error.message}</p>
+        {error.kind !== 'syntax' && error.kind !== 'compile' && error.kind !== 'internal' && (
           <p className="mt-1 text-ink-soft">The picture below shows everything up to that point.</p>
         )}
       </div>
