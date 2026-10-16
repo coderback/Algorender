@@ -20,10 +20,21 @@ const BUBBLE_PY = `def bubble_sort(arr):
                 arr[j], arr[j + 1] = arr[j + 1], arr[j]
 `;
 
+/**
+ * Picks the language before the page loads. Init scripts run in every frame, and the
+ * code sandbox's frames have no storage, so only the page itself is touched.
+ */
+async function useLanguage(page: Page, language: string) {
+  await page.addInitScript((l) => {
+    if (window === window.top) localStorage.setItem('algorender:language', l);
+  }, language);
+}
+
 /** Opens an exercise with code already saved for a language, as if the learner had typed it. */
 async function openWith(page: Page, slug: string, language: string, code: string) {
   await page.addInitScript(
     ([s, l, c]) => {
+      if (window !== window.top) return; // the code sandbox's frames have no storage
       localStorage.setItem(`algorender:code:${s}:${l}`, c);
       localStorage.setItem('algorender:language', l);
     },
@@ -109,7 +120,7 @@ test('a visualiser links to its exercise, and /code lists them', async ({ page }
 
 test('Parsons: ordering and indenting the lines solves bubble sort in Python', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.addInitScript(() => localStorage.setItem('algorender:language', 'python'));
+  await useLanguage(page, 'python');
   await page.goto('/code/bubble-sort');
   await page.getByRole('tab', { name: /Order the lines/ }).click();
   const lines: [string, number][] = [
@@ -132,7 +143,7 @@ test('Parsons: ordering and indenting the lines solves bubble sort in Python', a
 });
 
 test('fill the gaps: a wrong answer fails, a revealed gap passes, and levels hide more', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await useLanguage(page, 'javascript');
   await page.goto('/code/insertion-sort');
   await page.getByRole('tab', { name: /Fill the gaps/ }).click();
   const gap = page.getByLabel('Gap 1 of 1, line 5');
@@ -148,7 +159,7 @@ test('fill the gaps: a wrong answer fails, a revealed gap passes, and levels hid
 });
 
 test('a bug hunt explains the bug once it is fixed', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await useLanguage(page, 'javascript');
   await page.goto('/code/bubble-sort-bug');
   await expect(page.locator('.cm-content')).toContainText('j < n - i');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
@@ -162,7 +173,7 @@ test('a bug hunt explains the bug once it is fixed', async ({ page }) => {
 });
 
 test('the PRIMM lesson asks for a prediction before it runs the code', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await useLanguage(page, 'javascript');
   await page.goto('/learn/sorting-in-code');
   const run = page.getByRole('button', { name: /Run it on mixed input/ });
   await expect(run).toBeDisabled();
@@ -195,7 +206,7 @@ test('line by line: an exercise run can play on the memory view', async ({ page 
 
 test('the recursion lesson traces the call stack, and asks before the second run', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await useLanguage(page, 'javascript');
   await page.goto('/learn/recursion');
   const runs = page.getByRole('button', { name: 'Run it line by line' });
   await runs.first().click();
@@ -222,7 +233,7 @@ test('the recursion lesson traces the call stack, and asks before the second run
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`the memory view passes axe (${colorScheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme });
-    await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+    await useLanguage(page, 'javascript');
     await page.goto('/learn/recursion');
     await page.getByRole('button', { name: 'Run it line by line' }).first().click();
     await expect(page.getByRole('group', { name: 'Memory' }).first()).toBeVisible();
@@ -322,6 +333,36 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await scan();
   });
 }
+
+test('learner code runs in a sandbox: an opaque origin that can’t read the app or its storage', async ({ page, baseURL }) => {
+  const errors = collectErrors(page);
+  // Code that looks around instead of sorting: where it runs, whether it can open the app's
+  // IndexedDB, and whether it can read one of the app's pages (it could, as the learner, before).
+  const probe = `function bubbleSort(arr) {
+  console.log("origin " + self.origin);
+  let storage = "open";
+  try { indexedDB.open("probe"); } catch (e) { storage = e.name; }
+  console.log("storage " + storage);
+  let app = "read";
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", "${new URL('/code', baseURL).href}", false);
+    xhr.send();
+    app = "status " + xhr.status;
+  } catch (e) { app = e.name; }
+  console.log("app " + app);
+}
+`;
+  await openWith(page, 'bubble-sort', 'javascript', probe);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  const output = page.getByRole('group', { name: 'Output' });
+  await expect(output).toContainText('origin null');
+  await expect(output).toContainText('storage SecurityError');
+  await expect(output).toContainText('app NetworkError');
+  // The judged tests still ran in the sandbox (the probe sorts nothing, so most fail).
+  await expect(tests(page)).toContainText('2 of 7 tests pass.');
+  expect(errors).toEqual([]);
+});
 
 test('/code groups the exercises by kind', async ({ page }) => {
   await page.goto('/code');
