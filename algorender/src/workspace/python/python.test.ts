@@ -1,5 +1,5 @@
 // The Python runtime: the harness in real Pyodide (the npm build, which runs in
-// Node), called exactly as public/workers/python.mjs calls it.
+// Node), called exactly as public/workers/python.js calls it.
 
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { beforeAll, describe, expect, it } from 'vitest';

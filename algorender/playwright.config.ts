@@ -16,7 +16,8 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['Pixel 7'] }, grep: /@mobile/ },
   ],
   webServer: {
-    command: `npx next dev -p ${port}`,
+    // npm run, so the sandbox's JavaScript worker is bundled first (predev).
+    command: `npm run dev -- -p ${port}`,
     url: `http://localhost:${port}`,
     reuseExistingServer: true,
     timeout: 120_000,

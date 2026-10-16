@@ -1,7 +1,16 @@
-// Runs learner code off the main thread. One worker per runtime, started on
-// first use and kept warm; a run that overruns its time budget gets the worker
-// terminated (the only reliable way to stop a tight loop) and a fresh one next
-// time.
+// Runs learner code off the main thread, in a sandbox. One worker per runtime,
+// started on first use and kept warm; a run that overruns its time budget gets
+// the worker terminated (the only reliable way to stop a tight loop) and a
+// fresh one next time.
+//
+// The sandbox: each worker lives in its own hidden <iframe sandbox="allow-scripts">
+// (public/sandbox.html). Without allow-same-origin the frame and its worker
+// have an opaque origin, so learner code (perhaps someone else's, once code is
+// shared) can't read the app's cookies or storage or call its API as the
+// learner, and the frame's policy lets it fetch only Pyodide's CDN. The page
+// fetches the worker's script (same-origin, cached) and hands it over as text
+// with one end of a MessageChannel; the worker then talks to the page directly
+// on that port. Terminating removes the frame, which ends its worker.
 //
 // Worker protocol (both runtimes):
 //   main → worker  { type: 'init', harness? }      once, right after spawning
@@ -20,8 +29,16 @@ type FromWorker =
 
 type Pending = { resolve: (r: RunResult) => void; timer: ReturnType<typeof setTimeout>; started: number };
 
+/** What a runtime needs of its worker. */
+export type WorkerLike = {
+  postMessage(message: unknown): void;
+  onmessage: ((e: MessageEvent<FromWorker>) => void) | null;
+  onerror: ((e: { message: string }) => void) | null;
+  terminate(): void;
+};
+
 export class WorkerRuntime implements Runtime {
-  private worker: Worker | null = null;
+  private worker: WorkerLike | null = null;
   private ready: Promise<void> | null = null;
   private pending = new Map<number, Pending>();
   private nextId = 1;
@@ -31,7 +48,7 @@ export class WorkerRuntime implements Runtime {
   detail: string | undefined;
 
   constructor(
-    private readonly spawn: () => Worker,
+    private readonly spawn: () => WorkerLike,
     private readonly init: () => Promise<Record<string, unknown>> = async () => ({}),
   ) {}
 
@@ -138,19 +155,104 @@ function failure(kind: 'timeout' | 'internal', message: string): RunResult {
   return { events: [], arrays: {}, returned: null, error: { kind, message, line: null }, ms: 0 };
 }
 
+/** The page that starts workers in an opaque origin. */
+const SANDBOX = '/sandbox.html';
+
+/** Each worker script's text, fetched once per page (the browser caches it too). */
+const scripts = new Map<string, Promise<string>>();
+
+function scriptText(url: string): Promise<string> {
+  let text = scripts.get(url);
+  if (!text) {
+    text = fetch(url).then((r) => {
+      if (!r.ok) throw new Error(`couldn’t load ${url} (${r.status})`);
+      return r.text();
+    });
+    // A failed fetch is retried by the next worker rather than remembered.
+    text.catch(() => scripts.delete(url));
+    scripts.set(url, text);
+  }
+  return text;
+}
+
+/**
+ * A classic worker running `url` inside a sandboxed iframe. Messages sent before
+ * the worker is connected wait in order; terminate() removes the frame.
+ */
+export class SandboxedWorker implements WorkerLike {
+  onmessage: WorkerLike['onmessage'] = null;
+  onerror: WorkerLike['onerror'] = null;
+  private readonly frame: HTMLIFrameElement;
+  private port: MessagePort | null = null;
+  private waiting: unknown[] = [];
+  private done = false;
+
+  constructor(url: string, name: string) {
+    const frame = document.createElement('iframe');
+    // Scripts only: no same origin, forms, popups, modals or top navigation.
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.title = `${name} code runner`;
+    frame.hidden = true;
+    frame.tabIndex = -1;
+    frame.setAttribute('aria-hidden', 'true');
+    this.frame = frame;
+    window.addEventListener('message', this.fromFrame);
+    frame.addEventListener('load', () => void this.connect(url, name), { once: true });
+    frame.src = SANDBOX;
+    document.body.append(frame);
+  }
+
+  private async connect(url: string, name: string) {
+    let source: string;
+    try {
+      source = await scriptText(url);
+    } catch (e) {
+      return this.fail((e as Error).message);
+    }
+    const target = this.frame.contentWindow;
+    if (this.done || !target) return;
+    const { port1, port2 } = new MessageChannel();
+    port1.onmessage = (e: MessageEvent<FromWorker>) => this.onmessage?.(e);
+    this.port = port1;
+    // The frame's origin is opaque, so there is no origin to address; it only accepts messages from its parent.
+    target.postMessage({ type: 'spawn', source, name }, '*', [port2]);
+    for (const message of this.waiting) port1.postMessage(message);
+    this.waiting = [];
+  }
+
+  /** The frame reports a worker that failed to start; nothing else may speak for it. */
+  private fromFrame = (e: MessageEvent) => {
+    if (e.source !== this.frame.contentWindow || e.data?.type !== 'failed') return;
+    this.fail(String(e.data.message));
+  };
+
+  private fail(message: string) {
+    if (!this.done) this.onerror?.({ message });
+  }
+
+  postMessage(message: unknown) {
+    if (this.port) this.port.postMessage(message);
+    else this.waiting.push(message);
+  }
+
+  terminate() {
+    this.done = true;
+    window.removeEventListener('message', this.fromFrame);
+    this.port?.close();
+    this.frame.remove();
+  }
+}
+
 const runtimes: Partial<Record<'python' | 'js', WorkerRuntime>> = {};
 
 /** The shared runtime for a language (JS and TS share one worker). */
 export function runtimeFor(language: Language): WorkerRuntime {
   if (language === 'python') {
     return (runtimes.python ??= new WorkerRuntime(
-      // Pyodide refuses classic workers, and bundled workers run classic, so
-      // the Python worker is a static module script (public/workers/python.mjs).
-      () => new Worker('/workers/python.mjs', { type: 'module', name: 'python' }),
+      () => new SandboxedWorker('/workers/python.js', 'python'),
       async () => ({ harness: (await import('./python/harness')).HARNESS }),
     ));
   }
-  return (runtimes.js ??= new WorkerRuntime(
-    () => new Worker(new URL('./js/js.worker.ts', import.meta.url), { type: 'module', name: 'javascript' }),
-  ));
+  // Bundled from js/js.worker.ts by scripts/build-workers.mjs.
+  return (runtimes.js ??= new WorkerRuntime(() => new SandboxedWorker('/workers/js.js', 'javascript')));
 }

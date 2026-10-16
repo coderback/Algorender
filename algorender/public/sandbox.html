@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src blob:; connect-src https://cdn.jsdelivr.net"
+    />
+    <title>Algorender code sandbox</title>
+    <script>
+      // Starts the workers that run learner code (src/workspace/runner.ts).
+      //
+      // The app loads this page in an <iframe sandbox="allow-scripts"> without
+      // allow-same-origin, so it and its workers have an opaque origin: code
+      // running there can't read the app's cookies or storage, or call its API
+      // as the learner. The policy above also limits what they can fetch to
+      // Pyodide's CDN. The worker's code comes from the page as text, since an
+      // opaque origin can't start a worker from the app's URLs.
+      //
+      //   page → here    { type: 'spawn', source, name }, with a MessagePort
+      //   here → worker  { type: 'connect' }, with that port: the page and the
+      //                  worker then talk directly
+      //   here → page    { type: 'failed', message } if the worker can't start
+      addEventListener('message', (e) => {
+        if (e.source !== parent || !e.data || e.data.type !== 'spawn' || !e.ports[0]) return;
+        const url = URL.createObjectURL(new Blob([e.data.source], { type: 'text/javascript' }));
+        // Classic: a module worker can't start from a blob in an opaque origin.
+        const worker = new Worker(url, { name: e.data.name });
+        worker.onerror = (err) => {
+          err.preventDefault();
+          parent.postMessage({ type: 'failed', message: err.message || 'The code runner couldn’t start.' }, '*');
+        };
+        worker.postMessage({ type: 'connect' }, [e.ports[0]]);
+      });
+    </script>
+  </head>
+</html>

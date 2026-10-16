@@ -1,14 +1,17 @@
 // The JavaScript/TypeScript runner's worker; runner.ts describes the protocol.
-//
-// Security: the learner's code runs here with this worker's same-origin
-// privileges (fetch, IndexedDB, postMessage…). That's acceptable while code is
-// only ever the learner's own and there are no accounts; revisit (a sandboxed
-// cross-origin iframe, or a stricter realm) before code sharing or auth.
+// scripts/build-workers.mjs bundles it into public/workers/js.js, which runs
+// inside the sandbox (public/sandbox.html): an opaque origin, so the learner's
+// code here can't read the app's cookies or storage or call its API.
 
 import type { RunRequest, RunResult } from '../protocol';
 import { runJs } from './runtime';
 
 type ToWorker = { type: 'init' } | { type: 'run'; id: number; request: RunRequest };
+
+// The sandbox hands over one end of a MessageChannel whose other end is the
+// app's page; until then (or as a plain worker) messages use this global.
+let page: { postMessage(message: unknown): void } = self;
+const answer = (message: unknown) => page.postMessage(message);
 
 function internal(message: string): RunResult {
   return { events: [], arrays: {}, returned: null, error: { kind: 'internal', message, line: null }, ms: 0 };
@@ -20,10 +23,19 @@ function internal(message: string): RunResult {
 self.addEventListener('error', (e) => e.preventDefault());
 self.addEventListener('unhandledrejection', (e) => e.preventDefault());
 
-self.addEventListener('message', (e: MessageEvent<ToWorker>) => {
-  const msg = e.data;
+self.addEventListener('message', (e: MessageEvent<ToWorker | { type: 'connect' }>) => {
+  if (e.data.type === 'connect' && e.ports[0]) {
+    const port = e.ports[0];
+    page = port;
+    port.onmessage = (m: MessageEvent<ToWorker>) => handle(m.data);
+    return;
+  }
+  if (e.data.type !== 'connect') handle(e.data);
+});
+
+function handle(msg: ToWorker) {
   if (msg.type === 'init') {
-    self.postMessage({ type: 'status', status: 'ready' });
+    answer({ type: 'status', status: 'ready' });
     return;
   }
   if (msg.type !== 'run') return;
@@ -34,9 +46,9 @@ self.addEventListener('message', (e: MessageEvent<ToWorker>) => {
     result = internal(`The JavaScript runner failed: ${err instanceof Error ? err.message : String(err)}`);
   }
   try {
-    self.postMessage({ type: 'result', id: msg.id, result });
+    answer({ type: 'result', id: msg.id, result });
   } catch (err) {
     // Something in the result couldn't be cloned: still answer, so the run doesn't hang until its timeout.
-    self.postMessage({ type: 'result', id: msg.id, result: internal(`The JavaScript runner couldn't send its result: ${err instanceof Error ? err.message : String(err)}`) });
+    answer({ type: 'result', id: msg.id, result: internal(`The JavaScript runner couldn't send its result: ${err instanceof Error ? err.message : String(err)}`) });
   }
-});
+}
