@@ -833,6 +833,12 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
   - **Drivers:** generated drivers for Java, C++ and Go, which read typed tests on stdin and write answers to a side channel.
   - **Sandbox:** Vercel Sandbox behind sign-in and quotas, with server-written verdicts.
   - **Checks:** reference solutions in all five languages, checked in CI.
+  - **Status (2026-10-16): 3c is built; it runs on Vercel once the owner sets up the sandbox snapshot.**
+    - **Languages:** Java, C++ and Go join Python, JavaScript and TypeScript on every problem. Their stubs follow LeetCode's conventions, generated from the same signatures.
+    - **Drivers:** generated per problem and language. Tests go in as typed tokens on stdin; answers come back as JSON lines on a side file, so the learner's prints never mix with them and are split by test. Errors point at the learner's own line in all three languages; C++ crashes, endless recursion, endless loops and compile errors each get a plain explanation. Expected answers never enter the sandbox: the server judges with the same comparators and checks as the browser.
+    - **Sandbox:** a Vercel Sandbox microVM per run (Firecracker), started from a snapshot with the toolchains, with no network, stopped as soon as the answers are read. Locally the same script runs in a Docker container with no network. One request compiles once and judges every test.
+    - **Accounts and quotas:** server runs need sign-in; one at a time, 30 an hour and 200 a day by default, counted in a `judge_run` table. A submission's verdict is written by the server as a verified `problem.submitted` event, which devices pull like any other; a device can't claim `verified` itself.
+    - **Left for later:** hidden tests (every test still ships with the page, for the browser's judge), watching a Java/C++/Go run step by step, and Rust, C#, Kotlin and SQL.
 
 ### Phase 4 — Math and ML tracks
 
