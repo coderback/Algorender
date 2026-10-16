@@ -780,8 +780,11 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
       - The narration says what each line did, and quotes the condition an `if` or `while` tested.
       - Every exercise has a "Line by line, with memory" switch.
       - The `TraceCode` lesson widget traces short snippets (`src/content/snippets.ts`), with an optional predict-first lock. The new lesson "Recursion: watch the call stack" (`/learn/recursion`) is built on it.
+    - **Graphs and trees for learner code:**
+      - Both runtimes take a `graph` argument (a read-only dict of neighbour lists whose reads are events) and a `tree` argument (LeetCode's `TreeNode`), with shared contract cases.
+      - Their runs are watched line by line and drawn on GraphView and TreeView from the learner's own variables: queues and stacks wait, sets and dicts record, the call stack's nodes draw the path, and the edges that first reached each node draw the search tree. Narration adds what the line read ("takes the edge A – B").
+      - New exercises: BFS levels, DFS order, BST insert and inorder traversal, each with the full fading ladder and feedback that names common mix-ups (breadth-first order for DFS, preorder for inorder).
   - **Still to do:**
-    - **Graphs and trees** for learner code.
     - **Sandbox learner code** in an iframe, before code sharing or accounts (Phase 3).
   - **Deferred, with a reason: a service worker for Pyodide.** The browser already caches the CDN download. A repeat visit still takes about 6 s, but that is WebAssembly compile and start-up, which a service worker can't speed up. It would only add offline use.
 
