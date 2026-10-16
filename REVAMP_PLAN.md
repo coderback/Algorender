@@ -751,7 +751,7 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 **Status (2026-10-15, branch `revamp/phase-2`): the "done when" is met. This is Phase 2a.**
 - **Spike, resolved:**
   - Pyodide 314 (Python 3.14) runs in a Web Worker, and `sys.settrace` and `ast` work there.
-  - Pyodide refuses classic workers, and Turbopack-bundled workers run classic. So the Python worker is a static module script (`public/workers/python.mjs`), loading Pyodide from the jsDelivr CDN.
+  - The Python worker is a static script in `public/workers/`, loading Pyodide from the jsDelivr CDN. (Since 2b, both workers are classic scripts inside the sandbox, below.)
   - The cold load takes about 6 s, and the browser cache shortens later ones.
 - **Built:**
   - **One event protocol and a shared contract** (`src/workspace/protocol.ts`, `contract.ts`). Both runtimes pass identical cases, with exact events, lines and variables.
@@ -784,8 +784,11 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
       - Both runtimes take a `graph` argument (a read-only dict of neighbour lists whose reads are events) and a `tree` argument (LeetCode's `TreeNode`), with shared contract cases.
       - Their runs are watched line by line and drawn on GraphView and TreeView from the learner's own variables: queues and stacks wait, sets and dicts record, the call stack's nodes draw the path, and the edges that first reached each node draw the search tree. Narration adds what the line read ("takes the edge A – B").
       - New exercises: BFS levels, DFS order, BST insert and inorder traversal, each with the full fading ladder and feedback that names common mix-ups (breadth-first order for DFS, preorder for inorder).
-  - **Still to do:**
-    - **Sandbox learner code** in an iframe, before code sharing or accounts (Phase 3).
+    - **Sandboxed learner code:**
+      - Both runners' workers live in hidden `<iframe sandbox="allow-scripts">` frames (`public/sandbox.html`). Learner code therefore has an opaque origin: no app cookies, storage or same-origin API calls, which is ready for accounts and shared code in Phase 3. A CSP limits its network access to the Pyodide CDN.
+      - The page hands each worker its script as text and a `MessagePort`, and a timeout removes the frame. The JS worker is bundled by esbuild (`scripts/build-workers.mjs`) into a classic script, since a module worker can't start from a blob in an opaque origin.
+      - Checked in Chromium: Pyodide stays in the browser cache across visits, the CSP blocks other hosts, and e2e covers the isolation. Firefox and Safari aren't checked yet.
+  - **Status (2026-10-16): Phase 2b is done.**
   - **Deferred, with a reason: a service worker for Pyodide.** The browser already caches the CDN download. A repeat visit still takes about 6 s, but that is WebAssembly compile and start-up, which a service worker can't speed up. It would only add offline use.
 
 ### Phase 3 — Practice and progress
