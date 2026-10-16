@@ -58,6 +58,12 @@ export type Exercise<I = any> = {
   legend: LegendEntry[];
 };
 
+/**
+ * Whether an input is watched line by line: a graph or tree argument is drawn
+ * from the learner's own variables, which only a 'lines' run records.
+ */
+export const watchedByLine = (exercise: Exercise, input: unknown) => exercise.args(input).some((a) => a.kind === 'graph' || a.kind === 'tree');
+
 /** A run that crashed fails with its error, on its line. */
 export const crashed = (result: RunResult): Verdict | null =>
   result.error ? { pass: false, message: result.error.line == null ? result.error.message : `Line ${result.error.line}: ${result.error.message}` } : null;

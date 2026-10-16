@@ -3,13 +3,15 @@
 // The model lives in shared.ts; each file below adds one family.
 
 import { arrayExercises, bugHunts, modifyExercises } from './arrays';
+import { graphExercises } from './graphs';
 import { gridExercises } from './grids';
 import type { Exercise } from './shared';
+import { treeExercises } from './trees';
 
 export * from './shared';
 export { arrayArgs, type ArrayInput } from './arrays';
 
-export const exercises: Exercise[] = [...arrayExercises, ...gridExercises, ...modifyExercises, ...bugHunts];
+export const exercises: Exercise[] = [...arrayExercises, ...gridExercises, ...graphExercises, ...treeExercises, ...modifyExercises, ...bugHunts];
 
 export function getExercise(slug: string): Exercise | undefined {
   return exercises.find((e) => e.slug === slug);

@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { FiCheck, FiCrosshair, FiEye, FiLoader, FiPlay, FiRotateCcw, FiShuffle } from 'react-icons/fi';
 import * as Tabs from '@radix-ui/react-tabs';
-import { getExercise, type Exercise } from '@/content/exercises';
+import { getExercise, watchedByLine, type Exercise } from '@/content/exercises';
 import { CodeEditor } from './editor/CodeEditor';
 import { blankNumbers, fillTemplate, parseBlanks, type Segment } from './formats/blanks';
 import { assemble, firstMisplaced, parsonsLines, seedOf, shuffled } from './formats/parsons';
@@ -71,6 +71,8 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
   const [example, setExample] = useState(exercise.examples[0].id);
   // 'lines' plays the example line by line on the memory view instead of the algorithm's own view.
   const [mode, setMode] = useState<RunMode>('visual');
+  // A graph or tree is already watched line by line; the switch only swaps its picture for memory.
+  const byLine = watchedByLine(exercise, (exercise.examples.find((e) => e.id === example) ?? exercise.examples[0]).input);
   const [progress, setProgress] = useState<ExerciseProgress>(() => loadProgress(exercise.slug));
   const fillSegments = exercise.blanks ? parseBlanks(exercise.blanks[language]) : [];
   const levels = exercise.fades ?? (exercise.blanks ? [blankNumbers(fillSegments)] : []);
@@ -190,7 +192,7 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
           }}
           className="size-4 accent-accent"
         />
-        Line by line, with memory
+        {byLine ? 'Show the memory diagram' : 'Line by line, with memory'}
       </label>
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {stage === 'parsons' && (

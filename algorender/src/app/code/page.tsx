@@ -21,8 +21,9 @@ export default function CodeIndex() {
       <div className="mb-1 text-xs font-semibold tracking-wider text-accent-ink uppercase">Code</div>
       <h1 className="text-3xl font-bold text-ink">Code it yourself</h1>
       <p className="mt-2 max-w-3xl text-ink-soft">
-        Write the algorithm in Python, JavaScript or TypeScript. Your code runs in your browser, and every comparison,
-        swap and write it makes plays back on the same visualiser as the built-in version, next to your own lines.
+        Write the algorithm in Python, JavaScript or TypeScript. Your code runs in your browser, and what it does plays
+        back on the same visualiser as the built-in version, next to your own lines: every comparison, swap and write on
+        an array, and every queue, stack and node of a graph or tree it explores.
       </p>
       {GROUPS.map((g) => {
         const items = exercises.filter((e) => e.kind === g.kind);

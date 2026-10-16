@@ -9,7 +9,7 @@ import { runJs } from '@/workspace/js/runtime';
 import { HARNESS } from '@/workspace/python/harness';
 import { DEFAULT_LIMITS, LANGUAGES, LINE_LIMITS, type Language, type RunEvent, type RunMode, type RunRequest, type RunResult } from '@/workspace/protocol';
 import { traceFor } from '@/workspace/trace';
-import { exercises, stripBlanks, type Exercise } from '.';
+import { exercises, stripBlanks, watchedByLine, type Exercise } from '.';
 
 let runPython: (json: string) => string;
 
@@ -74,11 +74,16 @@ describe.each(exercises.map((e) => [e.slug, e] as const))('%s', (_slug, exercise
       expect(exercise.tests.some((t, i) => !exercise.check(t.input, results[i]).pass)).toBe(true);
     });
 
-    it(`${language}: every example plays as a trace`, () => {
+    it(`${language}: every example plays as a trace on the exercise's own view`, () => {
       for (const example of exercise.examples) {
-        const result = run(exercise, language, exercise.solution[language], example.input);
+        // A graph or tree is watched line by line, and drawn on its own view from the steps.
+        const byLine = watchedByLine(exercise, example.input);
+        const result = run(exercise, language, exercise.solution[language], example.input, byLine ? 'lines' : 'visual');
         expect(result.error).toBeNull();
-        expect(traceFor(result, { markSortedAtEnd: exercise.markSortedAtEnd })!.trace.frames.length).toBeGreaterThan(1);
+        const shown = traceFor(result, { markSortedAtEnd: exercise.markSortedAtEnd, code: exercise.solution[language] })!;
+        expect(shown.trace.frames.length).toBeGreaterThan(1);
+        if (byLine) expect(['graph', 'tree']).toContain(shown.view);
+        else expect(['array', 'grid']).toContain(shown.view);
       }
     });
 
@@ -86,12 +91,12 @@ describe.each(exercises.map((e) => [e.slug, e] as const))('%s', (_slug, exercise
       for (const example of exercise.examples) {
         const result = run(exercise, language, exercise.solution[language], example.input, 'lines');
         expect(result.error, example.id).toBeNull();
-        expect(traceFor(result)?.view).toBe('memory');
+        expect(traceFor(result, { view: 'memory' })?.view).toBe('memory');
       }
     });
   }
 
-  it('Python, JavaScript and TypeScript solutions do the same things to the arrays and tables', () => {
+  it('Python, JavaScript and TypeScript solutions do the same things to the arrays, tables and graphs', () => {
     for (const { input } of [...exercise.examples, ...exercise.tests]) {
       const python = actions(run(exercise, 'python', exercise.solution.python, input));
       expect(actions(run(exercise, 'javascript', exercise.solution.javascript, input))).toEqual(python);
