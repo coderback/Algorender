@@ -14,6 +14,13 @@ export type LessonMeta = {
 
 export const lessons: readonly LessonMeta[] = [
   {
+    slug: 'recursion',
+    title: 'Recursion: watch the call stack',
+    concept: 'recursion',
+    summary: 'Step through recursive code line by line and see every call get its own frame, wait, and return.',
+    minutes: 15,
+  },
+  {
     slug: 'binary-search',
     title: 'Binary search: halve it until you find it',
     concept: 'binary-search',

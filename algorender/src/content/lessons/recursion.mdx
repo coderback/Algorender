@@ -1,0 +1,98 @@
+<Section step="hook" title="A function that calls itself">
+
+Some problems contain smaller copies of themselves. The factorial of 4 is 4 × 3 × 2 × 1, which is just 4 times the factorial of 3. So a function can answer "what is factorial(4)?" by asking itself "what is factorial(3)?", and so on down, until the question is small enough to answer outright.
+
+That raises a fair question: if `factorial` is still running when it calls `factorial` again, where does the first call keep its `n` while the second one runs? The answer is the **call stack**, and once you can see it, recursion stops feeling like magic.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="base case">An input small enough to answer directly, without calling again. Every recursion needs one, or it never stops.</Term>
+  <Term name="recursive case">An input answered by calling the same function on a smaller input, then using its answer.</Term>
+  <Term name="frame">The memory for one call: its parameters and local variables, and where it is in the code.</Term>
+  <Term name="call stack">The frames of every call that hasn't returned yet. A new call adds a frame on top; a return removes it.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch the stack grow and shrink">
+
+Run it, then step through. On the left is the call stack: the global frame, then one frame per call that is still running. Each `factorial` frame has **its own** `n`. The calls pile up until `factorial(1)` hits the base case; then each frame returns its answer to the one below and disappears.
+
+<TraceCode snippet="factorial" />
+
+<KeyIdea>
+
+A recursive call doesn't overwrite the caller's variables: it gets a fresh frame. The caller waits, with its own `n` intact, until the call it made returns. Last in, first out: that is why it is a **stack**.
+
+</KeyIdea>
+
+<Misconception title="The function starts over and forgets where it was">
+
+Calling `factorial(3)` from inside `factorial(4)` doesn't restart or replace `factorial(4)`. Both are running at once; `factorial(4)` is paused halfway through its last line, waiting for a number to multiply by 4.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Predict: how many lists?">
+
+This function adds up a list by taking the first item and adding the total of the rest. Each call passes the list on with a bigger `i`.
+
+<TraceCode
+  snippet="recursive-sum"
+  question="When the deepest call, total(nums, 3), is running, how many lists are in memory?"
+  choices={['One, shared by every call', 'Four, one copy per call', 'Two: the original and a copy']}
+  answer={0}
+  why="Passing a list passes a reference to it, not a copy. Every frame has its own nums, but all of their arrows point at the same list. That keeps recursion over a list cheap, and it means a change made in one call is seen by all of them."
+/>
+
+</Section>
+
+<Section step="do" title="See every stack at once: the call tree">
+
+When a function calls itself more than once, as Fibonacci does, the stack goes up and down many times. Drawing every call as a node, joined to the call that made it, gives the **call tree**. At any moment, the call stack is the path from the top call down to the call that is running.
+
+<Explore slug="fibonacci-memoization" settings={{ preset: 'naive', n: 5 }} input caption="Try n = 6 and n = 7: each step up multiplies the calls by about 1.6, the waste the memoization lesson fixes." />
+
+</Section>
+
+<Section step="check" title="Check your understanding">
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'What does the base case do?',
+      choices: ['Answers a small input directly, so the calls stop', 'Makes the first call', 'Stores answers for later', 'Speeds every call up'],
+      answer: 0,
+      why: 'Without a base case every call makes another call, and the stack grows until the language gives up (Python raises RecursionError after about a thousand calls).',
+    },
+    {
+      q: 'The top-level code calls factorial(5). At the deepest point, how many frames are on the stack, counting the global frame?',
+      choices: ['2', '5', '6', '120'],
+      answer: 2,
+      why: 'factorial(5), (4), (3), (2) and (1) are all running at once, one frame each, plus the global frame underneath: six.',
+    },
+    {
+      q: 'In what order do the calls made by factorial(4) return?',
+      choices: ['factorial(4) first, then 3, 2, 1', 'factorial(1) first, then 2, 3, 4', 'All at the same time', 'In the order they were called'],
+      answer: 1,
+      why: 'The last call made is the first to finish: factorial(1) returns 1, then factorial(2) can return 2, factorial(3) 6, and factorial(4) 24.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="Recap">
+
+- A recursive function answers a big input by calling itself on a smaller one, and needs a base case to stop.
+- Every call gets its own frame, so the caller's variables are safe while it waits.
+- The call stack holds the calls still running: the newest on top, returning first.
+- Passing a list passes a reference: every frame sees the same list.
+- Next: [memoization](/learn/memoization), for recursion that asks the same question twice.
+
+</Section>

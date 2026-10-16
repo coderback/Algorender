@@ -58,6 +58,7 @@ concepts:
     summary: Solving a problem by solving smaller copies of it, and picturing the calls as a tree.
     prereqs: [big-o]
     visualisers: [fibonacci-memoization, subsets]
+    lesson: recursion
 
   # ── Arrays and lists ─────────────────────────────────────────
   - id: arrays
