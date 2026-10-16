@@ -1,76 +1,24 @@
 'use client';
 
-import { useMemo, useSyncExternalStore } from 'react';
+// Lesson progress: completed lessons and quiz and prediction scores, as
+// events in the learner's progress log (src/progress/), so it syncs with
+// their account and feeds the review queue.
 
-// Lesson progress kept in this browser only (a per-viewer convenience until
-// accounts arrive in Phase 3). Every read and write tolerates storage being
-// unavailable (private windows, blocked site data): the UI then simply
-// forgets between visits.
+import { record, useLessonProgress } from '@/progress/hooks';
+import type { LessonProgress, Score } from '@/progress/projections';
 
-const KEY = 'algorender.progress.v1';
-const EVENT = 'algorender-progress';
+export type { Score };
+export type Progress = LessonProgress;
 
-export type Score = { correct: number; total: number };
-export type Progress = {
-  completed: string[];
-  quizzes: Record<string, Score>;
-  predictions: Record<string, Score>;
-};
+/** Completed lessons and best scores; empty during server render and until the device's progress is read. */
+export const useProgress = (): Progress => useLessonProgress();
 
-const EMPTY: Progress = { completed: [], quizzes: {}, predictions: {} };
+export const markComplete = (lesson: string, done: boolean) => record('lesson.completed', { lesson, done });
 
-function read(): string {
-  try {
-    return localStorage.getItem(KEY) ?? '';
-  } catch {
-    return '';
-  }
-}
+/** A finished quiz or prediction challenge; the best score is the one shown. */
+export const recordScore = (lesson: string, kind: 'quiz' | 'prediction', key: string, score: Score) =>
+  record('lesson.scored', { lesson, key, kind, correct: score.correct, total: score.total });
 
-function parse(raw: string): Progress {
-  if (!raw) return EMPTY;
-  try {
-    const p = JSON.parse(raw) as Partial<Progress>;
-    return { completed: p.completed ?? [], quizzes: p.quizzes ?? {}, predictions: p.predictions ?? {} };
-  } catch {
-    return EMPTY;
-  }
-}
-
-function subscribe(onChange: () => void) {
-  window.addEventListener('storage', onChange);
-  window.addEventListener(EVENT, onChange);
-  return () => {
-    window.removeEventListener('storage', onChange);
-    window.removeEventListener(EVENT, onChange);
-  };
-}
-
-/** Current progress; empty during server render and until hydrated. */
-export function useProgress(): Progress {
-  const raw = useSyncExternalStore(subscribe, read, () => '');
-  return useMemo(() => parse(raw), [raw]);
-}
-
-export function updateProgress(change: (p: Progress) => Progress) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(change(parse(read()))));
-    window.dispatchEvent(new Event(EVENT));
-  } catch {
-    // Storage unavailable: progress just isn't remembered.
-  }
-}
-
-export const markComplete = (lesson: string, done: boolean) =>
-  updateProgress((p) => ({
-    ...p,
-    completed: done ? [...new Set([...p.completed, lesson])] : p.completed.filter((s) => s !== lesson),
-  }));
-
-/** Keeps the best score seen for a quiz or prediction challenge. */
-export const recordBest = (kind: 'quizzes' | 'predictions', key: string, score: Score) =>
-  updateProgress((p) => {
-    const prev = p[kind][key];
-    const better = !prev || score.correct > prev.correct || (score.correct === prev.correct && score.total < prev.total);
-    return better ? { ...p, [kind]: { ...p[kind], [key]: score } } : p;
-  });
+/** One quiz question answered: its first answer starts it in the review queue. */
+export const recordAnswer = (lesson: string, quiz: string, question: number, correct: boolean) =>
+  record('quiz.answered', { lesson, quiz, question, correct });

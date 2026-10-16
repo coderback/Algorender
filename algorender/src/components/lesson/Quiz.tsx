@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FiCheckCircle, FiRotateCcw, FiXCircle } from 'react-icons/fi';
 import { useLessonSlug } from './LessonContext';
-import { recordBest } from './progress';
+import { recordAnswer, recordScore } from './progress';
 
 export type Question = {
   q: string;
@@ -16,7 +16,8 @@ export type Question = {
 
 /**
  * Retrieval practice: answer from memory, then see why. One try per question;
- * "Try again" clears the answers. The best score is kept with the lesson.
+ * "Try again" clears the answers. The best score is kept with the lesson, and
+ * each question's first answer puts it in the review queue (src/progress/review.ts).
  */
 export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Question[] }) {
   const lesson = useLessonSlug();
@@ -29,8 +30,9 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
     if (picked[qi] !== null) return;
     const next = picked.map((p, i) => (i === qi ? ci : p));
     setPicked(next);
+    recordAnswer(lesson, id, qi, ci === questions[qi].answer);
     if (next.every((p) => p !== null)) {
-      recordBest('quizzes', `${lesson}:${id}`, { correct: next.filter((p, i) => p === questions[i].answer).length, total: questions.length });
+      recordScore(lesson, 'quiz', id, { correct: next.filter((p, i) => p === questions[i].answer).length, total: questions.length });
     }
   };
 

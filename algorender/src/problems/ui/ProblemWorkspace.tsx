@@ -117,7 +117,10 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
     setJudged(outcome);
     setSelected(firstFailure(outcome)?.test.id ?? checked[0]?.test.id ?? null);
     setProgress(null);
-    if (kind === 'submit') recordSubmission(spec.slug, language, !fatal && outcome.skipped === 0 && checked.every((c) => c.verdict.status === 'pass'));
+    if (kind === 'submit') {
+      const failed = checked.filter((c) => c.verdict.status !== 'pass').length + outcome.skipped;
+      recordSubmission(spec.slug, language, { passed: !fatal && failed === 0, tests: tests.length, failed: fatal ? tests.length : failed });
+    }
   };
 
   const watch = async (test: JudgeCase, memory: boolean) => {

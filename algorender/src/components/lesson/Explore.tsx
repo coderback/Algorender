@@ -4,7 +4,7 @@ import { Suspense, useCallback, useRef, useState } from 'react';
 import { FiCheckCircle, FiTarget } from 'react-icons/fi';
 import { Visualiser } from '@/components/explorer/Visualiser';
 import { useLessonSlug } from './LessonContext';
-import { recordBest } from './progress';
+import { recordScore } from './progress';
 
 type Settings = Record<string, string | number>;
 const asParams = (s: Settings = {}) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, String(v)]));
@@ -55,7 +55,7 @@ export function PredictChallenge({ slug, settings, goal = 5 }: { slug: string; s
       const next = { correct: latest.current.correct + (correct ? 1 : 0), total: latest.current.total + 1 };
       latest.current = next;
       setScore(next);
-      if (next.total === goal) recordBest('predictions', `${lesson}:${slug}`, next);
+      if (next.total === goal) recordScore(lesson, 'prediction', slug, next);
     },
     [goal, lesson, slug],
   );

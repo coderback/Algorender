@@ -12,7 +12,9 @@ import { LANGUAGES, type Language, type RunMode } from './protocol';
 import { RunOutput, statusText } from './RunOutput';
 import { FillStage } from './stages/FillStage';
 import { ParsonsStage, type Arrangement } from './stages/ParsonsStage';
-import { loadCode, loadLanguage, loadProgress, saveCode, saveLanguage, saveProgress, type ExerciseProgress } from './storage';
+import { record, useExerciseProgress, useProgressSnapshot } from '@/progress/hooks';
+import type { ExerciseProgress } from '@/progress/projections';
+import { loadCode, loadLanguage, saveCode, saveLanguage } from './storage';
 import { allPass, useExerciseRun } from './useExerciseRun';
 
 export type Stage = 'parsons' | 'fill' | 'write' | 'bug';
@@ -51,7 +53,9 @@ export function Workspace({
 }) {
   const exercise = getExercise(slug)!;
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
-  if (!hydrated) {
+  // The ladder starts at the first stage not yet passed, so wait for the device's progress.
+  const { ready } = useProgressSnapshot();
+  if (!hydrated || !ready) {
     return (
       <div data-workspace="loading" className="rounded-xl border border-line bg-surface p-4">
         <pre className="font-mono text-[13.5px] leading-[1.6] whitespace-pre-wrap text-ink-soft">{exercise.starter.python}</pre>
@@ -73,7 +77,7 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
   const [mode, setMode] = useState<RunMode>('visual');
   // A graph or tree is already watched line by line; the switch only swaps its picture for memory.
   const byLine = watchedByLine(exercise, (exercise.examples.find((e) => e.id === example) ?? exercise.examples[0]).input);
-  const [progress, setProgress] = useState<ExerciseProgress>(() => loadProgress(exercise.slug));
+  const progress = useExerciseProgress(exercise.slug);
   const fillSegments = exercise.blanks ? parseBlanks(exercise.blanks[language]) : [];
   const levels = exercise.fades ?? (exercise.blanks ? [blankNumbers(fillSegments)] : []);
   // Return to the editor if the learner has written code here before; otherwise start at the first stage not yet passed.
@@ -139,11 +143,11 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
     setFlagged(null);
     const result = await run(code, example, { mode: runMode });
     if (!result || !allPass(result)) return;
-    const next = { ...progress };
-    if (stage === 'fill') next.fill = Math.max(progress.fill ?? -1, level);
-    else next[stage] = true;
-    setProgress(next);
-    saveProgress(exercise.slug, next);
+    if (stage === 'fill') {
+      if ((progress.fill ?? -1) < level) record('exercise.passed', { exercise: exercise.slug, stage: 'fill', level });
+    } else if (!progress[stage]) {
+      record('exercise.passed', { exercise: exercise.slug, stage });
+    }
   };
 
   /** Fills the first gap that differs from the reference with its answer. */
