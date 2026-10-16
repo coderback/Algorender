@@ -20,6 +20,23 @@
 // assigned to directly (`dp = table(…)`, `const dp = table(…)`), otherwise
 // table1, table2… / array1, array2…. Ids are unique within a run but names
 // need not be (`row = array(n)` in a loop), so a repeat gets an id like row2.
+//
+// Two more argument kinds hand the learner a structure to explore:
+//   graph   a dict (Python) or plain object (JS/TS) from each node to its
+//           neighbours, in a fixed order: ['B', 'C'], or [('B', 4), …] /
+//           [['B', 4], …] when weighted. Read-only. Reading a node's list
+//           (graph[u], graph.get(u), or every list at once through items(),
+//           values(), Object.entries or Object.values) is a `neighbours`
+//           event; taking an entry from it (iterating or indexing) is an
+//           `edge` event. Membership tests (`v in graph[u]`, includes,
+//           indexOf) and lengths are not.
+//   tree    the root TreeNode of a binary tree (None/null when empty).
+//           TreeNode(val, left, right) is in scope too, LeetCode style, for
+//           code that builds nodes. A TreeNode returned (or inside what is
+//           returned) arrives as its level-order list, [4, 2, 7, null, 3].
+// Graph and tree runs are watched in 'lines' mode: the steps show the
+// learner's own sets, queues and stacks, and the trace draws them on the
+// graph or tree view (traceGraph.ts, traceTree.ts).
 
 import type { VarValue } from '@/engine/types';
 
@@ -37,8 +54,23 @@ export type Arg =
   | { kind: 'array'; name: string; values: number[] }
   /** A visual grid: the learner sees a list of lists / array of arrays, fixed in size. Rectangular. */
   | { kind: 'grid'; name: string; values: number[][] }
+  /** A graph to explore: each node's neighbours in reading order. Reads are tracked; it can't be changed. */
+  | ({ kind: 'graph'; name: string } & GraphSpec)
+  /** A binary tree in level order, LeetCode style (null: no node there). The function gets its root. */
+  | { kind: 'tree'; name: string; values: (number | null)[] }
   /** A plain JSON value (a number, a target, a flag). Not tracked. */
   | { kind: 'value'; name: string; value: Json };
+
+/** A graph argument as the runtimes build it, and as its `graph` event repeats it for the view. */
+export type GraphSpec = {
+  directed: boolean;
+  /** Weighted: neighbours arrive as (node, weight) pairs. Otherwise as bare nodes. */
+  weighted: boolean;
+  /** Every node in order, with its neighbours in the order the code reads them. An undirected edge is listed both ways. */
+  adjacency: { node: string; neighbours: { to: string; weight: number }[] }[];
+  /** Where the view draws each node, in layout units. Runtimes pass it through untouched. */
+  layout?: Record<string, [number, number]>;
+};
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
@@ -94,6 +126,13 @@ export const TS_HELPERS = `/** A visual table of rows × cols cells, each starti
 declare function table(rows: number, cols: number, fill?: number | null): number[][];
 /** A visual array: a copy of values, or that many cells of fill. */
 declare function array(valuesOrLength: number | readonly number[], fill?: number): number[];
+/** A binary tree node, as LeetCode defines it. */
+declare class TreeNode {
+  val: number;
+  left: TreeNode | null;
+  right: TreeNode | null;
+  constructor(val?: number, left?: TreeNode | null, right?: TreeNode | null);
+}
 `;
 
 /**
@@ -213,6 +252,14 @@ export type RunEvent =
   | ({ kind: 'pop'; array: string; index: number } & At)
   /** Something the learner printed (print / console.log), as one line of text. */
   | ({ kind: 'print'; text: string } & At)
+  /** A graph argument, as given (line null). */
+  | ({ kind: 'graph'; graph: string; name: string } & GraphSpec & At)
+  /** The code fetched `node`'s neighbour list. */
+  | ({ kind: 'neighbours'; graph: string; node: string } & At)
+  /** The code took one entry from `from`'s neighbour list: the edge from → to (weight 1 when unweighted). */
+  | ({ kind: 'edge'; graph: string; from: string; to: string; weight: number } & At)
+  /** A tree argument, as given in level order (line null). */
+  | ({ kind: 'tree'; name: string; values: (number | null)[] } & At)
   /**
    * 'lines' mode only: memory just before `line` runs ('line'), as a function
    * returns ('return'), or as an exception leaves a frame ('exception'). `heap`

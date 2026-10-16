@@ -92,7 +92,11 @@ type ArrayInfo = { kind: 'array'; id: string; name: string; data: number[] };
 /** `rows` are the row Proxies the learner's code sees, so a row kept in a variable is the same object in memory. */
 type GridInfo = { kind: 'grid'; id: string; name: string; data: (number | null)[][]; rows: unknown[] };
 type RowInfo = { kind: 'row'; grid: GridInfo; r: number; data: (number | null)[] };
-type Visual = ArrayInfo | GridInfo | RowInfo;
+/** A graph argument. `lists` holds the neighbour-list Proxies the learner's code sees, by node. */
+type GraphInfo = { kind: 'graph'; id: string; name: string; lists: Map<string, unknown>; raw: Map<string, unknown[]> };
+/** One node's neighbours: bare nodes, or frozen [node, weight] pairs when weighted. */
+type NeighboursInfo = { kind: 'neighbours'; graph: GraphInfo; node: string; weighted: boolean; data: unknown[] };
+type Visual = ArrayInfo | GridInfo | RowInfo | GraphInfo | NeighboursInfo;
 type At = { line: number | null; vars: Record<string, VarValue> };
 
 /** 'lines' mode: a call as the memory diagram draws it. */
@@ -281,8 +285,8 @@ class Run {
     cell: (obj: unknown, key: unknown, line: number): unknown => {
       this.errorLine = line;
       const info = typeof obj === 'object' && obj !== null ? this.visual.get(obj) : undefined;
-      // A grid gives its row as usual (dp[i] in dp[i][j]); the row then gives the cell.
-      if (info && info.kind !== 'grid' && typeof key !== 'symbol') {
+      // A grid gives its row as usual (dp[i] in dp[i][j]); the row then gives the cell. A graph reads as usual.
+      if (info && (info.kind === 'array' || info.kind === 'row') && typeof key !== 'symbol') {
         const k = String(key);
         const i = asIndex(k);
         if (i === null) return (obj as Record<string, unknown>)[k];
@@ -364,24 +368,14 @@ class Run {
     ended: (capture: Capture) => {
       if (this.stack.length === 1) this.stack[0].capture = capture;
     },
-    /** for…of's iterable: before each fetch after the first, the loop's line is a step again. */
-    each: (n: number, iterable: unknown): unknown => {
-      const make = iterable == null ? undefined : (iterable as { [Symbol.iterator]?: unknown })[Symbol.iterator];
-      if (typeof make !== 'function') return iterable; // for…of throws its own error
-      const it = make.call(iterable) as Iterator<unknown>;
-      let started = false;
-      return {
-        [Symbol.iterator]() {
-          return this;
-        },
-        next: (...args: [] | [unknown]) => {
-          if (started) this.again(n);
-          started = true;
-          return it.next(...args);
-        },
-        return: (value?: unknown) => (typeof it.return === 'function' ? it.return(value) : { done: true, value }),
-      };
-    },
+    /** for…of's iterable where lines are steps: before each fetch after the first, the loop's line is a step again. */
+    each: (n: number, iterable: unknown): unknown => this.iterate(n, iterable, () => this.again(n)),
+    /**
+     * for…of's iterable elsewhere: before each fetch after the first, the loop
+     * is back on its own line, with the variables as the last pass left them,
+     * as Python's for is, so an edge the fetch takes is reported there.
+     */
+    iter: (n: number, iterable: unknown): unknown => this.iterate(n, iterable, () => this.viz.line(n, this.capture)),
     /** An exception is leaving the frame entered at `depth`. */
     unwind: (depth: number, error: unknown) => {
       const frame = this.stack.at(-1);
@@ -416,6 +410,25 @@ class Run {
   /** A for…of loop's line again, with memory as the last pass left it (the frame's latest capture). */
   private again(n: number) {
     this.stepAt(n, this.stack.at(-1)?.capture ?? null, true);
+  }
+
+  /** Wraps a for…of iterable so `back()` runs before each fetch after the first. */
+  private iterate(n: number, iterable: unknown, back: () => void): unknown {
+    const make = iterable == null ? undefined : (iterable as { [Symbol.iterator]?: unknown })[Symbol.iterator];
+    if (typeof make !== 'function') return iterable; // for…of throws its own error
+    const it = make.call(iterable) as Iterator<unknown>;
+    let started = false;
+    return {
+      [Symbol.iterator]() {
+        return this;
+      },
+      next: (...args: [] | [unknown]) => {
+        if (started) back();
+        started = true;
+        return it.next(...args);
+      },
+      return: (value?: unknown) => (typeof it.return === 'function' ? it.return(value) : { done: true, value }),
+    };
   }
 
   /**
@@ -513,6 +526,12 @@ class Run {
     const listed = (items: readonly unknown[], n: number) => ({ items: items.slice(0, MAX_ITEMS).map(value), more: Math.max(0, n - MAX_ITEMS) });
     // A visual collection is a plain Array to the learner; its cells are read directly, so drawing it records no reads.
     const visual = this.visual.get(x);
+    if (visual?.kind === 'graph') {
+      // A plain object of neighbour lists, each the same Proxy the learner's code holds.
+      const fields: [string, MemValue][] = [];
+      for (const node of visual.lists.keys()) if (fields.length < MAX_ITEMS) fields.push([node, value(visual.lists.get(node))]);
+      return { id, kind: 'object', type: 'Object', fields, more: Math.max(0, visual.lists.size - MAX_ITEMS) };
+    }
     if (visual) {
       const items = visual.kind === 'grid' ? visual.rows : visual.data;
       return { id, kind: 'list', type: 'Array', ...listed(items, items.length) };
@@ -599,7 +618,17 @@ class Run {
 
   arg(a: Arg): unknown {
     if (a.kind === 'value') return structuredClone(a.value);
+    if (a.kind === 'tree') {
+      this.emit({ kind: 'tree', name: a.name, values: [...a.values], line: null, vars: {} });
+      return this.buildTree(a.values);
+    }
     this.ids.add(a.name);
+    if (a.kind === 'graph') {
+      const { directed, weighted, adjacency, layout } = a;
+      const spec = { directed, weighted, adjacency: structuredClone(adjacency), ...(layout && { layout: structuredClone(layout) }) };
+      this.emit({ kind: 'graph', graph: a.name, name: a.name, ...spec, line: null, vars: {} });
+      return this.visualGraph(a.name, a.weighted, a.adjacency);
+    }
     if (a.kind === 'grid') {
       const values = a.values.map((row) => [...row]);
       this.emit({ kind: 'grid', grid: a.name, name: a.name, rows: values.length, cols: values[0]?.length ?? 0, values: values.map((row) => [...row]), line: null, vars: {} });
@@ -609,10 +638,21 @@ class Run {
     return this.visualArray(a.name, a.values);
   }
 
-  /** table() and array() as the learner's code sees them (globals it may shadow). */
+  /** table(), array() and TreeNode as the learner's code sees them (globals it may shadow). */
   readonly helpers = {
     table: (rows: unknown, cols: unknown, fill: unknown = 0) => this.makeTable(null, rows, cols, fill),
     array: (values: unknown, fill: unknown = 0) => this.makeArray(null, values, fill),
+    // A class of this run's own, so a learner's change to it can't outlive the run.
+    TreeNode: class TreeNode {
+      val: unknown;
+      left: unknown;
+      right: unknown;
+      constructor(val: unknown = 0, left: unknown = null, right: unknown = null) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+      }
+    },
   };
 
   /** [name, id] for a new collection: the variable's name, or table1, array2…; the id gets a number on the end when taken. */
@@ -850,6 +890,115 @@ class Run {
     return proxy;
   }
 
+  // Graphs and trees ------------------------------------------------------------------
+
+  /**
+   * A graph argument: a Proxy over a plain object of neighbour-list Proxies, so
+   * Object.keys, `in` and for…in work as usual. Getting a node's list is a
+   * `neighbours` event (Object.entries and Object.values get every list, as
+   * Python's items() and values() do); nothing can be changed.
+   */
+  private visualGraph(id: string, weighted: boolean, adjacency: Extract<Arg, { kind: 'graph' }>['adjacency']): unknown {
+    const name = id;
+    const graph: GraphInfo = { kind: 'graph', id, name, lists: new Map(), raw: new Map() };
+    const target: Record<string, unknown> = {};
+    for (const { node, neighbours } of adjacency) {
+      const data = neighbours.map(({ to, weight }) => (weighted ? Object.freeze([to, weight]) : to));
+      const list = this.neighbourList({ kind: 'neighbours', graph, node, weighted, data });
+      graph.lists.set(node, list);
+      graph.raw.set(node, data);
+      target[node] = list;
+    }
+    const proxy = new Proxy(target, {
+      get: (t, key, receiver) => {
+        if (typeof key === 'string' && Object.hasOwn(t, key)) {
+          this.emit({ kind: 'neighbours', graph: id, node: key, ...this.at() });
+          return t[key];
+        }
+        return Reflect.get(t, key, receiver);
+      },
+      set: () => readOnly(name),
+      deleteProperty: () => readOnly(name),
+      defineProperty: () => readOnly(name),
+      setPrototypeOf: () => readOnly(name),
+      preventExtensions: () => readOnly(name),
+    });
+    this.visual.set(proxy, graph);
+    return proxy;
+  }
+
+  /** One node's neighbours: taking an entry (by index, so iteration too) is an `edge` event; includes and indexOf take none. */
+  private neighbourList(info: NeighboursInfo): unknown {
+    const { graph, node, weighted, data } = info;
+    const label = `${graph.name}[${JSON.stringify(node)}]`;
+    const searches: Record<string, unknown> = Object.fromEntries(
+      (['includes', 'indexOf', 'lastIndexOf'] as const).map((m) => [m, (...args: unknown[]) => (Array.prototype[m] as (...a: unknown[]) => unknown).apply(data, args)]),
+    );
+    const proxy = new Proxy(data, {
+      get: (target, key, receiver) => {
+        if (typeof key === 'string') {
+          const i = asIndex(key);
+          if (typeof i === 'number' && i >= 0 && i < target.length) {
+            const item = target[i];
+            const [to, weight] = weighted ? (item as [string, number]) : [item as string, 1];
+            this.emit({ kind: 'edge', graph: graph.id, from: node, to, weight, ...this.at() });
+            return item;
+          }
+          if (Object.hasOwn(searches, key)) return searches[key];
+        }
+        return Reflect.get(target, key, receiver);
+      },
+      set: () => readOnly(label),
+      deleteProperty: () => readOnly(label),
+      defineProperty: () => readOnly(label),
+      setPrototypeOf: () => readOnly(label),
+      preventExtensions: () => readOnly(label),
+    });
+    this.visual.set(proxy, info);
+    return proxy;
+  }
+
+  /** The root of a tree given in level order (null: no node there), or null. */
+  private buildTree(values: readonly (number | null)[]): unknown {
+    const Node = this.helpers.TreeNode;
+    if (values.length === 0 || values[0] === null) return null;
+    const root = new Node(values[0]);
+    const waiting = [root];
+    let i = 1;
+    for (let k = 0; i < values.length && k < waiting.length; k++) {
+      const node = waiting[k];
+      for (const side of ['left', 'right'] as const) {
+        const v = values[i++];
+        if (v !== null && v !== undefined) {
+          const child = new Node(v);
+          node[side] = child;
+          waiting.push(child);
+        }
+      }
+    }
+    return root;
+  }
+
+  /** A tree in level order, trailing gaps dropped, as JSON: [4, 2, 7, null, 3]. */
+  private treeJson(root: object, path: object[]): Json {
+    const out: Json[] = [];
+    const seen = new Set<object>();
+    const waiting: unknown[] = [root];
+    for (let k = 0; k < waiting.length; k++) {
+      const node = waiting[k];
+      if (!(node instanceof this.helpers.TreeNode)) {
+        out.push(node == null ? null : this.json(node, path));
+        continue;
+      }
+      if (seen.has(node) || seen.size >= MAX_CELLS) return 'not a tree: a node can be reached twice';
+      seen.add(node);
+      out.push(this.json(node.val, path));
+      waiting.push(node.left, node.right);
+    }
+    while (out.length > 0 && out.at(-1) === null) out.pop();
+    return out;
+  }
+
   private rowIndex({ name, data }: GridInfo, key: string, i: number | typeof BAD_INDEX): number {
     if (i === BAD_INDEX) throw new TypeError(`Index ${key} isn't a whole number, so it can't pick a row of ${name}.`);
     if (i < 0 || i >= data.length) throw new RangeError(`Row ${i} is out of range for ${name} (${plural(data.length, 'row')})`);
@@ -943,7 +1092,10 @@ class Run {
     seen.add(v);
     try {
       const visual = this.visual.get(v);
+      // A graph's parts are read directly, so printing them takes no edges.
+      if (visual?.kind === 'graph' || visual?.kind === 'neighbours') return this.show(plainData(visual), nested, seen);
       if (visual) return visual.kind === 'grid' ? `[${visual.data.map(cellsText).join(', ')}]` : cellsText(visual.data);
+      if (v instanceof this.helpers.TreeNode) return `TreeNode(${this.show(v.val, true, seen)})`;
       if (Array.isArray(v)) return `[${Array.from(v, (x) => this.show(x, true, seen)).join(', ')}]`;
       if (v instanceof Error) return `${v.name}: ${v.message}`;
       if (v instanceof Set) return `Set(${v.size}) {${Array.from(v, (x) => this.show(x, true, seen)).join(', ')}}`;
@@ -978,7 +1130,9 @@ class Run {
     if (path.includes(v)) return '…'; // contains itself
     const inner = [...path, v];
     const visual = this.visual.get(v);
-    if (visual) return plainData(visual);
+    if (visual?.kind === 'graph' || visual?.kind === 'neighbours') return this.json(plainData(visual), inner);
+    if (visual) return plainData(visual) as Json;
+    if (v instanceof this.helpers.TreeNode) return this.treeJson(v, inner);
     if (Array.isArray(v)) return Array.from(v, (x) => this.json(x, inner));
     if (v instanceof Set) return Array.from(v, (x) => this.json(x, inner));
     if (v instanceof Map) return Array.from(v, ([k, x]) => [this.json(k, inner), this.json(x, inner)]);
@@ -994,8 +1148,19 @@ class Run {
 }
 
 /** A copy of what a visual Proxy holds, as plain arrays. */
-function plainData(visual: Visual): (number | null)[] | (number | null)[][] {
-  return visual.kind === 'grid' ? visual.data.map((row) => [...row]) : [...visual.data];
+function plainData(visual: Visual): unknown {
+  switch (visual.kind) {
+    case 'grid':
+      return visual.data.map((row) => [...row]);
+    case 'graph':
+      return Object.fromEntries(Array.from(visual.raw, ([node, data]) => [node, [...data]]));
+    default:
+      return [...visual.data];
+  }
+}
+
+function readOnly(what: string): never {
+  throw new TypeError(`${what} is part of the graph you were given, so it can't be changed here; keep what you find in an object, Set or array of your own.`);
 }
 
 function listText(items: number[]): string {
@@ -1047,8 +1212,8 @@ function execute(request: RunRequest): RunResult {
   // The learner's top level runs inside a function: its declarations stay
   // local to this run, and `entry` is looked up once it has finished. The
   // helpers are parameters, so the learner's own `table` or `array` shadows them.
-  const factory = new Function('__viz', 'console', 'table', 'array', `return function () {\n${code}\n${lookup}\n};`);
-  const program = factory(run.viz, run.console, run.helpers.table, run.helpers.array) as () => unknown;
+  const factory = new Function('__viz', 'console', 'table', 'array', 'TreeNode', `return function () {\n${code}\n${lookup}\n};`);
+  const program = factory(run.viz, run.console, run.helpers.table, run.helpers.array, run.helpers.TreeNode) as () => unknown;
 
   let returned: unknown = undefined;
   let error: RunError | null = null;

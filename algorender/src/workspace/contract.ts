@@ -49,6 +49,35 @@ const cell = (index: number, value: number) => ({ array: 'arr', index, value });
 const gcell = (grid: string, row: number, col: number, value: number | null) => ({ grid, row, col, value });
 const read = (grid: string, row: number, col: number) => ({ grid, row, col });
 
+type GraphArg = Extract<Arg, { kind: 'graph' }>;
+
+/** A triangle: A–B, A–C, B–C, undirected, unweighted. */
+const GRAPH: GraphArg = {
+  kind: 'graph',
+  name: 'graph',
+  directed: false,
+  weighted: false,
+  adjacency: [
+    { node: 'A', neighbours: [{ to: 'B', weight: 1 }, { to: 'C', weight: 1 }] },
+    { node: 'B', neighbours: [{ to: 'A', weight: 1 }, { to: 'C', weight: 1 }] },
+    { node: 'C', neighbours: [{ to: 'A', weight: 1 }, { to: 'B', weight: 1 }] },
+  ],
+};
+
+/** One-way roads with weights, and a layout the runtimes pass through. */
+const WEIGHTED: GraphArg = {
+  kind: 'graph',
+  name: 'roads',
+  directed: true,
+  weighted: true,
+  adjacency: [
+    { node: 'A', neighbours: [{ to: 'B', weight: 4 }, { to: 'C', weight: 1 }] },
+    { node: 'B', neighbours: [] },
+    { node: 'C', neighbours: [{ to: 'B', weight: 2 }] },
+  ],
+  layout: { A: [0, 0], B: [100, 0], C: [50, 80] },
+};
+
 // ---------------------------------------------------------------------------
 // 'lines' mode shapes
 // ---------------------------------------------------------------------------
@@ -72,6 +101,7 @@ export type Shape =
   | typeof NOTHING
   | { ref: string; list: Shape[] }
   | { ref: string; map: [string, Shape][] }
+  | { ref: string; obj: string; fields: [string, Shape][] }
   | { ref: string; fn: string };
 
 type Side = 'python' | 'js';
@@ -111,6 +141,8 @@ export type DrawnStep = {
 const pythonOnly = (value: Shape): Local => ({ only: 'python', value });
 const list = (ref: string, ...items: Shape[]): Shape => ({ ref, list: items });
 const map = (ref: string, ...entries: [string, Shape][]): Shape => ({ ref, map: entries });
+/** An instance of a class both languages name alike (TreeNode), with its fields in order. */
+const obj = (ref: string, type: string, ...fields: [string, Shape][]): Shape => ({ ref, obj: type, fields });
 const fn = (name: string): Shape => ({ ref: name, fn: name });
 const G = 'Global frame';
 
@@ -756,6 +788,161 @@ function count(rows, cols) {
     expect: { kinds: ['grid'], grids: { dp: [[0, 0]] }, error: { kind: 'runtime', line: 3, message: "TypeError: dp holds numbers, so dp[0][1] can't store" } },
   },
   {
+    name: 'graphs: fetching a node’s neighbours and taking each edge are events, on the loop’s line',
+    code: {
+      python: `def walk(graph, start):
+    seen = [start]
+    for v in graph[start]:
+        seen.append(v)
+    return seen
+`,
+      javascript: `function walk(graph, start) {
+  const seen = [start];
+  for (const v of graph[start]) {
+    seen.push(v);
+  }
+  return seen;
+}
+`,
+    },
+    entry: { python: 'walk', js: 'walk' },
+    args: [GRAPH, { kind: 'value', name: 'start', value: 'A' }],
+    expect: {
+      events: [
+        { kind: 'graph', graph: 'graph', name: 'graph', directed: false, weighted: false, adjacency: GRAPH.adjacency, ...at(null) },
+        { kind: 'neighbours', graph: 'graph', node: 'A', ...at(3, { start: 'A' }) },
+        { kind: 'edge', graph: 'graph', from: 'A', to: 'B', weight: 1, ...at(3, { start: 'A' }) },
+        { kind: 'edge', graph: 'graph', from: 'A', to: 'C', weight: 1, ...at(3, { start: 'A', v: 'B' }) },
+      ],
+      returned: ['A', 'B', 'C'],
+    },
+  },
+  {
+    name: 'graphs: indexing and slicing take edges; lengths and membership don’t; values()/Object.values fetch every list',
+    code: {
+      python: `def look(graph):
+    n = len(graph["A"])
+    has = "C" in graph["A"]
+    first = graph["A"][0]
+    rest = graph["A"][1:]
+    lists = list(graph.values())
+    return [n, has, first, rest, len(lists)]
+`,
+      javascript: `function look(graph) {
+  const n = graph["A"].length;
+  const has = graph["A"].includes("C");
+  const first = graph["A"][0];
+  const rest = graph["A"].slice(1);
+  const lists = Object.values(graph);
+  return [n, has, first, rest, lists.length];
+}
+`,
+    },
+    entry: { python: 'look', js: 'look' },
+    args: [GRAPH],
+    expect: {
+      events: [
+        { kind: 'graph', graph: 'graph', name: 'graph', directed: false, weighted: false, adjacency: GRAPH.adjacency, ...at(null) },
+        { kind: 'neighbours', graph: 'graph', node: 'A', ...at(2) },
+        { kind: 'neighbours', graph: 'graph', node: 'A', ...at(3, { n: 2 }) },
+        { kind: 'neighbours', graph: 'graph', node: 'A', ...at(4, { n: 2, has: true }) },
+        { kind: 'edge', graph: 'graph', from: 'A', to: 'B', weight: 1, ...at(4, { n: 2, has: true }) },
+        { kind: 'neighbours', graph: 'graph', node: 'A', ...at(5, { n: 2, has: true, first: 'B' }) },
+        { kind: 'edge', graph: 'graph', from: 'A', to: 'C', weight: 1, ...at(5, { n: 2, has: true, first: 'B' }) },
+        ...['A', 'B', 'C'].map((node) => ({ kind: 'neighbours' as const, graph: 'graph', node, ...at(6, { n: 2, has: true, first: 'B' }) })),
+      ],
+      returned: [2, true, 'B', ['C'], 3],
+    },
+  },
+  {
+    name: 'graphs: a weighted graph’s neighbours are (node, weight) pairs, and each edge carries its weight',
+    code: {
+      python: `def cheapest(graph, start):
+    best = None
+    for v, w in graph[start]:
+        if best is None or w < best:
+            best = w
+    return best
+`,
+      javascript: `function cheapest(graph, start) {
+  let best = null;
+  for (const [v, w] of graph[start]) {
+    if (best === null || w < best) {
+      best = w;
+    }
+  }
+  return best;
+}
+`,
+    },
+    entry: { python: 'cheapest', js: 'cheapest' },
+    args: [WEIGHTED, { kind: 'value', name: 'start', value: 'A' }],
+    expect: {
+      events: [
+        { kind: 'graph', graph: 'roads', name: 'roads', directed: true, weighted: true, adjacency: WEIGHTED.adjacency, layout: WEIGHTED.layout, ...at(null) },
+        { kind: 'neighbours', graph: 'roads', node: 'A', ...at(3, { start: 'A', best: null }) },
+        { kind: 'edge', graph: 'roads', from: 'A', to: 'B', weight: 4, ...at(3, { start: 'A', best: null }) },
+        { kind: 'edge', graph: 'roads', from: 'A', to: 'C', weight: 1, ...at(3, { start: 'A', best: 4, v: 'B', w: 4 }) },
+      ],
+      returned: 1,
+    },
+  },
+  {
+    name: 'graphs: the graph can’t be changed',
+    code: {
+      python: `def grow(graph):
+    graph["A"].append("D")
+`,
+      javascript: `function grow(graph) {
+  graph["A"].push("D");
+}
+`,
+    },
+    entry: { python: 'grow', js: 'grow' },
+    args: [GRAPH],
+    expect: { kinds: ['graph', 'neighbours'], error: { kind: 'runtime', line: 2, message: 'is part of the graph you were given' } },
+  },
+  {
+    name: 'trees: a tree argument arrives as TreeNodes, TreeNode makes more, and a returned tree is its level-order list',
+    code: {
+      python: `def grow(root):
+    root.left.left = TreeNode(1)
+    print(root.left)
+    return root
+`,
+      javascript: `function grow(root) {
+  root.left.left = new TreeNode(1);
+  console.log(root.left);
+  return root;
+}
+`,
+    },
+    entry: { python: 'grow', js: 'grow' },
+    args: [{ kind: 'tree', name: 'root', values: [4, 2, 7, null, 3] }],
+    expect: {
+      events: [
+        { kind: 'tree', name: 'root', values: [4, 2, 7, null, 3], ...at(null) },
+        { kind: 'print', text: 'TreeNode(2)', ...at(3) },
+      ],
+      returned: [4, 2, 7, 1, 3],
+    },
+  },
+  {
+    name: 'trees: an empty tree is None (Python) or null (JS)',
+    code: {
+      python: `def is_empty(root):
+    return root is None
+`,
+      javascript: `function isEmpty(root) {
+  return root === null;
+}
+`,
+    },
+    entry: { python: 'is_empty', js: 'isEmpty' },
+    args: [{ kind: 'tree', name: 'root', values: [] }],
+    expect: { kinds: ['tree'], returned: true },
+  },
+  {
     name: 'a missing entry function says what to define',
     code: { python: `def something_else(arr):\n    pass\n`, javascript: `function somethingElse(arr) {}\n` },
     entry: { python: 'bubble_sort', js: 'bubbleSort' },
@@ -1123,6 +1310,43 @@ const b = check(-1);
     },
   },
   {
+    name: 'lines: a graph is a dict (Python) or object (JS) of lists, a tree is TreeNodes, and reads still come between steps',
+    code: {
+      python: `def first(graph, root):
+    nbrs = graph["A"]
+    return root.left
+`,
+      javascript: `function first(graph, root) {
+  const nbrs = graph["A"];
+  return root.left;
+}
+`,
+    },
+    entry: { python: 'first', js: 'first' },
+    args: [
+      { kind: 'graph', name: 'graph', directed: false, weighted: false, adjacency: [{ node: 'A', neighbours: [{ to: 'B', weight: 1 }] }, { node: 'B', neighbours: [{ to: 'A', weight: 1 }] }] },
+      { kind: 'tree', name: 'root', values: [2, 1] },
+    ],
+    mode: 'lines',
+    expect: {
+      kinds: ['step', 'step', 'graph', 'tree', 'step', 'neighbours', 'step', 'step'],
+      steps: (() => {
+        const graph = map('G', ['A', list('NA', 'B')], ['B', list('NB', 'A')]);
+        const leaf = obj('L', 'TreeNode', ['val', 1], ['left', null], ['right', null]);
+        const root = obj('R', 'TreeNode', ['val', 2], ['left', leaf], ['right', null]);
+        const top = [G, { first: fn('first') }] as [string, Record<string, Local>];
+        return [
+          { line: 1, stack: [[G, {}]] },
+          { event: 'return', line: 1, stack: [top] },
+          { line: 2, stack: [top, ['first', { graph, root }]] },
+          { line: 3, stack: [top, ['first', { graph, root, nbrs: list('NA', 'B') }]] },
+          { event: 'return', line: 3, stack: [top, ['first', { graph, root, nbrs: list('NA', 'B') }]], returning: leaf },
+        ];
+      })(),
+      returned: [1],
+    },
+  },
+  {
     name: 'lines: an endless loop stops at maxEvents, which counts steps',
     code: {
       python: `n = 0
@@ -1189,6 +1413,7 @@ export function expectedSteps(steps: readonly StepShape[], language: Language): 
         ? { ref, type: 'dict', entries: s.map.map(([k, v]): [Drawn, Drawn] => [draw(k), draw(v)]) }
         : { ref, type: 'Object', fields: s.map.map(([k, v]): [string, Drawn] => [k, draw(v)]) };
     }
+    if ('obj' in s) return { ref, type: s.obj, fields: s.fields.map(([k, v]): [string, Drawn] => [k, draw(v)]) };
     return { ref, type: 'function', name: s.fn };
   };
   return steps.map((step) => {

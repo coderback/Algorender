@@ -20,6 +20,9 @@
 // - `const name = table(…)` and `name = table(…)` (or array) call the helper
 //   as __viz.named("name", table)(…), so the collection is named after its
 //   variable; a learner's own `table` passes through unchanged.
+// - for…of iterates through __viz.iter, which puts the loop back on its own
+//   line before each fetch after the first, as Python's for is, so an event a
+//   fetch causes (taking a graph's edge) is reported on the loop's line.
 // The code runs in strict mode (parsed as such, so strict-only errors are
 // syntax errors): sloppy mode would let `i = 0` create a global in the worker
 // that outlives the run.
@@ -440,13 +443,16 @@ class Instrumenter {
       case 'ForOfStatement': {
         const left = s.left;
         const names = left.type === 'VariableDeclaration' && left.kind !== 'var' ? declarationNames(left) : null;
-        // for…in can't be wrapped, so only for…of comes back to its line between passes.
-        const header = this.steps && s.type === 'ForOfStatement' && !s.await;
+        // for…in can't be wrapped, so only for…of comes back to its line between
+        // passes: a step where lines are steps, otherwise just the line, so an
+        // event the fetch causes (taking a graph's edge) is reported on it.
+        const wrapped = s.type === 'ForOfStatement' && !s.await;
+        const header = this.steps && wrapped;
         return this.within(names, false, () => {
           if (left.type === 'VariableDeclaration') this.declaration(left);
           else s.left = this.node(left);
           s.right = this.node(s.right);
-          if (header) s.right = vizCall('each', [lit(lineOf(s)), s.right]);
+          if (wrapped) s.right = vizCall(header ? 'each' : 'iter', [lit(lineOf(s)), s.right]);
           s.body = this.loopBody(s.body, lineOf(s), header);
           return s;
         });

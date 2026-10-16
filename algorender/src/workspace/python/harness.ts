@@ -31,6 +31,7 @@
 export const HARNESS = String.raw`
 import ast
 import builtins
+import collections
 import dis
 import functools
 import itertools
@@ -119,6 +120,8 @@ def _list_text(items, tuple_=False):
 
 def _var(value):
     """A local variable as the variables panel shows it, or _SKIP."""
+    if type(value) in _VISUAL:
+        return _SKIP  # iterating a graph's list here would read its edges
     if value is None or isinstance(value, bool):
         return value
     if _is_number(value):
@@ -159,6 +162,13 @@ def _json(value, path=()):
         return list(value._values)
     if isinstance(value, VisualGrid):
         return value._lists()
+    # A graph's parts read directly, so returning them records no reads.
+    if isinstance(value, VisualGraph):
+        return {k: _json(v, inner) for k, v in dict.items(value)}
+    if isinstance(value, VisualNeighbours):
+        return [_json(x, inner) for x in list.__iter__(value)]
+    if isinstance(value, TreeNode):
+        return _tree_json(value, inner)
     if isinstance(value, (list, tuple)):
         return [_json(x, inner) for x in value]
     if isinstance(value, dict) and all(isinstance(k, str) for k in value):
@@ -611,7 +621,229 @@ class VisualRow:
         raise TypeError(f'{self._label()}.reverse() would reverse without showing the steps; set the cells yourself.')
 
 
-_VISUAL = (VisualList, VisualGrid, VisualRow)
+# ---------------------------------------------------------------------------
+# Graphs: a read-only dict of neighbour lists whose reads are shown
+# ---------------------------------------------------------------------------
+
+def _read_only(what):
+    raise TypeError(f"{what} is part of the graph you were given, so it can't be changed here; "
+                    'keep what you find in a dict, set or list of your own.')
+
+
+class VisualGraph(dict):
+    """A graph argument: each node → its VisualNeighbours, in a fixed order.
+    Fetching a node's list is a 'neighbours' event; items() and values()
+    fetch every list at once (as Object.entries does in JS)."""
+
+    __slots__ = ('_id', '_name')
+
+    def __init__(self, graph_id, name, lists):
+        dict.__init__(self, lists)
+        self._id = graph_id
+        self._name = name
+
+    def _fetch(self, node):
+        if _current is not None:
+            _current.emit('neighbours', graph=self._id, node=node)
+        return dict.__getitem__(self, node)
+
+    def __getitem__(self, node):
+        if not dict.__contains__(self, node):
+            raise KeyError(node)
+        return self._fetch(node)
+
+    def get(self, node, default=None):
+        return self._fetch(node) if dict.__contains__(self, node) else default
+
+    def items(self):
+        for node in dict.keys(self):
+            self._fetch(node)
+        return dict.items(self)
+
+    def values(self):
+        for node in dict.keys(self):
+            self._fetch(node)
+        return dict.values(self)
+
+    def __setitem__(self, node, value):
+        _read_only(self._name)
+
+    def __delitem__(self, node):
+        _read_only(self._name)
+
+    def __ior__(self, other):
+        _read_only(self._name)
+
+    def pop(self, *args):
+        _read_only(self._name)
+
+    def popitem(self):
+        _read_only(self._name)
+
+    def clear(self):
+        _read_only(self._name)
+
+    def update(self, *args, **kwargs):
+        _read_only(self._name)
+
+    def setdefault(self, *args):
+        _read_only(self._name)
+
+
+class VisualNeighbours(list):
+    """One node's neighbours (or (neighbour, weight) pairs). Taking an entry,
+    by iterating or indexing, is an 'edge' event; len() and 'in' are not."""
+
+    __slots__ = ('_graph', '_node', '_weighted', '_label')
+
+    def __init__(self, graph, node, weighted, items):
+        list.__init__(self, items)
+        self._graph = graph
+        self._node = node
+        self._weighted = weighted
+        self._label = f'{graph._name}[{node!r}]'
+
+    def _take(self, item):
+        if _current is not None:
+            to, weight = item if self._weighted else (item, 1)
+            _current.emit('edge', graph=self._graph._id, to=to, weight=weight, **{'from': self._node})
+        return item
+
+    def __iter__(self):
+        # Lazily, like a JS iterator, so a loop that breaks early takes only the edges it saw.
+        for i in range(list.__len__(self)):
+            yield self._take(list.__getitem__(self, i))
+
+    def __reversed__(self):
+        for i in reversed(range(list.__len__(self))):
+            yield self._take(list.__getitem__(self, i))
+
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            return [self._take(x) for x in list.__getitem__(self, i)]
+        return self._take(list.__getitem__(self, i))
+
+    def copy(self):
+        return list(self)
+
+    def __add__(self, other):
+        return list(self) + list(other)
+
+    def __radd__(self, other):
+        return list(other) + list(self)
+
+    def __mul__(self, n):
+        return list(self) * n
+
+    __rmul__ = __mul__
+
+    def __setitem__(self, i, value):
+        _read_only(self._label)
+
+    def __delitem__(self, i):
+        _read_only(self._label)
+
+    def __iadd__(self, other):
+        _read_only(self._label)
+
+    def __imul__(self, other):
+        _read_only(self._label)
+
+    def append(self, value):
+        _read_only(self._label)
+
+    def extend(self, values):
+        _read_only(self._label)
+
+    def insert(self, i, value):
+        _read_only(self._label)
+
+    def remove(self, value):
+        _read_only(self._label)
+
+    def pop(self, *args):
+        _read_only(self._label)
+
+    def clear(self):
+        _read_only(self._label)
+
+    def sort(self, *args, **kwargs):
+        _read_only(self._label)
+
+    def reverse(self):
+        _read_only(self._label)
+
+
+def _graph(spec):
+    graph_id = spec['name']
+    weighted = bool(spec.get('weighted'))
+    graph = VisualGraph(graph_id, graph_id, {})
+    for row in spec.get('adjacency') or []:
+        items = [(n['to'], n['weight']) if weighted else n['to'] for n in row['neighbours']]
+        dict.__setitem__(graph, row['node'], VisualNeighbours(graph, row['node'], weighted, items))
+    return graph
+
+
+_VISUAL = (VisualList, VisualGrid, VisualRow, VisualGraph, VisualNeighbours)
+
+
+# ---------------------------------------------------------------------------
+# Trees: LeetCode's TreeNode
+# ---------------------------------------------------------------------------
+
+class TreeNode:
+    """A binary tree node: TreeNode(val, left=None, right=None)."""
+
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+    def __repr__(self):
+        return f'TreeNode({self.val!r})'
+
+
+def _build_tree(values):
+    """The root of a tree given in level order (None: no node there), or None."""
+    if not values or values[0] is None:
+        return None
+    root = TreeNode(values[0])
+    waiting = [root]
+    k = 0
+    i = 1
+    while i < len(values) and k < len(waiting):
+        node = waiting[k]
+        k += 1
+        for side in ('left', 'right'):
+            if i < len(values) and values[i] is not None:
+                child = TreeNode(values[i])
+                setattr(node, side, child)
+                waiting.append(child)
+            i += 1
+    return root
+
+
+def _tree_json(root, path):
+    """A tree in level order, trailing gaps dropped: [4, 2, 7, None, 3]."""
+    out = []
+    seen = set()
+    waiting = [root]
+    k = 0
+    while k < len(waiting):
+        node = waiting[k]
+        k += 1
+        if not isinstance(node, TreeNode):
+            out.append(None if node is None else _json(node, path))
+            continue
+        if id(node) in seen or len(seen) >= MAX_CELLS:
+            return 'not a tree: a node can be reached twice'
+        seen.add(id(node))
+        out.append(_json(node.val, path))
+        waiting.append(node.left)
+        waiting.append(node.right)
+    while out and out[-1] is None:
+        out.pop()
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -870,7 +1102,7 @@ def _shown(name, value):
         return False
     if name.startswith('__') and name.endswith('__'):
         return False
-    return not isinstance(value, types.ModuleType) and value is not table and value is not array
+    return not isinstance(value, types.ModuleType) and value is not table and value is not array and value is not TreeNode
 
 
 _FUNCTIONS = (types.FunctionType, types.BuiltinFunctionType, types.MethodType)
@@ -920,6 +1152,14 @@ class _Heap:
             return self.items(oid, 'list', 'list', x._values)
         if kind is VisualGrid:
             return self.items(oid, 'list', 'list', x._rows)
+        # A graph is a dict and its lists are lists; read directly, so drawing them takes no edges.
+        if kind is VisualGraph:
+            entries = [[self.value(k), self.value(v)] for k, v in itertools.islice(dict.items(x), MAX_ITEMS)]
+            return {'id': oid, 'kind': 'dict', 'type': 'dict', 'entries': entries, 'more': max(0, len(x) - MAX_ITEMS)}
+        if kind is VisualNeighbours:
+            return self.items(oid, 'list', 'list', list(list.__iter__(x)))
+        if isinstance(x, collections.deque):
+            return self.items(oid, 'list', kind.__name__, list(x))
         if isinstance(x, list):
             return self.items(oid, 'list', kind.__name__, x)
         if isinstance(x, tuple):
@@ -1153,14 +1393,17 @@ class _Run:
         stack = [self.frame('global', 'Global frame', self.global_line, self.namespace, heap)]
         for f in reversed(calls):
             fid = self.frame_ids.get(id(f), 'f0')
-            stack.append(self.frame(fid, f.f_code.co_name, f.f_lineno or 0, f.f_locals, heap))
+            stack.append(self.frame(fid, f.f_code.co_name, f.f_lineno or 0, f.f_locals, heap, f.f_code.co_freevars))
         return stack
 
-    def frame(self, fid, fn, line, scope, heap):
+    def frame(self, fid, fn, line, scope, heap, outer=()):
+        """A frame's names in binding order. A closure's free variables
+        (outer) belong to the frame that defines them, so they are drawn
+        there, as in JS."""
         order = self.order.setdefault(fid, {})
         shown = {}
         for name, value in list(scope.items()):
-            if _shown(name, value):
+            if name not in outer and _shown(name, value):
                 shown[name] = value
                 order.setdefault(name, None)
         names = [name for name in order if name in shown]
@@ -1192,6 +1435,16 @@ class _Run:
             grid = VisualGrid(name, name, values)
             self.grids[name] = grid
             return grid
+        if kind == 'graph':
+            name = spec['name']
+            self.ids.add(name)
+            shown = {k: spec[k] for k in ('directed', 'weighted', 'adjacency', 'layout') if k in spec}
+            self.emit('graph', line=None, graph=name, name=name, **shown)
+            return _graph(spec)
+        if kind == 'tree':
+            values = list(spec.get('values') or [])
+            self.emit('tree', line=None, name=spec['name'], values=values)
+            return _build_tree(values)
         return spec.get('value')
 
     def result(self, returned, error, ms):
@@ -1224,7 +1477,7 @@ def _run(request):
 
     namespace = {'__name__': '__main__', '__builtins__': builtins,
                  '_viz_cmp': _viz_cmp, '_viz_cell': _viz_cell, '_viz_named': _viz_named,
-                 '_viz_reads': run.reads, 'table': table, 'array': array}
+                 '_viz_reads': run.reads, 'table': table, 'array': array, 'TreeNode': TreeNode}
     run.namespace = namespace
     run.code = code
     returned = None
