@@ -234,6 +234,95 @@ for (const colorScheme of ['light', 'dark'] as const) {
   });
 }
 
+const BFS_JS = `function bfsLevels(graph, start) {
+  const level = { [start]: 0 };
+  const queue = [start];
+  while (queue.length > 0) {
+    const u = queue.shift();
+    for (const v of graph[u]) {
+      if (!(v in level)) {
+        level[v] = level[u] + 1;
+        queue.push(v);
+      }
+    }
+  }
+  return level;
+}
+`;
+
+const INSERT_JS = `function insert(root, val) {
+  if (root === null) {
+    return new TreeNode(val);
+  }
+  if (val < root.val) {
+    root.left = insert(root.left, val);
+  } else {
+    root.right = insert(root.right, val);
+  }
+  return root;
+}
+`;
+
+/** Steps forward until the narration says `text`, at most `limit` times. */
+async function stepUntil(page: Page, text: string, limit = 40) {
+  const narration = page.getByTestId('narration');
+  for (let i = 0; i < limit && (await narration.textContent()) !== text; i++) {
+    await page.getByRole('button', { name: /Step forward/ }).click();
+  }
+  await expect(narration).toHaveText(text);
+}
+
+test('graphs: a BFS in JavaScript passes, and its own queue and reads drive the graph view', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openWith(page, 'bfs-levels', 'javascript', BFS_JS);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).toContainText('All 9 tests pass.');
+  await expect(page.getByTestId('narration')).toHaveText('The program starts at line 1.');
+  await stepUntil(page, 'Line 6 reads A’s neighbours (B, C), takes the edge A – B and sets v to "B".');
+  await stepUntil(page, 'Line 9 appends "B" to queue.');
+  await expect(page.getByRole('group', { name: 'queue' })).toContainText('B');
+  await expect(page.getByText('Under each node:')).toContainText('level');
+  // The memory diagram is one switch away, for the same run.
+  await page.getByLabel('Show the memory diagram').check();
+  await expect(page.getByRole('group', { name: 'Memory' })).toBeVisible();
+  await expect(tests(page)).toContainText('All 9 tests pass.');
+  expect(errors).toEqual([]);
+});
+
+test('trees: a BST insert in JavaScript passes, and the new node floats free until it is linked in', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openWith(page, 'bst-insert', 'javascript', INSERT_JS);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).toContainText('All 8 tests pass.');
+  await expect(tests(page)).toContainText('5 is in place: the left child of 7.');
+  await stepUntil(page, 'insert returns TreeNode(5).');
+  await expect(page.getByText(/2 separate trees of 5 nodes/)).toBeAttached();
+  await page.getByRole('button', { name: /Step forward/ }).click();
+  await expect(page.getByTestId('narration')).toHaveText('Line 6 sets root.left to TreeNode(5).');
+  await expect(page.getByText(/A tree of 5 nodes, level by level: 4, 2, 7, 3, 5\./)).toBeAttached();
+  expect(errors).toEqual([]);
+});
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`the graph and tree views of learner code pass axe (${colorScheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme });
+    const scan = async () => {
+      const { violations } = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
+        .analyze();
+      expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    };
+    await openWith(page, 'bfs-levels', 'javascript', BFS_JS);
+    await page.getByRole('button', { name: 'Run', exact: true }).click();
+    await stepUntil(page, 'Line 9 appends "C" to queue.');
+    await scan();
+    await openWith(page, 'bst-insert', 'javascript', INSERT_JS);
+    await page.getByRole('button', { name: 'Run', exact: true }).click();
+    await stepUntil(page, 'insert returns TreeNode(5).');
+    await scan();
+  });
+}
+
 test('/code groups the exercises by kind', async ({ page }) => {
   await page.goto('/code');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Write it', 'Change it', 'Find the bug']);
