@@ -14,11 +14,15 @@
     "e2e": "playwright test",
     "workers": "node scripts/build-workers.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "judge:image": "docker build -t algorender-judge judge"
   },
   "dependencies": {
     "@codemirror/autocomplete": "6.20.3",
     "@codemirror/commands": "6.11.1",
+    "@codemirror/lang-cpp": "6.0.3",
+    "@codemirror/lang-go": "6.0.1",
+    "@codemirror/lang-java": "6.0.2",
     "@codemirror/lang-javascript": "6.2.5",
     "@codemirror/lang-python": "6.2.1",
     "@codemirror/language": "6.12.4",
@@ -31,6 +35,7 @@
     "@next/mdx": "^16.4.1",
     "@radix-ui/react-tabs": "^1.1.12",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/sandbox": "3.5.1",
     "acorn": "8.18.0",
     "astring": "1.9.0",
     "better-auth": "1.7.7",

@@ -2,7 +2,7 @@
 // functions of the event list (in time order), so the same events give the
 // same progress on every device, online or not.
 
-import type { Language } from '@/workspace/protocol';
+import type { ProblemLanguage } from '@/problems/languages';
 import { byTime, type ProgressEvent } from './events';
 
 export type Score = { correct: number; total: number };
@@ -48,7 +48,7 @@ export type ProblemProgress = {
   /** When every test first passed. */
   solved?: string;
   /** Languages it has been solved in. */
-  languages?: Language[];
+  languages?: ProblemLanguage[];
   /** Submissions, passing or not. */
   submissions: number;
   /** Failed submissions before the first pass. */

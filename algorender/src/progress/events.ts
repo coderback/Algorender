@@ -27,10 +27,12 @@ export const EVENT_DATA = {
   /** A practice problem submitted: how many tests ran and how many failed. */
   'problem.submitted': z.object({
     problem: slug,
-    language: z.enum(['python', 'javascript', 'typescript']),
+    language: z.enum(['python', 'javascript', 'typescript', 'java', 'cpp', 'go']),
     passed: z.boolean(),
     tests: count,
     failed: count,
+    /** Judged on the server (Java, C++, Go) rather than in the browser. Only the server writes it: sync drops it from events a device sends. */
+    verified: z.literal(true).optional(),
   }),
   /** A review card rated: 1 again, 2 hard, 3 good, 4 easy (FSRS's ratings). */
   'review.rated': z.object({ card: z.string().regex(CARD_ID), rating: z.number().int().min(1).max(4) }),

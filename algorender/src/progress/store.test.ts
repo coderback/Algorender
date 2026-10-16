@@ -3,6 +3,7 @@
 // server, with two "devices" (two databases) per learner.
 
 import 'fake-indexeddb/auto';
+import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestDatabase, type Database } from '@/server/db';
 import { user } from '@/server/db/schema';
@@ -167,6 +168,21 @@ describe('the device store', () => {
     solve(s, 'two-sum');
     await s.syncNow();
     expect(s.getSnapshot().sync).toMatchObject({ state: 'error', pending: 1 });
+    await s.close();
+  });
+
+  it('keeps a verdict the server recorded without sending it back', async () => {
+    const session = { user: 'u2' };
+    const s = device(server(session));
+    await s.start();
+    await s.setOwner('u2');
+    const verdict = { id: uuidv7(), kind: 'problem.submitted', at: new Date().toISOString(), data: { problem: 'lru-cache', language: 'go', passed: true, tests: 12, failed: 0, verified: true } } as const;
+    s.receive(verdict);
+    expect(problemProgress(s.getSnapshot().events)['lru-cache']).toMatchObject({ languages: ['go'], submissions: 1 });
+    await new Promise((r) => setTimeout(r, 20));
+    await s.syncNow();
+    expect(s.getSnapshot().sync.pending).toBe(0);
+    expect(s.getSnapshot().events.filter((e) => e.id === verdict.id)).toHaveLength(1);
     await s.close();
   });
 });

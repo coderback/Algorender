@@ -55,15 +55,10 @@ export async function sync(db: Database, userId: string, { events, cursor }: Syn
       if (id) rejected.push(id);
       continue;
     }
-    valid.push({ ...event, at: new Date(event.at).toISOString() } as ProgressEvent);
+    valid.push({ ...event, at: new Date(event.at).toISOString(), data: unverified(event) } as ProgressEvent);
   }
 
-  if (valid.length > 0) {
-    await db
-      .insert(progressEvent)
-      .values(valid.map((e) => ({ userId, id: e.id, kind: e.kind, at: e.at, data: e.data })))
-      .onConflictDoNothing();
-  }
+  await storeEvents(db, userId, valid);
 
   const rows = await db
     .select({ id: progressEvent.id, seq: progressEvent.seq, kind: progressEvent.kind, at: progressEvent.at, data: progressEvent.data })
@@ -81,4 +76,21 @@ export async function sync(db: Database, userId: string, { events, cursor }: Syn
     if (event) pulled.push(event);
   }
   return { accepted: valid.map((e) => e.id), rejected, events: pulled, cursor: page.at(-1)?.seq ?? cursor, more };
+}
+
+/** Stores events once each (by id), from a device or from the server itself (the judge's verdicts). */
+export async function storeEvents(db: Database, userId: string, events: ProgressEvent[]): Promise<void> {
+  if (events.length === 0) return;
+  await db
+    .insert(progressEvent)
+    .values(events.map((e) => ({ userId, id: e.id, kind: e.kind, at: e.at, data: e.data })))
+    .onConflictDoNothing();
+}
+
+/** Only the server judge marks a submission verified, so a device's claim to it is dropped (and the server's own copy, same id, stays). */
+function unverified(event: ProgressEvent): ProgressEvent['data'] {
+  if (event.kind !== 'problem.submitted' || !event.data.verified) return event.data;
+  const data = { ...event.data };
+  delete data.verified;
+  return data;
 }

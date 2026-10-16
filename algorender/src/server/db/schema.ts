@@ -12,7 +12,7 @@
 // Change a table here, then `npm run db:generate` writes the migration into
 // drizzle/; PGlite applies it on start, Postgres with `npm run db:migrate`.
 
-import { bigint, bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, real, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -110,4 +110,31 @@ export const progressEvent = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.id] }), index('progress_event_user_seq_idx').on(t.userId, t.seq)],
 );
 
-export const schema = { user, session, account, verification, rateLimit, progressEvent };
+/**
+ * Every run of the server judge (Java, C++, Go): what was judged and how it
+ * went. Quotas count these rows, and a row still 'running' stops a learner
+ * from starting a second run at once.
+ */
+export const judgeRun = pgTable(
+  'judge_run',
+  {
+    id: uuid('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    problem: text('problem').notNull(),
+    language: text('language').notNull(),
+    /** 'run' (the examples) or 'submit' (every test). */
+    kind: text('kind').notNull(),
+    /** 'running', 'done', or 'failed' (the sandbox broke, not the learner's code). */
+    status: text('status').notNull(),
+    tests: integer('tests').notNull(),
+    failed: integer('failed'),
+    /** Seconds the sandbox took, compiling included. */
+    seconds: real('seconds'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('judge_run_user_created_idx').on(t.userId, t.createdAt)],
+);
+
+export const schema = { user, session, account, verification, rateLimit, progressEvent, judgeRun };

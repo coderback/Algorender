@@ -140,6 +140,21 @@ export class ProgressStore {
     return event;
   }
 
+  /**
+   * An event the server made for the signed-in learner (the server judge's
+   * verdict), received in a response: kept as already synced, so it is
+   * never pushed back. It would also arrive with the next pull.
+   */
+  receive(event: ProgressEvent): void {
+    const owner = this.snapshot.owner;
+    if (!owner || !parseEvent(event)) return;
+    void this.start().then(async () => {
+      await this.put([{ ...event, owner, synced: 1 }], { keepUnsynced: true });
+      this.notifyOthers();
+    });
+    if (!this.snapshot.events.some((e) => e.id === event.id)) this.set({ events: insert(this.snapshot.events, event) });
+  }
+
   private make = <K extends EventKind>(kind: K, data: EventData<K>, at?: string): ProgressEvent =>
     ({ id: uuidv7(), kind, at: at ?? this.env.now().toISOString(), data }) as ProgressEvent;
 
