@@ -16,6 +16,7 @@ import type { TreeState } from '@/viz/tree/types';
 import { jsonText, listWords, traceLines } from './lines';
 import type { GridCell, Operand, RunEvent, RunResult } from './protocol';
 import { GRAPH_RUN_STATS, traceGraph } from './traceGraph';
+import { ARRAY_LINES_STATS, traceArrayLines } from './traceArray';
 import { traceTree, TREE_RUN_STATS } from './traceTree';
 
 export { testedCondition, traceLines } from './lines';
@@ -49,14 +50,19 @@ export type RunTrace =
 /**
  * The learner's run for the stage, or null when nothing ran. A 'lines' run
  * (one with steps) on a graph or tree argument plays on the graph or tree
- * view, unless \`view: 'memory'\` asks for memory; any other 'lines' run plays
- * on the memory view as traceLines gives it. Otherwise
+ * view, unless \`view: 'memory'\` asks for memory; with \`view: 'array'\`, one
+ * on an array argument plays on the array view, line by line; any other
+ * 'lines' run plays on the memory view as traceLines gives it. Otherwise
  * a run that made no grid plays on ArrayView exactly as traceRun gives it; one
  * that made a grid plays on GridView, with every collection (arrays as
  * one-row tables).
  */
 export function traceFor(result: RunResult, options: TraceOptions = {}): RunTrace | null {
   if (result.events.some((e) => e.kind === 'step')) {
+    if (options.view === 'array') {
+      const trace = traceArrayLines(result, options);
+      if (trace) return { view: 'array', trace, stats: ARRAY_LINES_STATS };
+    }
     if (options.view !== 'memory' && result.events.some((e) => e.kind === 'graph')) {
       const trace = traceGraph(result, options);
       if (trace) return { view: 'graph', trace, stats: GRAPH_RUN_STATS };
@@ -87,8 +93,12 @@ export type TraceOptions = {
   pointers?: readonly string[];
   /** The code that ran: 'lines' narration quotes the condition an if or while line tested. */
   code?: string;
-  /** Play a 'lines' run on the memory view even when it explored a graph or tree. */
-  view?: 'memory';
+  /**
+   * 'memory': play a 'lines' run on the memory view even when it explored a
+   * graph or tree. 'array': play a 'lines' run on an array argument on the
+   * array view, a frame per line (traceArray.ts).
+   */
+  view?: 'memory' | 'array';
 };
 
 type Write = Extract<RunEvent, { kind: 'write' }>;
