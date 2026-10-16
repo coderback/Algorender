@@ -2,19 +2,22 @@
 
 import Link from 'next/link';
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
-import { FiArrowRight, FiCheck, FiClock, FiEye, FiLoader, FiPlay, FiRotateCcw, FiSend, FiX } from 'react-icons/fi';
+import { FiArrowRight, FiCheck, FiClock, FiEye, FiLoader, FiPlay, FiRotateCcw, FiSend, FiServer, FiX } from 'react-icons/fi';
 import type { LegendEntry } from '@/engine/module';
 import { CodeEditor } from '@/workspace/editor/CodeEditor';
-import { LANGUAGES, type Json, type Language, type RunError, type RunResult } from '@/workspace/protocol';
+import { authClient } from '@/lib/auth-client';
+import type { Json, RunError, RunResult } from '@/workspace/protocol';
 import { ErrorCard, MEMORY_LEGEND, RunPicture, statusText } from '@/workspace/RunOutput';
-import { loadCode, loadLanguage, saveCode, saveLanguage } from '@/workspace/storage';
+import { loadCode, loadProblemLanguage, saveCode, saveLanguage, saveProblemLanguage } from '@/workspace/storage';
 import { printed, type RunTrace } from '@/workspace/trace';
 import { TREE_RUN_LEGEND } from '@/workspace/traceTree';
 import { useRuntime } from '@/workspace/useRuntime';
-import { nameIn, stub } from '../codegen';
+import { methodIn, nameIn, stub } from '../codegen';
 import { formatValue, judgeRequest, timeLimit, verdict, watchable, watchRequest, type CaseVerdict, type JudgeCase, type ProblemSpec } from '../judge';
-import { recordSubmission } from '../progress';
+import { isServerLanguage, PROBLEM_LANGUAGE_IDS, PROBLEM_LANGUAGES, type ProblemLanguage, type ServerLanguage } from '../languages';
+import { receiveSubmission, recordSubmission } from '../progress';
 import { replayTrace } from '../replay';
+import { runOnServer } from './serverJudge';
 
 /** One judged test's outcome. */
 type Checked = { test: JudgeCase; verdict: CaseVerdict; output: string[] };
@@ -23,7 +26,7 @@ type Checked = { test: JudgeCase; verdict: CaseVerdict; output: string[] };
 type Judged = {
   kind: 'run' | 'submit';
   code: string;
-  language: Language;
+  language: ProblemLanguage;
   checked: Checked[];
   /** Tests left unrun: a timeout stops the judging, and a syntax error or missing function means nothing can run. */
   skipped: number;
@@ -65,22 +68,27 @@ function Columns({ statement, children }: { statement: ReactNode; children: Reac
 }
 
 function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: ReactNode; next?: { slug: string; title: string } }) {
-  const [language, setLanguage] = useState<Language>(() => loadLanguage() ?? 'python');
-  const [codes, setCodes] = useState<Record<Language, string>>(() => {
-    const saved = (l: Language) => loadCode(codeSlot(spec.slug), l) ?? stub(spec, l);
-    return { python: saved('python'), javascript: saved('javascript'), typescript: saved('typescript') };
-  });
+  const [language, setLanguage] = useState<ProblemLanguage>(() => loadProblemLanguage() ?? 'python');
+  const [codes, setCodes] = useState(
+    () => Object.fromEntries(PROBLEM_LANGUAGE_IDS.map((l) => [l, loadCode(codeSlot(spec.slug), l) ?? stub(spec, l)])) as Record<ProblemLanguage, string>,
+  );
+  /** Why the server judge didn't answer: the learner isn't signed in, or a message (a quota, an outage). */
+  const [notice, setNotice] = useState<'sign-in' | string | null>(null);
+  const session = authClient.useSession();
+  const signedIn = session.data != null;
+  const onServer = isServerLanguage(language);
   const [judged, setJudged] = useState<Judged | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [watching, setWatching] = useState<Watching | null>(null);
   const [frameLine, setFrameLine] = useState<number | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const { runtime, runtimeState, runtimeDetail } = useRuntime(language);
+  // Java, C++ and Go don't run in the browser; the JavaScript runner stands by unused (it starts on its first run).
+  const { runtime, runtimeState, runtimeDetail } = useRuntime(onServer ? 'javascript' : language);
 
   const code = codes[language];
   const running = progress != null;
-  const busy = running || runtimeState === 'loading';
+  const busy = running || (!onServer && runtimeState === 'loading');
   const stale = judged != null && (judged.code !== code || judged.language !== language);
 
   const setCode = (value: string) => {
@@ -88,14 +96,18 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
     saveCode(codeSlot(spec.slug), language, value === stub(spec, language) ? null : value);
   };
 
-  const chooseLanguage = (l: Language) => {
+  const chooseLanguage = (l: ProblemLanguage) => {
     setLanguage(l);
-    saveLanguage(l);
+    saveProblemLanguage(l);
+    if (!isServerLanguage(l)) saveLanguage(l);
     setConfirmReset(false);
+    setNotice(null);
   };
 
   const judge = async (kind: 'run' | 'submit') => {
     if (busy) return;
+    setNotice(null);
+    if (isServerLanguage(language)) return judgeOnServer(kind, language);
     const tests = kind === 'run' ? spec.cases.filter((c) => c.group === 'example') : spec.cases;
     const checked: Checked[] = [];
     let fatal: RunError | null = null;
@@ -123,8 +135,30 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
     }
   };
 
+  /** Java, C++ and Go: one request compiles the code and judges it on every test, on the server, which records a submission itself. */
+  const judgeOnServer = async (kind: 'run' | 'submit', lang: ServerLanguage) => {
+    setWatching(null);
+    setFrameLine(null);
+    setProgress({ done: 0, total: 1 });
+    const answer = await runOnServer(spec.slug, lang, code, kind);
+    setProgress(null);
+    if (!answer.ok) {
+      setNotice(answer.status === 401 ? 'sign-in' : answer.message);
+      return;
+    }
+    const byId = new Map(spec.cases.map((c) => [c.id, c]));
+    const checked = answer.body.checked.flatMap((c) => {
+      const test = byId.get(c.id);
+      return test ? [{ test, verdict: c.verdict, output: c.output }] : [];
+    });
+    const outcome: Judged = { kind, code, language: lang, checked, skipped: answer.body.skipped, fatal: answer.body.fatal };
+    setJudged(outcome);
+    setSelected(firstFailure(outcome)?.test.id ?? checked[0]?.test.id ?? null);
+    if (answer.body.event) receiveSubmission(answer.body.event);
+  };
+
   const watch = async (test: JudgeCase, memory: boolean) => {
-    if (busy) return;
+    if (busy || isServerLanguage(language)) return;
     setProgress({ done: 0, total: 1 });
     const result = await runtime.run(watchRequest(spec, test, language, code, memory));
     setWatching({ test, memory, code, run: replayTrace(result, code, spec.view, memory), error: result.error });
@@ -139,23 +173,26 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
     <>
       <Columns statement={statement}>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded-lg border border-line" role="group" aria-label="Language">
-            {(Object.keys(LANGUAGES) as Language[]).map((l) => (
+          <div className="inline-flex flex-wrap overflow-hidden rounded-lg border border-line" role="group" aria-label="Language">
+            {PROBLEM_LANGUAGE_IDS.map((l) => (
               <button
                 key={l}
                 type="button"
                 aria-pressed={language === l}
                 onClick={() => chooseLanguage(l)}
-                className={`px-3 py-1.5 text-sm transition-colors ${language === l ? 'bg-ink text-surface' : 'bg-surface text-ink-soft hover:bg-sunken'}`}
+                title={isServerLanguage(l) ? 'Runs on our server' : 'Runs in your browser'}
+                className={`px-3 py-1.5 text-sm transition-colors ${l === 'java' ? 'border-l-2 border-line' : ''} ${
+                  language === l ? 'bg-ink text-surface' : 'bg-surface text-ink-soft hover:bg-sunken'
+                }`}
               >
-                {LANGUAGES[l].label}
+                {PROBLEM_LANGUAGES[l].label}
               </button>
             ))}
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {confirmReset ? (
               <span className="flex items-center gap-2 text-sm text-ink-soft">
-                Discard your {LANGUAGES[language].label} code?
+                Discard your {PROBLEM_LANGUAGES[language].label} code?
                 <button
                   type="button"
                   onClick={() => {
@@ -206,7 +243,7 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
           value={code}
           onChange={setCode}
           language={language}
-          label={`Your ${LANGUAGES[language].label} code`}
+          label={`Your ${PROBLEM_LANGUAGES[language].label} code`}
           runLine={watching && watching.code === code ? frameLine : null}
           errorLine={errorLine}
           onRun={() => void judge('run')}
@@ -215,9 +252,22 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
         <div className="flex flex-wrap justify-between gap-2 text-xs text-ink-muted">
           <span>Ctrl/⌘ + Enter runs the examples. Your code is kept in this browser.</span>
           <span role="status">
-            {progress && progress.total > 1 ? `Running test ${progress.done + 1} of ${progress.total}…` : statusText(runtimeState, runtimeDetail, running)}
+            {onServer
+              ? running
+                ? 'Compiling and running on our server…'
+                : ''
+              : progress && progress.total > 1
+                ? `Running test ${progress.done + 1} of ${progress.total}…`
+                : statusText(runtimeState, runtimeDetail, running)}
           </span>
         </div>
+        {onServer && <ServerNote language={language} signedIn={signedIn} slug={spec.slug} />}
+        {notice && notice !== 'sign-in' && (
+          <p role="alert" className="rounded-lg border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn-ink">
+            {notice}
+          </p>
+        )}
+        {notice === 'sign-in' && onServer && <SignInCard language={language} slug={spec.slug} />}
         {judged && (
           <Results
             spec={spec}
@@ -270,6 +320,41 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
     </>
   );
 }
+
+/** Under the editor in Java, C++ and Go: where the code runs, and what that needs. */
+function ServerNote({ language, signedIn, slug }: { language: ServerLanguage; signedIn: boolean; slug: string }) {
+  const name = PROBLEM_LANGUAGES[language].label;
+  return (
+    <p className="flex items-start gap-2 text-sm text-ink-soft">
+      <FiServer aria-hidden className="mt-0.5 shrink-0" />
+      {signedIn ? (
+        <span>{name} is compiled and judged on our server, in a sandbox, so a run takes a few seconds.</span>
+      ) : (
+        <span>
+          {name} runs on our server, so it needs an account:{' '}
+          <Link href={signInHref(slug)} className="font-medium text-accent-ink hover:underline">
+            sign in
+          </Link>{' '}
+          to run it. Python, JavaScript and TypeScript run in your browser without one.
+        </span>
+      )}
+    </p>
+  );
+}
+
+function SignInCard({ language, slug }: { language: ServerLanguage; slug: string }) {
+  return (
+    <div role="alert" className="rounded-xl border border-accent-line bg-accent-soft px-4 py-3 text-sm text-ink">
+      <p className="font-semibold">Sign in to run {PROBLEM_LANGUAGES[language].label}</p>
+      <p className="mt-1 text-ink-soft">Java, C++ and Go are compiled on our server, which needs an account. Your code stays in this browser while you sign in.</p>
+      <Link href={signInHref(slug)} className="mt-2 inline-flex items-center gap-1 font-medium text-accent-ink hover:underline">
+        Sign in or create an account <FiArrowRight aria-hidden />
+      </Link>
+    </div>
+  );
+}
+
+const signInHref = (slug: string) => `/account?next=${encodeURIComponent(`/practice/${slug}`)}`;
 
 /** A result that means no test can run: the code doesn't parse, or doesn't define the entry. */
 function unrunnable(result: RunResult): boolean {
@@ -345,8 +430,10 @@ function Results({
           </div>
           {shown && <CaseDetail spec={spec} checked={shown} language={language} onWatch={onWatch} busy={busy || stale} />}
           <p className="border-t border-line-soft px-4 py-2 text-xs text-ink-muted">
-            Checked in your browser, as practice: passing here isn’t a proof your code is correct. Each test may take up to{' '}
-            {timeLimit(spec, language) / 1000} s in {LANGUAGES[language].label}.
+            {isServerLanguage(language)
+              ? 'Compiled and judged on our server, in a sandbox.'
+              : 'Checked in your browser, as practice: passing here isn’t a proof your code is correct.'}{' '}
+            Each test may take up to {timeLimit(spec, language) / 1000} s in {PROBLEM_LANGUAGES[language].label}.
           </p>
         </div>
       )}
@@ -401,7 +488,7 @@ function CaseDetail({
 }: {
   spec: ProblemSpec;
   checked: Checked;
-  language: Language;
+  language: ProblemLanguage;
   onWatch: (test: JudgeCase, memory: boolean) => void;
   busy: boolean;
 }) {
@@ -432,7 +519,11 @@ function CaseDetail({
           <pre className="max-h-40 overflow-auto rounded-md bg-sunken px-3 py-2 font-mono text-[13px] whitespace-pre-wrap text-ink-soft">{output.join('\n')}</pre>
         </div>
       )}
-      {watchable(test) ? (
+      {isServerLanguage(language) ? (
+        <p className="text-xs text-ink-muted">
+          Watching a run step by step works in Python, JavaScript and TypeScript, which run in your browser. Write it in one of those to watch it here.
+        </p>
+      ) : watchable(test) ? (
         <div className="flex flex-wrap gap-2 pt-1">
           <button
             type="button"
@@ -461,10 +552,10 @@ function CaseDetail({
 }
 
 /** A test's input as the learner's language would write the call's arguments. */
-function inputText(spec: ProblemSpec, test: JudgeCase, language: Language): string {
+function inputText(spec: ProblemSpec, test: JudgeCase, language: ProblemLanguage): string {
   if (test.calls) {
     return test.calls
-      .map(([method, ...args], i) => `${i === 0 ? method : nameIn(method, language)}(${args.map((a) => formatValue(a, language)).join(', ')})`)
+      .map(([method, ...args], i) => `${i === 0 ? method : methodIn(method, language)}(${args.map((a) => formatValue(a, language)).join(', ')})`)
       .join(', ');
   }
   return (spec.signature?.params ?? []).map((p) => `${nameIn(p.name, language)} = ${formatValue(test.input?.[p.name] ?? null, language)}`).join(', ');

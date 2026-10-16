@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { FiCheckCircle, FiCloud, FiCloudOff, FiGithub, FiLoader, FiLogOut, FiRefreshCw } from 'react-icons/fi';
 import { authClient } from '@/lib/auth-client';
@@ -26,10 +27,17 @@ export function AccountPanel({ providers }: { providers: Provider[] }) {
   return user ? <SignedIn name={user.name} email={user.email} /> : <SignInForms providers={providers} offline={session.error != null} />;
 }
 
+/** Where to go once signed in (?next=/practice/two-sum, from a page that needed an account): a path on this site, or null. */
+function nextPage(): string | null {
+  const next = new URLSearchParams(window.location.search).get('next');
+  return next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') ? next : null;
+}
+
 function SignInForms({ providers, offline }: { providers: Provider[]; offline: boolean }) {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -44,6 +52,7 @@ function SignInForms({ providers, offline }: { providers: Provider[]; offline: b
         : await authClient.signIn.email({ email, password });
     setBusy(false);
     if (failed) setError(failed.message ?? 'That didn’t work. Try again.');
+    else if (nextPage()) router.push(nextPage()!);
   };
 
   return (
@@ -102,7 +111,7 @@ function SignInForms({ providers, offline }: { providers: Provider[]; offline: b
               <button
                 key={p}
                 type="button"
-                onClick={() => void authClient.signIn.social({ provider: p, callbackURL: '/account' })}
+                onClick={() => void authClient.signIn.social({ provider: p, callbackURL: nextPage() ?? '/account' })}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium text-ink hover:bg-sunken"
               >
                 {p === 'github' ? <FiGithub aria-hidden /> : null}

@@ -3,12 +3,15 @@
 // unavailable (private mode, blocked site data), so every access falls back
 // quietly.
 
+import { isProblemLanguage, type ProblemLanguage } from '@/problems/languages';
 import type { Language } from './protocol';
 
-const codeKey = (slug: string, language: Language) => `algorender:code:${slug}:${language}`;
+const codeKey = (slug: string, language: ProblemLanguage) => `algorender:code:${slug}:${language}`;
 const LANGUAGE_KEY = 'algorender:language';
+/** Practice problems also offer the server judge's languages, so they remember their own choice. */
+const PROBLEM_LANGUAGE_KEY = 'algorender:problem-language';
 
-export function loadCode(slug: string, language: Language): string | null {
+export function loadCode(slug: string, language: ProblemLanguage): string | null {
   try {
     return localStorage.getItem(codeKey(slug, language));
   } catch {
@@ -16,7 +19,7 @@ export function loadCode(slug: string, language: Language): string | null {
   }
 }
 
-export function saveCode(slug: string, language: Language, code: string | null) {
+export function saveCode(slug: string, language: ProblemLanguage, code: string | null) {
   try {
     if (code == null) localStorage.removeItem(codeKey(slug, language));
     else localStorage.setItem(codeKey(slug, language), code);
@@ -37,6 +40,24 @@ export function loadLanguage(): Language | null {
 export function saveLanguage(language: Language) {
   try {
     localStorage.setItem(LANGUAGE_KEY, language);
+  } catch {
+    // Not saved.
+  }
+}
+
+/** The language last used on a practice problem, else the one used anywhere. */
+export function loadProblemLanguage(): ProblemLanguage | null {
+  try {
+    const value = localStorage.getItem(PROBLEM_LANGUAGE_KEY);
+    return value && isProblemLanguage(value) ? value : loadLanguage();
+  } catch {
+    return null;
+  }
+}
+
+export function saveProblemLanguage(language: ProblemLanguage) {
+  try {
+    localStorage.setItem(PROBLEM_LANGUAGE_KEY, language);
   } catch {
     // Not saved.
   }

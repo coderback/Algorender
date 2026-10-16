@@ -2,6 +2,9 @@
 
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { cpp } from '@codemirror/lang-cpp';
+import { go } from '@codemirror/lang-go';
+import { java } from '@codemirror/lang-java';
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, syntaxHighlighting } from '@codemirror/language';
@@ -18,7 +21,7 @@ import {
 } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { useEffect, useRef } from 'react';
-import type { Language } from '../protocol';
+import type { ProblemLanguage } from '@/problems/languages';
 
 // Colours come from the theme tokens, so the editor follows light and dark mode
 // with the rest of the page; every ink used here clears 4.5:1 on the surface.
@@ -86,9 +89,19 @@ const marksField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
-function languageExtension(language: Language): Extension {
-  if (language === 'python') return [python(), indentUnit.of('    ')];
-  return [javascript({ typescript: language === 'typescript' }), indentUnit.of('  ')];
+function languageExtension(language: ProblemLanguage): Extension {
+  switch (language) {
+    case 'python':
+      return [python(), indentUnit.of('    ')];
+    case 'java':
+      return [java(), indentUnit.of('    ')];
+    case 'cpp':
+      return [cpp(), indentUnit.of('    ')];
+    case 'go':
+      return [go(), indentUnit.of('	')];
+    default:
+      return [javascript({ typescript: language === 'typescript' }), indentUnit.of('  ')];
+  }
 }
 
 /**
@@ -109,7 +122,7 @@ export function CodeEditor({
 }: {
   value: string;
   onChange?: (value: string) => void;
-  language: Language;
+  language: ProblemLanguage;
   /** Accessible name, e.g. "Your Python code". */
   label: string;
   /** 1-based line the trace is on, highlighted while stepping. */
