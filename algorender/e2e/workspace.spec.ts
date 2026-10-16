@@ -33,13 +33,13 @@ async function openWith(page: Page, slug: string, language: string, code: string
   await expect(page.locator('.cm-editor')).toBeVisible();
 }
 
-const tests = (page: Page) => page.getByRole('region', { name: 'Tests' });
+const tests = (page: Page) => page.getByRole('group', { name: 'Tests' });
 
 test('a correct JavaScript solution passes every test and drives the array view', async ({ page }) => {
   const errors = collectErrors(page);
   await openWith(page, 'bubble-sort', 'javascript', BUBBLE_JS);
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(tests(page).getByRole('heading')).toContainText('All 7 tests pass.');
+  await expect(tests(page)).toContainText('All 7 tests pass.');
   await expect(page.getByTestId('narration')).toHaveText('Your function receives arr = [5, 2, 9, 1, 6, 3].');
   await page.getByRole('button', { name: /Step forward/ }).click();
   await expect(page.getByTestId('narration')).toHaveText('Line 4 is arr[0] (5) > arr[1] (2)? Yes.');
@@ -54,7 +54,7 @@ test('a correct Python solution runs in Pyodide and passes', async ({ page }) =>
   test.setTimeout(120_000); // the first load fetches Python (~6 MB) from the CDN
   await openWith(page, 'bubble-sort', 'python', BUBBLE_PY);
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(tests(page).getByRole('heading')).toContainText('All 7 tests pass.', { timeout: 90_000 });
+  await expect(tests(page)).toContainText('All 7 tests pass.', { timeout: 90_000 });
   await page.getByRole('button', { name: /Step forward/ }).click();
   await expect(page.getByTestId('narration')).toHaveText('Line 4 is arr[0] (5) > arr[1] (2)? Yes.');
 });
@@ -89,7 +89,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     await openWith(page, 'bubble-sort', 'javascript', BUBBLE_JS);
     await page.getByRole('button', { name: 'Run', exact: true }).click();
-    await expect(tests(page).getByRole('heading')).toContainText('All 7 tests pass.');
+    await expect(tests(page)).toContainText('All 7 tests pass.');
     await page.getByRole('button', { name: /Step forward/ }).click();
     const { violations } = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
@@ -105,4 +105,78 @@ test('a visualiser links to its exercise, and /code lists them', async ({ page }
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Write selection sort');
   await page.goto('/code');
   await expect(page.getByRole('link', { name: /Write binary search/ })).toBeVisible();
+});
+
+test('Parsons: ordering and indenting the lines solves bubble sort in Python', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.addInitScript(() => localStorage.setItem('algorender:language', 'python'));
+  await page.goto('/code/bubble-sort');
+  await page.getByRole('tab', { name: /Order the lines/ }).click();
+  const lines: [string, number][] = [
+    ['def bubble_sort(arr):', 0],
+    ['n = len(arr)', 1],
+    ['for i in range(n - 1):', 1],
+    ['for j in range(n - 1 - i):', 2],
+    ['if arr[j] > arr[j + 1]:', 3],
+    ['arr[j], arr[j + 1] = arr[j + 1], arr[j]', 4],
+  ];
+  for (const [text, indent] of lines) {
+    await page.getByRole('button', { name: `Add “${text}” to your program` }).click();
+    for (let i = 0; i < indent; i++) await page.getByRole('button', { name: `Indent “${text}”` }).click();
+  }
+  // The two distractors are left over.
+  await expect(page.getByRole('button', { name: /to your program$/ })).toHaveCount(2);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).toContainText('All 7 tests pass.', { timeout: 90_000 });
+  await expect(page.getByRole('tab', { name: /Order the lines/ }).getByLabel('done')).toBeVisible();
+});
+
+test('fill the gaps: a wrong answer fails, a revealed gap passes, and levels hide more', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await page.goto('/code/insertion-sort');
+  await page.getByRole('tab', { name: /Fill the gaps/ }).click();
+  const gap = page.getByLabel('Gap 1 of 1, line 5');
+  await gap.fill('arr[j] < key');
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).not.toContainText('All 7 tests pass.');
+  await page.getByRole('button', { name: 'Reveal a gap' }).click();
+  await expect(gap).toHaveValue('arr[j] > key');
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).toContainText('All 7 tests pass.');
+  await page.getByRole('button', { name: '5 gaps' }).click();
+  await expect(page.getByLabel(/^Gap \d of 5/)).toHaveCount(5);
+});
+
+test('a bug hunt explains the bug once it is fixed', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await page.goto('/code/bubble-sort-bug');
+  await expect(page.locator('.cm-content')).toContainText('j < n - i');
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).toContainText('RangeError');
+  // The fixed code, saved as if typed (typing into the editor would fight its auto-indent).
+  await page.evaluate((code) => localStorage.setItem('algorender:code:bubble-sort-bug:javascript', code), BUBBLE_JS);
+  await page.reload();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(tests(page)).toContainText('All 7 tests pass.');
+  await expect(page.getByText(/^Fixed\./)).toBeVisible();
+});
+
+test('the PRIMM lesson asks for a prediction before it runs the code', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('algorender:language', 'javascript'));
+  await page.goto('/learn/sorting-in-code');
+  const run = page.getByRole('button', { name: /Run it on mixed input/ });
+  await expect(run).toBeDisabled();
+  await page.getByRole('group', { name: 'Predict' }).getByRole('button', { name: 'At the end, index 5' }).click();
+  await expect(page.getByRole('group', { name: 'Predict' })).toContainText('Right.');
+  await run.click();
+  await page.getByRole('button', { name: /Step forward/ }).first().click();
+  await expect(page.getByTestId('narration').first()).toHaveText('Line 5 is arr[0] (5) > arr[1] (2)? Yes.');
+  // Modify and Make embed their exercises.
+  await expect(page.getByRole('heading', { name: 'Make bubble sort put the largest first' })).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Ways to practise' })).toBeVisible();
+});
+
+test('/code groups the exercises by kind', async ({ page }) => {
+  await page.goto('/code');
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Write it', 'Change it', 'Find the bug']);
 });
