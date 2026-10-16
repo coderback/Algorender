@@ -6,6 +6,7 @@ import { FiArrowLeft, FiCode } from 'react-icons/fi';
 import Header from '@/components/Header';
 import { Visualiser } from '@/components/explorer/Visualiser';
 import { exerciseForVisualiser } from '@/content/exercises';
+import { loadProblems } from '@/problems/load';
 import { getVisualiserBySlug } from '@/data/visualisers';
 import { getModule, modules } from '@/registry';
 
@@ -37,6 +38,7 @@ export default async function VisualiserPage({ params }: Props) {
   const { idea, invariant, whenToUse, traits } = visualiser.content;
   const isAlgorithm = meta.type === 'algorithm';
   const exercise = exerciseForVisualiser(slug);
+  const problems = loadProblems().filter((p) => p.visualisers.includes(slug)).slice(0, 4);
 
   return (
     <div className="min-h-screen bg-subtle">
@@ -61,6 +63,19 @@ export default async function VisualiserPage({ params }: Props) {
               >
                 <FiCode aria-hidden /> Write it yourself in Python, JavaScript or TypeScript
               </Link>
+            )}
+            {problems.length > 0 && (
+              <p className="mt-3 text-sm text-ink-soft">
+                Practise it:{' '}
+                {problems.map((p, i) => (
+                  <span key={p.slug}>
+                    {i > 0 && ' · '}
+                    <Link href={`/practice/${p.slug}`} className="text-accent-ink underline decoration-accent-line underline-offset-2 hover:decoration-current">
+                      {p.title}
+                    </Link>
+                  </span>
+                ))}
+              </p>
             )}
           </div>
           <dl className="flex shrink-0 flex-wrap gap-2 text-sm">

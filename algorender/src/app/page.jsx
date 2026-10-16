@@ -26,6 +26,9 @@ function Home() {
             <Link href="/learn" className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-strong">
               Start with the concept map and lessons
             </Link>
+            <Link href="/practice" className="rounded-full border border-line-strong bg-surface px-5 py-2.5 text-sm font-medium text-ink hover:border-accent-line">
+              Practise interview problems
+            </Link>
             <Link href="/compare" className="rounded-full border border-line-strong bg-surface px-5 py-2.5 text-sm font-medium text-ink hover:border-accent-line">
               Race the sorting algorithms
             </Link>
