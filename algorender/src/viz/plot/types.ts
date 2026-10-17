@@ -64,7 +64,9 @@ export type BarsShape = { kind: 'bars'; id: string; bars: readonly Bar[] };
  * Coloured cells over [x0, x1] × [y0, y1], `cols` × `rows`, values row by row
  * from the top: a classifier's decision regions or k-means' territories.
  * `blend` mixes tone `low` (0) into tone `high` (1); `classes` colours each
- * cell by an integer index into `tones`. Drawn as a pale wash under the data.
+ * cell by an integer index into `tones`. Both are drawn as a pale wash under
+ * the data. `intensity` is a matrix of weights in 0..1 (attention), from bare
+ * (0) to a strong `tone` (1), so the big entries stand out.
  */
 export type HeatmapShape = {
   kind: 'heatmap';
@@ -76,7 +78,7 @@ export type HeatmapShape = {
   cols: number;
   rows: number;
   values: readonly number[];
-  scale: { kind: 'blend'; low: Tone; high: Tone } | { kind: 'classes'; tones: readonly Tone[] };
+  scale: { kind: 'blend'; low: Tone; high: Tone } | { kind: 'classes'; tones: readonly Tone[] } | { kind: 'intensity'; tone: Tone };
 };
 
 export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShape | ContourShape | BarsShape | HeatmapShape;

@@ -62,6 +62,8 @@ export const reverseOf = ({ shape, n, seed }: DiffusionInput) => generate(net, s
 
 /** Indices of the followed points: the first is drawn large, the other two in tones. */
 const FOLLOW = [0, 1, 2] as const;
+/** How many recent positions a followed point's trail keeps during the reverse walk. */
+const TRAIL = 8;
 
 const signal = (t: number) => Math.sqrt(alphaBars[t]);
 const noiseLevel = (t: number) => Math.sqrt(1 - alphaBars[t]);
@@ -176,7 +178,7 @@ function* run(input: DiffusionInput): Generator<Frame<PlotState>> {
     yield plotFrame(scene({ t, points: pts, prefix: 'd', trails: forwardTrails, phase: 'forward' }), {
       line: 2,
       note,
-      vars: { t, 'ᾱ_t': Number(fmt(alphaBars[t], 4)), 'x.x': pts[0][0], 'x.y': pts[0][1] },
+      vars: { t, 'ᾱ_t': Number(fmt(alphaBars[t], 4)), 'x.x': r2(pts[0][0]), 'x.y': r2(pts[0][1]) },
       stats: stats(),
       ...(checkpoint && { checkpoint }),
     });
@@ -207,7 +209,7 @@ function* run(input: DiffusionInput): Generator<Frame<PlotState>> {
       {
         line: 5,
         note: `The denoiser's job. Take a clean point, noise it to t = ${t} (x is at ${fmtVec(xt)}), and ask a small network: which noise ε was added? Its answer ε̂ = ${fmtVec(guess)}; the truth was ${fmtVec(eps[0])}. Each arrow takes x back by √(1 − ᾱ_t) times a noise; with the true noise it lands exactly on √ᾱ_t·x₀. It was trained before this page loaded, on ${pretrained.config.steps * pretrained.config.batch} such examples, to make the squared error ‖ε̂ − ε‖² small (here ${fmt(err * err, 2)}).`,
-        vars: { t, 'ε.x': eps[0][0], 'ε.y': eps[0][1], 'ε̂.x': r2(guess[0]), 'ε̂.y': r2(guess[1]) },
+        vars: { t, 'ε.x': r2(eps[0][0]), 'ε.y': r2(eps[0][1]), 'ε̂.x': r2(guess[0]), 'ε̂.y': r2(guess[1]) },
         stats: stats(),
       },
     );
@@ -258,10 +260,12 @@ function* run(input: DiffusionInput): Generator<Frame<PlotState>> {
       const near = pts.filter((p) => distanceToShape(shape, p) < 0.25).length;
       note = `Done: ${near} of ${n} new points (${Math.round((100 * near) / n)}%) lie within 0.25 of ${NAMES[shape]}, though every one started as random noise. They are new samples, not copies of the training data: run it with another seed and you get different points on the same shape. ${T} small steps were needed because each guess x̂₀ is only good enough to take a small step towards it.`;
     }
-    yield plotFrame(scene({ t, points: pts, prefix: 'g', trails, extra, phase: t === 0 ? 'done' : 'reverse' }), {
+    // Fresh noise makes every trail a zigzag: keep only the recent moves, and none on the finished picture.
+    const recent = t === 0 ? [] : trails.map((trail) => trail.slice(-TRAIL));
+    yield plotFrame(scene({ t, points: pts, prefix: 'g', trails: recent, extra, phase: t === 0 ? 'done' : 'reverse' }), {
       line: t === 0 ? 6 : line,
       note,
-      vars: { t, 'x.x': pts[0][0], 'x.y': pts[0][1], ...(clean && { 'x̂₀.x': r2(clean[0]), 'x̂₀.y': r2(clean[1]) }) },
+      vars: { t, 'x.x': r2(pts[0][0]), 'x.y': r2(pts[0][1]), ...(clean && { 'x̂₀.x': r2(clean[0]), 'x̂₀.y': r2(clean[1]) }) },
       stats: stats(),
       ...(checkpoint && { checkpoint }),
     });

@@ -204,11 +204,13 @@ function* run(input: SamplingInput): Generator<Frame<PlotState>> {
     const bars: Bar[] = s.kept.map((w, j) => {
       const x0 = cum;
       cum += s.q[j];
-      return { id: `w${w}`, x0, x1: cum, y: 1, label: s.q[j] >= 0.08 ? vocab[w] : undefined, tone: (j % 2 === 0 ? 1 : 3) as 1 | 3, mark: withU && j === s.choice ? 'key' : null };
+      // A tone outranks a mark when painting, so the drawn word's slice drops its tone.
+      const drawn = withU && j === s.choice;
+      return { id: `w${w}`, x0, x1: cum, y: 1, label: s.q[j] >= 0.08 ? vocab[w] : undefined, ...(drawn ? { mark: 'key' as const } : { tone: (j % 2 === 0 ? 1 : 3) as 1 | 3 }) };
     });
     shapes.push({ kind: 'bars', id: 'intervals', bars });
     if (withU) shapes.push({ kind: 'line', id: 'u', through: [s.u, 0], dir: [0, 1], mark: 'compare', label: `u = ${fmt(s.u)}` });
-    return { kind: 'plane', id: 'draw', label: 'Each kept word owns a slice of [0, 1) as wide as its probability', x: { min: 0, max: 1 }, y: { min: 0, max: 1.5 }, equal: false, shapes, handles: [] };
+    return { kind: 'plane', id: 'draw', label: 'Each kept word owns a slice of [0, 1) as wide as its probability', x: { min: 0, max: 1 }, y: { min: 0, max: 1.5, ticks: [] }, equal: false, shapes, handles: [] };
   };
 
   const readouts = (extra: { u?: number; kept?: number } = {}): PlotPart => ({

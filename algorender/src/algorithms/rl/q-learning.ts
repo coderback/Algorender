@@ -46,7 +46,7 @@ const pseudocode = [
   '  otherwise: a ← argmax_a Q(s, a)',
   '  move; see reward r and next state s′',
   '  target ← r + γ·max_a′ Q(s′, a′)',
-  '  Q(s, a) ← Q(s, a) + α(target − Q(s, a))',
+  '  Q(s,a) ← Q(s,a) + α·(target − Q(s,a))',
   '  s ← s′ until s is terminal',
   'follow argmax Q from the start',
 ];

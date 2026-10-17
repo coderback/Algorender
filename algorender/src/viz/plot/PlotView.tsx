@@ -316,19 +316,25 @@ function PathView({ s, g }: { s: PathShape; g: PlaneGeometry }) {
   );
 }
 
-/** A pale wash of coloured cells (decision regions); each cell's colour changes by CSS transition. */
+/**
+ * Coloured cells: a pale wash (decision regions), or for `intensity` a
+ * stronger tint that grows with the value; each cell's colour changes by CSS
+ * transition.
+ */
 function Heatmap({ s, g }: { s: HeatmapShape; g: PlaneGeometry }) {
   const [left, top] = g.px([s.x0, s.y1]);
   const [right, bottom] = g.px([s.x1, s.y0]);
   const cw = (right - left) / s.cols;
   const ch = (bottom - top) / s.rows;
+  const scale = s.scale;
   const colour = (v: number) => {
-    if (s.scale.kind === 'classes') return TONES[s.scale.tones[Math.round(v)] ?? s.scale.tones[0]];
+    if (scale.kind === 'classes') return TONES[scale.tones[Math.round(v)] ?? scale.tones[0]];
     const p = Math.round(100 * Math.min(1, Math.max(0, v)));
-    return `color-mix(in oklab, ${TONES[s.scale.high]} ${p}%, ${TONES[s.scale.low]})`;
+    if (scale.kind === 'intensity') return `color-mix(in oklab, ${TONES[scale.tone]} ${p}%, transparent)`;
+    return `color-mix(in oklab, ${TONES[scale.high]} ${p}%, ${TONES[scale.low]})`;
   };
   return (
-    <g opacity={0.28} shapeRendering="crispEdges">
+    <g opacity={scale.kind === 'intensity' ? 0.75 : 0.28} shapeRendering="crispEdges">
       {s.values.map((v, k) => (
         <rect
           key={k}

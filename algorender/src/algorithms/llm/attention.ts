@@ -315,7 +315,7 @@ function* run(input: AttentionInput): Generator<Frame<PlotState>> {
     if (upTo >= 0) {
       const values: number[] = [];
       for (let i = 0; i <= upTo; i++) values.push(...rowsOf[i].weights.map((w) => round(w, 3)));
-      shapes.push({ kind: 'heatmap', id: 'matrix', x0: 0, x1: n, y0: n - upTo - 1, y1: n, cols: n, rows: upTo + 1, values, scale: { kind: 'blend', low: 1, high: 2 } });
+      shapes.push({ kind: 'heatmap', id: 'matrix', x0: 0, x1: n, y0: n - upTo - 1, y1: n, cols: n, rows: upTo + 1, values, scale: { kind: 'intensity', tone: 2 } });
       for (let i = 0; i <= upTo; i++) {
         const al = allowedFor(input, i);
         rowsOf[i].weights.forEach((w, j) => shapes.push({ kind: 'label', id: `c${i}-${j}`, at: [j + 0.5, n - i - 0.5], text: al[j] ? fmt(w, 2) : '—' }));
