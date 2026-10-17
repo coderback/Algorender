@@ -4,11 +4,12 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { dataStructures, algorithms } from '@/data/visualisers';
+import { dataStructures, algorithms, mathTopics } from '@/data/visualisers';
 
 function Home() {
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') === 'algorithms' ? 'algorithms' : 'data-structures';
+  const tab = searchParams.get('tab');
+  const initialTab = tab === 'algorithms' || tab === 'math' ? tab : 'data-structures';
   const [activeTab, setActiveTab] = useState(initialTab);
 
 
@@ -37,7 +38,7 @@ function Home() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex justify-center mb-8">
-            <TabsList className="grid w-full max-w-2xl grid-cols-2 h-14">
+            <TabsList className="grid w-full max-w-3xl grid-cols-3 h-14">
               <TabsTrigger 
                 value="data-structures"
                 className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
@@ -62,11 +63,22 @@ function Home() {
                   Algorithms
                 </span>
               </TabsTrigger>
+              <TabsTrigger
+                value="math"
+                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3v18h18M7 15c2-6 4-9 6-9s3 4 6 4" />
+                  </svg>
+                  Math &amp; ML
+                </span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Each tab owns its panel, so the tab's aria-controls points at a real element. */}
-          {[['data-structures', dataStructures], ['algorithms', algorithms]].map(([tab, items]) => (
+          {[['data-structures', dataStructures], ['algorithms', algorithms], ['math', mathTopics]].map(([tab, items]) => (
             <TabsContent key={tab} value={tab} className="mt-0 space-y-8">
               {[...new Set(items.map(item => item.category))].map(category => (
                 <div key={category} className="space-y-4">
@@ -92,7 +104,7 @@ function Home() {
                             <p className="text-ink-soft text-sm mb-4 line-clamp-2">
                               {item.description}
                             </p>
-                            <div className="space-y-2">
+                            {item.timeComplexity && <div className="space-y-2">
                               <div className="flex items-center text-sm text-ink-muted">
                                 <span className="w-24 text-ink-muted">Time:</span>
                                 <span className="font-medium text-ink-soft">
@@ -105,7 +117,7 @@ function Home() {
                                   {item.spaceComplexity}
                                 </span>
                               </div>
-                            </div>
+                            </div>}
                           </div>
                         </Link>
                       ))}

@@ -1,11 +1,11 @@
 import type { Frame } from './types';
-import type { MarkKey } from '@/viz/marks';
+import type { MarkKey, Tone } from '@/viz/marks';
 
 /**
  * Which renderer draws a module's state. Each kind maps to one component in
  * src/viz/views.tsx, and the module's state type must match that view.
  */
-export type ViewKind = 'array' | 'grid' | 'graph' | 'tree' | 'linear' | 'hash' | 'text' | 'memory';
+export type ViewKind = 'array' | 'grid' | 'graph' | 'tree' | 'linear' | 'hash' | 'text' | 'memory' | 'plot';
 
 // ───────────────────────────── inputs ─────────────────────────────
 
@@ -32,6 +32,13 @@ export type InputSpec<I> = {
     parse: (text: string) => { value: I } | { error: string };
     format: (input: I) => string;
   };
+  /**
+   * Direct manipulation: the input after the learner drags the view's handle
+   * `handle` to the point `to`. The explorer records the trace again, keeps
+   * the current frame and stores the result as custom text, so `custom` must
+   * be set and must round-trip what this returns.
+   */
+  drag?: (input: I, handle: string, to: readonly [number, number]) => I;
 };
 
 // ───────────────────────────── shared ─────────────────────────────
@@ -42,7 +49,7 @@ export type StatSpec = { key: string; label: string };
  * A legend row: a mark with its default label, a mark with a label specific to
  * this module, or the label for unmarked elements (e.g. "Unvisited").
  */
-export type LegendEntry = MarkKey | { mark: MarkKey; label: string } | { neutral: string };
+export type LegendEntry = MarkKey | { mark: MarkKey; label: string } | { neutral: string } | { tone: Tone; label: string };
 
 export type Content = {
   /** The hook: what it does, in plain words. Shown under the title. */

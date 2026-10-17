@@ -1,0 +1,137 @@
+<Section step="hook" title="How a model learns: walk downhill">
+
+Training a neural network means finding the weights that make its error, the *loss*, as small as possible. There can be
+billions of weights, so trying them all is hopeless. Instead, start somewhere, feel which way is downhill, take a small
+step, and repeat.
+
+That is gradient descent, and almost every model you have heard of was trained by some version of it. To use it you need
+one idea from calculus, the slope, and one decision, how big a step to take.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="derivative f′(x)">The slope of $f$ at a single point: how much $f$ changes per unit step in $x$, for a tiny step.</Term>
+  <Term name="gradient ∇f">The slope in every direction at once, as a vector. It points the way $f$ rises fastest.</Term>
+  <Term name="step size η">"Eta", also called the learning rate: how far to move against the gradient each step.</Term>
+  <Term name="contour lines">Lines of equal $f$ on a map, like height lines on a hiking map. The gradient crosses them at right angles.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="First, the slope at a point">
+
+A slope needs two points. Take $P$ and a second point $Q$ a gap $h$ away, measure the slope of the line through them, and
+shrink $h$: the slopes settle on one number, the derivative.
+
+<Explore slug="derivative" settings={{ preset: 'cubic' }} caption="The secant through P and Q turns into the tangent as h shrinks. Then the slope is measured everywhere to draw f′." />
+
+$$
+f'(a) = \lim_{h \to 0} \frac{f(a + h) - f(a)}{h}
+$$
+
+In two dimensions, do the same along $x$ and along $y$ and stack the two slopes into a vector: the gradient $\nabla f$.
+It points uphill, so $-\nabla f$ points downhill, and that gives the whole algorithm:
+
+$$
+x \leftarrow x - \eta \, \nabla f(x)
+$$
+
+<Explore slug="gradient-descent" settings={{ preset: 'bowl' }} caption="Each step: the gradient (uphill) is measured, and x moves against it. On a round bowl that points straight at the bottom." />
+
+<KeyIdea>
+
+**Gradient descent only ever looks at the ground under its feet.** That is why it scales to billions of weights, and
+also why it can zigzag, crawl, overshoot or settle in a valley that isn't the lowest.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: which way is the slope?">
+
+Before each step, predict whether $f$ is rising, falling or flat at the next point. That is exactly the information
+gradient descent uses.
+
+<PredictChallenge slug="derivative" settings={{ preset: 'sine' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Choose the step size">
+
+Pick an example and drag the start point. Things to try:
+
+- **Too big a step:** with $\eta = 1.05$ on $x^2 + y^2$, every step overshoots further than the last. Does $f$ ever fall?
+- **Narrow valley:** the step that suits the gentle slope along the valley is too big for its steep sides, so the path zigzags.
+- **Tiny steps:** safe, but 40 steps barely move.
+- **Two valleys:** start on the right and descent settles in the higher valley. Drag the start to the left half.
+
+<Explore slug="gradient-descent" settings={{ preset: 'too-big' }} input />
+
+<Misconception title="A bigger step size always gets there faster">
+
+Only up to a point. On $f = x^2 + y^2$ a step multiplies the distance to the bottom by $1 - 2\eta$: $\eta = 0.5$
+lands in one step, $\eta = 0.9$ zigzags, and anything above $1$ makes the distance *grow* every step.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Better steps: momentum and Adam">
+
+Plain gradient descent forgets everything after each step. **Momentum** keeps a running velocity, so steps that agree
+build up speed and steps that zigzag cancel out. **RMSProp** divides each direction's step by how steep that direction
+has recently been, so steep and gentle directions move at similar speeds. **Adam**, the default for training most neural
+networks, does both.
+
+<Explore slug="optimizers" settings={{ preset: 'banana' }} caption="Four optimizers, one start, the same gradients. Plain descent crawls along the curved valley floor; momentum keeps moving." />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'For f(x) = x², what is the slope of the secant from a = 1 to a + h?',
+      choices: ['2', '2 + h', '1 + h', 'h²'],
+      answer: 1,
+      why: '((1 + h)² − 1) / h = (2h + h²) / h = 2 + h, which settles on f′(1) = 2 as h → 0.',
+    },
+    {
+      q: 'The gradient at x is (3, −4). Which way does gradient descent step?',
+      choices: ['Towards (3, −4)', 'Towards (−3, 4)', 'Towards (4, 3)', 'It depends only on η'],
+      answer: 1,
+      why: 'The gradient points uphill; descent steps against it, along −∇f = (−3, 4), scaled by η.',
+    },
+    {
+      q: 'f went up after a step of gradient descent. What is the likeliest fix?',
+      choices: ['Take more steps', 'Make η smaller', 'Make η bigger', 'Start at the minimum'],
+      answer: 1,
+      why: 'For a small enough step every step goes downhill; f rising means the step overshot.',
+    },
+    {
+      q: 'Why does momentum help in a long, narrow valley?',
+      choices: [
+        'It computes the exact minimum',
+        'Zigzags across the valley cancel out in the velocity, while steps along it add up',
+        'It uses a bigger η in every direction',
+        'It ignores the gradient',
+      ],
+      answer: 1,
+      why: 'The velocity is a running sum of gradients: alternating components cancel, consistent ones accumulate.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The derivative is the limit of secant slopes; the gradient collects the slopes in every direction and points uphill.
+- Gradient descent repeats $x \leftarrow x - \eta \nabla f(x)$ until the ground is flat.
+- The step size matters most: too small crawls, too big overshoots or diverges, and narrow valleys make plain descent zigzag.
+- It finds a *local* minimum. Momentum, RMSProp and Adam add memory to move faster and more evenly.
+
+</Section>

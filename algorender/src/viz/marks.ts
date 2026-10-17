@@ -46,3 +46,18 @@ export const MARKS: Record<MarkKey, MarkStyle> = {
 
 /** Unmarked elements. */
 export const NEUTRAL = { bg: 'bg-bar', fill: 'fill-bar', stroke: 'stroke-bar' } as const;
+
+/**
+ * A named series rather than a state: the basis vectors î and ĵ, or one
+ * optimizer among several. Tones are the chart series tokens, so two of them
+ * fall below 3:1 on the light surface: anything drawn in a tone also carries a
+ * text label. Set them via `style` (they are CSS variables), never SVG attributes.
+ */
+export type Tone = 1 | 2 | 3 | 4;
+
+export const TONES: Record<Tone, string> = {
+  1: 'var(--color-series-1)',
+  2: 'var(--color-series-2)',
+  3: 'var(--color-series-3)',
+  4: 'var(--color-series-4)',
+};

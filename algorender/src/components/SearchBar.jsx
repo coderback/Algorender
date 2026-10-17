@@ -3,14 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function SearchBar({ dataStructures, algorithms }) {
+export default function SearchBar({ dataStructures, algorithms, mathTopics }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const router = useRouter();
 
   const allItems = [
     ...(dataStructures || []).map(item => ({ ...item, type: 'Data Structure' })),
-    ...(algorithms || []).map(item => ({ ...item, type: 'Algorithm' }))
+    ...(algorithms || []).map(item => ({ ...item, type: 'Algorithm' })),
+    ...(mathTopics || []).map(item => ({ ...item, type: 'Math & ML' }))
   ];
 
   const filteredItems = allItems.filter(item =>

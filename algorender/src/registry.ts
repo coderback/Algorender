@@ -1,8 +1,10 @@
 import { backtracking, decisionTrees } from '@/algorithms/backtracking';
+import { calculus } from '@/algorithms/calculus';
 import { dynamicProgramming } from '@/algorithms/dp';
 import { graphAlgorithms } from '@/algorithms/graph';
 import { greedy } from '@/algorithms/greedy';
 import { intervals } from '@/algorithms/intervals';
+import { linearAlgebra } from '@/algorithms/linear-algebra';
 import { patterns } from '@/algorithms/patterns';
 import { searching } from '@/algorithms/searching';
 import { sorting } from '@/algorithms/sorting';
@@ -32,6 +34,8 @@ for (const m of [
   ...stringAlgorithms,
   ...patterns,
   ...intervals,
+  ...linearAlgebra,
+  ...calculus,
   ...linearStructures,
   ...treeStructures,
   ...graphStructures,

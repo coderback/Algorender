@@ -1,0 +1,105 @@
+<Section step="hook" title="The directions a matrix leaves alone">
+
+Apply a matrix and almost every arrow gets knocked off its line: it turns as well as stretches. But most matrices have
+a few special directions where the arrow stays on its own line and is only stretched, shrunk or flipped.
+
+Those directions explain what the matrix does when you apply it over and over, which is why they show up everywhere:
+Google's PageRank, the long-run state of a Markov chain, the principal components of a dataset, and whether a
+recurrent network's signal explodes or fades.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="eigenvector">A non-zero vector $v$ with $Av = \lambda v$: the matrix sends it somewhere on its own line.</Term>
+  <Term name="eigenvalue λ">The stretch factor along that line. $\lambda > 1$ stretches, $0 < \lambda < 1$ shrinks, $\lambda < 0$ flips, $\lambda = 0$ crushes the line to the origin.</Term>
+  <Term name="eigen line">All multiples of an eigenvector. The matrix maps the line onto itself.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Sweep a vector around the circle">
+
+<Explore slug="eigenvectors" settings={{ preset: 'symmetric' }} caption="v sweeps around the circle; A·v traces the dashed ellipse. Where A·v lands on v's own dashed line, v is an eigenvector." />
+
+For this symmetric matrix the arrow lines up twice, at 45° (where $A$ triples it) and at 135° (where it leaves it
+alone). At the end, the whole grid is transformed: the two eigen lines stay exactly where they were.
+
+<KeyIdea>
+
+**Along an eigen line the matrix is just multiplication by a number.** Write any vector as a mix of eigenvectors and the
+matrix scales each part by its own $\lambda$, which is why repeated multiplication is dominated by the largest $|\lambda|$.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: will it line up?">
+
+Before each step, predict whether the next direction is an eigenvector.
+
+<PredictChallenge slug="eigenvectors" settings={{ preset: 'stretch' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Break it on purpose">
+
+Try the examples below, then drag î and ĵ at the end of a run to see the eigen lines move.
+
+- **Shear:** only one eigen line, the x-axis. Every other arrow leans to the right.
+- **Rotation:** no arrow ever lines up, so there are no real eigenvectors (the eigenvalues are complex numbers).
+- **Squash flat:** one eigenvalue is 0. A whole line is crushed onto the origin, which is why $\det A = 0$.
+
+<Explore slug="eigenvectors" settings={{ preset: 'shear' }} input />
+
+<Misconception title="Every matrix has two eigenvectors">
+
+Only some do. A rotation turns every direction, so none survives; a shear has just one eigen line. What is always true:
+the eigenvalues (counting complex ones) multiply to $\det A$ and add up to $a + d$, the trace.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A = [[3, 0], [0, 1]]. Which of these is an eigenvector?',
+      choices: ['(1, 1)', '(0, 2)', '(1, 2)', '(2, 1)'],
+      answer: 1,
+      why: 'A·(0, 2) = (0, 2) = 1·(0, 2). The others get stretched more along x than along y, so they turn.',
+    },
+    {
+      q: 'Av = −2v. What does A do to v?',
+      choices: ['Shrinks it to half', 'Doubles it and reverses its direction', 'Rotates it by 90°', 'Nothing'],
+      answer: 1,
+      why: 'λ = −2: twice as long, pointing the opposite way along the same line.',
+    },
+    {
+      q: 'Why does a 90° rotation have no real eigenvectors?',
+      choices: ['Its determinant is 0', 'It moves every direction off its own line', 'It is not linear', 'Its eigenvalues are all 1'],
+      answer: 1,
+      why: 'An eigenvector must stay on its own line, and a quarter turn moves every line through the origin.',
+    },
+    {
+      q: 'A matrix has eigenvalues 3 and 1/2. What is its determinant?',
+      choices: ['3.5', '1.5', '6', '2.5'],
+      answer: 1,
+      why: 'The determinant is the product of the eigenvalues: 3 × 1/2 = 1.5.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- An eigenvector stays on its own line: $Av = \lambda v$. The eigenvalue $\lambda$ is the stretch along it.
+- Find them geometrically by sweeping a direction and watching where $Av$ lines up with $v$.
+- Rotations have none (real), shears have one, symmetric matrices have two at right angles.
+- Eigenvalues multiply to $\det A$ and add up to the trace. Next: eigenvectors of a covariance matrix are the principal components of data (PCA).
+
+</Section>

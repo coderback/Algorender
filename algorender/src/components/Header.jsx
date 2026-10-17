@@ -5,7 +5,7 @@ import Image from 'next/image';
 import SearchBar from './SearchBar';
 import { ThemeToggle } from './ThemeToggle';
 import { AccountMenu } from './account/AccountMenu';
-import { dataStructures, algorithms } from '@/data/visualisers';
+import { dataStructures, algorithms, mathTopics } from '@/data/visualisers';
 
 const navLink = 'text-sm font-medium text-ink-soft hover:text-accent-ink';
 
@@ -32,7 +32,7 @@ export default function Header() {
 
           <div className="flex grow items-center gap-2 sm:max-w-md">
             <div className="grow">
-              <SearchBar dataStructures={dataStructures} algorithms={algorithms} />
+              <SearchBar dataStructures={dataStructures} algorithms={algorithms} mathTopics={mathTopics} />
             </div>
             <ThemeToggle />
           </div>
