@@ -39,7 +39,9 @@ export function planeGeometry(p: Pick<PlanePart, 'x' | 'y' | 'equal'>): PlaneGeo
     inner,
     kx,
     ky,
-    px: ([x, y]) => [inner.x + (x - p.x.min) * kx, inner.y + (p.y.max - y) * ky],
+    // Rounded to hundredths of a unit: transcendental functions (tanh, exp) differ in the last
+    // bit between the server's and the browser's engines, which would make hydration mismatch.
+    px: ([x, y]) => [round(inner.x + (x - p.x.min) * kx, 2), round(inner.y + (p.y.max - y) * ky, 2)],
     world: (sx, sy) => [p.x.min + (sx - inner.x) / kx, p.y.max - (sy - inner.y) / ky],
   };
 }

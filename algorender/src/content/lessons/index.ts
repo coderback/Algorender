@@ -97,6 +97,27 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'Measure surprise in bits, then see what believing the wrong distribution costs, the loss every classifier minimises.',
     minutes: 15,
   },
+  {
+    slug: 'backpropagation',
+    title: 'Backpropagation: the chain rule on a graph',
+    concept: 'chain-rule',
+    summary: 'Watch gradients flow back through a computation graph, then write the engine yourself, micrograd style.',
+    minutes: 30,
+  },
+  {
+    slug: 'linear-regression',
+    title: 'Linear regression: shrink the squares',
+    concept: 'linear-regression',
+    summary: 'A model, a loss and gradient descent: fit a line by shrinking squared residuals you can see, and drag the data.',
+    minutes: 15,
+  },
+  {
+    slug: 'neural-networks',
+    title: 'Neural networks: why one neuron isn’t enough',
+    concept: 'neural-networks',
+    summary: 'See a single neuron fail on XOR, then watch hidden units bend the boundary as the network trains.',
+    minutes: 20,
+  },
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

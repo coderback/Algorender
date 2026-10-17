@@ -552,6 +552,12 @@ const mathEntries = [
     category: 'Calculus'
   },
   {
+    name: 'The Chain Rule (Backpropagation)',
+    description: 'Run a computation graph forward, then push gradients back node by node: local derivative times upstream gradient.',
+    slug: 'chain-rule',
+    category: 'Calculus'
+  },
+  {
     name: 'Gradient Descent',
     description: 'Walk downhill on a contour map by stepping against the gradient, and see what the step size does.',
     slug: 'gradient-descent',
@@ -586,6 +592,48 @@ const mathEntries = [
     description: 'See how a float32 packs a sign, an exponent and 23 fraction bits, why 0.1 is not stored exactly, and how far apart neighbouring floats are.',
     slug: 'floating-point',
     category: 'Numerical Methods'
+  },
+  {
+    name: 'Linear Regression',
+    description: 'Fit a line by gradient descent on the mean squared error, with every residual drawn as a real square, then compare with the exact least-squares line. Drag the points to change the data.',
+    slug: 'linear-regression',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'Logistic Regression',
+    description: "Train a single sigmoid neuron on the cross-entropy: watch the probability regions sharpen and the boundary swing into place, and see why it can't separate XOR or circles.",
+    slug: 'logistic-regression',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'K-Means Clustering',
+    description: 'Group points by alternating two steps, joining the nearest centroid and moving centroids to their means, and see where k-means finds the right clusters and where it gets stuck.',
+    slug: 'k-means',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'Perceptron',
+    description: 'Watch a single neuron learn a line by nudging it towards every point it gets wrong, and see why it stops on separable data but never on XOR.',
+    slug: 'perceptron',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'Decision Trees',
+    description: 'Grow a decision tree one question at a time, choosing each split to make the regions as pure as possible, and see where deep trees start to overfit.',
+    slug: 'decision-tree',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'Gradient Boosting',
+    description: 'Build a strong model from tiny trees: each round fits a one-split stump to what the model still gets wrong and adds a shrunk copy of it.',
+    slug: 'gradient-boosting',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'Neural Network Playground',
+    description: 'Train a small neural network on XOR, circles or moons and watch hidden layers bend a straight decision boundary into a curve, with every weight drawn as it changes.',
+    slug: 'mlp',
+    category: 'Machine Learning'
   }
 ];
 

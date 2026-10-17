@@ -5,13 +5,22 @@
 import { arrayExercises, bugHunts, modifyExercises } from './arrays';
 import { graphExercises } from './graphs';
 import { gridExercises } from './grids';
+import { mlExercises } from './ml';
 import type { Exercise } from './shared';
 import { treeExercises } from './trees';
 
 export * from './shared';
 export { arrayArgs, type ArrayInput } from './arrays';
 
-export const exercises: Exercise[] = [...arrayExercises, ...gridExercises, ...graphExercises, ...treeExercises, ...modifyExercises, ...bugHunts];
+export const exercises: Exercise[] = [
+  ...arrayExercises,
+  ...gridExercises,
+  ...graphExercises,
+  ...treeExercises,
+  ...mlExercises,
+  ...modifyExercises,
+  ...bugHunts,
+];
 
 export function getExercise(slug: string): Exercise | undefined {
   return exercises.find((e) => e.slug === slug);

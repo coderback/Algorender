@@ -60,7 +60,26 @@ export type ContourShape = { kind: 'contours'; id: string; levels: readonly Cont
 export type Bar = Paint & { id: string; x0: number; x1: number; y: number; y0?: number; label?: string };
 export type BarsShape = { kind: 'bars'; id: string; bars: readonly Bar[] };
 
-export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShape | ContourShape | BarsShape;
+/**
+ * Coloured cells over [x0, x1] × [y0, y1], `cols` × `rows`, values row by row
+ * from the top: a classifier's decision regions or k-means' territories.
+ * `blend` mixes tone `low` (0) into tone `high` (1); `classes` colours each
+ * cell by an integer index into `tones`. Drawn as a pale wash under the data.
+ */
+export type HeatmapShape = {
+  kind: 'heatmap';
+  id: string;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+  cols: number;
+  rows: number;
+  values: readonly number[];
+  scale: { kind: 'blend'; low: Tone; high: Tone } | { kind: 'classes'; tones: readonly Tone[] };
+};
+
+export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShape | ContourShape | BarsShape | HeatmapShape;
 
 /**
  * A point the learner can drag (or move with the arrow keys) to change the
@@ -123,7 +142,25 @@ export type BitsPart = {
   fields: readonly { id: string; label: string; from: number; to: number; tone?: Tone; sub?: string }[];
 };
 
-export type PlotPart = PlanePart | ImagePart | BitsPart | MatrixPart | ReadoutPart;
+/**
+ * A node of a network diagram, in the part's own layout units. `value` boxes
+ * show a name, a value and optionally a gradient (a computation graph);
+ * `op` is a small circle holding an operation (+, ×, tanh); `neuron` is a
+ * circle with an optional value inside (a neural network).
+ */
+export type NetNode = Paint & { id: string; x: number; y: number; kind: 'value' | 'op' | 'neuron'; label: string; value?: string; grad?: string };
+
+/**
+ * An arrow between two nodes. A `weight` sets the stroke width by its size
+ * and the hue by its sign (tone 1 positive, tone 2 negative), like a network
+ * playground; otherwise a mark or neutral. `label` sits at its middle.
+ */
+export type NetEdge = Paint & { id: string; from: string; to: string; weight?: number; label?: string };
+
+/** A diagram of nodes and arrows: a computation graph, a neural network, a decision tree. */
+export type NetworkPart = { kind: 'network'; id: string; label: string; nodes: readonly NetNode[]; edges: readonly NetEdge[] };
+
+export type PlotPart = PlanePart | ImagePart | NetworkPart | BitsPart | MatrixPart | ReadoutPart;
 
 /**
  * Planes and images sit side by side (wrapping on narrow screens), bit rows
