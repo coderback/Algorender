@@ -5,13 +5,16 @@ import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEven
 import { useViewEdit, type ViewEdit } from '@/viz/edit';
 import { MARKS, TONES, type MarkKey, type Tone } from '@/viz/marks';
 import { describe } from './describe';
+import { NetworkView } from './NetworkView';
 import { clipLine, fmt, fmtVec, gridReach, planeGeometry, snap, ticks, warpedGrid, type PlaneGeometry } from './geometry';
 import type {
   BarsShape,
   BitsPart,
   ContourShape,
   Handle,
+  HeatmapShape,
   ImagePart,
+  NetworkPart,
   LineShape,
   MatrixPart,
   PathShape,
@@ -36,7 +39,7 @@ const ARROW_HEAD = 9;
  * moved with the arrow keys, when the module takes dragged input.
  */
 export function PlotView({ state }: { state: PlotState }) {
-  const figures = state.parts.filter((p): p is PlanePart | ImagePart => p.kind === 'plane' || p.kind === 'image');
+  const figures = state.parts.filter((p): p is PlanePart | ImagePart | NetworkPart => p.kind === 'plane' || p.kind === 'image' || p.kind === 'network');
   const rows = state.parts.filter((p): p is BitsPart => p.kind === 'bits');
   const panels = state.parts.filter((p): p is MatrixPart | ReadoutPart => p.kind === 'matrix' || p.kind === 'readouts');
   return (
@@ -44,7 +47,9 @@ export function PlotView({ state }: { state: PlotState }) {
       <p className="sr-only">{describe(state)}</p>
       {figures.length > 0 && (
         <div className="flex flex-wrap items-end justify-center gap-x-6 gap-y-3">
-          {figures.map((p) => (p.kind === 'plane' ? <Plane key={p.id} plane={p} /> : <ImageView key={p.id} part={p} />))}
+          {figures.map((p) =>
+            p.kind === 'plane' ? <Plane key={p.id} plane={p} /> : p.kind === 'image' ? <ImageView key={p.id} part={p} /> : <NetworkView key={p.id} part={p} />,
+          )}
         </div>
       )}
       {rows.map((p) => (
@@ -211,6 +216,8 @@ function ShapeView({ shape, plane, g }: { shape: Shape; plane: PlanePart; g: Pla
       return <Contours s={shape} g={g} />;
     case 'bars':
       return <BarsView s={shape} g={g} />;
+    case 'heatmap':
+      return <Heatmap s={shape} g={g} />;
     case 'label':
       return null; // drawn unclipped by ShapeLabels
   }
@@ -300,6 +307,34 @@ function PathView({ s, g }: { s: PathShape; g: PlaneGeometry }) {
         pts.map(([cx, cy], i) => (
           <motion.circle key={i} initial={false} animate={{ cx, cy }} r={2.5} className={`stroke-surface ${fl.className}`} style={fl.style} strokeWidth={1} />
         ))}
+    </g>
+  );
+}
+
+/** A pale wash of coloured cells (decision regions); each cell's colour changes by CSS transition. */
+function Heatmap({ s, g }: { s: HeatmapShape; g: PlaneGeometry }) {
+  const [left, top] = g.px([s.x0, s.y1]);
+  const [right, bottom] = g.px([s.x1, s.y0]);
+  const cw = (right - left) / s.cols;
+  const ch = (bottom - top) / s.rows;
+  const colour = (v: number) => {
+    if (s.scale.kind === 'classes') return TONES[s.scale.tones[Math.round(v)] ?? s.scale.tones[0]];
+    const p = Math.round(100 * Math.min(1, Math.max(0, v)));
+    return `color-mix(in oklab, ${TONES[s.scale.high]} ${p}%, ${TONES[s.scale.low]})`;
+  };
+  return (
+    <g opacity={0.28} shapeRendering="crispEdges">
+      {s.values.map((v, k) => (
+        <rect
+          key={k}
+          x={left + (k % s.cols) * cw}
+          y={top + Math.floor(k / s.cols) * ch}
+          width={cw + 0.5}
+          height={ch + 0.5}
+          className="transition-[fill]"
+          style={{ fill: colour(v), transitionDuration: 'var(--tween, 300ms)' }}
+        />
+      ))}
     </g>
   );
 }

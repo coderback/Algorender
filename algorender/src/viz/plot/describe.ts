@@ -20,6 +20,12 @@ function describePart(part: PlotPart): string {
     }
     case 'readouts':
       return part.items.length ? `${part.label}: ${part.items.map((i) => `${i.label} ${i.value}`).join('; ')}.` : '';
+    case 'network': {
+      const nodes = part.nodes
+        .filter((n) => n.kind !== 'op')
+        .map((n) => `${n.label}${n.value !== undefined ? ` ${n.value}` : ''}${n.grad !== undefined ? `, ${n.grad}` : ''}`);
+      return `${part.label}: ${nodes.join('; ')}.`;
+    }
     case 'image':
       return `${part.label}: a ${part.width} by ${part.height} picture.`;
     case 'bits':
@@ -52,6 +58,8 @@ function describeShape(s: Shape): string {
       const labelled = s.bars.filter((b) => b.label);
       return labelled.length ? labelled.map((b) => `bar ${b.id}: ${b.label}`).join(', ') : `${s.bars.length} bars`;
     }
+    case 'heatmap':
+      return '';
     case 'contours':
       return s.levels.length ? `contour lines from ${fmt(s.levels[0].value)} to ${fmt(s.levels[s.levels.length - 1].value)}` : '';
   }

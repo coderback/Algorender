@@ -33,6 +33,7 @@ function planeProblems(p: PlanePart): string[] {
       s.kind === 'vector' ? [s.from, s.to] : s.kind === 'point' ? [s.at] : s.kind === 'path' ? [...s.points] : s.kind === 'line' ? [s.through, s.dir] : s.kind === 'label' ? [s.at] : [];
     if (!points.every(finite)) problems.push(`${p.id}: ${s.id} has a coordinate that is not finite`);
     if (s.kind === 'line' && s.dir[0] === 0 && s.dir[1] === 0) problems.push(`${p.id}: line ${s.id} has no direction`);
+    if (s.kind === 'heatmap' && (s.values.length !== s.cols * s.rows || !s.values.every(Number.isFinite))) problems.push(`${p.id}: heatmap ${s.id} is malformed`);
     if (s.kind === 'bars') {
       const barIds = new Set(s.bars.map((b) => b.id));
       if (barIds.size !== s.bars.length) problems.push(`${p.id}: ${s.id} repeats a bar id`);
@@ -80,6 +81,13 @@ export function expectGoodPlotTrace(algo: AnyAlgorithm, frames: readonly Frame<P
       if (part.kind === 'image') {
         if (part.pixels.length !== part.width * part.height) at(`${part.id}: ${part.pixels.length} pixels for ${part.width}×${part.height}`);
         if (!part.pixels.every(Number.isFinite)) at(`${part.id}: a pixel is not finite`);
+      }
+      if (part.kind === 'network') {
+        const ids = new Set(part.nodes.map((n) => n.id));
+        if (ids.size !== part.nodes.length) at(`${part.id}: repeated node id`);
+        if (!part.nodes.every((n) => Number.isFinite(n.x) && Number.isFinite(n.y))) at(`${part.id}: a node has no position`);
+        for (const e of part.edges) if (!ids.has(e.from) || !ids.has(e.to)) at(`${part.id}: edge ${e.id} joins a missing node`);
+        if (new Set(part.edges.map((e) => e.id)).size !== part.edges.length) at(`${part.id}: repeated edge id`);
       }
       if (part.kind === 'bits') {
         const covered = part.fields.reduce((n, f) => n + (f.to - f.from), 0);
