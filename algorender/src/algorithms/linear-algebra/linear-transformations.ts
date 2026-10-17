@@ -64,7 +64,7 @@ function scene({ m, v }: MatrixInput, s: Stage): PlotPart[] {
     { kind: 'vector', id: 'i', from: [0, 0], to: s.i, tone: 1, label: 'î' },
     { kind: 'vector', id: 'j', from: [0, 0], to: s.j, tone: 2, label: 'ĵ' },
   );
-  const handle = (id: string, at: Vec, label: string, tone?: 1 | 2): Handle => ({ id, at, label, tone, step: 0.5, min: -ENTRY_MAX, max: ENTRY_MAX });
+  const handle = (id: string, at: Vec, label: string, tone?: 1 | 2): Handle => ({ id, at, label, tone, step: 0.5, min: [-ENTRY_MAX, -ENTRY_MAX], max: [ENTRY_MAX, ENTRY_MAX] });
   const handles: Handle[] = [];
   if (s.handles.v) handles.push(handle('v', v, 'v'));
   if (s.handles.i) handles.push(handle('i', col1(m), 'Where î lands', 1));

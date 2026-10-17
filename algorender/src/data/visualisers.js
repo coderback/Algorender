@@ -538,6 +538,24 @@ const mathEntries = [
     description: 'Sweep a vector around the circle to find the directions a matrix only stretches: A·v = λ·v.',
     slug: 'eigenvectors',
     category: 'Linear Algebra'
+  },
+  {
+    name: 'Derivatives',
+    description: 'Shrink a secant line until it becomes the tangent, then trace the slope at every point to draw f′.',
+    slug: 'derivative',
+    category: 'Calculus'
+  },
+  {
+    name: 'Gradient Descent',
+    description: 'Walk downhill on a contour map by stepping against the gradient, and see what the step size does.',
+    slug: 'gradient-descent',
+    category: 'Optimization'
+  },
+  {
+    name: 'Momentum and Adam',
+    description: 'Race gradient descent, momentum, RMSProp and Adam on the same surface, from the same start.',
+    slug: 'optimizers',
+    category: 'Optimization'
   }
 ];
 

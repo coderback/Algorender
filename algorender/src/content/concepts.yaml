@@ -38,7 +38,6 @@ tracks:
   - id: ml
     title: Machine learning
     summary: From fitting a line to attention, built step by step.
-    planned: true
   - id: systems
     title: Systems
     summary: How operating systems, databases and distributed systems really work.
@@ -303,17 +302,19 @@ concepts:
     track: math
     summary: Matrices as transformations that warp space.
     visualisers: [linear-transformations]
+    lesson: linear-transformations
   - id: eigenvectors
     title: Eigenvectors
     track: math
     summary: The directions a transformation only stretches.
     prereqs: [vectors-matrices]
     visualisers: [eigenvectors]
+    lesson: eigenvectors
   - id: derivatives-gradients
     title: Derivatives and gradients
     track: math
     summary: Slopes in one dimension, and the direction of steepest ascent in many.
-    planned: true
+    visualisers: [derivative]
   - id: chain-rule
     title: The chain rule
     track: math
@@ -326,13 +327,20 @@ concepts:
     summary: Conditional probability as areas, and updating beliefs with evidence.
     planned: true
 
-  # ── Planned: machine learning ────────────────────────────────
+  # ── Machine learning ─────────────────────────────────────────
   - id: gradient-descent
     title: Gradient descent
     track: ml
     summary: Walking downhill on a loss surface, and why the step size matters.
     prereqs: [derivatives-gradients]
-    planned: true
+    visualisers: [gradient-descent]
+    lesson: gradient-descent
+  - id: optimizers
+    title: Momentum and Adam
+    track: ml
+    summary: Optimizers that remember past gradients to speed through ravines and even out step sizes.
+    prereqs: [gradient-descent]
+    visualisers: [optimizers]
   - id: linear-regression
     title: Linear regression
     track: ml

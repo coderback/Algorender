@@ -55,9 +55,9 @@ export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShap
 /**
  * A point the learner can drag (or move with the arrow keys) to change the
  * input. Positions snap to multiples of `step` and stay inside `min`..`max`
- * on both axes.
+ * (per axis).
  */
-export type Handle = { id: string; at: Vec; label: string; tone?: Tone; mark?: MarkKey | null; step: number; min: number; max: number };
+export type Handle = { id: string; at: Vec; label: string; tone?: Tone; mark?: MarkKey | null; step: number; min: Vec; max: Vec };
 
 export type Axis = { min: number; max: number; label?: string };
 

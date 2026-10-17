@@ -364,9 +364,19 @@ function ShapeLabels({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
     }
   }
   // Handles aren't labelled here: each sits on a shape (a vector's tip, a start point) that carries the label.
+  // Nudge labels that would overprint an earlier one down a line (approximate text widths).
+  const placed: { x: number; y: number; w: number }[] = [];
+  const laid = labels.map((l) => {
+    const w = l.text.length * 7;
+    const x = l.anchor === 'start' ? l.x : l.anchor === 'end' ? l.x - w : l.x - w / 2;
+    let y = l.y;
+    for (let tries = 0; tries < 4 && placed.some((p) => Math.abs(p.y - y) < 12 && x < p.x + p.w && p.x < x + w); tries++) y += 13;
+    placed.push({ x, y, w });
+    return { ...l, y };
+  });
   return (
     <g>
-      {labels.map((l) => (
+      {laid.map((l) => (
         <motion.text
           key={l.id}
           initial={false}
@@ -416,7 +426,7 @@ function HandleControl({
   const dragging = useRef(false);
   const last = useRef<Vec>(handle.at);
   const fl = fill(handle, 'fill-accent');
-  const place = (v: Vec): Vec => [snap(v[0], handle.step, handle.min, handle.max), snap(v[1], handle.step, handle.min, handle.max)];
+  const place = (v: Vec): Vec => [snap(v[0], handle.step, handle.min[0], handle.max[0]), snap(v[1], handle.step, handle.min[1], handle.max[1])];
 
   const toWorld = (e: PointerEvent): Vec | null => {
     const ctm = svgRef.current?.getScreenCTM();

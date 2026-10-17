@@ -36,7 +36,7 @@ function planeProblems(p: PlanePart): string[] {
   }
   for (const h of p.handles) {
     const onStep = (v: number) => Math.abs(v / h.step - Math.round(v / h.step)) < 1e-6;
-    if (!finite(h.at) || h.at.some((v) => v < h.min - 1e-9 || v > h.max + 1e-9)) problems.push(`${p.id}: handle ${h.id} outside its bounds`);
+    if (!finite(h.at) || h.at.some((v, k) => v < h.min[k] - 1e-9 || v > h.max[k] + 1e-9)) problems.push(`${p.id}: handle ${h.id} outside its bounds`);
     else if (!h.at.every(onStep)) problems.push(`${p.id}: handle ${h.id} at ${h.at} is not on its ${h.step} step`);
   }
   return problems;

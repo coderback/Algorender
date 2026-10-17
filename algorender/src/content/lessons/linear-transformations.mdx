@@ -1,0 +1,110 @@
+<Section step="hook" title="A grid of numbers that moves the whole plane">
+
+A $2 \times 2$ matrix is four numbers. It is easy to learn the rule for multiplying it by a vector and never see what it
+*does*. Here is what it does: it picks up the entire plane and moves it, stretching, turning, shearing or flipping it,
+while keeping every grid line straight.
+
+By the end of this lesson you will be able to look at a matrix like $\begin{bmatrix} 2 & 1 \\ 0 & 1 \end{bmatrix}$ and
+picture its effect before doing any arithmetic.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="î and ĵ">The basis vectors $(1, 0)$ and $(0, 1)$: one step right, one step up. Every vector is built from them.</Term>
+  <Term name="v = x·î + y·ĵ">A vector's coordinates are a recipe: $x$ steps along î, then $y$ steps along ĵ.</Term>
+  <Term name="columns">The first column of a matrix is where î lands; the second is where ĵ lands.</Term>
+  <Term name="det A">The determinant, $ad - bc$: how much the matrix scales areas, with a minus sign if it flips the plane over.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch a matrix move the grid">
+
+<Explore slug="linear-transformations" settings={{ preset: 'stretch-shear' }} caption="First î lands on the first column, then ĵ on the second, then the whole grid follows. Step with → and read each line." />
+
+Because every vector is $x$ steps along î plus $y$ steps along ĵ, it must land on $x$ steps along *where î went* plus
+$y$ steps along *where ĵ went*:
+
+$$
+A\begin{bmatrix} x \\ y \end{bmatrix} = x \begin{bmatrix} a \\ c \end{bmatrix} + y \begin{bmatrix} b \\ d \end{bmatrix}
+$$
+
+<KeyIdea>
+
+**Read a matrix by its columns.** They are the images of î and ĵ, and those two arrows decide where everything else
+goes. Grid lines stay straight, parallel and evenly spaced, and the origin stays put: that is what *linear* means.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: where does it land?">
+
+Before each step, predict where î, ĵ and $v$ will land under a quarter turn, and what happens to the area.
+
+<PredictChallenge slug="linear-transformations" settings={{ preset: 'rotation' }} goal={4} />
+
+</Section>
+
+<Section step="do" title="Drag the columns yourself">
+
+Drag the tips of î and ĵ (or focus one and use the arrow keys) and watch the grid, $Av$ and $\det A$ follow. Try these:
+
+- Put ĵ on top of î's line. The plane collapses onto a line and $\det A = 0$.
+- Swap the two arrows' places. The grid flips over and the determinant turns negative.
+- Make a shear: leave î at $(1, 0)$ and move ĵ to $(1, 1)$. The square leans, but its area stays 1.
+
+<Explore slug="linear-transformations" settings={{ preset: 'shear', step: '8' }} input />
+
+<Misconception title="The rows tell you where î goes">
+
+It is tempting to read the first *row* $(a, b)$ as the image of î. It isn't: $A\hat{\imath} = (a, c)$, the first
+*column*. Rows are what you dot with $v$ when you compute by hand; columns are what the matrix does to space.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A = [[3, 0], [1, 2]]. Where does î = (1, 0) land?',
+      choices: ['(3, 0)', '(3, 1)', '(0, 2)', '(1, 2)'],
+      answer: 1,
+      why: 'î lands on the first column of A, which reads (3, 1) going down.',
+    },
+    {
+      q: 'A sends î to (2, 0) and ĵ to (1, 1). Where does v = (1, 2) land?',
+      choices: ['(2, 2)', '(4, 2)', '(3, 1)', '(1, 2)'],
+      answer: 1,
+      why: 'v = 1·î + 2·ĵ, so A·v = 1·(2, 0) + 2·(1, 1) = (4, 2).',
+    },
+    {
+      q: 'A matrix has determinant −2. What does it do to the unit square?',
+      choices: ['Shrinks it to half', 'Doubles its area and flips the plane over', 'Squashes it flat', 'Rotates it by 180°'],
+      answer: 1,
+      why: '|det A| = 2 is the area scale, and the minus sign means orientation is reversed.',
+    },
+    {
+      q: 'Which matrix squashes the plane onto a line?',
+      choices: ['[[1, 2], [2, 4]]', '[[1, 2], [3, 4]]', '[[0, −1], [1, 0]]', '[[2, 0], [0, 2]]'],
+      answer: 0,
+      why: 'Its columns (1, 2) and (2, 4) point the same way, so det = 1·4 − 2·2 = 0.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A matrix moves the whole plane; its **columns** are where î and ĵ land.
+- $A(x\hat{\imath} + y\hat{\jmath}) = x(A\hat{\imath}) + y(A\hat{\jmath})$: knowing two arrows tells you everything.
+- $\det A = ad - bc$ scales area; negative flips the plane, zero squashes it and can't be undone.
+- Next: **eigenvectors**, the special directions a matrix only stretches.
+
+</Section>

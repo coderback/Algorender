@@ -55,6 +55,27 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'Predict what real code does, run it to check, then change it and write a sort of your own, in Python, JavaScript or TypeScript.',
     minutes: 25,
   },
+  {
+    slug: 'linear-transformations',
+    title: 'Matrices move space',
+    concept: 'vectors-matrices',
+    summary: 'Read a matrix by its columns: where î and ĵ land decides where every vector goes, and the determinant scales area.',
+    minutes: 15,
+  },
+  {
+    slug: 'eigenvectors',
+    title: 'Eigenvectors: the directions a matrix only stretches',
+    concept: 'eigenvectors',
+    summary: 'Sweep a vector around the circle to find where A·v lines up with v, and see why rotations have none.',
+    minutes: 15,
+  },
+  {
+    slug: 'gradient-descent',
+    title: 'Gradient descent: how models learn',
+    concept: 'gradient-descent',
+    summary: 'From the slope at a point to walking downhill on a loss surface, and why the step size matters so much.',
+    minutes: 20,
+  },
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

@@ -1,7 +1,7 @@
 import type { InputSpec } from '@/engine/module';
-import type { Checkpoint, Frame, VarValue } from '@/engine/types';
+import { numbersIn, plain } from '@/viz/plot/frame';
 import { fmt, round } from '@/viz/plot/geometry';
-import type { Mat2, PlotPart, PlotState, Vec } from '@/viz/plot/types';
+import type { Mat2, Vec } from '@/viz/plot/types';
 
 export const IDENTITY: Mat2 = [1, 0, 0, 1];
 
@@ -38,46 +38,7 @@ export function eigenvector([a, b, c, d]: Mat2, lambda: number): Vec {
   return v[0] < -1e-12 || (Math.abs(v[0]) <= 1e-12 && v[1] < 0) ? [-v[0], -v[1]] : v;
 }
 
-/**
- * A checkpoint's choices: the answer and up to three distinct wrong ones,
- * sorted so the answer's position gives nothing away. Null when the wrong
- * ones all coincide with the answer (nothing to ask).
- */
-export function choices(answer: string, wrong: readonly string[], count = 4): Pick<Checkpoint, 'choices' | 'answer'> | null {
-  const set = new Set([answer]);
-  for (const w of wrong) if (set.size < count) set.add(w);
-  if (set.size < 2) return null;
-  const sorted = [...set].sort();
-  return { choices: sorted, answer: sorted.indexOf(answer) };
-}
-
-export function ask(question: string, answer: string, wrong: readonly string[]): Checkpoint | undefined {
-  const c = choices(answer, wrong);
-  return c ? { question, ...c } : undefined;
-}
-
-/** One frame of a plot module. Math modules rebuild their parts each frame and keep no counters. */
-export function plotFrame(
-  parts: readonly PlotPart[],
-  o: { note: string; line?: number | null; vars?: Record<string, VarValue>; checkpoint?: Checkpoint; stats?: Record<string, number> },
-): Frame<PlotState> {
-  return {
-    state: { parts },
-    line: o.line ?? null,
-    note: o.note,
-    vars: o.vars ?? {},
-    stats: o.stats ?? {},
-    ...(o.checkpoint && { checkpoint: o.checkpoint }),
-  };
-}
-
-/** Every number in the text, accepting a true minus sign. */
-export function numbersIn(text: string): number[] {
-  return (text.replace(/−/g, '-').match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
-}
-
-/** Plain-text number for custom input (ASCII minus, at most two decimals). */
-export const plain = (v: number) => String(round(v, 2));
+export { ask, plotFrame } from '@/viz/plot/frame';
 
 /** Matrix and vector entries a learner may choose. */
 export const ENTRY_MAX = 4;

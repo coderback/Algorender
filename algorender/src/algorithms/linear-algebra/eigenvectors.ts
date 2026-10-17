@@ -155,8 +155,8 @@ function* run(m: Mat2): Generator<Frame<PlotState>> {
     const handles: Handle[] =
       t === 1
         ? [
-            { id: 'i', at: col1(m), label: 'Where î lands', tone: 1, step: 0.5, min: -ENTRY_MAX, max: ENTRY_MAX },
-            { id: 'j', at: col2(m), label: 'Where ĵ lands', tone: 2, step: 0.5, min: -ENTRY_MAX, max: ENTRY_MAX },
+            { id: 'i', at: col1(m), label: 'Where î lands', tone: 1, step: 0.5, min: [-ENTRY_MAX, -ENTRY_MAX], max: [ENTRY_MAX, ENTRY_MAX] },
+            { id: 'j', at: col2(m), label: 'Where ĵ lands', tone: 2, step: 0.5, min: [-ENTRY_MAX, -ENTRY_MAX], max: [ENTRY_MAX, ENTRY_MAX] },
           ]
         : [];
     const riders: Shape[] = found.map((e, k) => ({
