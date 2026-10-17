@@ -1,0 +1,96 @@
+<Section step="hook" title="Why bell curves are everywhere">
+
+Heights, measurement errors, exam averages and polling results all tend to follow the same bell-shaped curve, even though
+the things being added up look nothing like a bell. A single die roll is flat; the average of many dice is a bell.
+
+The **central limit theorem** says this is no coincidence: average enough independent samples of almost anything and the
+averages pile up into a normal distribution, with a spread you can predict exactly.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="population">Where the samples come from, with mean $\mu$ and standard deviation $\sigma$. It can have any shape.</Term>
+  <Term name="sample of size n">$n$ independent draws from the population.</Term>
+  <Term name="sample mean x̄">The average of one sample. Draw many samples and you get many means.</Term>
+  <Term name="standard error">How spread out the means are: $\sigma / \sqrt{n}$.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Pile up the averages">
+
+<Explore slug="central-limit-theorem" settings={{ preset: 'skewed', n: '5' }} caption="Each sample of 5 is drawn from a lopsided population and averaged; the averages pile up in the bottom histogram." />
+
+The population is lopsided, but the averages are not: big and small draws partly cancel, so averages land near $\mu$
+more often than far from it, and they fall away symmetrically on both sides.
+
+<KeyIdea>
+
+**Averages of $n$ independent draws are roughly normal, centred on $\mu$, with spread $\sigma/\sqrt{n}$.** The shape of
+the population hardly matters once $n$ is moderately large. Quadrupling $n$ halves the spread.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what will pile up?">
+
+<PredictChallenge slug="central-limit-theorem" settings={{ preset: 'bimodal', n: '8' }} goal={3} />
+
+</Section>
+
+<Section step="do" title="Change the sample size">
+
+Use the slider to change $n$ and the buttons to change the population.
+
+- **n = 1:** each "average" is a single draw, so the histogram just copies the population. The theorem needs averaging.
+- **n = 2 to 5 on the skewed population:** watch the lopsidedness fade.
+- **Coin flips:** the averages can only be $k/n$, so the histogram is spiky, but the spikes still trace a bell.
+
+<Explore slug="central-limit-theorem" settings={{ preset: 'uniform', n: '2' }} input />
+
+<Misconception title="Large samples make the data normal">
+
+The theorem is about the **averages**, not the individual values. A skewed population stays skewed however many values
+you collect; it is the distribution of their *mean* that becomes a bell.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A population has σ = 12. What is the spread (standard error) of means of samples of size 9?',
+      choices: ['12', '4', '1.33', '108'],
+      answer: 1,
+      why: 'σ/√n = 12/√9 = 4.',
+    },
+    {
+      q: 'To halve the spread of the sample means, how should n change?',
+      choices: ['Double it', 'Multiply it by 4', 'Halve it', 'Square it'],
+      answer: 1,
+      why: 'The spread is σ/√n, so it halves when √n doubles, that is when n is multiplied by 4.',
+    },
+    {
+      q: 'With n = 1, what does the histogram of sample means look like?',
+      choices: ['A bell curve', 'The population itself', 'A single spike at μ', 'Flat'],
+      answer: 1,
+      why: 'Each mean is just one draw, so the means are distributed exactly like the population.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The means of samples of size $n$ cluster around $\mu$ with spread $\sigma/\sqrt{n}$.
+- For moderate $n$ their distribution is close to normal, whatever the population looks like.
+- This is why confidence intervals, A/B tests and polls can use the normal curve, and why averaging more data helps only like $\sqrt{n}$.
+
+</Section>

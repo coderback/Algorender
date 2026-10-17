@@ -76,6 +76,27 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'From the slope at a point to walking downhill on a loss surface, and why the step size matters so much.',
     minutes: 20,
   },
+  {
+    slug: 'bayes',
+    title: "Bayes' rule: a 90% test that is usually wrong",
+    concept: 'probability',
+    summary: 'Draw everyone as a square to see why the prior matters as much as the evidence, and how to update twice.',
+    minutes: 15,
+  },
+  {
+    slug: 'central-limit-theorem',
+    title: 'The central limit theorem: why averages make bells',
+    concept: 'sampling-clt',
+    summary: 'Average samples from lopsided or two-humped populations and watch a bell appear, with a spread of σ/√n.',
+    minutes: 12,
+  },
+  {
+    slug: 'entropy',
+    title: 'Entropy and KL divergence: information in bits',
+    concept: 'information-theory',
+    summary: 'Measure surprise in bits, then see what believing the wrong distribution costs, the loss every classifier minimises.',
+    minutes: 15,
+  },
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

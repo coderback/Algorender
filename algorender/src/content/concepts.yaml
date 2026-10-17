@@ -325,7 +325,33 @@ concepts:
     title: Probability and Bayes
     track: math
     summary: Conditional probability as areas, and updating beliefs with evidence.
-    planned: true
+    visualisers: [bayes]
+    lesson: bayes
+  - id: sampling-clt
+    title: Sampling and the central limit theorem
+    track: math
+    summary: Why averages of almost anything pile up into a bell curve, and how fast they settle.
+    prereqs: [probability]
+    visualisers: [central-limit-theorem]
+    lesson: central-limit-theorem
+  - id: information-theory
+    title: Entropy and KL divergence
+    track: math
+    summary: Information as surprise in bits, and the cost of believing the wrong distribution.
+    prereqs: [probability]
+    visualisers: [entropy]
+    lesson: entropy
+  - id: svd
+    title: Singular value decomposition
+    track: math
+    summary: Any matrix as a sum of rank-1 pieces, most important first, and why that compresses images.
+    prereqs: [eigenvectors]
+    visualisers: [svd]
+  - id: floating-point
+    title: Floating-point numbers
+    track: math
+    summary: How computers store real numbers in 32 bits, and why 0.1 + 0.2 isn’t quite 0.3.
+    visualisers: [floating-point]
 
   # ── Machine learning ─────────────────────────────────────────
   - id: gradient-descent

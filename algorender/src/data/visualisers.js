@@ -540,6 +540,12 @@ const mathEntries = [
     category: 'Linear Algebra'
   },
   {
+    name: 'SVD Image Compression',
+    description: 'Rebuild a picture from its singular value decomposition one rank-1 piece at a time, and see how few pieces most images need.',
+    slug: 'svd',
+    category: 'Linear Algebra'
+  },
+  {
     name: 'Derivatives',
     description: 'Shrink a secant line until it becomes the tangent, then trace the slope at every point to draw f′.',
     slug: 'derivative',
@@ -556,6 +562,30 @@ const mathEntries = [
     description: 'Race gradient descent, momentum, RMSProp and Adam on the same surface, from the same start.',
     slug: 'optimizers',
     category: 'Optimization'
+  },
+  {
+    name: "Bayes' Rule",
+    description: 'Update a belief with evidence by drawing everyone as a square: the answer is the share of the evidence strip where the hypothesis holds.',
+    slug: 'bayes',
+    category: 'Probability'
+  },
+  {
+    name: 'Central Limit Theorem',
+    description: 'Average samples from any population, flat, skewed or split in two, and watch the averages pile up into a bell curve whose spread shrinks like σ/√n.',
+    slug: 'central-limit-theorem',
+    category: 'Probability'
+  },
+  {
+    name: 'Entropy and KL Divergence',
+    description: 'Measure information as surprise in bits, then see what believing the wrong distribution costs: cross-entropy and KL divergence.',
+    slug: 'entropy',
+    category: 'Information Theory'
+  },
+  {
+    name: 'Floating-Point Numbers',
+    description: 'See how a float32 packs a sign, an exponent and 23 fraction bits, why 0.1 is not stored exactly, and how far apart neighbouring floats are.',
+    slug: 'floating-point',
+    category: 'Numerical Methods'
   }
 ];
 

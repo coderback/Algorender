@@ -20,6 +20,10 @@ function describePart(part: PlotPart): string {
     }
     case 'readouts':
       return part.items.length ? `${part.label}: ${part.items.map((i) => `${i.label} ${i.value}`).join('; ')}.` : '';
+    case 'image':
+      return `${part.label}: a ${part.width} by ${part.height} picture.`;
+    case 'bits':
+      return `${part.label}: ${part.fields.map((f) => `${f.label} ${part.bits.slice(f.from, f.to).map((b) => b.value).join('')}${f.sub ? ` (${f.sub})` : ''}`).join('; ')}.`;
   }
 }
 
@@ -44,6 +48,10 @@ function describeShape(s: Shape): string {
       return s.label ? `${s.label} through ${fmtVec(s.through)} along ${fmtVec(s.dir)}` : '';
     case 'label':
       return s.text;
+    case 'bars': {
+      const labelled = s.bars.filter((b) => b.label);
+      return labelled.length ? labelled.map((b) => `bar ${b.id}: ${b.label}`).join(', ') : `${s.bars.length} bars`;
+    }
     case 'contours':
       return s.levels.length ? `contour lines from ${fmt(s.levels[0].value)} to ${fmt(s.levels[s.levels.length - 1].value)}` : '';
   }

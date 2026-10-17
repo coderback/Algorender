@@ -1,0 +1,107 @@
+<Section step="hook" title="How much is a message worth?">
+
+"It's sunny in the desert" tells you almost nothing; "it's snowing in the desert" is news. Information is **surprise**:
+the less likely an outcome, the more you learn when it happens.
+
+In 1948 Claude Shannon turned that into a number, measured in bits. It sets the limit on how far any file can be
+compressed, and its cousin, **cross-entropy**, is the loss function that trains almost every classifier and language model.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="surprise">$\log_2(1/p)$ bits for an outcome with probability $p$: 1 bit for a fair coin flip, 3 bits for a 1-in-8 event.</Term>
+  <Term name="entropy H(P)">The average surprise of a distribution $P$: $\sum_x p(x)\log_2\frac{1}{p(x)}$.</Term>
+  <Term name="cross-entropy H(P, Q)">The average surprise when outcomes follow $P$ but you expected $Q$.</Term>
+  <Term name="KL divergence">$H(P, Q) - H(P)$: the extra bits you pay for believing $Q$. Never negative.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Measure the weather in bits">
+
+<Explore slug="entropy" settings={{ preset: 'weather' }} caption="Each outcome's surprise is log₂(1/p); the entropy is their average, weighted by how often each happens." />
+
+Sun (1/2) is worth 1 bit, cloud (1/4) 2 bits, rain and snow (1/8) 3 bits each. Weighted by how often each happens, the
+average is $0.5 \cdot 1 + 0.25 \cdot 2 + 0.125 \cdot 3 + 0.125 \cdot 3 = 1.75$ bits. The code 0, 10, 110, 111
+achieves exactly that: short codes for common outcomes.
+
+A forecaster who thinks all four are equally likely ($Q$ uniform) uses 2 bits each, so they pay $2 - 1.75 = 0.25$ extra
+bits per day. That gap is the KL divergence.
+
+<KeyIdea>
+
+**Cross-entropy = entropy + KL divergence.** Training a model to minimise cross-entropy against the data is the same as
+minimising how far its beliefs $Q$ are from the truth $P$, because $H(P)$ doesn't depend on the model.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: count the bits">
+
+<PredictChallenge slug="entropy" settings={{ preset: 'weather' }} goal={4} />
+
+</Section>
+
+<Section step="do" title="Drag the distributions">
+
+Drag the tops of the bars. The other bars rescale so each distribution still adds up to 1.
+
+- Make $P$ uniform: entropy reaches its maximum, $\log_2 n$.
+- Make one outcome almost certain: entropy drops towards 0.
+- Pull one of $Q$'s bars down to zero while $P$'s stays up: KL shoots to infinity.
+
+<Explore slug="entropy" settings={{ preset: 'ruled-out' }} input />
+
+<Misconception title="KL divergence is a distance">
+
+It measures how different two distributions are, but it isn't symmetric: $KL(P\|Q)$ and $KL(Q\|P)$ are usually
+different, and one can be infinite while the other is finite. Which way round you use it changes what a model learns.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'How many bits of surprise is an outcome with probability 1/16?',
+      choices: ['1/16', '4', '16', '0.25'],
+      answer: 1,
+      why: 'log₂(16) = 4 bits.',
+    },
+    {
+      q: 'Which distribution over 4 outcomes has the highest entropy?',
+      choices: ['(1, 0, 0, 0)', '(0.7, 0.1, 0.1, 0.1)', '(0.25, 0.25, 0.25, 0.25)', '(0.5, 0.5, 0, 0)'],
+      answer: 2,
+      why: 'The uniform distribution is the least predictable: log₂ 4 = 2 bits, the maximum.',
+    },
+    {
+      q: 'A classifier gives the correct class probability 0.25 on a sample. What is its cross-entropy loss there?',
+      choices: ['0.25 bits', '2 bits', '4 bits', '0.75 bits'],
+      answer: 1,
+      why: 'With a one-hot P, the cross-entropy is the surprise of the true class: log₂(1/0.25) = 2 bits.',
+    },
+    {
+      q: 'When is KL(P‖Q) zero?',
+      choices: ['When P is uniform', 'Only when Q = P', 'When Q is uniform', 'Never'],
+      answer: 1,
+      why: 'Gibbs’ inequality: the cross-entropy equals the entropy only when the two distributions match.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Surprise is $\log_2(1/p)$ bits; entropy is the average surprise, at most $\log_2 n$ for $n$ outcomes.
+- Cross-entropy is the average surprise under a model; KL is its excess over the entropy, never negative.
+- A model that rules out something that can happen pays infinite cross-entropy.
+- Machine learning minimises cross-entropy, which is the same as minimising KL from the data.
+
+</Section>
