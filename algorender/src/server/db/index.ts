@@ -8,6 +8,7 @@
 //   have no lasting disk, so there DATABASE_URL is required.
 // Tests make their own in-memory PGlite with `createTestDatabase()`.
 
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
@@ -38,6 +39,8 @@ async function open(): Promise<Database> {
   if (process.env.VERCEL) throw new Error('Accounts need a database: set DATABASE_URL.');
   // A local directory, never deployed (Vercel needs DATABASE_URL): don't let the bundler trace it.
   const dir = path.resolve(/*turbopackIgnore: true*/ process.env.PGLITE_DIR ?? path.join(process.cwd(), '.data', 'pglite'));
+  // PGlite makes its own folder, but not the ones above it (.data on a fresh checkout).
+  mkdirSync(dir, { recursive: true });
   const client = new PGlite(dir);
   const db = drizzlePglite(client, { schema });
   await migratePglite(db, { migrationsFolder: MIGRATIONS });
