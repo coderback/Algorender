@@ -30,20 +30,21 @@ try {
   await run('apt-get update -q && apt-get install -y -q --no-install-recommends g++ openjdk-21-jdk-headless curl ca-certificates', { sudo: true });
   await run(`curl -fsSL https://go.dev/dl/go${GO}.linux-amd64.tar.gz | tar -C /usr/local -xz && ln -sf /usr/local/go/bin/go /usr/local/bin/go && ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt`, { sudo: true });
 
-  // Warm Go's build cache with every package the driver and the automatic imports use, so a run only compiles the learner's code.
+  // Warm Go's build cache with every package the driver and the automatic imports use, so a run only compiles
+  // the learner's code. One folder per language: Go refuses to build a folder that holds C++ files.
   await sandbox.writeFiles([
     {
-      path: 'warm/main.go',
+      path: 'warm/go/main.go',
       content:
         'package main\n\nimport (\n\t"container/heap"\n\t"fmt"\n\t"math"\n\t"os"\n\t"reflect"\n\t"regexp"\n\t"runtime/debug"\n\t"slices"\n\t"sort"\n\t"strconv"\n\t"strings"\n\t"time"\n)\n\nvar _ = []any{heap.Init, fmt.Sprint, math.Abs, os.Exit, reflect.ValueOf, regexp.MustCompile, debug.Stack, slices.Sort[[]int], sort.Ints, strconv.Itoa, strings.Split, time.Now}\n\nfunc main() { fmt.Println("go ok") }\n',
     },
-    { path: 'warm/go.mod', content: 'module warm\n\ngo 1.22\n' },
-    { path: 'warm/Hello.java', content: 'public class Hello { public static void main(String[] a) { System.out.println("java ok"); } }\n' },
-    { path: 'warm/hello.cpp', content: '#include <bits/stdc++.h>\nint main() { std::cout << "c++ ok\\n"; }\n' },
+    { path: 'warm/go/go.mod', content: 'module warm\n\ngo 1.22\n' },
+    { path: 'warm/java/Hello.java', content: 'public class Hello { public static void main(String[] a) { System.out.println("java ok"); } }\n' },
+    { path: 'warm/cpp/hello.cpp', content: '#include <bits/stdc++.h>\nint main() { std::cout << "c++ ok\\n"; }\n' },
   ]);
-  await run('cd warm && GOTOOLCHAIN=local go build -o hello-go . && ./hello-go');
-  await run('cd warm && javac -d out Hello.java && java -cp out Hello');
-  await run('cd warm && g++ -std=c++20 -O2 -o hello-cpp hello.cpp && ./hello-cpp');
+  await run('cd warm/go && GOTOOLCHAIN=local go build -o hello . && ./hello');
+  await run('cd warm/java && javac -d out Hello.java && java -cp out Hello');
+  await run('cd warm/cpp && g++ -std=c++20 -O2 -o hello hello.cpp && ./hello');
   await run('rm -rf warm && command -v timeout && g++ --version | head -1 && java -version 2>&1 | head -1 && go version');
 
   const snapshot = await sandbox.snapshot({ expiration: 0 });
