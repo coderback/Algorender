@@ -130,7 +130,23 @@ export type ReadoutPart = { kind: 'readouts'; id: string; label: string; items: 
  * `gray`: 0 is black and 1 white (a photo looks the same in either theme).
  * `signed`: −1..1 for a piece that adds or subtracts, drawn in two hues.
  */
-export type ImagePart = { kind: 'image'; id: string; label: string; width: number; height: number; pixels: readonly number[]; scale: 'gray' | 'signed' };
+export type ImagePart = {
+  kind: 'image';
+  id: string;
+  label: string;
+  width: number;
+  height: number;
+  pixels: readonly number[];
+  scale: 'gray' | 'signed';
+  /** Outlined rectangles over the pixels, in pixel units, keyed by id so they glide: a convolution's window, a cache's new row. */
+  boxes?: readonly ImageBox[];
+  /** Text written on each pixel, row by row (for small grids such as a 3×3 kernel); empty strings leave a pixel bare. */
+  values?: readonly string[];
+  /** On-screen width in px (default 240); a 3×3 kernel wants less. */
+  size?: number;
+};
+
+export type ImageBox = Paint & { id: string; x: number; y: number; w: number; h: number };
 
 /** A row of bits split into named fields (sign, exponent, fraction), each field optionally toned. */
 export type BitsPart = {
@@ -160,10 +176,24 @@ export type NetEdge = Paint & { id: string; from: string; to: string; weight?: n
 /** A diagram of nodes and arrows: a computation graph, a neural network, a decision tree. */
 export type NetworkPart = { kind: 'network'; id: string; label: string; nodes: readonly NetNode[]; edges: readonly NetEdge[] };
 
-export type PlotPart = PlanePart | ImagePart | NetworkPart | BitsPart | MatrixPart | ReadoutPart;
+/**
+ * A token of a sequence: `text` is shown as is (spaces visible as ·), `sub`
+ * is a small line under it (an id, a probability).
+ */
+export type Token = Paint & { id: string; text: string; sub?: string };
 
 /**
- * Planes and images sit side by side (wrapping on narrow screens), bit rows
- * span the width under them, and matrices and readouts follow in a row.
+ * A row of tokens that wraps like text: a sentence split by BPE, the text a
+ * model has generated so far, the tokens in a KV cache. Tokens are keyed by
+ * id, so when two merge or a new one arrives the rest glide into place.
+ */
+export type TokensPart = { kind: 'tokens'; id: string; label: string; tokens: readonly Token[] };
+
+export type PlotPart = PlanePart | ImagePart | NetworkPart | BitsPart | TokensPart | MatrixPart | ReadoutPart;
+
+/**
+ * Token rows span the width at the top, planes, images and networks sit side
+ * by side under them (wrapping on narrow screens), bit rows span the width
+ * under those, and matrices and readouts follow in a row.
  */
 export type PlotState = { parts: readonly PlotPart[] };

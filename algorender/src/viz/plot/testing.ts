@@ -81,6 +81,15 @@ export function expectGoodPlotTrace(algo: AnyAlgorithm, frames: readonly Frame<P
       if (part.kind === 'image') {
         if (part.pixels.length !== part.width * part.height) at(`${part.id}: ${part.pixels.length} pixels for ${part.width}×${part.height}`);
         if (!part.pixels.every(Number.isFinite)) at(`${part.id}: a pixel is not finite`);
+        if (part.values && part.values.length !== part.pixels.length) at(`${part.id}: ${part.values.length} values for ${part.pixels.length} pixels`);
+        for (const b of part.boxes ?? []) {
+          if (!(b.w > 0 && b.h > 0 && b.x >= 0 && b.y >= 0 && b.x + b.w <= part.width + 1e-9 && b.y + b.h <= part.height + 1e-9)) at(`${part.id}: box ${b.id} outside the picture`);
+        }
+        if (new Set((part.boxes ?? []).map((b) => b.id)).size !== (part.boxes ?? []).length) at(`${part.id}: repeated box id`);
+      }
+      if (part.kind === 'tokens') {
+        if (new Set(part.tokens.map((t) => t.id)).size !== part.tokens.length) at(`${part.id}: repeated token id`);
+        if (part.tokens.some((t) => t.text === '')) at(`${part.id}: an empty token`);
       }
       if (part.kind === 'network') {
         const ids = new Set(part.nodes.map((n) => n.id));

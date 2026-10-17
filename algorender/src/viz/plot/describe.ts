@@ -26,8 +26,12 @@ function describePart(part: PlotPart): string {
         .map((n) => `${n.label}${n.value !== undefined ? ` ${n.value}` : ''}${n.grad !== undefined ? `, ${n.grad}` : ''}`);
       return `${part.label}: ${nodes.join('; ')}.`;
     }
-    case 'image':
-      return `${part.label}: a ${part.width} by ${part.height} picture.`;
+    case 'image': {
+      const values = part.values && part.values.length <= 25 && part.values.some(Boolean) ? ` Values row by row: ${part.values.join(', ')}.` : '';
+      return `${part.label}: a ${part.width} by ${part.height} grid.${values}`;
+    }
+    case 'tokens':
+      return `${part.label}: ${part.tokens.length ? part.tokens.map((t) => `“${t.text}”${t.sub ? ` (${t.sub})` : ''}`).join(', ') : 'none'}.`;
     case 'bits':
       return `${part.label}: ${part.fields.map((f) => `${f.label} ${part.bits.slice(f.from, f.to).map((b) => b.value).join('')}${f.sub ? ` (${f.sub})` : ''}`).join('; ')}.`;
   }
