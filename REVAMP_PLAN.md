@@ -848,6 +848,24 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 - **ML, build first:** linear and logistic regression, k-means, decision trees and boosting, perceptron and MLP, micrograd, CNN, attention, BPE, sampling, KV cache, gridworld Q-learning, 2D diffusion.
 - **Supporting work:** an offline training pipeline for precomputed traces; the "build micrograd visually" track.
 
+**Done when:** the math and ML tracks on the concept map open real lessons, and each concept on the build-first lists has a visualiser that runs on the trace engine with Predict mode.
+
+**Decisions (2026-10-17):**
+- **Our own SVG `PlotView`, not Mafs.** It shares the theme tokens, the marks, Motion tweens keyed by stable id, and the screen-reader description pattern of the other views. Mafs is slow-moving (§10) and would be a second visual language.
+- **Direct manipulation through the trace engine.** A view can draw draggable handles; the module maps a drag to a new input (`input.drag`), the explorer records the trace again and stays on the same frame. Handles also move with the arrow keys, and the custom text input is the non-dragging alternative (WCAG 2.5.7).
+- **Contours before 3D.** Loss surfaces are drawn as contour maps (marching squares) on `PlotView`. `SurfaceView` (three.js) waits until a lesson needs real 3D, since it costs ~600 KB.
+- **TypeScript before PyTorch.** Models small enough to train in the browser train in TypeScript, deterministically from a seed, so traces stay reproducible and testable. Precomputed traces are produced by TypeScript scripts at build time. A PyTorch pipeline is added only when a model is too big for that (a CNN on real images).
+
+**Split into four steps, each on its own stacked branch:**
+- **4a: plots and the first math** (`revamp/phase-4a`).
+  - **Primitive:** `PlotView` (planes with axes, warped grids, vectors, points, paths, infinite lines, contour maps and draggable handles, plus matrix and readout panels).
+  - **Linear algebra:** matrices as grid warps (with the determinant as area), eigenvectors.
+  - **Calculus and optimization:** the derivative as the limit of secants, gradient descent on contour maps, and momentum, RMSProp and Adam racing on the same surface.
+  - **Site:** a "Math & ML" section on the home page and in search; the math and ML tracks open on the concept map; lessons on transformations, eigenvectors and gradient descent.
+- **4b: probability, information and numbers** (`revamp/phase-4b`): Bayes as areas, the CLT sampler, entropy, cross-entropy and KL, SVD image compression, floating-point bit layout.
+- **4c: classical ML and micrograd** (`revamp/phase-4c`): the chain-rule computation graph (`NetworkView`), a TypeScript autograd that doubles as the "build micrograd" exercises, linear and logistic regression (drag the points), k-means, decision trees and boosting, the perceptron and an MLP playground.
+- **4d: deep learning, LLMs and RL** (`revamp/phase-4d`): CNN kernels and feature maps, attention, BPE, sampling, the KV cache, gridworld Q-learning, 2D diffusion, and the build-time pipeline for precomputed traces.
+
 ### Phase 5 — Personalization and tutor
 
 **Work:**

@@ -524,16 +524,35 @@ const algorithmEntries = [
   }
 ];
 
+// Math and ML visualisers have no running time to quote: their facts live in
+// the module's teaching content instead.
+const mathEntries = [
+  {
+    name: 'Linear Transformations',
+    description: 'See a 2×2 matrix move the whole plane: its columns are where î and ĵ land, and its determinant scales area.',
+    slug: 'linear-transformations',
+    category: 'Linear Algebra'
+  },
+  {
+    name: 'Eigenvectors',
+    description: 'Sweep a vector around the circle to find the directions a matrix only stretches: A·v = λ·v.',
+    slug: 'eigenvectors',
+    category: 'Linear Algebra'
+  }
+];
+
 const withMeta = (entries, type) =>
   entries.map(entry => ({ ...entry, type, path: `/visualisers/${entry.slug}` }));
 
 export const visualisers = [
   ...withMeta(dataStructureEntries, 'data-structure'),
-  ...withMeta(algorithmEntries, 'algorithm')
+  ...withMeta(algorithmEntries, 'algorithm'),
+  ...withMeta(mathEntries, 'math')
 ];
 
 export const dataStructures = visualisers.filter(v => v.type === 'data-structure' && !v.hidden);
 export const algorithms = visualisers.filter(v => v.type === 'algorithm' && !v.hidden);
+export const mathTopics = visualisers.filter(v => v.type === 'math' && !v.hidden);
 
 export function getVisualiserByPath(pathname) {
   const path = (pathname || '').replace(/\/+$/, '');

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { VarValue } from '@/engine/types';
 import type { LegendEntry } from '@/engine/module';
-import { MARKS, NEUTRAL } from '@/viz/marks';
+import { MARKS, NEUTRAL, TONES } from '@/viz/marks';
 
 export function Panel({ title, children, className = '' }: { title: string; children: ReactNode; className?: string }) {
   return (
@@ -109,6 +109,15 @@ export function Legend({ entries }: { entries: readonly LegendEntry[] }) {
                 <span className={`h-4 w-3 rounded-sm ring-1 ring-black/10 ring-inset ${NEUTRAL.bg}`} aria-hidden />
                 <span className="w-6" aria-hidden />
                 {entry.neutral}
+              </li>
+            );
+          }
+          if (typeof entry === 'object' && 'tone' in entry) {
+            return (
+              <li key={`tone-${entry.tone}`} className="flex items-center gap-2">
+                <span className="h-1 w-3 shrink-0 rounded-full" style={{ background: TONES[entry.tone] }} aria-hidden />
+                <span className="w-6" aria-hidden />
+                {entry.label}
               </li>
             );
           }

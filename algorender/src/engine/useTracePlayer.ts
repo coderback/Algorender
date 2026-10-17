@@ -46,13 +46,16 @@ export type TracePlayer = {
  * forward from it (Predict mode uses this to wait for an answer). Seeking can
  * still jump past a gate: exploring is always allowed. `autoPlay` starts
  * playing on mount (used to animate a data-structure operation right away).
+ * `frameCount` may change while mounted; the index stays put, clamped to it.
  */
 export function useTracePlayer(
   frameCount: number,
   { initialIndex = 0, gate, autoPlay = false }: { initialIndex?: number; gate?: (index: number) => boolean; autoPlay?: boolean } = {},
 ): TracePlayer {
   const last = Math.max(0, frameCount - 1);
-  const [index, setIndex] = useState(() => clamp(initialIndex, 0, last));
+  const [stored, setIndex] = useState(() => clamp(initialIndex, 0, last));
+  // A trace recorded again in place (the learner dragged the input) may be shorter.
+  const index = Math.min(stored, last);
   const [playing, setPlaying] = useState(() => autoPlay && last > 0 && !gate?.(clamp(initialIndex, 0, last)));
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
   const [instant, setInstant] = useState(false);

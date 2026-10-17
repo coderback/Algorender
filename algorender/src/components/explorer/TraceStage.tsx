@@ -5,12 +5,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import type { LegendEntry, StatSpec, ViewKind } from '@/engine/module';
 import type { Trace } from '@/engine/types';
 import { usePlayerKeyboard, useTracePlayer } from '@/engine/useTracePlayer';
+import { ViewEditContext, type ViewEdit } from '@/viz/edit';
 import { VIEWS } from '@/viz/views';
 import { CodePanel, Legend, Narration, StatsPanel, VarsPanel } from './panels';
 import { PlayerControls } from './PlayerControls';
 import { PredictCard } from './PredictCard';
 
 export type Mode = 'watch' | 'predict';
+
+const NO_ANSWERS: ReadonlyMap<number, number> = new Map();
 export type Density = 'all' | 'some';
 
 /** Predict mode asks at every 3rd decision on "some", unless there are only a few. */
@@ -44,6 +47,8 @@ export function TraceStage<S>({
   code,
   share = true,
   onFrame,
+  edit,
+  live = false,
 }: {
   trace: Trace<S>;
   view: ViewKind;
@@ -65,9 +70,15 @@ export function TraceStage<S>({
   share?: boolean;
   /** Called with the frame index whenever it changes, e.g. to keep an editor's line highlight in step. */
   onFrame?: (index: number) => void;
+  /** Lets the view's handles change the input (see InputSpec.drag). */
+  edit?: ViewEdit;
+  /** True while a handle is being dragged: the view follows the pointer with no tween. */
+  live?: boolean;
 }) {
   const View = VIEWS[view];
-  const [answers, setAnswers] = useState<ReadonlyMap<number, number>>(new Map());
+  // Answers belong to the trace they were given on: a drag records a new trace in place, and its questions start fresh.
+  const [given, setGiven] = useState<{ trace: Trace<S>; answers: ReadonlyMap<number, number> }>(() => ({ trace, answers: NO_ANSWERS }));
+  const answers = given.trace === trace ? given.answers : NO_ANSWERS;
 
   // Frames whose checkpoint is asked in Predict mode.
   const asked = useMemo(() => {
@@ -82,6 +93,7 @@ export function TraceStage<S>({
   const rootRef = useRef<HTMLDivElement>(null);
   usePlayerKeyboard(player, keyboard === 'local' ? rootRef : undefined);
   const frame = trace.frames[player.index];
+  const tweenMs = live ? 0 : player.tweenMs;
   useEffect(() => {
     onFrame?.(player.index);
   }, [onFrame, player.index]);
@@ -90,7 +102,7 @@ export function TraceStage<S>({
   const answer = useCallback(
     (choice: number) => {
       if (answers.has(player.index)) return;
-      setAnswers((prev) => new Map(prev).set(player.index, choice));
+      setGiven({ trace, answers: new Map(answers).set(player.index, choice) });
       onPrediction?.(choice === trace.frames[player.index].checkpoint?.answer);
     },
     [answers, player.index, onPrediction, trace],
@@ -99,7 +111,7 @@ export function TraceStage<S>({
   const correct = answered.filter(([i, c]) => trace.frames[i].checkpoint!.answer === c).length;
 
   return (
-    <MotionConfig transition={{ duration: player.tweenMs / 1000, ease: [0.4, 0, 0.2, 1] }} reducedMotion="user">
+    <MotionConfig transition={{ duration: tweenMs / 1000, ease: [0.4, 0, 0.2, 1] }} reducedMotion="user">
       <div
         ref={rootRef}
         // Focusable so that clicking anywhere in a local-keyboard stage makes its shortcuts active.
@@ -109,9 +121,11 @@ export function TraceStage<S>({
         <div className="min-w-0 space-y-3">
           <div
             className="rounded-xl border border-line-soft bg-surface px-3 pt-4 pb-3 shadow-xs sm:px-6"
-            style={{ '--tween': `${player.tweenMs}ms` } as CSSProperties}
+            style={{ '--tween': `${tweenMs}ms` } as CSSProperties}
           >
-            <View state={frame.state} />
+            <ViewEditContext value={edit ?? null}>
+              <View state={frame.state} />
+            </ViewEditContext>
           </div>
           <Narration note={frame.note} live={!player.playing} />
           {question && (

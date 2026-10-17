@@ -35,7 +35,6 @@ tracks:
   - id: math
     title: Math for CS and ML
     summary: The linear algebra, calculus and probability behind machine learning.
-    planned: true
   - id: ml
     title: Machine learning
     summary: From fitting a line to attention, built step by step.
@@ -298,18 +297,18 @@ concepts:
     prereqs: [string-matching]
     visualisers: [manacher]
 
-  # ── Planned: math ────────────────────────────────────────────
+  # ── Math ─────────────────────────────────────────────────────
   - id: vectors-matrices
     title: Vectors and matrices
     track: math
     summary: Matrices as transformations that warp space.
-    planned: true
+    visualisers: [linear-transformations]
   - id: eigenvectors
     title: Eigenvectors
     track: math
     summary: The directions a transformation only stretches.
     prereqs: [vectors-matrices]
-    planned: true
+    visualisers: [eigenvectors]
   - id: derivatives-gradients
     title: Derivatives and gradients
     track: math

@@ -37,6 +37,8 @@ export default async function VisualiserPage({ params }: Props) {
   if (!visualiser || !meta) notFound();
   const { idea, invariant, whenToUse, traits } = visualiser.content;
   const isAlgorithm = meta.type === 'algorithm';
+  const back = BACK[meta.type as keyof typeof BACK];
+  const cost = 'timeComplexity' in meta ? meta : null;
   const exercise = exerciseForVisualiser(slug);
   const problems = loadProblems().filter((p) => p.visualisers.includes(slug)).slice(0, 4);
 
@@ -45,10 +47,10 @@ export default async function VisualiserPage({ params }: Props) {
       <Header />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <Link
-          href={`/?tab=${isAlgorithm ? 'algorithms' : 'data-structures'}`}
+          href={`/?tab=${back.tab}`}
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline"
         >
-          <FiArrowLeft aria-hidden /> {isAlgorithm ? 'All algorithms' : 'All data structures'}
+          <FiArrowLeft aria-hidden /> {back.label}
         </Link>
 
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -78,10 +80,12 @@ export default async function VisualiserPage({ params }: Props) {
               </p>
             )}
           </div>
-          <dl className="flex shrink-0 flex-wrap gap-2 text-sm">
-            <Chip label={isAlgorithm ? 'Average time' : 'Typical operation'} value={meta.timeComplexity.average} />
-            <Chip label="Space" value={meta.spaceComplexity} />
-          </dl>
+          {cost && (
+            <dl className="flex shrink-0 flex-wrap gap-2 text-sm">
+              <Chip label={isAlgorithm ? 'Average time' : 'Typical operation'} value={cost.timeComplexity.average} />
+              <Chip label="Space" value={cost.spaceComplexity} />
+            </dl>
+          )}
         </div>
 
         <Suspense fallback={<div className="h-[640px] animate-pulse rounded-xl bg-surface" aria-label="Loading visualiser" />}>
@@ -99,19 +103,21 @@ export default async function VisualiserPage({ params }: Props) {
           <Card title="When to use it">
             <p>{whenToUse}</p>
           </Card>
-          <Card title="Cost and properties">
+          <Card title={cost ? 'Cost and properties' : 'Properties'}>
+            {cost && (
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
               <dt className="text-ink-muted">Best</dt>
-              <dd className="font-mono">{meta.timeComplexity.best}</dd>
+              <dd className="font-mono">{cost.timeComplexity.best}</dd>
               <dt className="text-ink-muted">Average</dt>
-              <dd className="font-mono">{meta.timeComplexity.average}</dd>
+              <dd className="font-mono">{cost.timeComplexity.average}</dd>
               <dt className="text-ink-muted">Worst</dt>
-              <dd className="font-mono">{meta.timeComplexity.worst}</dd>
+              <dd className="font-mono">{cost.timeComplexity.worst}</dd>
               <dt className="text-ink-muted">Space</dt>
-              <dd className="font-mono">{meta.spaceComplexity}</dd>
+              <dd className="font-mono">{cost.spaceComplexity}</dd>
             </dl>
+            )}
             {traits.length > 0 && (
-              <ul className="mt-3 flex flex-wrap gap-1.5 text-xs">
+              <ul className={`${cost ? 'mt-3 ' : ''}flex flex-wrap gap-1.5 text-xs`}>
                 {traits.map((t) => (
                   <li
                     key={t.label}
@@ -130,6 +136,12 @@ export default async function VisualiserPage({ params }: Props) {
     </div>
   );
 }
+
+const BACK = {
+  'data-structure': { tab: 'data-structures', label: 'All data structures' },
+  algorithm: { tab: 'algorithms', label: 'All algorithms' },
+  math: { tab: 'math', label: 'All math and ML' },
+} as const;
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (

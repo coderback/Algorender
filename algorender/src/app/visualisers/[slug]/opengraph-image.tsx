@@ -15,8 +15,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   return ogCard({
     eyebrow: meta?.category ?? 'Visualiser',
     title: meta?.name ?? 'Algorender',
-    detail: meta
+    detail: meta?.timeComplexity
       ? `${meta.type === 'algorithm' ? 'Time' : 'Typical operation'} ${meta.timeComplexity.average} · space ${meta.spaceComplexity}. Step through it and predict each move.`
-      : 'Step through it and predict each move.',
+      : `${meta?.description ?? ''} Step through it and predict each move.`.trim(),
   });
 }
