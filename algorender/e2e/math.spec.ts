@@ -51,6 +51,16 @@ test('dragging the start point reruns gradient descent from there', async ({ pag
   await expect(narration(page)).toContainText('(−2.1, 2)');
 });
 
+test('moving the query arrow re-scores every key', async ({ page }) => {
+  await open(page, '/visualisers/attention?preset=pronoun&step=3');
+  const q = page.getByRole('button', { name: /^Query of “it” at \(1\.6, 0\.2\)/ });
+  await q.focus();
+  await page.keyboard.press('Shift+ArrowUp');
+  await expect(page.getByRole('button', { name: /^Query of “it” at \(1\.6, 0\.6\)/ })).toBeFocused();
+  await expect(page.locator('#custom-input')).toHaveValue(/q = \(1\.6, 0\.6\)/);
+  await expect(page).toHaveURL(/input=/);
+});
+
 test('the home page lists math and ML topics', async ({ page }) => {
   await page.goto('/?tab=math');
   await expect(page.getByRole('heading', { name: 'Linear Algebra' })).toBeVisible();
