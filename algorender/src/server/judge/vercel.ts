@@ -14,8 +14,13 @@ import type { ServerLanguage } from '@/problems/languages';
 import { OUTPUT_CHARS } from './docker';
 import type { Sandbox } from './sandbox';
 
-/** The sandbox's working folder, where writeFiles puts relative paths. */
-const DIR = '/vercel/sandbox';
+/**
+ * The run's folder, relative to the sandbox user's working folder (which
+ * depends on the image: /vercel on Ubuntu, not the documented
+ * /vercel/sandbox). writeFiles, runCommand and readFileToBuffer all resolve
+ * relative paths against it.
+ */
+const DIR = 'judge';
 
 /** Compiling gets this long on top of the run's own limit; the VM is stopped after this whatever happens. */
 const COMPILE_SECONDS = 45;
@@ -41,7 +46,7 @@ export function vercelSandbox(): Sandbox | null {
         ...credentials(),
       });
       try {
-        await sandbox.writeFiles(Object.entries(files).map(([name, content]) => ({ path: name, content })));
+        await sandbox.writeFiles(Object.entries(files).map(([name, content]) => ({ path: `${DIR}/${name}`, content })));
         await sandbox.runCommand({ cmd: 'sh', args: [`${DIR}/judge.sh`, language, String(seconds)], signal: AbortSignal.timeout(budget) });
         const read = async (name: string) => (await sandbox.readFileToBuffer({ path: `${DIR}/${name}` }))?.toString('utf8') ?? '';
         const [status, compile, stdout, stderr, answers] = await Promise.all(['status.txt', 'compile.txt', 'stdout.txt', 'stderr.txt', 'answers.jsonl'].map(read));

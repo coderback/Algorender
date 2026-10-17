@@ -21,6 +21,8 @@ export interface Sandbox {
 export async function judgeInSandbox(sandbox: Sandbox, spec: ProblemSpec, language: ServerLanguage, code: string, tests: JudgeCase[]): Promise<ServerVerdicts> {
   const seconds = runSeconds(spec, language, tests);
   const output = await sandbox.run(sandboxFiles(spec, language, code, tests), language, seconds);
+  // judge.sh always writes a status, so its absence is the sandbox failing, not the learner's code.
+  if (!output.status.trim()) throw new Error(`The ${sandbox.name} sandbox ran nothing (no status file).`);
   return readOutput(spec, language, tests, output, seconds);
 }
 
