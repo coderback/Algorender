@@ -33,6 +33,8 @@ export type PathShape = Paint & {
   points: readonly Vec[];
   closed?: boolean;
   fill?: boolean;
+  /** How strongly `fill` washes the inside (default 0.18): areas that carry meaning (Bayes) want more. */
+  fillOpacity?: number;
   dashed?: boolean;
   dots?: boolean;
   /** Thin and quiet, for reference curves. */
@@ -50,7 +52,15 @@ export type LabelShape = { kind: 'label'; id: string; at: Vec; text: string };
 export type ContourLevel = { value: number; segments: readonly (readonly [Vec, Vec])[] };
 export type ContourShape = { kind: 'contours'; id: string; levels: readonly ContourLevel[] };
 
-export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShape | ContourShape;
+/**
+ * Bars standing on the x-axis (or on `y0`), e.g. a histogram or a probability
+ * distribution. Each bar is keyed by id and tweens its height; `label` is
+ * written above it.
+ */
+export type Bar = Paint & { id: string; x0: number; x1: number; y: number; y0?: number; label?: string };
+export type BarsShape = { kind: 'bars'; id: string; bars: readonly Bar[] };
+
+export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShape | ContourShape | BarsShape;
 
 /**
  * A point the learner can drag (or move with the arrow keys) to change the
@@ -59,7 +69,8 @@ export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShap
  */
 export type Handle = { id: string; at: Vec; label: string; tone?: Tone; mark?: MarkKey | null; step: number; min: Vec; max: Vec };
 
-export type Axis = { min: number; max: number; label?: string };
+/** `ticks` replaces the round-number ticks with named ones, e.g. the symbols under a bar chart. */
+export type Axis = { min: number; max: number; label?: string; ticks?: readonly { at: number; label: string }[] };
 
 export type PlanePart = {
   kind: 'plane';
@@ -95,7 +106,27 @@ export type Readout = { id: string; label: string; value: string; mark?: MarkKey
 /** Named values, e.g. det A = 2 or loss = 0.31. */
 export type ReadoutPart = { kind: 'readouts'; id: string; label: string; items: readonly Readout[] };
 
-export type PlotPart = PlanePart | MatrixPart | ReadoutPart;
+/**
+ * A small grayscale picture, `width` × `height`, row by row from the top.
+ * `gray`: 0 is black and 1 white (a photo looks the same in either theme).
+ * `signed`: −1..1 for a piece that adds or subtracts, drawn in two hues.
+ */
+export type ImagePart = { kind: 'image'; id: string; label: string; width: number; height: number; pixels: readonly number[]; scale: 'gray' | 'signed' };
 
-/** Planes sit side by side (wrapping on narrow screens); matrices and readouts follow in a row. */
+/** A row of bits split into named fields (sign, exponent, fraction), each field optionally toned. */
+export type BitsPart = {
+  kind: 'bits';
+  id: string;
+  label: string;
+  bits: readonly { id: string; value: string; mark?: MarkKey | null }[];
+  /** Fields as [from, to) bit positions, left to right. */
+  fields: readonly { id: string; label: string; from: number; to: number; tone?: Tone; sub?: string }[];
+};
+
+export type PlotPart = PlanePart | ImagePart | BitsPart | MatrixPart | ReadoutPart;
+
+/**
+ * Planes and images sit side by side (wrapping on narrow screens), bit rows
+ * span the width under them, and matrices and readouts follow in a row.
+ */
 export type PlotState = { parts: readonly PlotPart[] };

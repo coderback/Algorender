@@ -1,0 +1,114 @@
+<Section step="hook" title="A 90% accurate test says you're sick. Are you?">
+
+A disease affects 1 person in 100. A test catches 90% of people who have it, and wrongly flags 9% of people who don't.
+You test positive. What is the chance you have the disease?
+
+Most people, including many doctors in published studies, answer "about 90%". The true answer is about **9%**. This
+lesson shows why, with a picture that makes the answer obvious instead of surprising.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="H and E">H is the hypothesis ("has the disease"); E is the evidence ("tests positive").</Term>
+  <Term name="prior P(H)">How likely H is before you see any evidence: here 1%.</Term>
+  <Term name="likelihoods">$P(E \mid H)$, how often H produces the evidence (90%), and $P(E \mid \neg H)$, how often it appears without H (9%).</Term>
+  <Term name="posterior P(H | E)">How likely H is once you know E happened. This is what you want.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Draw everyone as a square">
+
+<Explore slug="bayes" settings={{ preset: 'rare-disease' }} caption="Split 1000 people by who has the disease, then shade who tests positive. Once you know the test was positive, only the bottom strip is left." />
+
+The sick column is a sliver, 10 people out of 1000. Even though the test catches 9 of them, it also flags 9% of the 990
+healthy people, about 89. So among the 98 positives, only 9 are sick:
+
+$$
+P(H \mid E) = \frac{P(E \mid H)\,P(H)}{P(E)} = \frac{0.9 \times 0.01}{0.9 \times 0.01 + 0.09 \times 0.99} \approx 0.09
+$$
+
+<KeyIdea>
+
+**The posterior is the share of the evidence strip where H holds.** It depends on the prior just as much as on how good
+the evidence is: when H is rare, even rare false alarms can outnumber the true hits.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: count the people">
+
+This time the condition affects 30% of people. Predict each count before you step, then the final chance.
+
+<PredictChallenge slug="bayes" settings={{ preset: 'common' }} goal={4} />
+
+</Section>
+
+<Section step="do" title="Move the dividers">
+
+Drag the divider (the prior) and the tops of the two shaded strips (the hit rate and the false alarm rate). Try to answer:
+
+- How common must the disease be before a positive test means "more likely than not"?
+- Which helps more for a rare disease: catching more of the sick, or flagging fewer of the healthy?
+- What happens when both strips are the same height?
+
+<Explore slug="bayes" settings={{ preset: 'rare-disease', step: '7' }} input />
+
+<Misconception title="P(E | H) and P(H | E) are the same thing">
+
+"90% of sick people test positive" is not "90% of positive people are sick". Swapping them is called the *prosecutor's
+fallacy*. The first is a fact about the test; the second also depends on how many people were sick to begin with.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'In a group of 1000, 50 have a condition. A test flags 80% of them and 10% of the other 950. Roughly how many positives are there?',
+      choices: ['40', '95', '135', '850'],
+      answer: 2,
+      why: '0.8 × 50 = 40 true positives plus 0.1 × 950 = 95 false ones: 135 in all.',
+    },
+    {
+      q: 'In that group, what is the chance that someone who tests positive has the condition?',
+      choices: ['80%', 'About 30%', '10%', '5%'],
+      answer: 1,
+      why: '40 of the 135 positives have it: about 30%.',
+    },
+    {
+      q: 'Evidence is equally likely with or without H. What does seeing it do to P(H)?',
+      choices: ['Raises it', 'Lowers it', 'Leaves it unchanged', 'Sets it to 50%'],
+      answer: 2,
+      why: 'Both strips are the same height, so H keeps the same share of the evidence strip as of the whole square.',
+    },
+    {
+      q: 'A second, independent positive test arrives. How do you update?',
+      choices: [
+        'Start again from the original prior',
+        'Use the first posterior as the new prior',
+        'Multiply the two hit rates',
+        'Ignore it: the first test decided it',
+      ],
+      answer: 1,
+      why: 'What you believed after the first test is your prior for the second.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Draw the whole population, split by the prior, then shade the evidence in each part.
+- $P(H \mid E)$ is H's share of the evidence: $P(E \mid H)P(H) / P(E)$.
+- Rare hypotheses need very clean evidence: false alarms from the large majority swamp the true hits.
+- Updates chain: today's posterior is tomorrow's prior. Naive Bayes spam filters do this word by word.
+
+</Section>

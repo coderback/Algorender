@@ -870,6 +870,22 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Lessons:** "Matrices move space", "Eigenvectors" and "Gradient descent: how models learn", each with a predict challenge and a quiz.
     - **Left for 4b+:** code exercises on math (implement a gradient step), histograms and image parts for `PlotView`, and `NetworkView`.
 - **4b: probability, information and numbers** (`revamp/phase-4b`): Bayes as areas, the CLT sampler, entropy, cross-entropy and KL, SVD image compression, floating-point bit layout.
+  - **Status (2026-10-17): 4b is done.**
+    - **PlotView additions:** bar charts with named (categorical) ticks, grayscale and signed pixel images, bit rows split into toned fields, and fill strength for meaningful areas.
+    - **Visualisers (5):**
+      - **Bayes' rule:** everyone as a square split by the prior, a zoom on the evidence strip, natural frequencies, a second test that uses the posterior as the new prior, and draggable prior and likelihoods.
+      - **Central limit theorem:** four populations and a sample-size slider; the means pile up against N(μ, σ/√n).
+      - **Entropy:** surprise in bits per outcome, entropy, cross-entropy against a model Q, and KL. The bars can be dragged, and a model that rules out a possible outcome costs infinite bits.
+      - **SVD:** six 24×24 pictures rebuilt one rank-1 piece at a time, with energy, storage and error; the decomposition is a one-sided Jacobi SVD of our own.
+      - **Floating point:** float32 sign, exponent and fraction; the exact stored value (via BigInt) against the number asked for; neighbouring floats; subnormals, ±0, ∞, NaN and 0.1 + 0.2.
+    - **Checks:** property tests against the maths:
+      - Bayes: the areas tile the square, and the green share is the posterior.
+      - Entropy: Gibbs' inequality.
+      - SVD: reconstruction, orthonormality and Eckart–Young at every rank.
+      - Floating point: bits match Float32Array, and exact decimals are right.
+      - CLT: the means' average and spread agree with μ and σ/√n.
+    - **Lessons:** Bayes' rule, the central limit theorem, and entropy and KL.
+    - **Left for later:** lessons for SVD and floating point, Monte Carlo and Markov chains, and the geometric (rotate–stretch–rotate) picture of SVD.
 - **4c: classical ML and micrograd** (`revamp/phase-4c`): the chain-rule computation graph (`NetworkView`), a TypeScript autograd that doubles as the "build micrograd" exercises, linear and logistic regression (drag the points), k-means, decision trees and boosting, the perceptron and an MLP playground.
 - **4d: deep learning, LLMs and RL** (`revamp/phase-4d`): CNN kernels and feature maps, attention, BPE, sampling, the KV cache, gridworld Q-learning, 2D diffusion, and the build-time pipeline for precomputed traces.
 

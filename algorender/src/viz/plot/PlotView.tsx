@@ -6,7 +6,23 @@ import { useViewEdit, type ViewEdit } from '@/viz/edit';
 import { MARKS, TONES, type MarkKey, type Tone } from '@/viz/marks';
 import { describe } from './describe';
 import { clipLine, fmt, fmtVec, gridReach, planeGeometry, snap, ticks, warpedGrid, type PlaneGeometry } from './geometry';
-import type { ContourShape, Handle, LineShape, MatrixPart, PathShape, PlanePart, PlotState, PointShape, ReadoutPart, Shape, Vec, VectorShape } from './types';
+import type {
+  BarsShape,
+  BitsPart,
+  ContourShape,
+  Handle,
+  ImagePart,
+  LineShape,
+  MatrixPart,
+  PathShape,
+  PlanePart,
+  PlotState,
+  PointShape,
+  ReadoutPart,
+  Shape,
+  Vec,
+  VectorShape,
+} from './types';
 
 /** Largest on-screen width of one plane, so a single plane doesn't balloon on a wide screen. */
 const MAX_PLANE_PX = 520;
@@ -20,16 +36,20 @@ const ARROW_HEAD = 9;
  * moved with the arrow keys, when the module takes dragged input.
  */
 export function PlotView({ state }: { state: PlotState }) {
-  const planes = state.parts.filter((p): p is PlanePart => p.kind === 'plane');
-  const panels = state.parts.filter((p): p is MatrixPart | ReadoutPart => p.kind !== 'plane');
+  const figures = state.parts.filter((p): p is PlanePart | ImagePart => p.kind === 'plane' || p.kind === 'image');
+  const rows = state.parts.filter((p): p is BitsPart => p.kind === 'bits');
+  const panels = state.parts.filter((p): p is MatrixPart | ReadoutPart => p.kind === 'matrix' || p.kind === 'readouts');
   return (
     <div className="flex flex-col gap-3">
       <p className="sr-only">{describe(state)}</p>
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
-        {planes.map((p) => (
-          <Plane key={p.id} plane={p} />
-        ))}
-      </div>
+      {figures.length > 0 && (
+        <div className="flex flex-wrap items-end justify-center gap-x-6 gap-y-3">
+          {figures.map((p) => (p.kind === 'plane' ? <Plane key={p.id} plane={p} /> : <ImageView key={p.id} part={p} />))}
+        </div>
+      )}
+      {rows.map((p) => (
+        <BitsView key={p.id} part={p} />
+      ))}
       {panels.length > 0 && (
         <div className="flex flex-wrap items-stretch justify-center gap-2" aria-hidden>
           {panels.map((p) => (p.kind === 'matrix' ? <MatrixView key={p.id} part={p} /> : <Readouts key={p.id} part={p} />))}
@@ -90,11 +110,14 @@ function Plane({ plane }: { plane: PlanePart }) {
 
 /** Grid lines at round ticks, the axes, and tick labels. Faint when a warped grid is drawn over it. */
 function Background({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
-  const xt = ticks(plane.x);
-  const yt = ticks(plane.y);
+  // Named ticks label categories (bars), so they get labels but no grid lines.
+  const named = (axis: PlanePart['x']) => axis.ticks?.map((t) => ({ at: t.at, label: t.label })) ?? ticks(axis).map((v) => ({ at: v, label: fmt(v) }));
+  const xt = named(plane.x);
+  const yt = named(plane.y);
   // Under a warp, the faint grid is the integer one, so the learner can count where squares went.
-  const xs = plane.warp ? integers(plane.x.min, plane.x.max) : xt;
-  const ys = plane.warp ? integers(plane.y.min, plane.y.max) : yt;
+  const lines = (axis: PlanePart['x'], t: { at: number }[]) => (axis.ticks ? [] : plane.warp ? integers(axis.min, axis.max) : t.map((x) => x.at));
+  const xs = lines(plane.x, xt);
+  const ys = lines(plane.y, yt);
   const { inner } = g;
   const gridClass = 'stroke-line-soft';
   const left = inner.x;
@@ -102,8 +125,9 @@ function Background({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
   const top = inner.y;
   const bottom = inner.y + inner.h;
   const [ox, oy] = g.px([0, 0]);
-  const showX0 = plane.x.min <= 0 && plane.x.max >= 0;
-  const showY0 = plane.y.min <= 0 && plane.y.max >= 0;
+  // No zero line across a categorical axis: it would run through the first category.
+  const showX0 = !plane.x.ticks && plane.x.min <= 0 && plane.x.max >= 0;
+  const showY0 = !plane.y.ticks && plane.y.min <= 0 && plane.y.max >= 0;
 
   return (
     <g>
@@ -118,19 +142,19 @@ function Background({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
       })}
       {showX0 && <line x1={ox} x2={ox} y1={top} y2={bottom} className="stroke-line-strong" strokeWidth={1.25} />}
       {showY0 && <line x1={left} x2={right} y1={oy} y2={oy} className="stroke-line-strong" strokeWidth={1.25} />}
-      {xt.map((v) => {
-        const [x] = g.px([v, 0]);
+      {xt.map((t) => {
+        const [x] = g.px([t.at, 0]);
         return (
-          <text key={`tx${v}`} x={x} y={bottom + 14} textAnchor="middle" className="fill-ink-muted text-[10px] tabular-nums">
-            {fmt(v)}
+          <text key={`tx${t.at}`} x={x} y={bottom + 14} textAnchor="middle" className="fill-ink-muted text-[10px] tabular-nums">
+            {t.label}
           </text>
         );
       })}
-      {yt.map((v) => {
-        const [, y] = g.px([0, v]);
+      {yt.map((t) => {
+        const [, y] = g.px([0, t.at]);
         return (
-          <text key={`ty${v}`} x={left - 5} y={y} dy="0.32em" textAnchor="end" className="fill-ink-muted text-[10px] tabular-nums">
-            {fmt(v)}
+          <text key={`ty${t.at}`} x={left - 5} y={y} dy="0.32em" textAnchor="end" className="fill-ink-muted text-[10px] tabular-nums">
+            {t.label}
           </text>
         );
       })}
@@ -185,6 +209,8 @@ function ShapeView({ shape, plane, g }: { shape: Shape; plane: PlanePart; g: Pla
       return <LineView s={shape} plane={plane} g={g} />;
     case 'contours':
       return <Contours s={shape} g={g} />;
+    case 'bars':
+      return <BarsView s={shape} g={g} />;
     case 'label':
       return null; // drawn unclipped by ShapeLabels
   }
@@ -266,7 +292,7 @@ function PathView({ s, g }: { s: PathShape; g: PlaneGeometry }) {
         strokeLinejoin="round"
         strokeLinecap="round"
         strokeDasharray={s.dashed ? '5 4' : undefined}
-        fillOpacity={s.fill ? 0.18 : 0}
+        fillOpacity={s.fill ? (s.fillOpacity ?? 0.18) : 0}
         className={`${st.className} ${s.fill ? fl.className : 'fill-none'}`}
         style={{ ...st.style, ...(s.fill ? fl.style : {}) }}
       />
@@ -274,6 +300,29 @@ function PathView({ s, g }: { s: PathShape; g: PlaneGeometry }) {
         pts.map(([cx, cy], i) => (
           <motion.circle key={i} initial={false} animate={{ cx, cy }} r={2.5} className={`stroke-surface ${fl.className}`} style={fl.style} strokeWidth={1} />
         ))}
+    </g>
+  );
+}
+
+/** Bars standing on y0 (default 0), tweening their height; neutral bars take the bar colour. */
+function BarsView({ s, g }: { s: BarsShape; g: PlaneGeometry }) {
+  return (
+    <g>
+      {s.bars.map((b) => {
+        const [x0, top] = g.px([b.x0, Math.max(b.y, b.y0 ?? 0)]);
+        const [x1, base] = g.px([b.x1, Math.min(b.y, b.y0 ?? 0)]);
+        const fl = fill(b, 'fill-bar');
+        return (
+          <motion.rect
+            key={b.id}
+            initial={false}
+            animate={{ x: x0, y: top, width: Math.max(0, x1 - x0), height: Math.max(0, base - top) }}
+            className={`stroke-surface ${fl.className}`}
+            style={fl.style}
+            strokeWidth={0.75}
+          />
+        );
+      })}
     </g>
   );
 }
@@ -358,6 +407,12 @@ function ShapeLabels({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
         const len = Math.hypot(x2 - x1, y2 - y1) || 1;
         labels.push({ id: s.id, x: x1 + (x2 - x1) * 0.86 + ((y2 - y1) / len) * 12, y: y1 + (y2 - y1) * 0.86 - ((x2 - x1) / len) * 12 + 4, text: s.label, anchor: 'middle' });
       }
+    } else if (s.kind === 'bars') {
+      for (const b of s.bars) {
+        if (!b.label) continue;
+        const [x, y] = g.px([(b.x0 + b.x1) / 2, Math.max(b.y, b.y0 ?? 0)]);
+        labels.push({ id: `${s.id}:${b.id}`, x, y: y - 4, text: b.label, anchor: 'middle' });
+      }
     } else if (s.kind === 'label') {
       const [x, y] = g.px(s.at);
       labels.push({ id: s.id, x, y: y + 4, text: s.text, anchor: 'middle' });
@@ -366,8 +421,10 @@ function ShapeLabels({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
   // Handles aren't labelled here: each sits on a shape (a vector's tip, a start point) that carries the label.
   // Nudge labels that would overprint an earlier one down a line (approximate text widths).
   const placed: { x: number; y: number; w: number }[] = [];
-  const laid = labels.map((l) => {
-    const w = l.text.length * 7;
+  const laid = labels.map((label) => {
+    const w = label.text.length * 7;
+    // A start-anchored label that would run off the right edge flips to end at its point instead.
+    const l = label.anchor === 'start' && label.x + w > inner.x + inner.w ? { ...label, anchor: 'end' as const, x: label.x - 14 } : label;
     const x = l.anchor === 'start' ? l.x : l.anchor === 'end' ? l.x - w : l.x - w / 2;
     let y = l.y;
     for (let tries = 0; tries < 4 && placed.some((p) => Math.abs(p.y - y) < 12 && x < p.x + p.w && p.x < x + w); tries++) y += 13;
@@ -533,6 +590,93 @@ function Readouts({ part }: { part: ReadoutPart }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+// ───────────────────────────── images and bits ─────────────────────────────
+
+/** Largest on-screen width of an image. */
+const MAX_IMAGE_PX = 240;
+
+function pixelColour(v: number, scale: ImagePart['scale']): string {
+  if (scale === 'gray') {
+    const c = Math.round(255 * Math.min(1, Math.max(0, v)));
+    return `rgb(${c},${c},${c})`;
+  }
+  // Signed: orange below zero, blue above, a pale neutral at zero.
+  const p = Math.round(100 * Math.min(1, Math.abs(v)));
+  return `color-mix(in oklab, var(--color-mark-${v < 0 ? 'swap' : 'compare'}) ${p}%, #f2f2f2)`;
+}
+
+function ImageView({ part }: { part: ImagePart }) {
+  const { width: w, height: h } = part;
+  // Pixel colours change between frames by CSS transition, so a picture sharpens smoothly as terms are added.
+  return (
+    <figure className="m-0 min-w-0 basis-40" style={{ width: MAX_IMAGE_PX, maxWidth: '100%' }} aria-hidden>
+      <svg viewBox={`0 0 ${w} ${h}`} className="block h-auto w-full rounded-sm ring-1 ring-line" shapeRendering="crispEdges">
+        {part.pixels.map((v, k) => (
+          <rect
+            key={k}
+            x={k % w}
+            y={Math.floor(k / w)}
+            width={1.02}
+            height={1.02}
+            className="transition-[fill]"
+            style={{ fill: pixelColour(v, part.scale), transitionDuration: 'var(--tween, 300ms)' }}
+          />
+        ))}
+      </svg>
+      <figcaption className="mt-1 text-center text-xs text-ink-muted">{part.label}</figcaption>
+    </figure>
+  );
+}
+
+/** Bits as a row of cells; fields are bracketed underneath with their names and values. */
+function BitsView({ part }: { part: BitsPart }) {
+  const n = part.bits.length;
+  const grid: CSSProperties = { gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, containerType: 'inline-size' };
+  return (
+    <div className="mx-auto w-full max-w-3xl" aria-hidden>
+      <div className="mb-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{part.label}</div>
+      <div className="grid gap-px" style={grid}>
+        {part.bits.map((b, i) => {
+          const field = part.fields.find((f) => i >= f.from && i < f.to);
+          const mark = b.mark ? MARKS[b.mark] : null;
+          return (
+            <div
+              key={b.id}
+              className={`flex aspect-[3/4] items-center justify-center rounded-[3px] font-mono font-semibold transition-colors ${
+                mark ? `${mark.bg} ${b.mark === 'compare' ? 'text-white' : 'text-on-mark'}` : 'bg-sunken text-ink'
+              }`}
+              style={{
+                fontSize: `clamp(8px, ${(60 / n).toFixed(2)}cqw, 16px)`,
+                boxShadow: field?.tone && !mark ? `inset 0 -3px 0 ${TONES[field.tone]}` : undefined,
+                transitionDuration: 'var(--tween, 300ms)',
+              }}
+            >
+              {b.value}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1 grid gap-px" style={grid}>
+        {part.fields.map((f) => {
+          // A field a few bits wide (a sign bit) lets its text run on to the right instead of truncating to nothing.
+          const narrow = f.to - f.from < 4;
+          const text = narrow ? 'whitespace-nowrap' : 'truncate';
+          return (
+            <div
+              key={f.id}
+              className={`min-w-0 border-t-2 pt-0.5 ${narrow ? 'text-left' : 'text-center'}`}
+              style={{ gridColumn: `${f.from + 1} / ${f.to + 1}`, borderColor: f.tone ? TONES[f.tone] : undefined }}
+            >
+              <div className={`${text} text-[11px] font-medium text-ink-soft`}>{f.label}</div>
+              {f.sub && <div className={`${text} font-mono text-[11px] text-ink`}>{f.sub}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

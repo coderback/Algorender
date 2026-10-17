@@ -33,6 +33,11 @@ function planeProblems(p: PlanePart): string[] {
       s.kind === 'vector' ? [s.from, s.to] : s.kind === 'point' ? [s.at] : s.kind === 'path' ? [...s.points] : s.kind === 'line' ? [s.through, s.dir] : s.kind === 'label' ? [s.at] : [];
     if (!points.every(finite)) problems.push(`${p.id}: ${s.id} has a coordinate that is not finite`);
     if (s.kind === 'line' && s.dir[0] === 0 && s.dir[1] === 0) problems.push(`${p.id}: line ${s.id} has no direction`);
+    if (s.kind === 'bars') {
+      const barIds = new Set(s.bars.map((b) => b.id));
+      if (barIds.size !== s.bars.length) problems.push(`${p.id}: ${s.id} repeats a bar id`);
+      for (const b of s.bars) if (![b.x0, b.x1, b.y, b.y0 ?? 0].every(Number.isFinite) || b.x1 < b.x0) problems.push(`${p.id}: bar ${b.id} is malformed`);
+    }
   }
   for (const h of p.handles) {
     const onStep = (v: number) => Math.abs(v / h.step - Math.round(v / h.step)) < 1e-6;
@@ -72,6 +77,14 @@ export function expectGoodPlotTrace(algo: AnyAlgorithm, frames: readonly Frame<P
       if (/[a-z]{4,}/i.test(answer) && !['Yes', 'No'].includes(answer) && frame.note.includes(answer)) at(`note gives away "${answer}"`);
     }
     for (const part of frame.state.parts) {
+      if (part.kind === 'image') {
+        if (part.pixels.length !== part.width * part.height) at(`${part.id}: ${part.pixels.length} pixels for ${part.width}×${part.height}`);
+        if (!part.pixels.every(Number.isFinite)) at(`${part.id}: a pixel is not finite`);
+      }
+      if (part.kind === 'bits') {
+        const covered = part.fields.reduce((n, f) => n + (f.to - f.from), 0);
+        if (covered !== part.bits.length || part.fields.some((f, i) => f.from !== (i ? part.fields[i - 1].to : 0))) at(`${part.id}: fields don't tile the bits`);
+      }
       if (part.kind !== 'plane') continue;
       for (const p of planeProblems(part)) if (opts.handlesOnStep !== false || !p.includes('step')) at(p);
     }
