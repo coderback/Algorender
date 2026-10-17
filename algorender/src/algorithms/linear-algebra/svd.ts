@@ -122,7 +122,8 @@ function* run({ image: id, seed }: SvdInput): Generator<Frame<PlotState>> {
   const terms = Math.min(rank, MAX_TERMS);
   const total = d.sigma.reduce((s, x) => s + x * x, 0);
   const energy = (k: number) => d.sigma.slice(0, k).reduce((s, x) => s + x * x, 0) / total;
-  const pct = (x: number) => `${fmt(100 * x, 1)}%`;
+  // Never round an incomplete share up to 100%.
+  const pct = (x: number) => (x < 1 && fmt(100 * x, 1) === '100' ? `${fmt(100 * x, 2) === '100' ? 'almost 100' : fmt(100 * x, 2)}%` : `${fmt(100 * x, 1)}%`);
   const storage = (k: number) => `${k * (m + n + 1)} vs ${m * n}`;
 
   const chart = (shown: number, used: number): PlanePart => {

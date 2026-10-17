@@ -1,0 +1,120 @@
+<Section step="hook" title="How few numbers does a picture need?">
+
+A 24 × 24 grayscale picture is 576 numbers. But most pictures aren't random: neighbouring rows look alike, and whole
+regions share the same pattern. The **singular value decomposition** (SVD) finds that shared structure and lists it
+from most to least important, so you can keep the important part and throw the rest away.
+
+The same idea compresses images, removes noise, powers recommender systems and is the engine inside PCA.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="rank-1 piece">A column pattern $u$ times a row pattern $v^\top$: every row of the piece is the same row pattern, scaled. It takes $m + n$ numbers instead of $m \cdot n$.</Term>
+  <Term name="singular value σ">How strongly a piece counts. The SVD sorts them: $\sigma_1 \ge \sigma_2 \ge \dots \ge 0$.</Term>
+  <Term name="rank">How many pieces have $\sigma > 0$: the number of pieces that rebuild the matrix exactly.</Term>
+  <Term name="energy">The share of $\sum \sigma_i^2$ that the pieces kept so far account for.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Rebuild a face one piece at a time">
+
+<Explore slug="svd" settings={{ preset: 'smiley' }} caption="Each step adds the next piece σ·u·vᵀ. Blue in the piece adds brightness, orange takes it away." />
+
+Every matrix $A$ can be written as
+
+$$
+A = \sigma_1 u_1 v_1^\top + \sigma_2 u_2 v_2^\top + \dots
+$$
+
+with the $u$'s perpendicular to each other, the $v$'s too, and the $\sigma$'s in decreasing order. The first piece alone
+already has about 80% of the smiley's energy; by the fifth the face is clearly there. Each piece costs $24 + 24 + 1 = 49$
+numbers, so five pieces are 245 numbers instead of 576.
+
+Some pictures are simple enough to have only a couple of pieces at all:
+
+<Explore slug="svd" settings={{ preset: 'checker' }} caption="A checkerboard is an even gray plus one ± pattern: rank 2, however many squares it has." />
+
+<KeyIdea>
+
+**The first $k$ pieces are the best possible picture you can build from $k$ pieces** (the Eckart–Young theorem). Nothing
+with rank $k$ comes closer to $A$, and the squared error left over is exactly the sum of the squared $\sigma$'s you dropped.
+That is why sorting by $\sigma$ is the whole trick: when the $\sigma$'s fall quickly, a few pieces carry almost everything.
+
+</KeyIdea>
+
+There is also a geometric reading, the one the eigenvectors lesson prepares you for. Written as $A = U \Sigma V^\top$,
+any matrix acts in three moves: $V^\top$ rotates (or reflects) the space, $\Sigma$ stretches it along the axes by the
+singular values, and $U$ rotates it again. A circle always lands on an ellipse whose half-axes are the $\sigma$'s.
+
+</Section>
+
+<Section step="predict" title="Your turn: how many pieces does a letter need?">
+
+<PredictChallenge slug="svd" settings={{ preset: 'letter' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Compare pictures">
+
+Switch between the pictures and watch the bar chart of singular values:
+
+- **Plus sign and gradient:** two pieces and the picture is exact. One $\sigma$ is huge and the other tiny.
+- **Smiley and letter A:** curves and diagonals need more pieces, but the $\sigma$'s still fall fast.
+- **Random noise:** the $\sigma$'s fall slowly, so ten pieces still look like mush. Noise has no shared structure to find.
+
+<Explore slug="svd" settings={{ preset: 'noise' }} input />
+
+<Misconception title="SVD compression keeps the most important pixels">
+
+It keeps no pixels at all. Each piece is a pattern spread over the whole picture, and every pixel changes a little as
+each piece is added. What it keeps is the most important *patterns*, which is why a compressed picture looks blurry
+everywhere rather than missing some spots.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'How many numbers does one rank-1 piece σ·u·vᵀ of a 24 × 24 picture take to store?',
+      choices: ['576', '49', '48', '24'],
+      answer: 1,
+      why: '24 numbers for u, 24 for v and one for σ: 49, against 576 for the full picture.',
+    },
+    {
+      q: 'A white picture with one full-width black stripe across it. What is its rank?',
+      choices: ['1', '2', '24', 'It depends on how wide the stripe is'],
+      answer: 0,
+      why: 'Every row is either all ones or all zeros, so every row is a multiple of the same row pattern: one piece is enough.',
+    },
+    {
+      q: 'You keep the first k pieces. What is the squared error ‖A − Aₖ‖²?',
+      choices: ['σₖ²', 'The sum of the squared σ’s you dropped', 'Zero', 'The sum of the σ’s you kept'],
+      answer: 1,
+      why: 'The pieces are perpendicular to each other, so their squared sizes add up: what is left is exactly the dropped σ’s squared.',
+    },
+    {
+      q: 'Why does random noise compress so badly?',
+      choices: ['Its σ’s are all zero', 'Its σ’s are all about the same size, so no few pieces dominate', 'It has rank 1', 'The SVD can’t be computed for it'],
+      answer: 1,
+      why: 'Compression works when σ’s fall quickly. Noise spreads its energy evenly over every piece.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Any matrix is a sum of rank-1 pieces $\sigma_i u_i v_i^\top$, sorted by singular value.
+- The first $k$ pieces are the best rank-$k$ approximation; the error is the dropped $\sigma$'s.
+- Fast-falling $\sigma$'s mean structure you can compress; flat ones mean noise.
+- Geometrically, every matrix rotates, stretches along axes, and rotates again.
+
+</Section>

@@ -634,6 +634,48 @@ const mathEntries = [
     description: 'Train a small neural network on XOR, circles or moons and watch hidden layers bend a straight decision boundary into a curve, with every weight drawn as it changes.',
     slug: 'mlp',
     category: 'Machine Learning'
+  },
+  {
+    name: 'Convolution',
+    description: 'Slide a 3×3 kernel over a picture to build a feature map, then apply ReLU and max-pooling: how a CNN finds edges.',
+    slug: 'convolution',
+    category: 'Deep Learning'
+  },
+  {
+    name: 'Byte-Pair Encoding',
+    description: 'Learn a tokenizer from text: glue the most frequent pair of neighbours into a new token, merge after merge, then split a word it never saw.',
+    slug: 'bpe',
+    category: 'Language Models'
+  },
+  {
+    name: 'Attention',
+    description: 'Watch a query score every key, softmax turn the scores into weights, and the output blend the values; drag the query to steer it.',
+    slug: 'attention',
+    category: 'Language Models'
+  },
+  {
+    name: 'Sampling and Temperature',
+    description: 'Turn a language model’s logits into one next word: softmax with temperature, top-k and top-p cuts, and a random draw.',
+    slug: 'sampling',
+    category: 'Language Models'
+  },
+  {
+    name: 'KV Cache',
+    description: 'Generate text token by token and see why caching keys and values turns each step from recomputing everything into one new row.',
+    slug: 'kv-cache',
+    category: 'Language Models'
+  },
+  {
+    name: 'Q-Learning',
+    description: 'An agent learns a gridworld from rewards alone: watch Q-values spread back from the goal, the greedy arrows settle, and the discount decide between a near and a far reward.',
+    slug: 'q-learning',
+    category: 'Reinforcement Learning'
+  },
+  {
+    name: 'Diffusion Models',
+    description: 'Noise a cloud of points into a blob, then watch a trained denoiser turn fresh noise back into the shape, one small step at a time.',
+    slug: 'diffusion',
+    category: 'Generative Models'
   }
 ];
 

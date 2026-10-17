@@ -1,0 +1,137 @@
+<Section step="hook" title="A network that knows where to look">
+
+A 28 × 28 photo of a digit has 784 pixels. A fully connected layer with 100 neurons needs 78,400 weights just to look at
+it once, and it has to learn separately that a stroke in the top-left corner and the same stroke in the bottom-right are
+the same thing.
+
+Convolutional networks fix both problems with one idea: a tiny pattern detector of 9 weights, slid over every position
+of the image. This lesson shows what that detector computes, why the same 9 weights work everywhere, and what happens
+to its output next.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="kernel">A small grid of weights, here 3 × 3. It is the pattern the layer looks for.</Term>
+  <Term name="feature map">The output: one number per window position, large where the image looks like the kernel's pattern.</Term>
+  <Term name="stride">How far the window jumps between positions. Stride 2 skips every other position and roughly halves the map.</Term>
+  <Term name="ReLU">The activation $\max(x, 0)$: keep positive responses, turn the rest into 0.</Term>
+  <Term name="max-pooling">Shrink the map by keeping only the largest value in each 2 × 2 block.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Slide, multiply, add">
+
+<Explore slug="convolution" settings={{ preset: 'vertical-edges' }} caption="The vertical-edge kernel weighs the right column +1, +2, +1 and the left column −1, −2, −1. Each output is the sum of the nine products under the window." />
+
+At every position the window computes the same thing, a dot product of the patch with the kernel:
+
+$$
+\text{out}[i][j] = \sum_{a=0}^{2}\sum_{b=0}^{2} \text{image}[i + a][j + b] \cdot \text{kernel}[a][b]
+$$
+
+Where the image is darker on the left and brighter on the right, the positive weights win and the output is large. Over
+a flat patch, bright or dark, the left and right columns cancel and the output is 0. So the feature map is a picture of
+where vertical edges are, and of which way they go.
+
+<KeyIdea>
+
+**One kernel, every position.** The same 9 weights are reused across the whole image (weight sharing). The layer needs 9
+parameters instead of tens of thousands, and an edge is detected the same way wherever it appears.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="see" title="Other kernels, other patterns">
+
+Rotate the weights a quarter turn and the kernel finds horizontal edges instead: the top of the 7 lights up, its
+slanted stroke only a little.
+
+<Explore slug="convolution" settings={{ preset: 'horizontal-edges' }} caption="The horizontal-edge kernel: positive where the picture gets brighter going down, negative where it gets darker." />
+
+A kernel of nine equal weights of $\tfrac19$ is an average, so it blurs; a big centre weight minus its neighbours
+sharpens. Classic image editors used exactly these hand-made kernels. A convolutional network starts from random ones and
+learns its own by backpropagation, usually ending up with edge and colour detectors in its first layer.
+
+</Section>
+
+<Section step="predict" title="Your turn: positive, negative or nothing?">
+
+<PredictChallenge slug="convolution" settings={{ preset: 'horizontal-edges' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Change the window">
+
+Try these in the visualiser below, using the buttons or your own input:
+
+- **Stride 2:** the window jumps two pixels at a time. Predict the feature map's size before you press play: an $n \times n$
+  image with a $k \times k$ kernel and stride $s$ gives $\lfloor (n - k)/s \rfloor + 1$ positions across.
+- **Your own kernel:** type `picture = square, kernel = [0 1 0; 1 -4 1; 0 1 0], stride = 1`. This kernel (a Laplacian)
+  responds to edges in every direction. Which parts of the square light up?
+- **Blur:** every weight is positive, so ReLU has nothing to remove. Why?
+
+<Explore slug="convolution" settings={{ preset: 'stride-2' }} input />
+
+<Misconception title="Pooling just throws information away">
+
+It does throw away *where exactly* a feature was inside each block, and that is the point: a network that only needs to
+know "there is an edge around here" becomes tolerant to small shifts of the input, and every later layer works on a
+smaller map. What survives is the strongest response, not an average that a weak neighbour could dilute.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A 12 × 12 image is convolved with a 3 × 3 kernel, stride 1, no padding. How big is the feature map?',
+      choices: ['12 × 12', '10 × 10', '9 × 9', '4 × 4'],
+      answer: 1,
+      why: 'The window fits at columns 0 to 9: 12 − 3 + 1 = 10 positions across, and the same down.',
+    },
+    {
+      q: 'The vertical-edge kernel slides over a patch that is white everywhere. What does it output?',
+      choices: ['A large positive number', 'A large negative number', 'About 0', 'It depends on the stride'],
+      answer: 2,
+      why: 'Its positive and negative columns cover the same brightness and cancel. It responds to differences, not to brightness.',
+    },
+    {
+      q: 'Why does a convolution layer need so few weights compared with a fully connected layer?',
+      choices: [
+        'It only looks at part of the image',
+        'The same small kernel is reused at every position',
+        'It rounds its weights to integers',
+        'ReLU removes half of them',
+      ],
+      answer: 1,
+      why: 'Weight sharing: one 3 × 3 kernel has 9 weights however big the image is.',
+    },
+    {
+      q: 'A 2 × 2 block of a ReLU output holds 0, 2.5, 1 and 0. What does max-pooling keep?',
+      choices: ['0', '0.875', '2.5', '3.5'],
+      answer: 2,
+      why: 'Max-pooling keeps the largest value of each block. 0.875 would be average pooling.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A convolution slides a small kernel over the image; each output is the dot product of a patch with the kernel.
+- The feature map is large where the image looks like the kernel's pattern; edge kernels respond to changes, not
+  brightness.
+- The same weights at every position (weight sharing) means few parameters and a pattern found wherever it is.
+- Output size: $\lfloor (n - k)/s \rfloor + 1$. ReLU keeps the positive responses; max-pooling keeps the strongest per
+  block and shrinks the map.
+- Stacked layers detect patterns of patterns: edges, then corners and curves, then whole shapes.
+
+</Section>

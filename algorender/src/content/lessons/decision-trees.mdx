@@ -1,0 +1,132 @@
+<Section step="hook" title="Twenty questions, then many small fixes">
+
+A doctor's checklist, a bank's loan rules, the game of twenty questions: each asks one simple question, then picks the
+next question based on the answer. A **decision tree** learns such a checklist from data, and anyone can read the
+result.
+
+One tree is easy to understand but easy to fool. Add up hundreds of tiny trees, each fixing the mistakes of the ones
+before, and you get **gradient boosting**, the method that wins most competitions on tabular data.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="split">A yes/no question about one feature, like $x \lt 0.4$. It cuts a region of the plane into two boxes.</Term>
+  <Term name="Gini impurity">$1 - \sum_c p_c^2$ for the class shares $p_c$ in a region: 0 when it is pure, ½ for an even two-class mix.</Term>
+  <Term name="leaf">A region that isn't split any further. It predicts its majority class.</Term>
+  <Term name="residual">In boosting, what the model still gets wrong: $y - F(x)$.</Term>
+  <Term name="stump">A tree with a single split: a step, with one value on each side.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Grow a tree on XOR">
+
+<Explore slug="decision-tree" settings={{ preset: 'xor', n: 2 }} caption="Each region tries every question on x and on y and keeps the one whose halves are purest. The tree is drawn beside the plane." />
+
+The tree is grown greedily. For a region it tries every threshold on each axis, scores each split by the Gini impurity
+of the two halves (weighted by their sizes), and keeps the lowest. A single question can't separate XOR, since every
+cut leaves both classes on both sides, but two levels of questions can: this tree gets 95% of the points right at depth 2.
+
+Deeper isn't always better, though:
+
+<Explore slug="decision-tree" settings={{ preset: 'circles', n: 5 }} caption="A round boundary built from boxes. At depth 5 the tree is perfect on its training points, with leaves that hold only one or two of them." />
+
+</Section>
+
+<Section step="see" title="Boosting: fit what is left">
+
+<Explore slug="gradient-boosting" settings={{ preset: 'step' }} caption="Each round fits a stump to the residuals (the bars) and adds a shrunk copy of it to the model F." />
+
+Boosting starts from a flat guess, the mean of $y$. Each round it looks at the residuals, fits one stump to them, and
+adds $\eta$ times that stump to the model:
+
+$$
+F \leftarrow F + \eta \cdot \text{stump}
+$$
+
+Each stump is weak, just one step, but together they build a staircase that follows the curve. Because each one is
+fitted to the current errors, the training error can only fall.
+
+<KeyIdea>
+
+**Trees split greedily by purity; boosting adds trees that fix each other's mistakes.** A single deep tree memorises
+its data. Many shallow trees, each nudging the model a little ($\eta \lt 1$) towards what is still wrong, generalise far
+better. Fitting residuals is gradient descent, with whole functions as the steps.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: which question comes next?">
+
+<PredictChallenge slug="decision-tree" settings={{ preset: 'xor' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Change the depth and the learning rate">
+
+Use the slider to change the maximum depth, and the buttons to change the data:
+
+- **Moons or circles at depth 1, 3 and 5:** training accuracy climbs, but the boundary turns into a staircase of tiny boxes.
+- **Overlapping classes:** deeper trees chase individual points into their own leaves.
+
+<Explore slug="decision-tree" settings={{ preset: 'moons', n: 4 }} input />
+
+For boosting, compare **Small learning rate** (η = 0.2) with **Learning rate 1**: the small rate falls more slowly but
+each stump changes the model gently; the full rate fixes big errors fast, then starts chasing noisy points.
+
+<Explore slug="gradient-boosting" settings={{ preset: 'slow' }} input />
+
+<Misconception title="100% training accuracy means a great model">
+
+A tree deep enough to give every point its own leaf is always 100% right on the points it was grown on, and that says
+nothing about new points. Judge a model on data it hasn't seen (a validation set), and limit depth, leaf size or the
+number of boosting rounds to stop it memorising.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A region holds 3 points of class A and 1 of class B. What is its Gini impurity?',
+      choices: ['0', '0.25', '0.375', '0.5'],
+      answer: 2,
+      why: '1 − (0.75² + 0.25²) = 1 − 0.625 = 0.375.',
+    },
+    {
+      q: 'Why can’t a depth-1 tree solve XOR?',
+      choices: ['Gini doesn’t work for two classes', 'Any single cut on x or y leaves both classes on both sides', 'It has too few points', 'XOR needs a curved boundary'],
+      answer: 1,
+      why: 'Each half of any one cut still holds a corner of each class; a second question is needed to tell them apart.',
+    },
+    {
+      q: 'In gradient boosting, what does each new stump fit?',
+      choices: ['The original y values', 'The residuals y − F(x) of the model so far', 'A random sample of the points', 'The previous stump'],
+      answer: 1,
+      why: 'Each stump models what the current ensemble still gets wrong, then a shrunk copy is added.',
+    },
+    {
+      q: 'Why multiply each stump by a learning rate η below 1?',
+      choices: ['To make training faster', 'So no single tree gets the final word, which usually generalises better', 'Because stumps are always too small', 'To keep the residuals positive'],
+      answer: 1,
+      why: 'Small steps need more rounds, but each correction is gentle, so the model overfits later.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A decision tree asks one question about one feature at a time; each split is the one with the lowest weighted Gini.
+- Deep trees fit their training data perfectly and overfit; limit depth and judge on new data.
+- Gradient boosting adds shrunk stumps fitted to the residuals, so the training error only falls.
+- Small learning rates with more rounds are the usual recipe.
+
+</Section>

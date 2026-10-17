@@ -1,0 +1,145 @@
+<Section step="hook" title="Learning without an answer key">
+
+Every model so far learned from examples with the right answer attached: this point is class A, this house sold for
+that much. Nobody can label every move of a game or every turn of a robot's wheel, though. What there is instead is a
+score that arrives later: a win, a crash, a reward.
+
+Reinforcement learning learns from that score alone. The agent acts, sees what happens, and slowly works out which
+moves lead to reward, even when the reward comes many moves after the decision that earned it. This lesson builds the
+classic method, Q-learning, on a few small grids.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="state and action">Where the agent is (a cell of the grid) and what it can do there (move up, right, down or left).</Term>
+  <Term name="reward">A number the world hands back after each move: +10 for the goal, −1 per step, −100 for the cliff.</Term>
+  <Term name="discount γ">A reward $k$ moves away counts $\gamma^k$ times as much as one now. With $\gamma = 0.9$, ten points four moves away are worth $0.9^4 \cdot 10 \approx 6.6$ today.</Term>
+  <Term name="Q-value">$Q(s, a)$: the total discounted reward the agent expects if it makes move $a$ in state $s$ and plays as well as it can afterwards.</Term>
+  <Term name="policy">How the agent chooses moves. The greedy policy picks the move with the largest $Q(s, a)$; the arrows on the grid show it.</Term>
+  <Term name="ε-greedy">Mostly greedy, but with chance $\varepsilon$ a random move instead, so the agent keeps trying things it doesn't yet rate.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Nothing, nothing, then a reward">
+
+The agent starts with every Q-value at 0 and wanders. After every move it nudges one entry of its table towards a
+*target*: the reward it just got, plus the discounted value of the best move from where it landed.
+
+$$
+Q(s, a) \leftarrow Q(s, a) + \alpha\,\big(\underbrace{r + \gamma \max_{a'} Q(s', a')}_{\text{target}} - Q(s, a)\big)
+$$
+
+<Explore slug="q-learning" settings={{ preset: 'maze', n: '100' }} caption="In the first episode, every target is 0 + γ·0 until the agent stumbles onto the +10. Then watch the value creep back towards the start, one cell per visit." />
+
+Only the move that entered the goal learns anything in the first episode. On the next visit to the cell before it, the
+target includes that cell's new value, so the reward spreads one step further back each time, shrinking by $\gamma$
+per step. The wash fades with distance from the goal because of that discount.
+
+<KeyIdea>
+
+**Q-learning is dynamic programming learned from experience.** The true values satisfy the Bellman equation
+$Q^*(s, a) = r + \gamma \max_{a'} Q^*(s', a')$: a move's value is its reward plus the value of the best next move. If
+you know the rules of the world you can solve that table directly (value iteration fills it in sweep by sweep, like a
+DP table). Q-learning fills in the same table without knowing the rules, one observed move at a time.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="see" title="Hugging the cliff edge">
+
+Here every move costs 1 and the cliff costs 100. The fastest route runs right along the edge.
+
+<Explore slug="q-learning" settings={{ preset: 'cliff', n: '100' }} caption="The moves chart falls towards the best route of 9 moves, but stays noisy: random exploring moves still tip the agent into the cliff now and then." />
+
+The target uses $\max_{a'} Q(s', a')$, the value of acting *greedily* next, whatever the agent actually does next. So
+Q-learning learns how good the edge is for an agent that never slips, even while its own ε-greedy wandering keeps
+slipping. That is called learning **off-policy**. A method that learns the value of the policy it really follows (SARSA)
+would pay for the slips and prefer a row further from the edge.
+
+</Section>
+
+<Section step="predict" title="Your turn: up, down, or unchanged?">
+
+Before each update, decide whether that Q-value will rise, fall or stay put. Compare the target, $r + \gamma \max Q(s', \cdot)$,
+with the value it has now. When the agent exploits, predict which move it makes from the Q-values listed.
+
+<PredictChallenge slug="q-learning" settings={{ preset: 'cliff', n: '100' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Near or far?">
+
+From the start, a +1 is two moves away and a +10 is four. Which is better depends entirely on $\gamma$: the +1 is worth
+$\gamma \cdot 1$ and the +10 is worth $\gamma^3 \cdot 10$. Work out both for $\gamma = 0.9$ and for $\gamma = 0.25$, then
+run each and see which way the arrows from S end up pointing.
+
+<Explore slug="q-learning" settings={{ preset: 'two-goals', n: '100' }} input />
+
+Then use the input box to try:
+
+- **The crossover:** at which $\gamma$ does the preference flip? (Solve $\gamma = 10\gamma^3$.)
+- **No exploring:** set `epsilon = 0` on the near-or-far world. The first goal the agent stumbles onto is the one it
+  keeps going back to, so the other one may never be found.
+- **Too few episodes:** with `episodes = 10`, the arrows from S may still loop.
+
+<Misconception title="The agent has to behave well to learn what behaving well is worth">
+
+Q-learning's target always assumes the best next move, so it can learn the optimal values while acting almost at random:
+the near-or-far world explores 80% of the time and still learns the right preference. What it can't do is learn about
+places it never visits, which is why exploration is needed at all.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'The agent moves from s to s′ and gets r = 0. Every Q-value at s′ is 0, and Q(s, a) is 0. What does the update do?',
+      choices: ['Raises Q(s, a)', 'Lowers Q(s, a)', 'Leaves Q(s, a) at 0', 'Resets the whole table'],
+      answer: 2,
+      why: 'The target is 0 + γ·0 = 0, which is what Q(s, a) already predicts, so the update moves it by α·0.',
+    },
+    {
+      q: 'With γ = 0.5, how much is a reward of 8 worth if it arrives three moves from now?',
+      choices: ['8', '4', '1', '0.5'],
+      answer: 2,
+      why: 'Each move multiplies by γ: 8 · 0.5³ = 1.',
+    },
+    {
+      q: 'Why does the agent sometimes make a random move instead of the greedy one?',
+      choices: [
+        'To make training faster on every world',
+        'Because the greedy move is usually wrong',
+        'So it keeps trying moves whose value it may be underestimating',
+        'Because Q-learning needs random targets',
+      ],
+      answer: 2,
+      why: 'A move that looks poor may only look poor because it was never tried; without exploring, early luck decides the policy forever.',
+    },
+    {
+      q: 'Value iteration and Q-learning both find Q*. What does Q-learning do without?',
+      choices: ['Rewards', 'A model of how the world responds to each move', 'A discount factor', 'A table of values'],
+      answer: 1,
+      why: 'Value iteration sweeps over every state and move using known rules; Q-learning only uses the moves it actually makes and what it observes.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The agent learns $Q(s, a)$, the discounted reward to expect from a move, and acts greedily on it, with chance $\varepsilon$ of exploring.
+- Each update moves $Q(s, a)$ a fraction $\alpha$ towards $r + \gamma \max_{a'} Q(s', a')$; rewards spread backwards one step per visit.
+- The fixed point is the Bellman equation, the same one dynamic programming solves when the rules are known.
+- $\gamma$ trades near rewards against far ones; ε trades using what is known against finding out more.
+- Next: replace the table with a neural network and the same update learns Atari games (DQN).
+
+</Section>

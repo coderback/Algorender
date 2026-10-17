@@ -351,11 +351,13 @@ concepts:
     summary: Any matrix as a sum of rank-1 pieces, most important first, and why that compresses images.
     prereqs: [eigenvectors]
     visualisers: [svd]
+    lesson: svd
   - id: floating-point
     title: Floating-point numbers
     track: math
     summary: How computers store real numbers in 32 bits, and why 0.1 + 0.2 isn’t quite 0.3.
     visualisers: [floating-point]
+    lesson: floating-point
 
   # ── Machine learning ─────────────────────────────────────────
   - id: gradient-descent
@@ -384,12 +386,14 @@ concepts:
     summary: A single sigmoid neuron that draws a straight boundary between two classes, trained on cross-entropy.
     prereqs: [linear-regression, information-theory]
     visualisers: [logistic-regression]
+    lesson: logistic-regression
   - id: decision-trees
     title: Decision trees and boosting
     track: ml
     summary: Classify by asking one question at a time, then add up many small trees that each fix the last one’s mistakes.
     prereqs: [probability]
     visualisers: [decision-tree, gradient-boosting]
+    lesson: decision-trees
   - id: neural-networks
     title: Neural networks and backpropagation
     track: ml
@@ -403,12 +407,42 @@ concepts:
     summary: Find groups in unlabelled data by alternating between assigning points and moving centres.
     prereqs: [vectors-matrices]
     visualisers: [k-means]
+    lesson: k-means
+  - id: convolution
+    title: Convolutional networks
+    track: ml
+    summary: Slide one small kernel over every position of an image to find a pattern wherever it is, then pool.
+    prereqs: [neural-networks]
+    visualisers: [convolution]
+    lesson: convolution
   - id: attention
     title: Attention and transformers
     track: ml
     summary: Every token weighs every other token to decide what matters.
-    prereqs: [neural-networks, eigenvectors]
-    planned: true
+    prereqs: [neural-networks, vectors-matrices]
+    visualisers: [attention]
+    lesson: attention
+  - id: language-models
+    title: Tokens and text generation
+    track: ml
+    summary: How a language model splits text into learned tokens and writes one token at a time, sampling from a probability for every token.
+    prereqs: [attention, information-theory]
+    visualisers: [bpe, sampling, kv-cache]
+    lesson: language-models
+  - id: reinforcement-learning
+    title: Reinforcement learning
+    track: ml
+    summary: Learning which moves pay off from rewards alone, with Q-values that spread back from the goal.
+    prereqs: [dynamic-programming, probability]
+    visualisers: [q-learning]
+    lesson: q-learning
+  - id: diffusion
+    title: Diffusion models
+    track: ml
+    summary: Generate by learning to remove noise, destroying data step by step and then running it backwards from fresh noise.
+    prereqs: [neural-networks, sampling-clt]
+    visualisers: [diffusion]
+    lesson: diffusion
 
   # ── Planned: systems ─────────────────────────────────────────
   - id: cpu-scheduling

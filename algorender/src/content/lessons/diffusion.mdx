@@ -1,0 +1,136 @@
+<Section step="hook" title="Making something out of nothing">
+
+Image generators start every picture from pure static: random noise, different every time. Then, in a few dozen small
+steps, the static turns into a face or a landscape. Nothing in the noise says "face"; the knowledge is in a network that
+has learned one narrow skill: looking at something noisy and guessing which noise was added.
+
+This lesson shows the whole idea on the smallest possible example: clouds of 2D points instead of pictures, so you can
+watch every point move.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="forward process">Adding a little Gaussian noise at each step $t = 1, \dots, T$, until the data is indistinguishable from pure noise.</Term>
+  <Term name="noise schedule">How much noise each step adds, $\beta_t$. Its running product $\bar\alpha_t = (1-\beta_1)\cdots(1-\beta_t)$ is how much of the original signal survives to step $t$.</Term>
+  <Term name="denoiser">A neural network that takes a noisy point $x_t$ and the step $t$ and predicts the noise $\varepsilon$ in it.</Term>
+  <Term name="reverse process">Generating: start from fresh noise and repeatedly remove a share of the predicted noise, from $t = T$ down to $1$.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Destroy the data, then rebuild it">
+
+<Explore slug="diffusion" settings={{ preset: 'spiral', n: 80 }} caption="First the spiral is noised away into a round blob. Then fresh noise flows back onto the spiral, one small step at a time." />
+
+The forward process needs no learning at all. Because Gaussian noise adds up to Gaussian noise, you can jump straight
+to any step:
+
+$$
+x_t = \sqrt{\bar\alpha_t}\,x_0 + \sqrt{1-\bar\alpha_t}\,\varepsilon, \qquad \varepsilon \sim \mathcal{N}(0, I).
+$$
+
+As $t$ grows, $\sqrt{\bar\alpha_t}$ (the signal) falls towards 0 and $\sqrt{1-\bar\alpha_t}$ (the noise) rises
+towards 1, so every shape ends as the same blob: a standard normal around the origin.
+
+Training is a guessing game built on that formula: take a data point, pick a random $t$ and a random $\varepsilon$,
+compute $x_t$, and ask the network for $\hat\varepsilon$. The loss is $\lVert \hat\varepsilon - \varepsilon \rVert^2$.
+Our denoiser here is a small network with two hidden layers of 48 units, trained once when the site was built.
+
+<KeyIdea>
+
+**Predicting the noise is the same as predicting the clean point.** Rearranging the formula gives the denoiser's guess
+of where the point came from, $\hat x_0 = (x_t - \sqrt{1-\bar\alpha_t}\,\hat\varepsilon)/\sqrt{\bar\alpha_t}$. The
+dashed arrow in the reverse process points at that guess.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: follow a point">
+
+Before each step, predict where the cloud or the followed point goes next. In the reverse process, use the dashed arrow.
+
+<PredictChallenge slug="diffusion" settings={{ preset: 'moons', n: 60 }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Why so many steps?">
+
+When the noise is large, the guess $\hat x_0$ is poor: a point that is mostly noise could have come from almost
+anywhere on the shape, so the best guess is a blurry average of all of them, near the middle. Jumping straight to it
+would land every point in the same place. Instead, each step moves only a little towards the guess and adds a little
+fresh noise back; at the next step the point is slightly less noisy and the guess slightly better.
+
+Try it with the controls below:
+
+- **Change the seed:** the generated points are different every time, yet they always land on the shape. They are new
+  samples, not copies of the training points.
+- **Watch the arrow** on the ring: early on it swings around; near the end it is short and steady.
+- **Compare the shapes:** the thin spiral is the hardest, and a few points end up between its arms.
+
+<Explore slug="diffusion" settings={{ preset: 'ring', n: 80 }} input />
+
+<Misconception title="The network memorises the training images and pastes them back">
+
+The denoiser never stores data points; it learns which direction is "less noisy" from every place in the plane. Fresh
+noise therefore turns into fresh samples that look like the data. (Very large models can still reproduce a training
+image that appeared many times, which is why duplicates are removed from training sets.)
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What does the denoiser network predict?',
+      choices: ['The clean data point directly', 'The noise that was added to the point', 'The step number t', 'Which shape the point belongs to'],
+      answer: 1,
+      why: 'It predicts ε from x_t and t. The clean point follows from that by rearranging x_t = √ᾱ_t·x₀ + √(1 − ᾱ_t)·ε.',
+    },
+    {
+      q: 'Why can training jump straight to any step t instead of noising one step at a time?',
+      choices: [
+        'Because the network is small',
+        'Because adding Gaussian noise repeatedly is the same as adding one bigger Gaussian noise',
+        'Because the schedule is linear',
+        'Because the data is two-dimensional',
+      ],
+      answer: 1,
+      why: 'Sums of independent Gaussians are Gaussian, which gives the closed form x_t = √ᾱ_t·x₀ + √(1 − ᾱ_t)·ε for any t.',
+    },
+    {
+      q: 'What does the cloud look like after the last forward step, whatever shape it started as?',
+      choices: ['The same shape, smaller', 'A round blob of standard normal noise', 'A uniform square', 'A single point at the origin'],
+      answer: 1,
+      why: 'ᾱ_T is close to 0, so x_T ≈ ε, a sample of N(0, I). That is why generating can start from plain noise.',
+    },
+    {
+      q: 'Why does generating take many small steps rather than one big jump to the predicted clean point?',
+      choices: [
+        'To make the animation smoother',
+        'Because the guess of the clean point is poor while the noise is large, so it is only safe to move a little',
+        'Because the network can only be called once per step',
+        'Because fresh noise must be removed first',
+      ],
+      answer: 1,
+      why: 'From heavy noise the best guess is a blurry average; small steps let the guess sharpen as the noise shrinks.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The forward process adds noise until data becomes $\mathcal{N}(0, I)$; the closed form jumps to any step.
+- A network is trained to predict the added noise $\varepsilon$ from $x_t$ and $t$.
+- Generating runs backwards from fresh noise: remove a share of the predicted noise, add a little fresh noise, repeat.
+- Many small steps are needed because the denoiser's guess only sharpens as the noise fades.
+- Image models do exactly this to every pixel at once, with a far bigger network that also reads a text prompt.
+
+</Section>

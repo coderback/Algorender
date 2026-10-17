@@ -388,10 +388,22 @@ function* run(input: FloatInput): Generator<Frame<PlotState>> {
 
   // ── summary
   const digits = kind === 'normal' ? ' The gap is always about 2^−23 ≈ 1.2 × 10^−7 of the number itself, which is why a float32 keeps about 7 significant decimal digits.' : '';
+  // A sum's famous surprise lives in float64; say whether float32's coarser grid shows it too.
+  let sumNote = '';
+  if (req.sum && req.exact && finite) {
+    const nearest = Number(decString(req.exact));
+    if (req.value !== nearest) {
+      sumNote = ` In float64 the sum comes out as ${pretty(String(req.value))}, not ${pretty(String(nearest))}, which is why ${pretty(req.text)} == ${pretty(String(nearest))} is false there. ${
+        Math.fround(req.value) === Math.fround(nearest)
+          ? `float32’s grid is coarser, so both round to this same pattern: in float32 the two happen to agree.`
+          : `float32 keeps the two apart as well.`
+      }`;
+    }
+  }
   yield plotFrame([bitsPart('all'), readouts([askedItem, storedItem])], {
     line: null,
     note: finite
-      ? `${asked} → sign ${sign}, exponent ${eBits}, fraction ${trimmed.length > 12 ? `${trimmed.slice(0, 12)}…` : trimmed}: ${isExact ? 'stored exactly' : `stored as ${storedText}`}.${digits}`
+      ? `${asked} → sign ${sign}, exponent ${eBits}, fraction ${trimmed.length > 12 ? `${trimmed.slice(0, 12)}…` : trimmed}: ${isExact ? 'stored exactly' : `stored as ${storedText}`}.${digits}${sumNote}`
       : `${asked} → sign ${sign}, exponent all ones, fraction ${f === 0 ? 'zero' : 'non-zero'}: ${kind === 'nan' ? 'NaN' : sign ? '−∞' : '+∞'}.`,
     vars: { ...vars, power },
   });
@@ -451,7 +463,7 @@ export const floatingPoint = defineAlgorithm<FloatInput, PlotState>({
       { example: 'tenth', prompt: '0.1 in binary is 0.000110011001100… forever, so the 23 fraction bits cut it off and the stored value is slightly too big.' },
       { example: 'big-int', prompt: 'Above 2²⁴ the gap between floats is 2, so 16 777 217 can’t be stored: it rounds to 16 777 216.' },
       { example: 'subnormal', prompt: 'With the exponent bits all 0 there is no hidden 1: tiny numbers lose precision gradually instead of jumping to zero.' },
-      { example: 'sum', prompt: '0.1 + 0.2 is added in float64 first, then rounded. Compare the stored value with the 0.3 you might expect.' },
+      { example: 'sum', prompt: '0.1 + 0.2 is added in float64 first, then rounded. Then try 0.3 on its own: does float32 tell them apart?' },
     ],
   },
 });
