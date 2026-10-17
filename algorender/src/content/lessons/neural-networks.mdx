@@ -1,0 +1,109 @@
+<Section step="hook" title="Why one neuron isn't enough">
+
+A single artificial neuron draws a straight line through its inputs and says which side a point is on. That is enough to
+separate two clusters, but not to tell the inside of a ring from the outside, or to compute XOR (one or the other, but
+not both). In 1969 this limitation stalled the field for a decade.
+
+The fix is to stack neurons in layers. Each hidden neuron draws its own soft straight edge, and the next layer combines
+those edges into curves. This lesson shows the failure, then the fix.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="neuron">A weighted sum of inputs plus a bias, passed through a squashing function: $\tanh(w_1x_1 + w_2x_2 + b)$ or a sigmoid.</Term>
+  <Term name="perceptron">The oldest learning rule: when a point is misclassified, add it to (or subtract it from) the weights.</Term>
+  <Term name="hidden layer">Neurons between the inputs and the output. Each one becomes a new feature the output can use.</Term>
+  <Term name="decision boundary">Where the network's output crosses ½: the line, or curve, between the two classes.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One neuron draws one line">
+
+<Explore slug="perceptron" settings={{ preset: 'linear' }} caption="Every mistake nudges the line towards the misclassified point. On separable data the mistakes eventually stop." />
+
+On data like this the perceptron always finds a separating line in a finite number of mistakes. On XOR it never does:
+no straight line puts the two orange corners on one side and the two blue corners on the other.
+
+<Explore slug="perceptron" settings={{ preset: 'xor' }} caption="XOR: the line keeps moving forever, because no line can be right about all four corners." />
+
+</Section>
+
+<Section step="see" title="Hidden units bend the boundary">
+
+<Explore slug="mlp" settings={{ preset: 'xor', n: '4' }} caption="Four hidden tanh units, trained by gradient descent with backpropagation. Edge width is the weight's size; colour is its sign." />
+
+Each hidden unit learns a soft straight edge; the output weighs them, so the boundary becomes a combination of edges
+that can bend around the corners. The training is the same recipe as linear regression: forward, loss, backward, step.
+
+<KeyIdea>
+
+**Hidden layers turn straight edges into curves.** A network with one hidden layer of enough units can approximate any
+reasonable boundary; deeper networks build curves out of curves, using far fewer units.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: will it keep improving?">
+
+<PredictChallenge slug="mlp" settings={{ preset: 'circles', n: '4' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Break it and fix it">
+
+Use the slider to change the number of hidden units, and the buttons to change the data:
+
+- **XOR, no hidden layer:** the network is back to a single neuron, and accuracy stalls.
+- **Circles with 1 or 2 hidden units:** too few edges to surround the inner ring. How many do you need?
+- **Step too big:** the loss jumps around instead of falling smoothly.
+
+<Explore slug="mlp" settings={{ preset: 'no-hidden' }} input />
+
+<Misconception title="More layers always means a better model">
+
+More units and layers can fit more complicated boundaries, but they also fit noise, train more slowly, and with too big a
+step they diverge. The right size depends on the data; that trade-off is what validation sets are for.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'The perceptron misclassifies a point x whose label is +1. What happens to the weights?',
+      choices: ['w ← w − x', 'w ← w + x', 'w ← 0', 'Nothing until the end of the epoch'],
+      answer: 1,
+      why: 'Adding x turns the weights towards x, so w·x grows and the point moves to the positive side.',
+    },
+    {
+      q: 'Why can’t a single neuron learn XOR?',
+      choices: ['It trains too slowly', 'Its boundary is a straight line, and no line separates XOR', 'It needs more data', 'Its learning rate is too small'],
+      answer: 1,
+      why: 'One neuron thresholds a weighted sum, which is a straight line in the input plane.',
+    },
+    {
+      q: 'What does a hidden layer add?',
+      choices: ['More training data', 'New features the output can combine into a curved boundary', 'A faster optimiser', 'A larger learning rate'],
+      answer: 1,
+      why: 'Each hidden unit computes a new feature (a soft edge); the output combines them.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A neuron draws one straight boundary; the perceptron rule finds one whenever it exists.
+- XOR and rings need curved boundaries, which a single neuron can't draw.
+- Hidden layers create new features that combine into curves; backpropagation trains every weight at once.
+- Next: the same building blocks, arranged differently, become convolutional networks and transformers.
+
+</Section>

@@ -26,14 +26,17 @@ const halfSize = (n: NetNode): Half =>
 function exit(n: NetNode, dx: number, dy: number): [number, number] {
   const s = halfSize(n);
   const len = Math.hypot(dx, dy) || 1;
-  if (s.round) return [n.x + (dx / len) * s.hw, n.y + (dy / len) * s.hh];
+  if (s.round) return [r2(n.x + (dx / len) * s.hw), r2(n.y + (dy / len) * s.hh)];
   const t = Math.min(dx === 0 ? Infinity : s.hw / Math.abs(dx), dy === 0 ? Infinity : s.hh / Math.abs(dy));
-  return [n.x + dx * t, n.y + dy * t];
+  return [r2(n.x + dx * t), r2(n.y + dy * t)];
 }
+
+/** Hundredths: the server's and the browser's maths differ in the last bit, which would break hydration. */
+const r2 = (v: number) => Math.round(v * 100) / 100;
 
 function edgeStyle(e: NetEdge): { className: string; style?: CSSProperties; width: number } {
   if (e.weight !== undefined) {
-    const w = Math.min(6, 0.75 + Math.abs(e.weight) * 1.6);
+    const w = r2(Math.min(6, 0.75 + Math.abs(e.weight) * 1.6));
     return { className: '', style: { stroke: TONES[e.weight >= 0 ? 1 : 2] }, width: w };
   }
   if (e.tone) return { className: '', style: { stroke: TONES[e.tone] }, width: 2 };

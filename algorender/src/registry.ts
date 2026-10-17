@@ -6,6 +6,7 @@ import { greedy } from '@/algorithms/greedy';
 import { information } from '@/algorithms/information';
 import { intervals } from '@/algorithms/intervals';
 import { linearAlgebra } from '@/algorithms/linear-algebra';
+import { machineLearning } from '@/algorithms/ml';
 import { numerics } from '@/algorithms/numerics';
 import { patterns } from '@/algorithms/patterns';
 import { probability } from '@/algorithms/probability';
@@ -42,6 +43,7 @@ for (const m of [
   ...probability,
   ...information,
   ...numerics,
+  ...machineLearning,
   ...linearStructures,
   ...treeStructures,
   ...graphStructures,

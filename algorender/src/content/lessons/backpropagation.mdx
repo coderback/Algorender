@@ -1,0 +1,119 @@
+<Section step="hook" title="How does a network know which weight to blame?">
+
+A neural network can have billions of weights. After it gets an answer wrong, training nudges every one of them in the
+direction that would have made the error smaller. That needs the gradient of the loss with respect to every weight, and
+computing them one at a time would take forever.
+
+**Backpropagation** gets all of them in one backward sweep, for about the cost of running the network once. It is nothing
+more than the chain rule from calculus, applied node by node on a graph. In this lesson you will watch it, then write it.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="computation graph">A formula broken into small steps (add, multiply, tanh), each a box fed by its inputs.</Term>
+  <Term name="forward pass">Computing every box's value from left to right.</Term>
+  <Term name="local derivative">How much a box's output changes per unit change in one input, ignoring everything else: 1 for an addition, the other factor for a product, $1 - \tanh^2$ for tanh.</Term>
+  <Term name="gradient">How much the final output changes per unit change in a box: what training needs.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Forward, then backward">
+
+<Explore slug="chain-rule" settings={{ preset: 'simple' }} caption="Values flow left to right, then gradients flow right to left. Each step multiplies a local derivative by the gradient arriving from above." />
+
+Each box only needs to know its own local derivative. The chain rule glues them together:
+
+$$
+\frac{\partial L}{\partial a} = \frac{\partial L}{\partial d}\cdot\frac{\partial d}{\partial e}\cdot\frac{\partial e}{\partial a}
+$$
+
+<KeyIdea>
+
+**Gradient of an input = local derivative × gradient of the output it feeds.** If a value feeds several places, add up
+what comes back from each. Walk the boxes in reverse order and every gradient falls out in one pass.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: a neuron">
+
+A single neuron computes $\tanh(x_1 w_1 + x_2 w_2 + b)$. Predict each value going forward and each gradient coming back.
+
+<PredictChallenge slug="chain-rule" settings={{ preset: 'neuron' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Compute the gradients yourself">
+
+First by hand: write the three gradients of a neuron using the chain rule.
+
+<CodeExercise exercise="neuron-gradients" />
+
+Then build the engine: a `Value` that remembers its inputs, and the backward step for each operation.
+
+<CodeExercise exercise="value-backward" />
+
+Finally, the loop that makes it automatic: sort the graph so every value comes after its inputs, then walk it backwards.
+
+<CodeExercise exercise="topological-backward" />
+
+<Misconception title="A value's gradient is set once">
+
+When a value is used in two places, its gradient is the **sum** of what both uses send back. Code that writes
+`grad = …` instead of `grad += …` silently drops one path. Try the "a used twice" example above to see the two
+contributions arrive one after the other.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'e = a × b with a = 2, b = −3, and the gradient arriving at e is −2. What is the gradient of a?',
+      choices: ['−2', '6', '−6', '4'],
+      answer: 1,
+      why: 'The local derivative of a product with respect to a is b = −3; × −2 gives 6.',
+    },
+    {
+      q: 'What does an addition node do to the gradient flowing back through it?',
+      choices: ['Doubles it', 'Passes it unchanged to each input', 'Splits it in half', 'Sets it to 1'],
+      answer: 1,
+      why: 'd(x + y)/dx = 1, so each input receives exactly the upstream gradient.',
+    },
+    {
+      q: 'tanh(n) = 0.7 and the gradient arriving at its output is 1. What is the gradient of n?',
+      choices: ['0.7', '0.51', '0.3', '1.49'],
+      answer: 1,
+      why: '1 − tanh² = 1 − 0.49 = 0.51, times 1.',
+    },
+    {
+      q: 'Why does backpropagation visit nodes in reverse topological order?',
+      choices: [
+        'It is faster to read memory backwards',
+        'A node’s gradient must be complete before it is passed on to its inputs',
+        'The forward pass already used the other order',
+        'Leaves must be visited first',
+      ],
+      answer: 1,
+      why: 'Every use of a value must have sent its contribution before that value pushes its own gradient further back.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A computation graph splits a formula into simple steps, each with an easy local derivative.
+- Backward pass: output gradient 1, then each input's gradient += local derivative × upstream gradient, in reverse topological order.
+- One backward pass gives the gradient for every input; this is how PyTorch and JAX train networks.
+- Next: use these gradients for gradient descent on a real model, starting with linear regression.
+
+</Section>

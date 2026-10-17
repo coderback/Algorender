@@ -1,0 +1,101 @@
+<Section step="hook" title="The first model everyone trains">
+
+Given some points, find the straight line that fits them best. It sounds like school geometry, but it is a complete
+machine-learning pipeline in miniature: a model ($y = wx + b$), a loss that says how wrong it is, and gradient descent
+nudging the parameters until the loss stops falling.
+
+Every bigger model, up to large language models, is trained with the same three pieces.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="model">The line $\hat{y} = wx + b$: a weight $w$ (the slope) and a bias $b$ (where it crosses zero).</Term>
+  <Term name="residual">How far a point is from the line vertically: $y - \hat{y}$.</Term>
+  <Term name="mean squared error">The average of the squared residuals. Here each one is drawn as an actual square, so the loss is their average area.</Term>
+  <Term name="least squares">The line with the smallest possible MSE, which also has an exact formula.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Shrink the squares">
+
+<Explore slug="linear-regression" settings={{ preset: 'trend' }} caption="Each step moves w and b against the gradient of the MSE: the squares shrink and the line swings towards the data." />
+
+The gradient of the MSE comes straight from the chain rule: each point pulls the line towards itself in proportion to its
+residual,
+
+$$
+\frac{\partial\,\mathrm{MSE}}{\partial w} = -\frac{2}{n}\sum_i (y_i - \hat{y}_i)\,x_i, \qquad \frac{\partial\,\mathrm{MSE}}{\partial b} = -\frac{2}{n}\sum_i (y_i - \hat{y}_i).
+$$
+
+<KeyIdea>
+
+**Squaring makes big misses count a lot.** A point twice as far from the line contributes four times the loss, so
+gradient descent works hardest on the worst-fitting points. That is good for a clean trend and bad for outliers.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: which way will it move?">
+
+<PredictChallenge slug="linear-regression" settings={{ preset: 'noisy' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Drag the data">
+
+Drag any point and the fit runs again from the start. Try:
+
+- Drag one point far from the others. Watch its square dominate the loss and drag the line towards it.
+- Line the points up exactly. The final MSE goes to 0.
+- Pick "Too big a step": with too large a learning rate, the line swings further each time and the loss explodes.
+
+<Explore slug="linear-regression" settings={{ preset: 'outlier', step: '32' }} input />
+
+<Misconception title="The best line passes through as many points as possible">
+
+Least squares doesn't count hits; it minimises the total squared distance. The best line may pass through no point at
+all, and a single far-away point can pull it a long way, which is why robust methods sometimes use absolute errors instead.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Three residuals are 1, −2 and 3. What is the mean squared error?',
+      choices: ['0.67', '2', '4.67', '14'],
+      answer: 2,
+      why: '(1 + 4 + 9) / 3 = 14 / 3 ≈ 4.67.',
+    },
+    {
+      q: 'Every point lies above the line. Which way does gradient descent move b?',
+      choices: ['Up', 'Down', 'It stays', 'It depends on w'],
+      answer: 0,
+      why: 'All residuals are positive, so ∂MSE/∂b is negative and stepping against it raises b.',
+    },
+    {
+      q: 'Why can one outlier move the least-squares line so much?',
+      choices: ['Its residual is squared, so its loss grows fast', 'It has a larger weight in the data', 'The line must pass through it', 'Gradient descent visits it first'],
+      answer: 0,
+      why: 'A residual three times bigger costs nine times more, so the fit bends to shrink it.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A model, a loss and an optimiser: $\hat{y} = wx + b$, the mean squared error, and gradient descent.
+- Each point pulls the line in proportion to its residual; squared errors make outliers pull hard.
+- Gradient descent reaches the same line as the exact least-squares formula when the step size is right.
+- Next: replace the line with a curve made of many neurons, and the same recipe trains a neural network.
+
+</Section>

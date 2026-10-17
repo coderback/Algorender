@@ -320,7 +320,11 @@ concepts:
     track: math
     summary: How changes flow through a computation graph, one link at a time.
     prereqs: [derivatives-gradients]
-    planned: true
+    visualisers: [chain-rule]
+    lesson: backpropagation
+    links:
+      - href: /code/neuron-gradients
+        label: 'Build micrograd: backprop through a neuron'
   - id: probability
     title: Probability and Bayes
     track: math
@@ -372,13 +376,33 @@ concepts:
     track: ml
     summary: Fitting a line by shrinking the squared residuals.
     prereqs: [gradient-descent, vectors-matrices]
-    planned: true
+    visualisers: [linear-regression]
+    lesson: linear-regression
+  - id: logistic-regression
+    title: Logistic regression
+    track: ml
+    summary: A single sigmoid neuron that draws a straight boundary between two classes, trained on cross-entropy.
+    prereqs: [linear-regression, information-theory]
+    visualisers: [logistic-regression]
+  - id: decision-trees
+    title: Decision trees and boosting
+    track: ml
+    summary: Classify by asking one question at a time, then add up many small trees that each fix the last one’s mistakes.
+    prereqs: [probability]
+    visualisers: [decision-tree, gradient-boosting]
   - id: neural-networks
     title: Neural networks and backpropagation
     track: ml
     summary: Layers of weighted sums, trained by pushing the chain rule backwards.
-    prereqs: [linear-regression, chain-rule]
-    planned: true
+    prereqs: [logistic-regression, chain-rule]
+    visualisers: [perceptron, mlp]
+    lesson: neural-networks
+  - id: clustering
+    title: Clustering with k-means
+    track: ml
+    summary: Find groups in unlabelled data by alternating between assigning points and moving centres.
+    prereqs: [vectors-matrices]
+    visualisers: [k-means]
   - id: attention
     title: Attention and transformers
     track: ml

@@ -887,6 +887,26 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Lessons:** Bayes' rule, the central limit theorem, and entropy and KL.
     - **Left for later:** lessons for SVD and floating point, Monte Carlo and Markov chains, and the geometric (rotate–stretch–rotate) picture of SVD.
 - **4c: classical ML and micrograd** (`revamp/phase-4c`): the chain-rule computation graph (`NetworkView`), a TypeScript autograd that doubles as the "build micrograd" exercises, linear and logistic regression (drag the points), k-means, decision trees and boosting, the perceptron and an MLP playground.
+  - **Status (2026-10-17): 4c is done.**
+    - **Primitives:** network diagrams as a PlotView part (value boxes, operation circles, neurons; edge width and hue from signed weights), decision-region heatmaps, a micrograd-style autograd engine, and seeded 2D datasets.
+    - **Visualisers (8):**
+      - **The chain rule:** forward, then backward node by node with the reason for every local derivative, accumulation when a value is reused, and a nudge check at the end.
+      - **Linear regression:** residuals drawn as real squares, draggable points, a comparison with least squares.
+      - **Logistic regression:** probability regions and a cross-entropy chart, failing honestly on XOR and circles.
+      - **k-means:** territories and moving centroids, draggable starts, local optima.
+      - **The perceptron:** never converging on XOR.
+      - **Decision trees:** Gini splits with the tree drawn as it grows, and overfitting.
+      - **Gradient boosting:** stumps fitted to residuals, with shrinkage.
+      - **An MLP playground:** hidden units bending the boundary, live weights on the diagram.
+    - **Build micrograd:** three code exercises in Python, JavaScript and TypeScript (backprop through a neuron by hand, each operation's local gradient, the topological backward pass), with checks that name the usual mistakes.
+    - **Checks:**
+      - Autograd against finite differences; the MLP's hand-written backprop against autograd to 1e-9.
+      - Each split and stump against a brute-force optimum.
+      - Inertia never rises; gradient descent reaches the closed-form least squares.
+      - The perceptron stops exactly on separable data.
+      - Every chain-rule question is answered by the next frame.
+    - **Lessons:** backpropagation (with the exercises), linear regression, and neural networks.
+    - **Left for later:** lessons for logistic regression, k-means and trees, and a validation set to show overfitting directly.
 - **4d: deep learning, LLMs and RL** (`revamp/phase-4d`): CNN kernels and feature maps, attention, BPE, sampling, the KV cache, gridworld Q-learning, 2D diffusion, and the build-time pipeline for precomputed traces.
 
 ### Phase 5 — Personalization and tutor
