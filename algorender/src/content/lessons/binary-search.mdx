@@ -1,0 +1,117 @@
+<Section step="hook" title="Twenty guesses for a million names">
+
+Think of a number between 1 and 1,000,000 and let a friend guess. If you only say "yes" or "no", they could need a
+million guesses. If you say "higher" or "lower", they need at most **20**, because every answer throws away half of
+what is left: a million, half a million, a quarter million… down to one in about 20 halvings.
+
+Binary search is that game played on a sorted array. It is how a dictionary lookup, a database index or `git bisect`
+finds things fast. The catch is the word *sorted*: the "higher or lower" answer only means something when the order is
+fixed.
+
+The number of halvings it takes to shrink $n$ items to one is $\log_2 n$, so binary search needs at most
+$\lceil \log_2 (n+1) \rceil$ probes, against up to $n$ for checking every element.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="lo and hi">The ends of the **window**: the positions that could still hold the target. Everything outside has been ruled out.</Term>
+  <Term name="mid">The middle of the window, ⌊(lo + hi) / 2⌋. The only element the algorithm actually looks at each step.</Term>
+  <Term name="probe">One comparison of A[mid] with the target. Counting probes is how we measure the work.</Term>
+  <Term name="sorted order">The promise that makes the trick legal: everything left of mid is no bigger, everything right is no smaller.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch the window halve">
+
+Step forward with the arrow buttons (or click the visualiser and use ← →). Watch the shaded window: each probe throws
+away one half, and the narration says *why* that half cannot contain the target.
+
+<Explore slug="binary-search" settings={{ preset: 'present', n: 15, seed: 3 }} caption="15 sorted values: the target is found within 4 probes, since 2⁴ = 16 > 15." />
+
+<KeyIdea>
+
+**If the target is in the array, it is always inside the window [lo, hi].** Each step keeps that true while making the
+window at least one element smaller, so the search must end: either at the target, or with an empty window that proves
+the target is not there.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: predict each move">
+
+This time the player stops before every decision and asks what happens next. Decide from the values you can see, then
+step forward to check. Predicting before you watch is what turns watching into learning.
+
+<PredictChallenge slug="binary-search" settings={{ preset: 'absent', n: 15, seed: 11 }} goal={4} />
+
+</Section>
+
+<Section step="do" title="Break it on purpose">
+
+Try the inputs that sit at the edges: a target at the very first or last position, or one that isn't there at all.
+Count the probes each time and compare them with $\lceil \log_2 (n+1) \rceil$. Then type your own sorted values.
+
+<Explore slug="binary-search" settings={{ preset: 'first', n: 20, seed: 5 }} input caption="Change the input below: try a target that is missing, or the largest array the visualiser allows." />
+
+<Misconception title="hi ← mid instead of hi ← mid − 1">
+
+If A[mid] is bigger than the target, mid itself is ruled out too. Setting `hi ← mid` keeps it in the window, and when
+lo = hi the window never shrinks: the loop runs forever. The rule is that every branch must remove mid.
+
+</Misconception>
+
+<Misconception title="Binary search works on any array">
+
+On an unsorted array, "A[mid] is too small" says nothing about the elements to the right, so throwing away the left half
+can throw away the target. If the data isn't sorted, either sort it first (O(n log n)) or search it linearly (O(n)).
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'At most how many probes does binary search need for 1,000 sorted items?',
+      choices: ['10', '100', '500', '1,000'],
+      answer: 0,
+      why: '2¹⁰ = 1,024 ≥ 1,000, so ten halvings shrink the window to one item.',
+    },
+    {
+      q: 'A = [3, 8, 15, 22, 31, 47, 60] and the target is 31. The first probe looks at A[3] = 22. What happens next?',
+      choices: ['Search positions 0–2', 'Search positions 4–6', 'Stop: 31 is not there', 'Search positions 3–6'],
+      answer: 1,
+      why: '22 < 31, so 31 can only be to the right of mid: lo becomes 4 and mid is ruled out too.',
+    },
+    {
+      q: 'Which update keeps the invariant when A[mid] < target?',
+      choices: ['lo ← mid', 'lo ← mid + 1', 'hi ← mid − 1', 'hi ← mid'],
+      answer: 1,
+      why: 'Everything up to and including mid is too small, so the window starts just after it.',
+    },
+    {
+      q: 'lo = 4, hi = 4 and A[4] is not the target. What does the next step do?',
+      choices: ['Probe A[4] again', 'Probe A[5]', 'The window becomes empty, so report "not found"', 'Restart from lo = 0'],
+      answer: 2,
+      why: 'Either lo moves past hi or hi moves below lo, so lo > hi and the loop ends: the target is not in the array.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Binary search keeps a **window** that must contain the target if it exists, and halves it with each probe.
+- It needs about $\log_2 n$ probes: 20 for a million items.
+- Every branch must remove mid, or the window can stop shrinking.
+- It only works on **sorted** data. The same idea powers searching over answers too: whenever "too small / too big" is
+  monotonic, you can binary search it.
+
+</Section>

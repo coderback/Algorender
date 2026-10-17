@@ -1,0 +1,205 @@
+title: Smallest Window Holding Every Letter
+difficulty: hard
+patterns: [sliding-window]
+why: >-
+  You want the shortest contiguous stretch that satisfies a rule (it holds all of `t`). Grow a
+  window until it does, then shrink it from the left for as long as it still does.
+summary: Find the shortest substring of one string that contains every character of another, repeats included.
+statement: |
+  You are given two strings `s` and `t`. Return the shortest substring of `s` that contains every
+  character of `t`, repeats included: if `t` has two `a`s, the substring needs at least two `a`s.
+  The characters can come in any order, and the substring may hold other characters as well.
+
+  If no substring of `s` works, return the empty string `""`. If several shortest substrings work,
+  return the one that starts first (the leftmost).
+constraints:
+  - "`s` and `t` each hold 1 to 10⁵ characters."
+  - "Both contain only English letters; upper and lower case are different characters."
+signature:
+  function: minWindow
+  params:
+    - { name: s, type: string }
+    - { name: t, type: string }
+  returns: string
+examples:
+  - input: { s: "XAYBZACB", t: "ABC" }
+    output: "ACB"
+    explanation: "`ACB` (positions 5 to 7) holds an `A`, a `B` and a `C`, and no shorter stretch does."
+  - input: { s: "baab", t: "ab" }
+    output: "ba"
+    explanation: "`ba` and `ab` both work and are equally short; `ba` starts first."
+  - input: { s: "a", t: "aa" }
+    output: ""
+    explanation: "`t` needs two `a`s, but `s` has only one."
+tests:
+  - input: { s: "a", t: "a" }
+    output: "a"
+  - input: { s: "a", t: "b" }
+    output: ""
+  - input: { s: "aa", t: "aa" }
+    output: "aa"
+  - input: { s: "Aa", t: "a" }
+    output: "a"
+  - input: { s: "abcdefg", t: "ga" }
+    output: "abcdefg"
+  - input: { s: "bbaacb", t: "abc" }
+    output: "acb"
+generated: { count: 8, seed: 34 }
+hints:
+  - "Count what `t` needs: how many of each character. When does a window of `s` satisfy it?"
+  - "Grow a window to the right until it holds everything `t` needs. Then shrink it from the left while it still does: what's left is the shortest valid window ending there."
+  - "Keep a count of how many characters of `t` the window still lacks, so you can tell in O(1) whether it is complete."
+approach: |
+  Count the characters `t` needs in a hash map `need`, and keep `missing`, how many characters
+  (repeats included) the window still lacks, starting at the length of `t`. Move `right` along `s`.
+  If `need[s[right]] > 0`, that character was missing, so `missing` drops by one. Decrease
+  `need[s[right]]` either way; a negative count means the window has spares of that character.
+
+  Whenever `missing` is 0, the window holds all of `t`. Shrink it: while the leftmost character is
+  a spare (its `need` is negative), give it back and move `left` on. Now `[left, right]` is the
+  shortest valid window ending at `right`; keep it if it is strictly shorter than the best so far
+  (strictly, so the leftmost of equal lengths wins). Then give up `s[left]` too, which makes the
+  window incomplete again, and carry on to the right.
+complexity: { time: "O(|s| + |t|)", space: "O(k) for k different characters" }
+solutions:
+  python: |
+    def min_window(s: str, t: str) -> str:
+        need = {}
+        for ch in t:
+            need[ch] = need.get(ch, 0) + 1
+        missing = len(t)
+        left = 0
+        best_start, best_length = 0, len(s) + 1
+        for right, ch in enumerate(s):
+            if need.get(ch, 0) > 0:
+                missing -= 1
+            need[ch] = need.get(ch, 0) - 1
+            if missing > 0:
+                continue
+            while need[s[left]] < 0:
+                need[s[left]] += 1
+                left += 1
+            if right - left + 1 < best_length:
+                best_start, best_length = left, right - left + 1
+            need[s[left]] += 1
+            missing += 1
+            left += 1
+        if best_length > len(s):
+            return ''
+        return s[best_start:best_start + best_length]
+  typescript: |
+    function minWindow(s: string, t: string): string {
+      const need = new Map<string, number>();
+      for (const ch of t) need.set(ch, (need.get(ch) ?? 0) + 1);
+      let missing = t.length;
+      let left = 0;
+      let bestStart = 0;
+      let bestLength = s.length + 1;
+      for (let right = 0; right < s.length; right++) {
+        const count = need.get(s[right]) ?? 0;
+        if (count > 0) missing--;
+        need.set(s[right], count - 1);
+        if (missing > 0) continue;
+        while (need.get(s[left])! < 0) {
+          need.set(s[left], need.get(s[left])! + 1);
+          left++;
+        }
+        if (right - left + 1 < bestLength) {
+          bestStart = left;
+          bestLength = right - left + 1;
+        }
+        need.set(s[left], need.get(s[left])! + 1);
+        missing++;
+        left++;
+      }
+      return bestLength > s.length ? '' : s.slice(bestStart, bestStart + bestLength);
+    }
+  java: |
+    class Solution {
+        public String minWindow(String s, String t) {
+            int[] need = new int[128];
+            for (char ch : t.toCharArray()) need[ch]++;
+            int missing = t.length();
+            int left = 0, bestStart = 0, bestLength = s.length() + 1;
+            for (int right = 0; right < s.length(); right++) {
+                char ch = s.charAt(right);
+                if (need[ch] > 0) missing--;
+                need[ch]--;
+                if (missing > 0) continue;
+                while (need[s.charAt(left)] < 0) { // give back spares on the left
+                    need[s.charAt(left)]++;
+                    left++;
+                }
+                if (right - left + 1 < bestLength) {
+                    bestStart = left;
+                    bestLength = right - left + 1;
+                }
+                need[s.charAt(left)]++;
+                missing++;
+                left++;
+            }
+            return bestLength > s.length() ? "" : s.substring(bestStart, bestStart + bestLength);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        string minWindow(string& s, string& t) {
+            int need[128] = {};
+            for (char ch : t) need[ch]++;
+            int missing = t.size();
+            int n = s.size(), left = 0, bestStart = 0, bestLength = n + 1;
+            for (int right = 0; right < n; right++) {
+                char ch = s[right];
+                if (need[ch] > 0) missing--;
+                need[ch]--;
+                if (missing > 0) continue;
+                while (need[s[left]] < 0) { // give back spares on the left
+                    need[s[left]]++;
+                    left++;
+                }
+                if (right - left + 1 < bestLength) {
+                    bestStart = left;
+                    bestLength = right - left + 1;
+                }
+                need[s[left]]++;
+                missing++;
+                left++;
+            }
+            return bestLength > n ? "" : s.substr(bestStart, bestLength);
+        }
+    };
+  go: |
+    func minWindow(s string, t string) string {
+    	var need [128]int
+    	for i := 0; i < len(t); i++ {
+    		need[t[i]]++
+    	}
+    	missing := len(t)
+    	left, bestStart, bestLength := 0, 0, len(s)+1
+    	for right := 0; right < len(s); right++ {
+    		ch := s[right]
+    		if need[ch] > 0 {
+    			missing--
+    		}
+    		need[ch]--
+    		if missing > 0 {
+    			continue
+    		}
+    		for need[s[left]] < 0 { // give back spares on the left
+    			need[s[left]]++
+    			left++
+    		}
+    		if right-left+1 < bestLength {
+    			bestStart, bestLength = left, right-left+1
+    		}
+    		need[s[left]]++
+    		missing++
+    		left++
+    	}
+    	if bestLength > len(s) {
+    		return ""
+    	}
+    	return s[bestStart : bestStart+bestLength]
+    }
+visualisers: [sliding-window, hash-table]

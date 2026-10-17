@@ -1,0 +1,165 @@
+title: All Subsets
+difficulty: medium
+patterns: [backtracking]
+why: >-
+  Every number is either in a subset or out of it, so the subsets are the leaves of a tree of
+  in-or-out choices. Backtracking walks that tree: make a choice, explore, then undo it.
+summary: List every subset of a list of distinct numbers.
+statement: |
+  You are given `nums`, a list of distinct integers. Return every subset of it: every list you can
+  make by keeping some of the numbers, from none of them to all of them.
+
+  Each subset must appear exactly once. The subsets may come in any order, and so may the numbers
+  inside each one.
+constraints:
+  - "`nums` holds 1 to 10 numbers."
+  - "Every number is between −10 and 10, and no number appears twice."
+signature:
+  function: subsets
+  params:
+    - { name: nums, type: "int[]" }
+  returns: "int[][]"
+compare: unordered-deep
+examples:
+  - input: { nums: [4, 7, 1] }
+    output: [[], [4], [7], [1], [4, 7], [4, 1], [7, 1], [4, 7, 1]]
+    explanation: "Each of the three numbers is in or out, which makes 2³ = 8 subsets, the empty one included."
+  - input: { nums: [-2] }
+    output: [[], [-2]]
+tests:
+  - input: { nums: [-10] }
+    output: [[], [-10]]
+  - input: { nums: [-1, 4] }
+    output: [[], [-1], [4], [-1, 4]]
+  - input: { nums: [5, -5, 0] }
+    output: [[], [5], [-5], [0], [5, -5], [5, 0], [-5, 0], [5, -5, 0]]
+  - input: { nums: [10, -10, 3, 7] }
+    output:
+      - []
+      - [10]
+      - [-10]
+      - [3]
+      - [7]
+      - [10, -10]
+      - [10, 3]
+      - [10, 7]
+      - [-10, 3]
+      - [-10, 7]
+      - [3, 7]
+      - [10, -10, 3]
+      - [10, -10, 7]
+      - [10, 3, 7]
+      - [-10, 3, 7]
+      - [10, -10, 3, 7]
+generated: { count: 6, seed: 37 }
+hints:
+  - "For each number there are two choices: leave it out or put it in. How many subsets does that make?"
+  - "Write a recursive helper that decides about `nums[i]` and then moves on to `i + 1`. When `i` reaches the end, the choices made so far form one subset."
+  - "Keep one list for the subset being built: append, recurse, then pop to undo the choice. Save a copy of it, not the list itself."
+approach: |
+  Backtrack over positions, keeping the subset being built in one list, `chosen`. A helper
+  `explore(i)` decides about `nums[i]`:
+
+  - When `i == len(nums)`, every number has been decided, so save a copy of `chosen`.
+  - Otherwise explore without `nums[i]` (call `explore(i + 1)`), then append `nums[i]`, explore
+    again, and pop it to undo the choice.
+
+  That reaches every combination of in-or-out choices exactly once: 2ⁿ subsets.
+
+  An iterative version works too: start from `[[]]`, and for each number add a copy of every
+  subset so far with that number appended.
+complexity: { time: "O(n · 2ⁿ)", space: "O(n) besides the output" }
+solutions:
+  python: |
+    def subsets(nums: list[int]) -> list[list[int]]:
+        result = []
+        chosen = []
+
+        def explore(i):
+            if i == len(nums):
+                result.append(chosen[:])
+                return
+            explore(i + 1)  # without nums[i]
+            chosen.append(nums[i])
+            explore(i + 1)  # with it
+            chosen.pop()
+
+        explore(0)
+        return result
+  typescript: |
+    function subsets(nums: number[]): number[][] {
+      const result: number[][] = [];
+      const chosen: number[] = [];
+      const explore = (i: number): void => {
+        if (i === nums.length) {
+          result.push([...chosen]);
+          return;
+        }
+        explore(i + 1); // without nums[i]
+        chosen.push(nums[i]);
+        explore(i + 1); // with it
+        chosen.pop();
+      };
+      explore(0);
+      return result;
+    }
+  java: |
+    class Solution {
+        public List<List<Integer>> subsets(int[] nums) {
+            List<List<Integer>> result = new ArrayList<>();
+            explore(nums, 0, new ArrayList<>(), result);
+            return result;
+        }
+
+        private void explore(int[] nums, int i, List<Integer> chosen, List<List<Integer>> result) {
+            if (i == nums.length) {
+                result.add(new ArrayList<>(chosen));
+                return;
+            }
+            explore(nums, i + 1, chosen, result); // without nums[i]
+            chosen.add(nums[i]);
+            explore(nums, i + 1, chosen, result); // with it
+            chosen.remove(chosen.size() - 1);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> subsets(vector<int>& nums) {
+            vector<vector<int>> result;
+            vector<int> chosen;
+            explore(nums, 0, chosen, result);
+            return result;
+        }
+
+    private:
+        void explore(const vector<int>& nums, size_t i, vector<int>& chosen, vector<vector<int>>& result) {
+            if (i == nums.size()) {
+                result.push_back(chosen);
+                return;
+            }
+            explore(nums, i + 1, chosen, result); // without nums[i]
+            chosen.push_back(nums[i]);
+            explore(nums, i + 1, chosen, result); // with it
+            chosen.pop_back();
+        }
+    };
+  go: |
+    func subsets(nums []int) [][]int {
+    	result := [][]int{}
+    	chosen := []int{}
+    	var explore func(i int)
+    	explore = func(i int) {
+    		if i == len(nums) {
+    			result = append(result, slices.Clone(chosen))
+    			return
+    		}
+    		explore(i + 1) // without nums[i]
+    		chosen = append(chosen, nums[i])
+    		explore(i + 1) // with it
+    		chosen = chosen[:len(chosen)-1]
+    	}
+    	explore(0)
+    	return result
+    }
+visualisers: [subsets]

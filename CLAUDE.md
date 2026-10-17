@@ -1,0 +1,164 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Algorender is a Next.js 16 app for learning algorithms and data structures visually, and is being rebuilt into a broader platform (DS&A → math → ML → systems). `REVAMP_PLAN.md` at the repo root is the plan: read its roadmap and decisions before proposing architecture. Every visualiser now runs on the trace engine (one dynamic route, `app/visualisers/[slug]`); there are no legacy per-page visualisers left. Other routes: `/learn` (concept map and lessons), `/code` (exercises), `/practice` (interview-style problems, judged in the browser in Python/JS/TS and on the server in Java/C++/Go), `/review` (the daily spaced-review queue), `/account` (sign in, sync), `/api/auth/*`, `/api/progress` and `/api/judge` (the only server routes), `/compare` (sorting race + growth chart), `/embed/[slug]` (chrome-less iframe embeds), `sitemap.xml`, `robots.txt`.
+
+## Development Commands
+
+Run everything from `algorender/`:
+
+```bash
+npm run dev          # dev server on localhost:3000
+npm run build        # production build (also type-checks)
+npm run lint         # ESLint (flat config, eslint.config.mjs)
+npm run typecheck    # tsc --noEmit
+npm test             # Vitest unit + property tests (src/**/*.test.ts)
+npm run e2e          # Playwright (e2e/); reuses a dev server on E2E_PORT (default 3100), else starts `npm run dev`
+npm run workers      # bundle the JS runner's worker (runs before dev and build; add -- --watch while editing src/workspace/js)
+npm run db:generate  # write a migration into drizzle/ after changing src/server/db/schema.ts
+npm run db:migrate   # apply drizzle/ to the Postgres in DATABASE_URL (PGlite migrates itself)
+npm run judge:image  # build the local server judge (Docker image algorender-judge: g++, JDK 21, Go)
+node --no-warnings scripts/stubs.mjs two-sum java   # a problem's generated starter code (any language, or all)
+PROBLEMS=two-sum,min-stack npx vitest run src/server/judge/solutions.test.ts   # Java/C++/Go reference solutions in Docker (JUDGE_SOLUTIONS=1: all)
+```
+
+The user's global `~/.npmrc` sets `os=linux`, which makes npm skip Windows native binaries (Tailwind's oxide, lightningcss, Next's SWC). Run installs with `npm_config_os=win32` set in the environment; don't add that to a project `.npmrc` (Vercel builds on Linux).
+
+The full e2e suite (~330 tests, including axe scans of every page in both themes) is heavy next to `next dev`. On a low-memory machine, run it against a production build instead: `npm run build`, then `BETTER_AUTH_RATE_LIMIT=off PGLITE_DIR=<a fresh folder> npx next start -p 3100` (the account tests sign up many learners from one address, and the offline test needs the production service worker), then `npm run e2e -- --workers=1`. Playwright reuses whatever already listens on the port, so stop any stale server first.
+
+**Environment:** nothing is needed locally: the database is PGlite in `.data/pglite` (git-ignored) and auth uses a development secret. On Vercel set `DATABASE_URL` (any Postgres, e.g. Neon; run `npm run db:migrate` against it first) and `BETTER_AUTH_SECRET`; optionally `BETTER_AUTH_URL` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for those sign-in buttons. The server judge (Java, C++, Go) uses Docker locally when the `algorender-judge` image exists (`npm run judge:image`; without it those languages answer "not set up"); on Vercel it needs `JUDGE_SNAPSHOT_ID` from `node --env-file=.env.local scripts/judge-snapshot.mjs` (run once, after `vercel env pull`), and optionally `JUDGE_RUNS_PER_HOUR`/`JUDGE_RUNS_PER_DAY` (30/200). `JUDGE_SANDBOX=docker|vercel|off` overrides the choice.
+
+## Architecture
+
+### Trace engine (record → replay): how all new visualisers work
+
+1. Each step is a `Frame` (`src/engine/types.ts`): a state snapshot, the pseudo-code `line`, a one-sentence `note` (narration that says *why*), `vars`, running `stats`, and optionally a `checkpoint` (a Predict-mode question about the *next* frame; the frame's own note must not reveal the answer).
+2. Two module kinds (`src/engine/module.ts`):
+   - **`AlgorithmModule<I, S>`** (`defineAlgorithm`): a pure generator `run(input)` over an `InputSpec<I>` (named examples taking `{seed, size}`, an optional size slider, optional custom text with `parse`/`format`). Lives in `src/algorithms/<family>/<slug>.ts`.
+   - **`StructureModule<M, S>`** (`defineStructure`): an immutable model `M` changed by operations (`run(model, args)` is a generator that yields frames and **returns the new model**; it must never mutate `model`). Lives in `src/structures/<family>/<slug>.ts`. The explorer keeps history/undo and encodes operations in the URL (`?start=&seed=&ops=push:5;pop`).
+3. Each module names a `view` kind; `src/viz/views.tsx` maps kinds to renderers (`array`, `grid`, `graph`, `tree`, `linear`, `hash`, `text`, and `memory` for learner code run line by line). A view gets `{ state }` and owns its tracer/types under `src/viz/<kind>/`. `ArrayTracer` (`src/viz/array/tracer.ts`) is the reference pattern: mutate through methods, `t.frame({...})` returns a copy-on-write snapshot.
+4. `recordTrace()` / `recordOperation()` (`src/engine/trace.ts`) record a run; `useTracePlayer()` holds only an index on a requestAnimationFrame clock (step back, scrub, `?step=` deep links), and gates forward motion on unanswered Predict questions.
+5. Views key every element by **stable id** and animate with Motion (`layout`/`layoutId` for HTML, `motion.*` SVG elements animating attributes). Motion components inherit the stage's `MotionConfig` (tween length from playback speed; `reducedMotion="user"`).
+6. `src/registry.ts` merges the per-family registries (`src/algorithms/<family>/index.ts`, `src/structures/<family>/index.ts`); `app/visualisers/[slug]/page.tsx` serves every registered module. `src/components/explorer/` holds the shared UI: `TraceStage` (view, narration, predict card, controls, pseudo-code, stats, variables, legend), `AlgorithmExplorer`, `StructureExplorer`, `InputPanel`.
+
+**Porting a visualiser:** write the module (generator, pseudo-code, stats, legend with a `{ neutral: … }` row, `content` with idea/invariant/whenToUse/traits/experiments, checkpoints at real decisions), add it to its family's `index.ts`, delete the legacy `app/visualisers/<slug>/` folder (static folders take precedence over `[slug]`), and add property tests next to it (correct result vs a reference implementation on random inputs, every frame narrated, valid pseudo-code lines, well-formed checkpoints, monotonic stats, and for structures: operations never mutate their input model).
+
+**Never** animate by mutating React state inside async loops with sleeps, and never key moving elements by array index: that is what made the legacy pages choppy.
+
+**Reuse a view before writing one.** `GridView` (`src/viz/grid/types.ts`) composes parts: tables (look `table`/`board`/`timeline`, cell styles incl. `block` walls, arrows, pieces, interval `bars`, `guides`, per-row `scales`, a `group` to sit parts side by side), lists and meters. `TreeView` (`src/viz/tree/types.ts`) draws one tree or a forest (`roots`, `parentArrows`, an aligned `table` of rows), and with `search: true` a recursion/decision tree; build those from a list of calls with `src/viz/tree/search.ts`, which lays out the whole tree up front so nodes never move as it is revealed and turns sideways on narrow screens.
+
+**Operations:** `disabledReason(model, args?)` blocks an operation with a reason (the form disables itself as the learner types; replay and the run button use `blockedReason()`). Use `type: 'choice'` args (options from the model) for references that must exist. Prefer a narrated run over disabling when the attempt itself teaches (searching for a missing key).
+
+### Lessons and the concept graph
+
+- `src/content/concepts.yaml` (validated by Zod in `concepts.ts`) is the concept graph: tracks, concepts with prerequisites, the visualisers that teach each, an optional lesson, and planned concepts for the roadmap. `src/content/content.test.ts` rejects unknown ids, cycles, untaught visualisers, and planned concepts that link anywhere.
+- Lessons are MDX in `src/content/lessons/<slug>.mdx`, listed with their metadata in `src/content/lessons/index.ts`, served by `app/learn/[lesson]`. Every lesson follows the learning loop with `<Section step="hook|parts|see|predict|do|check|recap">`, and uses the widgets registered in `src/mdx-components.tsx`: `Terms`/`Term` (pre-training), `Explore` (a visualiser; `settings` take the same keys as the page URL), `PredictChallenge` (predict mode with a goal; make sure the run has at least that many questions), `Quiz` (retrieval practice with explanations), `KeyIdea`, `Misconception`. Math uses `$…$` (KaTeX).
+- Visualisers inside lessons run with `variant="lesson"`: they start from their settings, never write the URL, keep keyboard shortcuts to the focused stage, stack their panels, and ask at every decision in Predict mode.
+- Progress (completed lessons, best quiz and prediction scores, and each quiz answer, which starts that question in the review queue) is recorded as events through `src/components/lesson/progress.ts` (see Accounts and progress).
+
+### Code workspace (learner code drives the views)
+
+- `src/workspace/protocol.ts` is the contract: a `RunRequest` (language, code, entry function, args, limits) produces a `RunResult` whose `events` (array created, compare, write, append, pop, print — each with the learner's line and simple local `vars`) describe what the code did to its *visual collections*. `src/workspace/contract.ts` holds the shared cases every runtime must pass, with exact events; add a case there when you change semantics, never in one runtime only.
+- Learners can make their own visual collections with `table(rows, cols, fill)` and `array(values)` (both runtimes provide them); a `cellWrite` carries `from`, the cells read since the statement began (tracked per call, so memoised recursion and helpers work), which the grid trace draws as dependency arrows. `traceFor()` picks the view: GridView (every collection as a table) once a run makes a grid, otherwise ArrayView.
+- `trace.ts` turns events into the same `Trace<ArrayState>` the built-in visualisers play (two writes that exchange two cells on the same or the next line become a swap, keeping element identity, so bars slide). `runner.ts` owns the workers, kills one that overruns its time budget, and starts a fresh one next run.
+- **Python** runs in Pyodide 314 (CDN) in `public/workers/python.js`, a classic worker script that loads Pyodide's classic build with `importScripts`. The Python-side logic is `HARNESS` in `python/harness.ts` (AST rewrite of comparisons, `VisualList`, a `sys.settrace` step counter, print capture), sent to the worker on init and unit-tested in Node with the npm `pyodide` build. **JS/TS** is stripped with sucrase, instrumented with acorn/astring and run by `js/runtime.ts`; `scripts/build-workers.mjs` (esbuild) bundles `js/js.worker.ts` into `public/workers/js.js` (generated and git-ignored, so rerun `npm run workers` after changing the runtime while `next dev` runs). The runtime is plain TS, tested directly in Node.
+- Exercises live in `src/content/exercises/`: the model in `shared.ts` (task, starter and solution per language, an `args` builder, examples to watch, judged tests, a `check` that explains failures, hints), one file per family (`arrays.ts`, `grids.ts`, `graphs.ts`, `trees.ts`), gathered by `index.ts`. `/code` lists them, `/code/[slug]` hosts `Workspace.tsx`, and a visualiser page links to its exercise. `exercises.test.ts` runs every solution and starter through both runtimes and checks the languages do the same things to the arrays, tables and graphs. Verdicts are local practice feedback, labelled as such.
+- **Exercise formats** (`Workspace.tsx` is a ladder of stages; `useExerciseRun` runs whatever code a stage produces against the example and every test, and `RunOutput` shows verdicts and the trace): `parsons` (shuffled solution lines plus `distractors`; Python indentation is part of the puzzle, JS indentation follows the braces; `formats/parsons.ts`), `fill` (the solution with `«n:text»` blanks in `blanks`, and `fades` listing which blanks each level hides; `formats/blanks.ts`), `write` (the editor), and `bug` (kind `'bug'`: the starter has one bug, `bug.symptom`/`bug.explanation`). Kind `'modify'` starts from working code (PRIMM's Modify). Verdicts come from running the tests, so any working answer passes; the reference order and answers only power opt-in hints ("point out a misplaced line", "reveal a gap"). Passed stages are kept in localStorage (`storage.ts`).
+- **Line by line (`mode: 'lines'`, Python Tutor style):**
+  - **Runtimes:** both also emit a `step` event before every line, at every return, and as an exception unwinds. A step holds the whole stack (Global frame first, locals in binding order, harness names hidden; a Python closure's free variables are drawn in the frame that defines them, as in JS) and the heap reachable from it. Object ids stay stable for the run, so two names for one list share an arrow.
+  - **Limits:** `MAX_ITEMS`, `MAX_OBJECTS` and `MAX_DEPTH` cap what a step holds, and runs use `LINE_LIMITS`.
+  - **Contract:** lines-mode contract cases compare steps across languages by shape. Primitives are spelled per language, and refs are relabelled by first appearance.
+  - **Trace:** `lines.ts` holds the step walker (`traceSteps`, one frame per step, narrated by `narrate`), shared by every view of a 'lines' run; a view adds clauses for what memory can't show. `traceLines()` (picked by `traceFor()` when a run has steps) turns steps into `Trace<MemoryState>`. Changes are flagged by diffing steps, and a note says what the line did. Pass `code` in the options so a condition line is narrated as "Line 2: n <= 1? No, so line 5 is next."
+  - **View:** `MemoryView` (`src/viz/memory/`) draws frames, objects and measured SVG arrows. Its screen-reader description is `describe.ts`, and `fixtures.ts` holds sample states.
+  - **Workspace:** the "Line by line, with memory" switch runs only the example this way; the tests still run in visual mode.
+- **Graphs and trees (learner code on GraphView and TreeView):**
+  - **Arguments:** `graph` (each node's neighbours in reading order, `graphArg()` in `exercises/graphs.ts` builds it in label order; a read-only dict / object whose reads are `neighbours` and `edge` events) and `tree` (level order, LeetCode style; the function gets the root `TreeNode`, which is also in scope, and a returned tree comes back in level order). Contract cases cover both.
+  - **Watching:** their examples always run in 'lines' mode (`watchedByLine`), and `traceFor()` draws the steps on GraphView (`traceGraph.ts`) or TreeView (`traceTree.ts`); `view: 'memory'` (the "Show the memory diagram" switch) asks for the memory view instead.
+  - **Marks come from the learner's own variables, never their names:** in a queue or stack (a list the code takes items out of) or a paused call = waiting; in another set, dict or list = recorded; the node whose neighbours the innermost call reads, or that it took out of a queue into a variable, or its first node-valued variable = current; the edge taken just before a node first appears anywhere = the edge that reached it. Every container gets a panel named after its variable, and the first dict of numbers is written under the nodes. On a tree, the innermost call's most recently assigned tree variable is current, paused calls' nodes wait and draw the path down, and a node the code makes floats as its own root until it is linked in.
+- **Lessons** embed code with these widgets:
+  - `<PredictCode exercise="…" question choices answer why />`: read the solution, predict, then run. Running is locked until the learner predicts.
+  - `<CodeExercise exercise="…" stages={[…]} />`.
+  - `<TraceCode snippet="…" />`: a short, editable program run line by line on the memory view. It takes the same optional predict props.
+  - Snippets live in `src/content/snippets.ts`, and write Python there rather than in MDX props, where indentation is fragile. `snippets.test.ts` runs every one in every language it offers.
+  - Use `exercise="…"` for exercise slugs and `snippet="…"` for snippets; content tests check both. `slug="…"` is for visualisers.
+  - Section steps include PRIMM's `run`, `investigate`, `modify` and `make`. `sorting-in-code.mdx` is the PRIMM template; `recursion.mdx` shows tracing.
+- **Sandbox** (`runner.ts`, `public/sandbox.html`): learner code never runs with the app's origin.
+  - Each runtime's worker lives in a hidden `<iframe sandbox="allow-scripts">`, so it has an opaque origin: it can't read the app's cookies or storage, or call its API as the learner. The frame's CSP lets it fetch only jsDelivr (Pyodide).
+  - The page fetches the worker script itself (same-origin, cached) and hands it over as text with a `MessagePort`, then talks to the worker directly on that port. A timeout removes the frame, which kills the worker, and the next run makes a new one.
+  - Both workers are classic scripts, because a module worker can't start from a blob in an opaque origin.
+  - Server routes must never accept the `null` origin with credentials.
+  - In e2e tests, init scripts run in every frame, including the sandbox's, which has no storage: touch `localStorage` only when `window === window.top` (see `useLanguage` in `e2e/workspace.spec.ts`).
+
+### Practice problems (`/practice`, the local judge)
+
+- **Content:** one YAML file per problem in `src/content/problems/<slug>.yaml`, validated by `ProblemSchema` (`src/problems/schema.ts`, which documents every field). Statements, examples, hints and approaches are our own words, never copied from another site.
+  - **Signature:** a typed function (`int`, `float`, `bool`, `string`, arrays and 2D arrays of them, `TreeNode`, `ListNode`; a `void` function names its `inPlace` argument), or a `design` class whose tests are call lists, constructor first: `[[MinStack], [push, 3], [getMin]]`. Signatures are camelCase; Python gets snake_case (`codegen.ts`, which also writes every language's stub).
+  - **Tests:** `examples` (shown and judged), hand-picked `tests`, and seeded `generated` tests from a generator in `src/content/problems/gen-*.ts`, whose answers come from the TypeScript solution, run on the server at build time (`load.ts`). Keep a problem's tests well under 200 KB: they travel with the page.
+  - **Answers** are compared in trusted code (`judge.ts`): `exact`, `float`, `unordered` (top level), `unordered-deep`, or a named `check` in `src/content/problems/checks.ts` for problems with several right answers. An empty tree or list is `[]`.
+  - **Solutions:** Python, TypeScript, Java, C++ and Go; JavaScript is the TypeScript with its types stripped. Write the compiled ones from the generated stub (`scripts/stubs.mjs`), with the same algorithm, and check them with `solutions.test.ts` (Docker). `problems.test.ts` loads every problem, runs every stub (which must parse and fail something) and every solution against every test in all three languages through the browser's judge, and replays the examples on their view. `PROBLEMS=a,b npx vitest run src/content/problems` checks just those.
+- **Judge mode (`mode: 'judge'` in the protocol):** the code runs as written (TypeScript stripped, no instrumentation, no step counter), so big tests run at full speed and only the worker's timeout stops a loop. Arguments are plain values (trees and lists as `TreeNode`/`ListNode`), printing is capped (`MAX_PRINTS`), an error's line comes from the stack or traceback, and the result carries each argument's final value. Design problems pass `calls`. Contract cases cover all of it.
+- **Pages:** `/practice` (grouped by main pattern, or mixed with the patterns hidden; difficulty and solved filters), `/practice/[slug]` (statement beside `ProblemWorkspace`: Run examples, Submit, a chip per test, the selected test's input, expected answer, yours and its prints), `/practice/drills` (name the pattern for a mixed round of statements; wrong options come from `CONFUSED_WITH` in `patterns.ts`).
+- **Watching a test:** `watchRequest` replays one test on the problem's `view`: an `int[]` argument line by line on the array view (`traceArray.ts`: a frame per line, the learner's index variables from `POINTERS` drawn under the array, compares and writes marked and narrated), an `int[][]` from its cell reads and writes on the grid, a tree on TreeView, anything else on the memory view, which the learner can always switch to.
+- **Progress:** every submission is a `problem.submitted` event (`src/problems/progress.ts`); a first solve starts the problem in the review queue. Code drafts stay in localStorage under `algorender:code:problem:<slug>:<language>`, and the problem language under `algorender:problem-language`.
+
+### The server judge (Java, C++, Go)
+
+- **Languages:** `src/problems/languages.ts` (`ProblemLanguage` = the browser's `Language` plus `ServerLanguage`, labels, `TIME_FACTOR`). Stubs follow LeetCode's conventions: `class Solution` in Java and C++, Go functions with `Constructor()` and exported methods (`methodIn`) for design problems; Java returns lists of lists as `List<List<…>>`.
+- **Drivers** (`src/problems/drivers/`, plain functions, unit-tested): `encode.ts` writes the tests as typed tokens on stdin (strings by UTF-8 length, arrays by count, trees in level order); `java.ts`, `cpp.ts`, `go.ts` generate a driver around the learner's code that parses each test first, times only the call, and writes one JSON line per test to `answers.jsonl` (value, error and its line, `x` for a crash), printing a marker line on stdout before each test so prints split by test. Line numbers match the editor: Java's imports share line 1, C++ uses `#line`, Go `//line` (Go code without imports gets common packages imported, with blank uses). Errors: exceptions and panics per test; C++ crashes via a signal handler on its own stack; a 64 MB (Java, Go) or 256 MB (C++) stack. `shared.ts` has `judge.sh` (compile, run under `timeout`, capped files, status line); `index.ts` reads the files back into the same verdicts as the browser (`verdict()`), stopping at a timeout or crash. Expected answers never enter the sandbox.
+- **Sandboxes** (`src/server/judge/`): `sandbox.ts` picks one (`JUDGE_SANDBOX`, else Vercel on Vercel, Docker elsewhere); `docker.ts` runs `algorender-judge` (`judge/Dockerfile`) with no network, 2 GB, 2 CPUs, no capabilities; `vercel.ts` makes a Vercel Sandbox microVM per run from `JUDGE_SNAPSHOT_ID`, with `networkPolicy: 'deny-all'`, and stops it after. `index.ts` is the service: request validation, one run at a time and hourly/daily quotas counted in the `judge_run` table, and a submission's verdict written as a `problem.submitted` event with `verified: true` (sync drops that flag from device-sent events; the device keeps the server's copy with `store.receive`).
+- **Workspace:** the language picker offers all six; Java/C++/Go need sign-in (`ServerNote`, `SignInCard`, `/account?next=` returns to the problem), send one request per run (`serverJudge.ts`), can't be watched, and show compile errors as a `compile` error at the learner's line.
+- **Tests:** `drivers.test.ts` (encoding, reading output), `src/server/judge/judge.test.ts` (every value shape and failure mode through Docker; skipped without the image), `service.test.ts` (quotas, events, on PGlite with a stand-in sandbox), `solutions.test.ts` (every reference solution and stub, opt-in), `vercel.test.ts` (Two Sum through the real Vercel Sandbox, opt-in: `node --env-file=.env.local node_modules/vitest/vitest.mjs run src/server/judge/vercel.test.ts` after `vercel env pull`), `e2e/server-judge.spec.ts`.
+
+### Accounts and progress (`src/server/`, `src/progress/`)
+
+- **Server:** the only server code. Drizzle over Postgres (`src/server/db/`): `DATABASE_URL` → node-postgres, otherwise PGlite in `PGLITE_DIR` (default `.data/pglite`), migrated on start from `drizzle/`. Better Auth (`src/server/auth.ts`, served by `app/api/auth/[...all]`): email and password, GitHub/Google when keys are set, database sessions, rate limits counted in the database (off with `BETTER_AUTH_RATE_LIMIT=off`, outside Vercel only), and the Origin check forced on everywhere, test runners included. `src/server/providers.ts` says which social buttons exist without loading the database.
+- **Progress is an event log** (`src/progress/events.ts`, Zod-validated on both sides): `lesson.completed`, `lesson.scored`, `quiz.answered`, `exercise.passed`, `problem.submitted`, `review.rated`, each with a UUIDv7 id and the device's time. Never change what an existing kind means; add a kind. Everything else is a pure projection of the events (`projections.ts`, `review.ts`), so devices merge by taking the union.
+- **The device store** (`store.ts`): events in IndexedDB (Dexie; memory if unavailable), recorded instantly and synced in the background (`POST /api/progress`: push unsent events idempotently, pull from a cursor; `src/server/progress.ts`). Events have an owner: `anon` until sign-in, which claims them for the account. Explicit sign-out syncs, then removes the account's events from the device; an expired session only hides them. Progress saved before the event log is imported once (`legacy.ts`). `hooks.ts` gives React the snapshot and projections; anything that depends on progress at mount (the exercise ladder) waits for `ready`.
+- **Review (FSRS via ts-fsrs, day-based, no fuzz):** a solved problem makes `problem:<slug>` (first review Good, Hard after failed submissions); a quiz question's first answer makes `quiz:<lesson>:<quiz>:<n>` (Good or Again). `/review` shows due cards; its card faces are built on the server (`lessonQuizzes()` in `src/content/lessons/quizzes.ts` reads `<Quiz>` questions from the MDX with acorn) and ship with the page. The header shows how many are due (`AccountMenu`, which also tells the store who is signed in).
+- **Offline:** `public/sw.js` (registered in production by `ServiceWorker.tsx`) caches hashed assets for good and pages network-first; `/review` is precached. Playwright blocks service workers except in the offline test.
+- **Tests:** `src/server/server.test.ts` (accounts, rate limits, origin checks and sync on in-memory PGlite), `src/progress/store.test.ts` (two devices against the real sync code, offline, sign-out, an expired session), `progress.test.ts` (projections, scheduling, quiz extraction), `e2e/accounts.spec.ts`.
+
+### Registry
+
+`src/data/visualisers.js` is the single registry (name, slug, category, complexities, `hidden`) for the home page, search, and the new page headers. Complexities live only there; algorithm modules hold the teaching content.
+
+### Remaining JavaScript
+
+The home page (`app/page.jsx`), root layout, `Header.jsx`, `SearchBar.jsx`, `ui/tabs.jsx` and `src/data/visualisers.js` are still JavaScript. ESLint reports React Compiler hook rules as warnings for `.js/.jsx` and as errors for TypeScript; new code is TypeScript. `VISUALIZER_GUIDE.md` describes the removed async-loop pattern and is kept only for history.
+
+### Tests that guard every module
+
+- `src/registry.test.ts`: every module is listed in `src/data/visualisers.js`, no legacy folder shadows its route, pseudo-code lines are ≤ 42 characters (the code panel width), and teaching content is complete.
+- Per-family property tests next to the modules (results vs reference implementations, frames, checkpoints, immutability).
+- `e2e/all-visualisers.spec.ts` opens and runs every visualiser listed in the registry with no console errors.
+- `e2e/a11y.spec.ts` runs axe (WCAG 2.2 A/AA + best practice) on every page in both themes, a few steps into each run, and checks the theme toggle and embed override.
+- `src/content/problems/problems.test.ts` checks every practice problem end to end in Python, JavaScript and TypeScript; `e2e/practice.spec.ts` covers the list, judging, replays, drills and axe on a sample of problem pages (they share one template).
+
+### Design system
+
+State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-safe): `bar`, `mark-compare`, `mark-swap`, `mark-write`, `mark-focus`, `mark-frontier`, `mark-done`. `src/viz/marks.ts` is the one shared vocabulary (`compare`, `swap`, `write`, `pivot`, `min`, `key`, `frontier`, `sorted`, `visited`, `found`, `path`, `reject`), each with a glyph and `bg`/`fill`/`stroke`/`text` classes, so colour is never the only cue and a colour means the same thing in every view. Modules relabel marks in their legend rather than inventing colours.
+
+**Colours are semantic tokens, never palette classes.** `globals.css` defines what a colour is *for*: planes `page`, `surface`, `subtle`, `sunken`; hairlines `line-soft`, `line`, `line-strong`; text `ink`, `ink-soft`, `ink-muted` (and `ink-faint`, decoration only, below text contrast); `accent`/`accent-strong` (white text on them), `accent-ink`, `accent-soft`, `accent-line`; feedback `good`/`warn`/`bad` with `-ink`, `-soft`, `-line`; `mark-*-ink` for mark hues as text; `series-1..4` for chart series. Write `bg-surface text-ink border-line`, not `bg-white text-gray-900 border-gray-200`; every ink clears 4.5:1 on page, surface and sunken in both themes. Text on a mark *fill* is `text-white` on `compare` and `text-on-mark` (dark in both themes) on every other mark; unmarked text takes the theme's `ink`. Tints of a fill (`bg-mark-done/25`, `opacity-25` overlays) work in both themes.
+
+**Dark mode** redefines the tokens, so components need no `dark:` variants. It follows the OS by default; the header's `ThemeToggle` (System → Light → Dark) stamps `data-theme` on `<html>`, saved in localStorage and applied before paint by `THEME_SCRIPT` (`src/lib/theme.ts`), and an embed can pass `?theme=light|dark`. The custom `dark:` variant covers both the OS and the stamp, for the rare one-off (the home-page gradient). Mark fills are the same in both themes (see the note in `globals.css` on why they sit above the dataviz dark lightness band). Colours that end up in style props (chart series) are `var(--color-…)` strings, set via `style`, not SVG attributes.
+
+**Accessibility conventions:** a view's panels are `role="group"` with a label, not `<section>` landmarks or headings (a page can hold several visualisers, and panel titles don't belong in its outline). Narration is a polite live region while stepping and silent during playback. Keyboard-readable charts are sliders with `aria-valuetext`. `html` has `scroll-padding-top` so anchors and focus clear the sticky header, and `prefers-reduced-motion` stops CSS tweens as well as Motion's.
+
+## Naming Conventions
+
+- Routes: `/visualisers/<kebab-case-slug>` (kept stable for SEO; ported ones are served by `[slug]`)
+- New code is TypeScript; components are PascalCase `.tsx`
+- Tailwind v4 (CSS-first `@theme` config, no `tailwind.config.js`)
+
+## Dependencies
+
+- Next.js 16.4, React 19.3, Tailwind CSS 4.3, TypeScript 6.0 (pinned below 6.1: typescript-eslint doesn't support 7 yet, and TS 7 drops the JS compiler API Next uses)
+- Motion 14 (`motion/react`) for layout animation
+- Vitest 5 + fast-check (property tests), Playwright 1.64 (e2e), @axe-core/playwright 4.13 (accessibility scans)
+- react-icons, Radix UI (tabs), Vercel Analytics
+- react-markdown 10 (problem statements, with remark-math and rehype-katex), yaml + Zod (content)
+- better-auth 1.7, drizzle-orm 0.45 + drizzle-kit, pg (Postgres) and @electric-sql/pglite (local Postgres), Dexie 4 (IndexedDB), uuidv7, ts-fsrs 5 (spaced review), fake-indexeddb (tests)
+- @vercel/sandbox 3.5 (the server judge in production), CodeMirror's Java, C++ and Go modes

@@ -1,0 +1,118 @@
+title: Smallest Value in a Rotated Sorted List
+difficulty: medium
+patterns: [binary-search]
+why: >-
+  Comparing the middle number with the last one tells you which side of the middle the break in
+  the order (and so the minimum) is on, so you can throw away half the list at every step.
+summary: Find the smallest number in a sorted list that has been rotated.
+statement: |
+  A list of different integers was sorted in increasing order and then rotated: some of its items
+  were moved, in order, from the end to the front. For example, `[1, 2, 4, 6, 7]` rotated by two
+  becomes `[6, 7, 1, 2, 4]`. It may have been rotated by any amount, including none.
+
+  Given the rotated list `nums`, return its smallest number in O(log n) time.
+constraints:
+  - "`nums` holds 1 to 5000 numbers, all different."
+  - "Every number is between −5000 and 5000."
+  - "`nums` is an increasing list rotated by some amount from 0 to n − 1."
+signature:
+  function: findMin
+  params:
+    - { name: nums, type: "int[]" }
+  returns: int
+examples:
+  - input: { nums: [6, 7, 1, 2, 4] }
+    output: 1
+  - input: { nums: [11, 13, 15, 17] }
+    output: 11
+    explanation: "This list wasn't rotated at all, so the minimum is at the front."
+tests:
+  - input: { nums: [3] }
+    output: 3
+  - input: { nums: [2, 1] }
+    output: 1
+  - input: { nums: [1, 2] }
+    output: 1
+  - input: { nums: [5, 1, 3] }
+    output: 1
+  - input: { nums: [-1, 0, 4, 9, -5, -4, -3] }
+    output: -5
+  - input: { nums: [8, 9, 10, 11, 0] }
+    output: 0
+generated: { count: 8, seed: 39 }
+hints:
+  - "In a rotated list, the minimum is where the order breaks: the only number smaller than the one before it."
+  - "Compare the middle number with the last number. If the middle one is bigger, where must the break be?"
+  - "If the middle number is smaller than the last, the stretch from the middle to the end is in order, so the minimum is the middle itself or somewhere to its left."
+approach: |
+  Keep a range `[lo, hi]` that contains the minimum, starting with the whole list. Look at `mid`.
+  If `nums[mid] > nums[hi]`, the order breaks somewhere after `mid`, so the minimum is to its
+  right: `lo = mid + 1`. Otherwise `nums[mid..hi]` is increasing, so the minimum is `mid` itself
+  or to its left: `hi = mid`. When `lo` meets `hi`, it points at the minimum.
+
+  Comparing with `nums[hi]` rather than `nums[lo]` handles a list that wasn't rotated, with no
+  special case.
+complexity: { time: "O(log n)", space: "O(1)" }
+solutions:
+  python: |
+    def find_min(nums: list[int]) -> int:
+        lo, hi = 0, len(nums) - 1
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if nums[mid] > nums[hi]:
+                lo = mid + 1
+            else:
+                hi = mid
+        return nums[lo]
+  typescript: |
+    function findMin(nums: number[]): number {
+      let lo = 0;
+      let hi = nums.length - 1;
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (nums[mid] > nums[hi]) lo = mid + 1;
+        else hi = mid;
+      }
+      return nums[lo];
+    }
+  java: |
+    class Solution {
+        public int findMin(int[] nums) {
+            int lo = 0;
+            int hi = nums.length - 1;
+            while (lo < hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (nums[mid] > nums[hi]) lo = mid + 1;
+                else hi = mid;
+            }
+            return nums[lo];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int findMin(vector<int>& nums) {
+            int lo = 0;
+            int hi = (int)nums.size() - 1;
+            while (lo < hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (nums[mid] > nums[hi]) lo = mid + 1;
+                else hi = mid;
+            }
+            return nums[lo];
+        }
+    };
+  go: |
+    func findMin(nums []int) int {
+    	lo, hi := 0, len(nums)-1
+    	for lo < hi {
+    		mid := lo + (hi-lo)/2
+    		if nums[mid] > nums[hi] {
+    			lo = mid + 1
+    		} else {
+    			hi = mid
+    		}
+    	}
+    	return nums[lo]
+    }
+visualisers: [binary-search]

@@ -1,0 +1,175 @@
+title: Kth Largest Number in a List
+difficulty: medium
+patterns: [heap]
+why: >-
+  Only the k largest values seen so far can matter, and the answer is the smallest of them. A
+  min-heap capped at k items keeps exactly those values, with that smallest one on top.
+summary: Find the value that would be k-th if the list were sorted from largest down.
+statement: |
+  You are given a list of integers `nums` and an integer `k`. Return the k-th largest value: the
+  value that would sit at position k (counting from 1) if `nums` were sorted from largest to
+  smallest.
+
+  Equal values count separately, so in `[5, 5, 1]` the largest and the second largest are both 5.
+  Try to do better than sorting the whole list.
+constraints:
+  - "1 ≤ `k` ≤ length of `nums` ≤ 10⁵"
+  - "Every value is between −10⁴ and 10⁴."
+signature:
+  function: findKthLargest
+  params:
+    - { name: nums, type: "int[]" }
+    - { name: k, type: int }
+  returns: int
+examples:
+  - input: { nums: [4, 9, 1, 7, 3], k: 2 }
+    output: 7
+    explanation: "From largest down the values are 9, 7, 4, 3, 1, and the second is 7."
+  - input: { nums: [6, 2, 6, 5, 1], k: 2 }
+    output: 6
+    explanation: The two 6s count separately, so the second largest is 6 as well.
+tests:
+  - input: { nums: [7], k: 1 }
+    output: 7
+  - input: { nums: [2, 2, 2], k: 3 }
+    output: 2
+  - input: { nums: [-1, -5, -3], k: 1 }
+    output: -1
+  - input: { nums: [-10000, 10000, 0, 5], k: 4 }
+    output: -10000
+  - input: { nums: [9, 3, 9, 8, 1], k: 2 }
+    output: 9
+generated: { count: 8, seed: 31 }
+hints:
+  - "Sorting takes O(n log n). Which of the values do you actually need to remember as you go?"
+  - "Only the k largest values seen so far matter, and the answer is the smallest of them."
+  - "Keep a min-heap of at most k values: push each number, and pop the smallest whenever the heap holds more than k. The top is the answer."
+approach: |
+  Walk through the list keeping a min-heap of the k largest values seen so far. Push each number;
+  if the heap now holds k + 1 values, pop the smallest, which can't be among the k largest. After
+  the walk the heap holds the k largest values, and its top, the smallest of them, is the k-th
+  largest.
+
+  Quickselect (partition around a pivot as quicksort does, then continue into one side only) takes
+  O(n) on average, but it rearranges the list, and an unlucky run takes O(n²).
+complexity: { time: "O(n log k)", space: "O(k)" }
+solutions:
+  python: |
+    import heapq
+
+    def find_kth_largest(nums: list[int], k: int) -> int:
+        heap = []  # the k largest so far, smallest on top
+        for x in nums:
+            heapq.heappush(heap, x)
+            if len(heap) > k:
+                heapq.heappop(heap)
+        return heap[0]
+  typescript: |
+    class Heap<T> {
+      private items: T[] = [];
+      private before: (a: T, b: T) => boolean;
+
+      // before(a, b) is true when a belongs nearer the top than b.
+      constructor(before: (a: T, b: T) => boolean) {
+        this.before = before;
+      }
+
+      size(): number {
+        return this.items.length;
+      }
+
+      peek(): T {
+        return this.items[0];
+      }
+
+      push(item: T): void {
+        const a = this.items;
+        a.push(item);
+        let i = a.length - 1;
+        while (i > 0) {
+          const parent = (i - 1) >> 1;
+          if (!this.before(a[i], a[parent])) break;
+          [a[i], a[parent]] = [a[parent], a[i]];
+          i = parent;
+        }
+      }
+
+      pop(): T {
+        const a = this.items;
+        const top = a[0];
+        const last = a.pop()!;
+        if (a.length > 0) {
+          a[0] = last;
+          let i = 0;
+          while (true) {
+            const left = 2 * i + 1;
+            const right = left + 1;
+            let first = i;
+            if (left < a.length && this.before(a[left], a[first])) first = left;
+            if (right < a.length && this.before(a[right], a[first])) first = right;
+            if (first === i) break;
+            [a[i], a[first]] = [a[first], a[i]];
+            i = first;
+          }
+        }
+        return top;
+      }
+    }
+
+    function findKthLargest(nums: number[], k: number): number {
+      const heap = new Heap<number>((a, b) => a < b); // the k largest so far, smallest on top
+      for (const x of nums) {
+        heap.push(x);
+        if (heap.size() > k) heap.pop();
+      }
+      return heap.peek();
+    }
+  java: |
+    class Solution {
+        public int findKthLargest(int[] nums, int k) {
+            PriorityQueue<Integer> heap = new PriorityQueue<>(); // the k largest so far, smallest on top
+            for (int x : nums) {
+                heap.add(x);
+                if (heap.size() > k) heap.poll();
+            }
+            return heap.peek();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int findKthLargest(vector<int>& nums, int k) {
+            priority_queue<int, vector<int>, greater<int>> heap; // the k largest so far, smallest on top
+            for (int x : nums) {
+                heap.push(x);
+                if ((int)heap.size() > k) heap.pop();
+            }
+            return heap.top();
+        }
+    };
+  go: |
+    // minHeap is a container/heap of ints, smallest on top.
+    type minHeap []int
+
+    func (h minHeap) Len() int           { return len(h) }
+    func (h minHeap) Less(i, j int) bool { return h[i] < h[j] }
+    func (h minHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *minHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *minHeap) Pop() any {
+    	old := *h
+    	last := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return last
+    }
+
+    func findKthLargest(nums []int, k int) int {
+    	largest := &minHeap{} // the k largest so far, smallest on top
+    	for _, x := range nums {
+    		heap.Push(largest, x)
+    		if largest.Len() > k {
+    			heap.Pop(largest)
+    		}
+    	}
+    	return (*largest)[0]
+    }
+visualisers: [heap]

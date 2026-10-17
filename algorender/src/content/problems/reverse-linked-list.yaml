@@ -1,0 +1,109 @@
+title: Reverse a Linked List
+difficulty: easy
+patterns: [linked-list]
+why: >-
+  Reversing in place means rewiring each node's `next` pointer as you pass it, keeping hold of
+  the node behind and the node ahead so nothing is lost.
+summary: Turn a singly linked list around and return its new head.
+statement: |
+  You are given `head`, the first node of a singly linked list (or nothing, for an empty list).
+
+  Reverse the list, so its last node comes first and every `next` pointer points the other way,
+  and return the new first node. Rewire the nodes you were given rather than making new ones.
+constraints:
+  - "The list holds 0 to 5000 nodes."
+  - "Every value is between −5000 and 5000."
+signature:
+  function: reverseList
+  params:
+    - { name: head, type: ListNode }
+  returns: ListNode
+view: memory
+examples:
+  - input: { head: [4, 8, 15] }
+    output: [15, 8, 4]
+  - input: { head: [7] }
+    output: [7]
+    explanation: A single node is its own reverse.
+tests:
+  - input: { head: [] }
+    output: []
+  - input: { head: [1, 2] }
+    output: [2, 1]
+  - input: { head: [3, 3, 1, 3] }
+    output: [3, 1, 3, 3]
+generated: { count: 6, seed: 5 }
+hints:
+  - "As you walk the list, each node's `next` should end up pointing at the node you just left."
+  - "Before you change `node.next`, save it: it's the only way to reach the rest of the list."
+  - "Keep two names, `prev` (starting as nothing) and the current node. Each step: save next, point current at prev, move both forward."
+approach: |
+  Walk the list with two references: `prev`, the reversed part so far (initially empty), and
+  `node`, the next node to move. At each step save `node.next`, point `node.next` at `prev`, then
+  move `prev` to `node` and `node` to the saved next. When `node` runs out, `prev` is the new head.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def reverse_list(head: ListNode | None) -> ListNode | None:
+        prev = None
+        node = head
+        while node:
+            nxt = node.next
+            node.next = prev
+            prev = node
+            node = nxt
+        return prev
+  typescript: |
+    function reverseList(head: ListNode | null): ListNode | null {
+      let prev: ListNode | null = null;
+      let node = head;
+      while (node) {
+        const next: ListNode | null = node.next;
+        node.next = prev;
+        prev = node;
+        node = next;
+      }
+      return prev;
+    }
+  java: |
+    class Solution {
+        public ListNode reverseList(ListNode head) {
+            ListNode prev = null;
+            ListNode node = head;
+            while (node != null) {
+                ListNode next = node.next;
+                node.next = prev;
+                prev = node;
+                node = next;
+            }
+            return prev;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        ListNode* reverseList(ListNode* head) {
+            ListNode* prev = nullptr;
+            ListNode* node = head;
+            while (node) {
+                ListNode* next = node->next;
+                node->next = prev;
+                prev = node;
+                node = next;
+            }
+            return prev;
+        }
+    };
+  go: |
+    func reverseList(head *ListNode) *ListNode {
+    	var prev *ListNode
+    	node := head
+    	for node != nil {
+    		next := node.Next
+    		node.Next = prev
+    		prev = node
+    		node = next
+    	}
+    	return prev
+    }
+visualisers: [linked-list]

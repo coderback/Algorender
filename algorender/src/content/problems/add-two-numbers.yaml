@@ -1,0 +1,166 @@
+title: Add Two Numbers Stored as Linked Lists
+difficulty: medium
+patterns: [linked-list]
+why: >-
+  The digits arrive ones digit first, the order you add them by hand, so you walk both lists in
+  step, carrying as you go, and build the answer node by node behind a dummy head.
+summary: Add two numbers whose digits are stored in linked lists, ones digit first.
+statement: |
+  You are given `l1` and `l2`, two non-empty linked lists that each hold a non-negative integer,
+  one decimal digit per node, with the **ones digit first**. So `[3, 0, 8]` is the number 803.
+
+  Return the sum of the two numbers as a linked list in the same form. Neither number has leading
+  zeros, except the number 0 itself, which is `[0]`, and the sum mustn't have any either.
+
+  The numbers can have up to 100 digits, far more than an ordinary integer holds, so add them
+  digit by digit.
+constraints:
+  - "Each list holds 1 to 100 nodes."
+  - "Every node holds a digit from 0 to 9."
+  - "No list ends in a 0, except the list `[0]`."
+signature:
+  function: addTwoNumbers
+  params:
+    - { name: l1, type: ListNode }
+    - { name: l2, type: ListNode }
+  returns: ListNode
+examples:
+  - input: { l1: [3, 0, 8], l2: [9, 4] }
+    output: [2, 5, 8]
+    explanation: "803 + 49 = 852, written ones digit first."
+  - input: { l1: [9, 9], l2: [1] }
+    output: [0, 0, 1]
+    explanation: "99 + 1 = 100: the last carry becomes a new node."
+tests:
+  - input: { l1: [0], l2: [0] }
+    output: [0]
+  - input: { l1: [5], l2: [5] }
+    output: [0, 1]
+  - input: { l1: [1, 2, 3], l2: [0] }
+    output: [1, 2, 3]
+  - input: { l1: [9, 9, 9, 9], l2: [9, 9] }
+    output: [8, 9, 0, 0, 1]
+  - input: { l1: [6, 1], l2: [7, 8, 9] }
+    output: [3, 0, 0, 1]
+generated: { count: 8, seed: 37 }
+hints:
+  - "Add the way you would on paper: ones digits first, then tens, carrying 1 whenever a column reaches 10."
+  - "Walk both lists together. A list that has run out adds 0."
+  - "Keep going while either list has nodes left or there is a carry. Each column adds a node holding `total % 10` to a new list built behind a dummy head."
+approach: |
+  Walk both lists at once with a running `carry`, starting at 0. In each column, add the two
+  digits (0 for a list that has already ended) and the carry. The new node holds `total % 10`, and
+  the carry becomes `total // 10`. Append each new node behind a dummy head.
+
+  Keep going while either list has nodes left or the carry is 1, so a final carry becomes a node of
+  its own. The sum starts at `dummy.next`.
+complexity: { time: "O(max(m, n))", space: "O(max(m, n)) for the answer" }
+solutions:
+  python: |
+    def add_two_numbers(l1: ListNode | None, l2: ListNode | None) -> ListNode | None:
+        dummy = ListNode(0)
+        tail = dummy
+        carry = 0
+        while l1 or l2 or carry:
+            total = carry
+            if l1:
+                total += l1.val
+                l1 = l1.next
+            if l2:
+                total += l2.val
+                l2 = l2.next
+            carry = total // 10
+            tail.next = ListNode(total % 10)
+            tail = tail.next
+        return dummy.next
+  typescript: |
+    function addTwoNumbers(l1: ListNode | null, l2: ListNode | null): ListNode | null {
+      const dummy = new ListNode(0);
+      let tail = dummy;
+      let carry = 0;
+      while (l1 || l2 || carry > 0) {
+        let total = carry;
+        if (l1) {
+          total += l1.val;
+          l1 = l1.next;
+        }
+        if (l2) {
+          total += l2.val;
+          l2 = l2.next;
+        }
+        carry = Math.floor(total / 10);
+        const node = new ListNode(total % 10);
+        tail.next = node;
+        tail = node;
+      }
+      return dummy.next;
+    }
+  java: |
+    class Solution {
+        public ListNode addTwoNumbers(ListNode l1, ListNode l2) {
+            ListNode dummy = new ListNode(0);
+            ListNode tail = dummy;
+            int carry = 0;
+            while (l1 != null || l2 != null || carry > 0) {
+                int total = carry;
+                if (l1 != null) {
+                    total += l1.val;
+                    l1 = l1.next;
+                }
+                if (l2 != null) {
+                    total += l2.val;
+                    l2 = l2.next;
+                }
+                carry = total / 10;
+                tail.next = new ListNode(total % 10);
+                tail = tail.next;
+            }
+            return dummy.next;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+            ListNode dummy(0);
+            ListNode* tail = &dummy;
+            int carry = 0;
+            while (l1 || l2 || carry > 0) {
+                int total = carry;
+                if (l1) {
+                    total += l1->val;
+                    l1 = l1->next;
+                }
+                if (l2) {
+                    total += l2->val;
+                    l2 = l2->next;
+                }
+                carry = total / 10;
+                tail->next = new ListNode(total % 10);
+                tail = tail->next;
+            }
+            return dummy.next;
+        }
+    };
+  go: |
+    func addTwoNumbers(l1 *ListNode, l2 *ListNode) *ListNode {
+    	dummy := &ListNode{}
+    	tail := dummy
+    	carry := 0
+    	for l1 != nil || l2 != nil || carry > 0 {
+    		total := carry
+    		if l1 != nil {
+    			total += l1.Val
+    			l1 = l1.Next
+    		}
+    		if l2 != nil {
+    			total += l2.Val
+    			l2 = l2.Next
+    		}
+    		carry = total / 10
+    		tail.Next = &ListNode{Val: total % 10}
+    		tail = tail.Next
+    	}
+    	return dummy.Next
+    }
+visualisers: [linked-list]

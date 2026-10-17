@@ -1,0 +1,237 @@
+title: Signal Spread Time
+difficulty: medium
+patterns: [shortest-paths]
+why: >-
+  The signal reaches each node along its quickest route, and no delay is negative. Dijkstra's
+  algorithm with a heap finds every quickest arrival time; the answer is the latest of them.
+summary: Work out how long a signal takes to reach every node of a network with one-way delays.
+statement: |
+  A network has `n` nodes, numbered from 1 to `n`. Each entry `[u, v, w]` in `times` is a one-way
+  link: a signal at node `u` reaches node `v` after `w` minutes.
+
+  A signal starts at node `k` at minute 0 and travels along every link at once. Return the number
+  of minutes until every node has received it, or `-1` if some node can never be reached.
+constraints:
+  - "1 ≤ `k` ≤ `n` ≤ 500"
+  - "`times` holds 0 to 6000 links. In each, `u` and `v` are different nodes from 1 to `n`, and no (`u`, `v`) pair appears twice."
+  - "0 ≤ `w` ≤ 100"
+signature:
+  function: networkDelayTime
+  params:
+    - { name: times, type: "int[][]" }
+    - { name: n, type: int }
+    - { name: k, type: int }
+  returns: int
+view: memory
+examples:
+  - input: { times: [[1, 2, 4], [1, 3, 1], [3, 2, 2], [2, 4, 1]], n: 4, k: 1 }
+    output: 4
+    explanation: "Node 3 hears the signal at minute 1, node 2 at minute 3 by way of node 3 (sooner than the direct 4-minute link), and node 4 at minute 4."
+  - input: { times: [[1, 2, 5], [1, 3, 2]], n: 3, k: 2 }
+    output: -1
+    explanation: "Links only go one way, and none leaves node 2, so the signal never gets anywhere."
+tests:
+  - input: { times: [], n: 1, k: 1 }
+    output: 0
+  - input: { times: [[1, 2, 0]], n: 2, k: 1 }
+    output: 0
+  - input: { times: [[2, 1, 3], [2, 3, 7], [1, 3, 2]], n: 3, k: 2 }
+    output: 5
+  - input: { times: [[1, 2, 1], [2, 3, 1]], n: 4, k: 1 }
+    output: -1
+  - input: { times: [[3, 1, 100], [3, 2, 100], [1, 2, 1]], n: 3, k: 3 }
+    output: 100
+  - input: { times: [[1, 2, 1], [2, 3, 1], [3, 1, 1]], n: 3, k: 2 }
+    output: 2
+generated: { count: 8, seed: 47 }
+hints:
+  - "Each node hears the signal at the time of its quickest route from `k`. Once you know all those times, what is the answer?"
+  - "No delay is negative, so Dijkstra's algorithm applies: settle nodes in order of arrival time, earliest first."
+  - "Keep a min-heap of `(time, node)` pairs. Pop the earliest; skip it if that node already has a time; otherwise record the time and push each neighbour with `time + w`. The answer is the latest recorded time, or −1 if fewer than `n` nodes get one."
+approach: |
+  Build a list of outgoing links for each node. Then run Dijkstra's algorithm from `k`: a min-heap
+  holds `(arrival time, node)` pairs, starting with `(0, k)`. Pop the earliest pair. If its node
+  already has a time, skip it, because a quicker route got there first. Otherwise record the time,
+  and push every neighbour `v` that has no time yet with `time + w`.
+
+  Because no delay is negative, the first time a node comes off the heap is its quickest arrival.
+  If every node gets a time, the answer is the largest of them; otherwise it is `-1`.
+complexity: { time: "O(E log E) for E links", space: "O(n + E)" }
+solutions:
+  python: |
+    import heapq
+
+    def network_delay_time(times: list[list[int]], n: int, k: int) -> int:
+        links = [[] for _ in range(n + 1)]
+        for u, v, w in times:
+            links[u].append((v, w))
+        arrived = {}  # node -> minute it first hears the signal
+        heap = [(0, k)]
+        while heap:
+            time, node = heapq.heappop(heap)
+            if node in arrived:
+                continue  # a quicker route got here first
+            arrived[node] = time
+            for nxt, w in links[node]:
+                if nxt not in arrived:
+                    heapq.heappush(heap, (time + w, nxt))
+        return max(arrived.values()) if len(arrived) == n else -1
+  typescript: |
+    class Heap<T> {
+      private items: T[] = [];
+      private before: (a: T, b: T) => boolean;
+
+      // before(a, b) is true when a belongs nearer the top than b.
+      constructor(before: (a: T, b: T) => boolean) {
+        this.before = before;
+      }
+
+      size(): number {
+        return this.items.length;
+      }
+
+      peek(): T {
+        return this.items[0];
+      }
+
+      push(item: T): void {
+        const a = this.items;
+        a.push(item);
+        let i = a.length - 1;
+        while (i > 0) {
+          const parent = (i - 1) >> 1;
+          if (!this.before(a[i], a[parent])) break;
+          [a[i], a[parent]] = [a[parent], a[i]];
+          i = parent;
+        }
+      }
+
+      pop(): T {
+        const a = this.items;
+        const top = a[0];
+        const last = a.pop()!;
+        if (a.length > 0) {
+          a[0] = last;
+          let i = 0;
+          while (true) {
+            const left = 2 * i + 1;
+            const right = left + 1;
+            let first = i;
+            if (left < a.length && this.before(a[left], a[first])) first = left;
+            if (right < a.length && this.before(a[right], a[first])) first = right;
+            if (first === i) break;
+            [a[i], a[first]] = [a[first], a[i]];
+            i = first;
+          }
+        }
+        return top;
+      }
+    }
+
+    function networkDelayTime(times: number[][], n: number, k: number): number {
+      const links: number[][][] = Array.from({ length: n + 1 }, () => []);
+      for (const [u, v, w] of times) links[u].push([v, w]);
+      const arrived = new Map<number, number>(); // node -> minute it first hears the signal
+      const heap = new Heap<number[]>((a, b) => a[0] < b[0]); // [time, node], earliest on top
+      heap.push([0, k]);
+      while (heap.size() > 0) {
+        const [time, node] = heap.pop();
+        if (arrived.has(node)) continue; // a quicker route got here first
+        arrived.set(node, time);
+        for (const [next, w] of links[node]) {
+          if (!arrived.has(next)) heap.push([time + w, next]);
+        }
+      }
+      return arrived.size === n ? Math.max(...arrived.values()) : -1;
+    }
+  java: |
+    class Solution {
+        public int networkDelayTime(int[][] times, int n, int k) {
+            List<List<int[]>> links = new ArrayList<>();
+            for (int i = 0; i <= n; i++) links.add(new ArrayList<>());
+            for (int[] t : times) links.get(t[0]).add(new int[] {t[1], t[2]});
+            Map<Integer, Integer> arrived = new HashMap<>(); // node -> minute it first hears the signal
+            PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));
+            heap.offer(new int[] {0, k});
+            while (!heap.isEmpty()) {
+                int[] top = heap.poll();
+                int time = top[0], node = top[1];
+                if (arrived.containsKey(node)) continue; // a quicker route got here first
+                arrived.put(node, time);
+                for (int[] link : links.get(node)) {
+                    if (!arrived.containsKey(link[0])) heap.offer(new int[] {time + link[1], link[0]});
+                }
+            }
+            return arrived.size() == n ? Collections.max(arrived.values()) : -1;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int networkDelayTime(vector<vector<int>>& times, int n, int k) {
+            vector<vector<pair<int, int>>> links(n + 1);
+            for (auto& t : times) links[t[0]].push_back({t[1], t[2]});
+            vector<int> arrived(n + 1, -1); // minute each node first hears the signal
+            priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> heap;
+            heap.push({0, k});
+            int reached = 0, latest = 0;
+            while (!heap.empty()) {
+                auto [time, node] = heap.top();
+                heap.pop();
+                if (arrived[node] != -1) continue; // a quicker route got here first
+                arrived[node] = time;
+                reached++;
+                latest = max(latest, time);
+                for (auto [next, w] : links[node]) {
+                    if (arrived[next] == -1) heap.push({time + w, next});
+                }
+            }
+            return reached == n ? latest : -1;
+        }
+    };
+  go: |
+    type arrival struct{ time, node int }
+
+    // arrivalHeap is a min-heap of arrivals by time, for container/heap.
+    type arrivalHeap []arrival
+
+    func (h arrivalHeap) Len() int           { return len(h) }
+    func (h arrivalHeap) Less(i, j int) bool { return h[i].time < h[j].time }
+    func (h arrivalHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *arrivalHeap) Push(x any)        { *h = append(*h, x.(arrival)) }
+    func (h *arrivalHeap) Pop() any {
+    	old := *h
+    	x := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return x
+    }
+
+    func networkDelayTime(times [][]int, n int, k int) int {
+    	links := make([][][2]int, n+1)
+    	for _, t := range times {
+    		links[t[0]] = append(links[t[0]], [2]int{t[1], t[2]})
+    	}
+    	arrived := map[int]int{} // node -> minute it first hears the signal
+    	h := &arrivalHeap{{0, k}}
+    	for h.Len() > 0 {
+    		a := heap.Pop(h).(arrival)
+    		if _, done := arrived[a.node]; done {
+    			continue // a quicker route got here first
+    		}
+    		arrived[a.node] = a.time
+    		for _, link := range links[a.node] {
+    			if _, done := arrived[link[0]]; !done {
+    				heap.Push(h, arrival{a.time + link[1], link[0]})
+    			}
+    		}
+    	}
+    	if len(arrived) < n {
+    		return -1
+    	}
+    	latest := 0
+    	for _, time := range arrived {
+    		latest = max(latest, time)
+    	}
+    	return latest
+    }
+visualisers: [dijkstra]

@@ -1,0 +1,153 @@
+title: Fewest Edits Between Two Words
+difficulty: hard
+patterns: [dp-2d]
+why: >-
+  The cheapest way to turn one prefix into another builds on three slightly shorter pairs of
+  prefixes (after an insert, a delete or a replace): a 2D table over a position in each word.
+summary: Count the fewest single-character inserts, deletes and replacements that turn one word into another.
+statement: |
+  You can change a word with three kinds of edit: insert one character anywhere, delete one
+  character, or replace one character with a different one.
+
+  Given `word1` and `word2`, return the fewest edits that turn `word1` into `word2`.
+constraints:
+  - "`word1` and `word2` each hold 0 to 500 lowercase letters."
+signature:
+  function: minDistance
+  params:
+    - { name: word1, type: string }
+    - { name: word2, type: string }
+  returns: int
+examples:
+  - input: { word1: "sunday", word2: "saturday" }
+    output: 3
+    explanation: "Insert `a` and `t` after the `s`, then replace the `n` with `r`."
+  - input: { word1: "", word2: "abc" }
+    output: 3
+    explanation: Insert all three letters.
+tests:
+  - input: { word1: "", word2: "" }
+    output: 0
+  - input: { word1: "same", word2: "same" }
+    output: 0
+  - input: { word1: "abc", word2: "" }
+    output: 3
+  - input: { word1: "a", word2: "b" }
+    output: 1
+  - input: { word1: "ab", word2: "ba" }
+    output: 2
+  - input: { word1: "flaw", word2: "lawn" }
+    output: 2
+  - input: { word1: "kitten", word2: "sitting" }
+    output: 3
+generated: { count: 8, seed: 31 }
+hints:
+  - "Look at the last character of each word. If they are equal, do you need to touch them at all?"
+  - "Let `D[i][j]` be the fewest edits that turn the first i characters of `word1` into the first j of `word2`. Turning a prefix into the empty string costs its length, and so does the reverse."
+  - "When the last characters differ, the last edit was a replace (from `D[i − 1][j − 1]`), a delete (from `D[i − 1][j]`) or an insert (from `D[i][j − 1]`), plus 1. Take the cheapest."
+approach: |
+  Let `D[i][j]` be the fewest edits that turn the first `i` characters of `word1` into the first
+  `j` characters of `word2`. Turning `i` characters into nothing takes `i` deletes, and building
+  `j` characters from nothing takes `j` inserts, which fills the first column and row.
+
+  If the last characters of the two prefixes are equal, leave them alone:
+  `D[i][j] = D[i − 1][j − 1]`. Otherwise the last edit was one of three, each costing 1:
+
+  - replace the last character: `D[i − 1][j − 1] + 1`;
+  - delete the last character of `word1`'s prefix: `D[i − 1][j] + 1`;
+  - insert the last character of `word2`'s prefix: `D[i][j − 1] + 1`.
+
+  Take the smallest. Fill the table row by row, keeping only the previous row; the answer is the
+  bottom-right entry.
+complexity: { time: "O(m × n)", space: "O(n)" }
+solutions:
+  python: |
+    def min_distance(word1: str, word2: str) -> int:
+        above = list(range(len(word2) + 1))  # turning "" into each prefix of word2 takes that many inserts
+        for i, a in enumerate(word1, 1):
+            row = [i]  # turning i characters into "" takes i deletes
+            for j, b in enumerate(word2, 1):
+                if a == b:
+                    row.append(above[j - 1])
+                else:
+                    row.append(1 + min(above[j - 1], above[j], row[j - 1]))  # replace, delete, insert
+            above = row
+        return above[-1]
+  typescript: |
+    function minDistance(word1: string, word2: string): number {
+      // Turning "" into each prefix of word2 takes that many inserts.
+      let above = Array.from({ length: word2.length + 1 }, (_, j) => j);
+      for (let i = 1; i <= word1.length; i++) {
+        const row = [i]; // turning i characters into "" takes i deletes
+        for (let j = 1; j <= word2.length; j++) {
+          if (word1[i - 1] === word2[j - 1]) row.push(above[j - 1]);
+          else row.push(1 + Math.min(above[j - 1], above[j], row[j - 1])); // replace, delete, insert
+        }
+        above = row;
+      }
+      return above[word2.length];
+    }
+  java: |
+    class Solution {
+        public int minDistance(String word1, String word2) {
+            int m = word1.length();
+            int n = word2.length();
+            // Turning "" into each prefix of word2 takes that many inserts.
+            int[] above = new int[n + 1];
+            for (int j = 0; j <= n; j++) above[j] = j;
+            for (int i = 1; i <= m; i++) {
+                int[] row = new int[n + 1];
+                row[0] = i; // turning i characters into "" takes i deletes
+                for (int j = 1; j <= n; j++) {
+                    if (word1.charAt(i - 1) == word2.charAt(j - 1)) row[j] = above[j - 1];
+                    else row[j] = 1 + Math.min(above[j - 1], Math.min(above[j], row[j - 1])); // replace, delete, insert
+                }
+                above = row;
+            }
+            return above[n];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int minDistance(string& word1, string& word2) {
+            int m = word1.size();
+            int n = word2.size();
+            // Turning "" into each prefix of word2 takes that many inserts.
+            vector<int> above(n + 1);
+            iota(above.begin(), above.end(), 0);
+            for (int i = 1; i <= m; i++) {
+                vector<int> row(n + 1);
+                row[0] = i; // turning i characters into "" takes i deletes
+                for (int j = 1; j <= n; j++) {
+                    if (word1[i - 1] == word2[j - 1]) row[j] = above[j - 1];
+                    else row[j] = 1 + min({above[j - 1], above[j], row[j - 1]}); // replace, delete, insert
+                }
+                above = move(row);
+            }
+            return above[n];
+        }
+    };
+  go: |
+    func minDistance(word1 string, word2 string) int {
+    	m, n := len(word1), len(word2)
+    	// Turning "" into each prefix of word2 takes that many inserts.
+    	above := make([]int, n+1)
+    	for j := range above {
+    		above[j] = j
+    	}
+    	for i := 1; i <= m; i++ {
+    		row := make([]int, n+1)
+    		row[0] = i // turning i characters into "" takes i deletes
+    		for j := 1; j <= n; j++ {
+    			if word1[i-1] == word2[j-1] {
+    				row[j] = above[j-1]
+    			} else {
+    				row[j] = 1 + min(above[j-1], above[j], row[j-1]) // replace, delete, insert
+    			}
+    		}
+    		above = row
+    	}
+    	return above[n]
+    }
+visualisers: [edit-distance]

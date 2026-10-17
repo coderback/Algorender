@@ -1,0 +1,115 @@
+title: Rotate a Square Grid
+difficulty: medium
+patterns: [math]
+why: >-
+  A quarter turn is index arithmetic: cell (r, c) moves to (c, n − 1 − r). Doing it in place means
+  moving cells in cycles of four, or as two simpler flips.
+summary: Turn an n × n grid a quarter turn clockwise, in place.
+statement: |
+  You are given `matrix`, an n × n grid of integers.
+
+  Rotate it 90 degrees clockwise **in place**: change `matrix` itself rather than building and
+  returning a new grid. After the turn, the first row holds what was the first column, read from
+  bottom to top.
+constraints:
+  - "1 ≤ n ≤ 20"
+  - "Every value is between −1000 and 1000."
+signature:
+  function: rotate
+  params:
+    - { name: matrix, type: "int[][]" }
+  returns: void
+  inPlace: matrix
+examples:
+  - input: { matrix: [[1, 2, 3], [4, 5, 6], [7, 8, 9]] }
+    output: [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  - input: { matrix: [[1, 2], [3, 4]] }
+    output: [[3, 1], [4, 2]]
+tests:
+  - input: { matrix: [[5]] }
+    output: [[5]]
+  - input: { matrix: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]] }
+    output: [[13, 9, 5, 1], [14, 10, 6, 2], [15, 11, 7, 3], [16, 12, 8, 4]]
+  - input: { matrix: [[0, -1], [-1, 0]] }
+    output: [[-1, 0], [0, -1]]
+generated: { count: 6, seed: 4 }
+hints:
+  - "Where does the cell at row r, column c end up after a clockwise quarter turn?"
+  - "Two flips make a quarter turn: swap across the main diagonal (transpose), then reverse each row."
+approach: |
+  A clockwise quarter turn sends cell (r, c) to (c, n − 1 − r). That is two easy in-place steps:
+  transpose the grid (swap `matrix[r][c]` with `matrix[c][r]` for every c > r), which sends (r, c)
+  to (c, r), then reverse each row, which sends (c, r) to (c, n − 1 − r).
+complexity: { time: "O(n²)", space: "O(1)" }
+solutions:
+  python: |
+    def rotate(matrix: list[list[int]]) -> None:
+        n = len(matrix)
+        for r in range(n):
+            for c in range(r + 1, n):
+                matrix[r][c], matrix[c][r] = matrix[c][r], matrix[r][c]
+        for row in matrix:
+            for c in range(n // 2):
+                row[c], row[n - 1 - c] = row[n - 1 - c], row[c]
+  typescript: |
+    function rotate(matrix: number[][]): void {
+      const n = matrix.length;
+      for (let r = 0; r < n; r++) {
+        for (let c = r + 1; c < n; c++) {
+          [matrix[r][c], matrix[c][r]] = [matrix[c][r], matrix[r][c]];
+        }
+      }
+      for (const row of matrix) {
+        for (let c = 0; c < Math.floor(n / 2); c++) {
+          [row[c], row[n - 1 - c]] = [row[n - 1 - c], row[c]];
+        }
+      }
+    }
+  java: |
+    class Solution {
+        public void rotate(int[][] matrix) {
+            int n = matrix.length;
+            for (int r = 0; r < n; r++) { // transpose
+                for (int c = r + 1; c < n; c++) {
+                    int cell = matrix[r][c];
+                    matrix[r][c] = matrix[c][r];
+                    matrix[c][r] = cell;
+                }
+            }
+            for (int[] row : matrix) { // then reverse each row
+                for (int c = 0; c < n / 2; c++) {
+                    int cell = row[c];
+                    row[c] = row[n - 1 - c];
+                    row[n - 1 - c] = cell;
+                }
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        void rotate(vector<vector<int>>& matrix) {
+            int n = matrix.size();
+            for (int r = 0; r < n; r++) { // transpose
+                for (int c = r + 1; c < n; c++) {
+                    swap(matrix[r][c], matrix[c][r]);
+                }
+            }
+            for (auto& row : matrix) { // then reverse each row
+                reverse(row.begin(), row.end());
+            }
+        }
+    };
+  go: |
+    func rotate(matrix [][]int) {
+    	n := len(matrix)
+    	for r := 0; r < n; r++ { // transpose
+    		for c := r + 1; c < n; c++ {
+    			matrix[r][c], matrix[c][r] = matrix[c][r], matrix[r][c]
+    		}
+    	}
+    	for _, row := range matrix { // then reverse each row
+    		slices.Reverse(row)
+    	}
+    }
+visualisers: []

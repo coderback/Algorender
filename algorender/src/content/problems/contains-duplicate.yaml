@@ -1,0 +1,104 @@
+title: Spot a Repeated Number
+difficulty: easy
+patterns: [hashing]
+why: >-
+  For each number you need to know whether you have met it before. A hash set answers "seen it?"
+  in constant time, so one pass is enough.
+summary: Decide whether any number appears more than once in a list.
+statement: |
+  You are given a list of integers `nums`.
+
+  Return `true` if some value appears at least twice in `nums`, and `false` if every value is
+  different.
+constraints:
+  - "`nums` holds 1 to 10⁵ numbers."
+  - "Every number is between −10⁹ and 10⁹."
+signature:
+  function: containsDuplicate
+  params:
+    - { name: nums, type: "int[]" }
+  returns: bool
+examples:
+  - input: { nums: [4, 1, 7, 1] }
+    output: true
+    explanation: "`1` appears at positions 1 and 3."
+  - input: { nums: [3, 8, -2, 5] }
+    output: false
+    explanation: All four values are different.
+tests:
+  - input: { nums: [7] }
+    output: false
+  - input: { nums: [0, 0] }
+    output: true
+  - input: { nums: [-5, 5, -5] }
+    output: true
+  - input: { nums: [1000000000, -1000000000] }
+    output: false
+  - input: { nums: [2, 2, 2, 2] }
+    output: true
+  - input: { nums: [1, 2, 3, 4, 5, 6, 7, 8, 9, 1] }
+    output: true
+generated: { count: 8, seed: 21 }
+hints:
+  - "Comparing every pair works, but that is about n²/2 comparisons. What could you remember as you go, so each number needs only one check?"
+  - "Keep a set of the numbers you have passed. Before adding a number, ask whether it is already there."
+  - "Sorting a copy also works, since equal values end up side by side, but it costs O(n log n)."
+approach: |
+  Walk through the list once with an empty hash set. For each number, if it is already in the set,
+  you have found a repeat: return `true`. Otherwise add it and move on. If the walk ends, every
+  number was new, so return `false`.
+
+  Comparing the size of `set(nums)` with the length of the list gives the same answer in one line,
+  but the loop can stop at the first repeat.
+complexity: { time: "O(n)", space: "O(n)" }
+solutions:
+  python: |
+    def contains_duplicate(nums: list[int]) -> bool:
+        seen = set()
+        for x in nums:
+            if x in seen:
+                return True
+            seen.add(x)
+        return False
+  typescript: |
+    function containsDuplicate(nums: number[]): boolean {
+      const seen = new Set<number>();
+      for (const x of nums) {
+        if (seen.has(x)) return true;
+        seen.add(x);
+      }
+      return false;
+    }
+  java: |
+    class Solution {
+        public boolean containsDuplicate(int[] nums) {
+            Set<Integer> seen = new HashSet<>();
+            for (int x : nums) {
+                if (!seen.add(x)) return true;
+            }
+            return false;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool containsDuplicate(vector<int>& nums) {
+            unordered_set<int> seen;
+            for (int x : nums) {
+                if (!seen.insert(x).second) return true;
+            }
+            return false;
+        }
+    };
+  go: |
+    func containsDuplicate(nums []int) bool {
+    	seen := map[int]bool{}
+    	for _, x := range nums {
+    		if seen[x] {
+    			return true
+    		}
+    		seen[x] = true
+    	}
+    	return false
+    }
+visualisers: [hash-set]

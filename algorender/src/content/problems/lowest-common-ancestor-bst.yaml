@@ -1,0 +1,131 @@
+title: Lowest Common Ancestor in a Binary Search Tree
+difficulty: medium
+patterns: [trees]
+why: >-
+  The ordering tells you which side both values are on. While they are on the same side of a node,
+  go that way; the first node that separates them, or is one of them, is the answer.
+summary: Find the deepest node of a binary search tree that has both of two given values below it.
+statement: |
+  You are given `root`, the root of a binary search tree whose values are all different, and two
+  different values `p` and `q` that are both in the tree.
+
+  Return the value of their **lowest common ancestor**: the deepest node that has both `p` and `q`
+  in its subtree. A node counts as part of its own subtree, so if `p` is above `q`, the answer is
+  `p`.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds 2 to 1000 nodes."
+  - "Values are distinct, between −10⁴ and 10⁴."
+  - "`p` ≠ `q`, and both are values in the tree."
+signature:
+  function: lowestCommonAncestor
+  params:
+    - { name: root, type: TreeNode }
+    - { name: p, type: int }
+    - { name: q, type: int }
+  returns: int
+examples:
+  - input: { root: [20, 10, 30, 5, 15, 25, 35, null, null, 12, 18], p: 12, q: 5 }
+    output: 10
+    explanation: "5 is in 10's left subtree and 12 in its right, so 10 is where their paths split."
+  - input: { root: [20, 10, 30, 5, 15, 25, 35, null, null, 12, 18], p: 15, q: 18 }
+    output: 15
+    explanation: "18 is below 15, and 15 counts as part of its own subtree."
+tests:
+  - input: { root: [2, 1], p: 2, q: 1 }
+    output: 2
+  - input: { root: [2, 1, 3], p: 1, q: 3 }
+    output: 2
+  - input: { root: [40, 20, 60, 10, 30, 50, 70], p: 50, q: 70 }
+    output: 60
+  - input: { root: [40, 20, 60, 10, 30, 50, 70], p: 10, q: 70 }
+    output: 40
+  - input: { root: [1, null, 2, null, 3, null, 4], p: 3, q: 4 }
+    output: 3
+  - input: { root: [-5, -10, 0, null, null, -3, 8], p: -3, q: 8 }
+    output: 0
+generated: { count: 8, seed: 48 }
+hints:
+  - "Compare `p` and `q` with the root's value. If both are smaller, where must their common ancestor be?"
+  - "While both values are on the same side of the current node, move to the child on that side."
+  - "The first node where they part ways (one smaller, one larger), or that holds one of them, is the answer."
+approach: |
+  Start at the root. If `p` and `q` are both smaller than the node's value, both are in the left
+  subtree, and so is their lowest common ancestor: go left. If both are larger, go right.
+  Otherwise the node separates them, or is one of them, so no deeper node has both below it:
+  return its value.
+
+  The walk follows a single path down, with no recursion and no extra memory.
+complexity: { time: "O(h), h the tree's height", space: "O(1)" }
+solutions:
+  python: |
+    def lowest_common_ancestor(root: TreeNode | None, p: int, q: int) -> int:
+        node = root
+        while node:
+            if p < node.val and q < node.val:
+                node = node.left
+            elif p > node.val and q > node.val:
+                node = node.right
+            else:
+                return node.val
+        return -1  # not reached: p and q are in the tree
+  typescript: |
+    function lowestCommonAncestor(root: TreeNode | null, p: number, q: number): number {
+      let node = root;
+      while (node) {
+        if (p < node.val && q < node.val) node = node.left;
+        else if (p > node.val && q > node.val) node = node.right;
+        else return node.val;
+      }
+      return -1; // not reached: p and q are in the tree
+    }
+  java: |
+    class Solution {
+        public int lowestCommonAncestor(TreeNode root, int p, int q) {
+            TreeNode node = root;
+            while (node != null) {
+                if (p < node.val && q < node.val) {
+                    node = node.left;
+                } else if (p > node.val && q > node.val) {
+                    node = node.right;
+                } else {
+                    return node.val;
+                }
+            }
+            return -1; // not reached: p and q are in the tree
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int lowestCommonAncestor(TreeNode* root, int p, int q) {
+            TreeNode* node = root;
+            while (node) {
+                if (p < node->val && q < node->val) {
+                    node = node->left;
+                } else if (p > node->val && q > node->val) {
+                    node = node->right;
+                } else {
+                    return node->val;
+                }
+            }
+            return -1; // not reached: p and q are in the tree
+        }
+    };
+  go: |
+    func lowestCommonAncestor(root *TreeNode, p int, q int) int {
+    	node := root
+    	for node != nil {
+    		if p < node.Val && q < node.Val {
+    			node = node.Left
+    		} else if p > node.Val && q > node.Val {
+    			node = node.Right
+    		} else {
+    			return node.Val
+    		}
+    	}
+    	return -1 // not reached: p and q are in the tree
+    }
+visualisers: [binary-tree]

@@ -1,0 +1,119 @@
+title: Schedule Tasks with a Cooldown
+difficulty: medium
+patterns: [greedy, heap]
+why: >-
+  The most frequent task fixes the shape of the schedule: its copies must be spread out, and every
+  other task can be tucked into the gaps between them. Counting and committing to that frame is a
+  greedy argument (a max-heap simulation reaches the same answer).
+summary: Find the fewest time slots needed to run tasks when repeats of a task need a cooldown.
+statement: |
+  A processor must run every task in `tasks`, where each task is named by one uppercase letter.
+  Each task takes one time slot, and in every slot the processor either runs one task or sits idle.
+
+  Tasks may run in any order, but between two runs of the same task there must be at least `n`
+  other slots (running other tasks or idle). Return the smallest number of slots that runs every
+  task.
+constraints:
+  - "`tasks` holds 1 to 10⁴ tasks, each an uppercase letter from `A` to `Z`."
+  - "0 ≤ `n` ≤ 100"
+signature:
+  function: leastInterval
+  params:
+    - { name: tasks, type: "string[]" }
+    - { name: n, type: int }
+  returns: int
+examples:
+  - input: { tasks: ["X", "X", "X", "Y", "Y"], n: 2 }
+    output: 7
+    explanation: "`X Y idle X Y idle X`: after each `X` come two other slots before the next one."
+  - input: { tasks: ["P", "Q", "R", "P", "Q", "S"], n: 1 }
+    output: 6
+    explanation: "`P Q P Q R S` needs no idle slots, because there are enough different tasks to fill the gaps."
+tests:
+  - input: { tasks: ["A"], n: 5 }
+    output: 1
+  - input: { tasks: ["A", "A", "A"], n: 2 }
+    output: 7
+  - input: { tasks: ["B", "B", "B", "C", "C", "C"], n: 0 }
+    output: 6
+  - input: { tasks: ["M", "M", "M", "M", "N", "O", "P"], n: 3 }
+    output: 13
+  - input: { tasks: ["A", "B", "C", "D", "A", "B", "E"], n: 3 }
+    output: 7
+  - input: { tasks: ["Z", "Z", "Y", "Y", "X", "X"], n: 2 }
+    output: 6
+generated: { count: 8, seed: 34 }
+hints:
+  - "Which task makes the schedule long? Think about the one that appears most often."
+  - "If the most common task appears `m` times, its runs split the timeline into `m − 1` blocks of `n + 1` slots, then a final row."
+  - "Other tasks fill the blocks' gaps. The answer is the larger of `len(tasks)` and `(m − 1) · (n + 1) + t`, where `t` counts the tasks that appear `m` times."
+approach: |
+  Count each task. Let `m` be the highest count and `t` the number of tasks that appear `m` times.
+  Lay out the most frequent task first: `m − 1` blocks of `n + 1` slots, each starting with that
+  task, then a final row holding the `t` tasks that appear `m` times. Every other task fits into the
+  blocks' remaining slots, one copy per block, without breaking a cooldown. So
+  `(m − 1) · (n + 1) + t` slots are enough, and the most frequent task's own spacing shows that
+  fewer won't do.
+
+  If there are more tasks than that frame has room for, the extra ones can widen the blocks and no
+  slot needs to be idle, so the answer is simply `len(tasks)`. The answer is the larger of the two.
+
+  A max-heap simulation gives the same result: each round of `n + 1` slots, run the tasks with the
+  most copies left, then put them back with one copy fewer.
+complexity: { time: "O(len(tasks))", space: "O(1): at most 26 counts" }
+solutions:
+  python: |
+    from collections import Counter
+
+    def least_interval(tasks: list[str], n: int) -> int:
+        counts = Counter(tasks).values()
+        most = max(counts)
+        tied = sum(1 for c in counts if c == most)
+        return max(len(tasks), (most - 1) * (n + 1) + tied)
+  typescript: |
+    function leastInterval(tasks: string[], n: number): number {
+      const counts = new Map<string, number>();
+      for (const task of tasks) counts.set(task, (counts.get(task) ?? 0) + 1);
+      const most = Math.max(...counts.values());
+      let tied = 0;
+      for (const c of counts.values()) if (c === most) tied++;
+      return Math.max(tasks.length, (most - 1) * (n + 1) + tied);
+    }
+  java: |
+    class Solution {
+        public int leastInterval(String[] tasks, int n) {
+            int[] counts = new int[26];
+            for (String task : tasks) counts[task.charAt(0) - 'A']++;
+            int most = Arrays.stream(counts).max().getAsInt();
+            int tied = 0;
+            for (int c : counts) if (c == most) tied++;
+            return Math.max(tasks.length, (most - 1) * (n + 1) + tied);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int leastInterval(vector<string>& tasks, int n) {
+            int counts[26] = {};
+            for (auto& task : tasks) counts[task[0] - 'A']++;
+            int most = *max_element(counts, counts + 26);
+            int tied = count(counts, counts + 26, most);
+            return max((int)tasks.size(), (most - 1) * (n + 1) + tied);
+        }
+    };
+  go: |
+    func leastInterval(tasks []string, n int) int {
+    	var counts [26]int
+    	for _, task := range tasks {
+    		counts[task[0]-'A']++
+    	}
+    	most := slices.Max(counts[:])
+    	tied := 0
+    	for _, c := range counts {
+    		if c == most {
+    			tied++
+    		}
+    	}
+    	return max(len(tasks), (most-1)*(n+1)+tied)
+    }
+visualisers: [heap]

@@ -1,0 +1,104 @@
+<Section step="hook" title="The same question, asked hundreds of times">
+
+The Fibonacci numbers are defined by themselves: $F(n) = F(n-1) + F(n-2)$, starting from $F(0) = 0$ and $F(1) = 1$.
+Code that follows the definition word for word is correct, short, and astonishingly slow: computing $F(40)$ makes over
+300 million calls.
+
+It isn't slow because addition is slow. It is slow because it asks the **same questions again and again**. Memoization
+fixes that with one idea: write each answer down the first time, and look it up after that. It is the first step
+towards dynamic programming.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="call">One run of fib(k). Each call that isn't a base case makes two more calls.</Term>
+  <Term name="call stack">The calls still waiting for an answer, deepest on top.</Term>
+  <Term name="memo">A table of answers already found: memo[k] holds fib(k) once it is known.</Term>
+  <Term name="memo hit">A call answered by looking in the memo instead of recursing.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="First, without a memo">
+
+Watch plain recursion compute fib(6) and keep an eye on the **calls** row: fib(2) is computed 5 times and fib(1) 8 times.
+
+<Explore slug="fibonacci-memoization" settings={{ preset: 'naive', n: 6 }} caption="25 calls for fib(6). Each extra n multiplies the calls by about 1.6." />
+
+Now the same function with a memo. The first time fib(k) finishes, its answer goes into memo[k]; every later call to
+fib(k) returns it at once.
+
+<Explore slug="fibonacci-memoization" settings={{ preset: 'memo', n: 6 }} caption="11 calls for fib(6): each value is computed once and looked up after that." />
+
+<KeyIdea>
+
+The plain version does work proportional to the **number of calls**, which grows like $1.6^n$. The memoised version does
+work proportional to the **number of distinct subproblems**, which is just $n + 1$. Memoization pays off whenever a
+recursion asks overlapping questions.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: hit or miss?">
+
+Predict whether each call can be answered from the memo or has to recurse.
+
+<PredictChallenge slug="fibonacci-memoization" settings={{ preset: 'memo', n: 7 }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Turn it around: fill the table bottom-up">
+
+Instead of recursing from the top and remembering on the way back, you can fill the table from the bottom: dp[0], dp[1],
+then each dp[i] from the two before it. Same answers, no recursion, no call stack. This is **dynamic programming**: choose
+an order in which every value's inputs are already filled in.
+
+<Explore slug="fibonacci-memoization" settings={{ preset: 'table', n: 10 }} input caption="Raise n to 15 and compare: the table needs 14 additions, while plain recursion would make 1,973 calls." />
+
+<Misconception title="Memoization makes every recursion fast">
+
+It only helps when the **same** subproblems come back. Merge sort's recursion never repeats a subproblem, so a memo would
+just waste memory. Look for overlap first: if the call tree has repeated labels, a memo will help.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Why is plain recursive Fibonacci slow?',
+      choices: ['Adding big numbers is slow', 'It solves the same subproblems many times', 'Recursion is always slower than loops', 'The call stack overflows'],
+      answer: 1,
+      why: 'fib(n−2) is computed inside fib(n−1) and again directly, and the repetition compounds at every level.',
+    },
+    {
+      q: 'With a memo, how many distinct values does fib(30) compute?',
+      choices: ['30', '31', 'About 1.6³⁰', '2³⁰'],
+      answer: 1,
+      why: 'fib(0) to fib(30) is 31 values, each computed once; everything else is a look-up.',
+    },
+    {
+      q: 'What does the bottom-up version need that the top-down version works out for itself?',
+      choices: ['A bigger memo', 'An order in which every entry\'s inputs are ready', 'A base case', 'Recursion'],
+      answer: 1,
+      why: 'Top-down discovers the order by recursing; bottom-up must fill dp[i] after dp[i−1] and dp[i−2]. Choosing that order is the heart of dynamic programming.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Memoization = recursion + a table of answers. It turns repeated work into look-ups.
+- Cost becomes the number of **distinct** subproblems times the work per subproblem: for Fibonacci, O(n) instead of O(1.6ⁿ).
+- Bottom-up dynamic programming fills the same table in a chosen order, without recursion.
+- Next: coin change, knapsack and edit distance are all "find the subproblems, then fill the table".
+
+</Section>

@@ -1,0 +1,186 @@
+title: Count the Islands
+difficulty: medium
+patterns: [graphs]
+why: >-
+  Land cells joined side by side form groups, and counting the groups is counting the connected
+  components of a graph whose nodes are cells. Each new land cell starts a flood fill that claims
+  its whole island.
+summary: Count the groups of connected land cells in a grid.
+statement: |
+  You are given `grid`, a map made of `1`s (land) and `0`s (water). An island is a group of land
+  cells joined up, down, left or right; cells that only touch diagonally are not joined. Everything
+  outside the grid is water.
+
+  Return the number of islands.
+constraints:
+  - "The grid has 1 to 200 rows and 1 to 200 columns."
+  - "Every cell is `0` or `1`."
+signature:
+  function: numIslands
+  params:
+    - { name: grid, type: "int[][]" }
+  returns: int
+examples:
+  - input: { grid: [[1, 1, 0, 0, 1], [0, 1, 0, 1, 1], [1, 0, 0, 0, 0], [1, 0, 1, 1, 0]] }
+    output: 4
+    explanation: "The islands are at the top left, the top right, the bottom left and the bottom middle. The cells at (1, 1) and (2, 0) only touch diagonally, so they are on different islands."
+  - input: { grid: [[0, 0], [0, 0]] }
+    output: 0
+    explanation: No land, so no islands.
+tests:
+  - input: { grid: [[1]] }
+    output: 1
+  - input: { grid: [[0]] }
+    output: 0
+  - input: { grid: [[1, 0, 1, 0, 1]] }
+    output: 3
+  - input: { grid: [[1, 1, 1], [1, 0, 1], [1, 1, 1]] }
+    output: 1
+  - input: { grid: [[1, 0], [0, 1]] }
+    output: 2
+  - input: { grid: [[1, 1, 1, 1], [0, 0, 0, 1], [1, 1, 1, 1], [1, 0, 0, 0], [1, 1, 1, 1]] }
+    output: 1
+generated: { count: 8, seed: 41 }
+hints:
+  - "Think of each land cell as a node joined to its land neighbours. What are you counting?"
+  - "Scan the grid. Land you haven't seen yet starts a new island: count it, then visit every land cell you can reach from it, so none of them is counted again."
+  - "Mark visited land by setting it to 0 (sinking it). Use an explicit stack or queue for the visit, so a huge island can't overflow the call stack."
+approach: |
+  Scan every cell. Each time you find a `1`, you have found a new island: add one to the count, then
+  flood-fill from that cell, visiting every land cell joined to it and setting each one to `0` so it
+  is never counted again. A stack of cells still to visit (depth-first) or a queue (breadth-first)
+  does the flood fill without recursion: pop a cell, and push each neighbour that is on the grid
+  and still land, sinking it as you push it.
+
+  Every cell is looked at a constant number of times. If you may not change the grid, keep a set
+  of visited cells instead.
+complexity: { time: "O(rows · cols)", space: "O(rows · cols) for the stack in the worst case" }
+solutions:
+  python: |
+    def num_islands(grid: list[list[int]]) -> int:
+        rows, cols = len(grid), len(grid[0])
+        islands = 0
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] != 1:
+                    continue
+                islands += 1
+                grid[r][c] = 0  # sink it, so it isn't counted again
+                stack = [(r, c)]
+                while stack:
+                    y, x = stack.pop()
+                    for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                        if 0 <= ny < rows and 0 <= nx < cols and grid[ny][nx] == 1:
+                            grid[ny][nx] = 0
+                            stack.append((ny, nx))
+        return islands
+  typescript: |
+    function numIslands(grid: number[][]): number {
+      const rows = grid.length;
+      const cols = grid[0].length;
+      let islands = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (grid[r][c] !== 1) continue;
+          islands++;
+          grid[r][c] = 0; // sink it, so it isn't counted again
+          const stack: number[][] = [[r, c]];
+          while (stack.length > 0) {
+            const [y, x] = stack.pop()!;
+            for (const [ny, nx] of [[y + 1, x], [y - 1, x], [y, x + 1], [y, x - 1]]) {
+              if (ny >= 0 && ny < rows && nx >= 0 && nx < cols && grid[ny][nx] === 1) {
+                grid[ny][nx] = 0;
+                stack.push([ny, nx]);
+              }
+            }
+          }
+        }
+      }
+      return islands;
+    }
+  java: |
+    class Solution {
+        public int numIslands(int[][] grid) {
+            int rows = grid.length, cols = grid[0].length;
+            int[][] steps = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            int islands = 0;
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (grid[r][c] != 1) continue;
+                    islands++;
+                    grid[r][c] = 0; // sink it, so it isn't counted again
+                    Deque<int[]> stack = new ArrayDeque<>();
+                    stack.push(new int[] {r, c});
+                    while (!stack.isEmpty()) {
+                        int[] cell = stack.pop();
+                        for (int[] step : steps) {
+                            int y = cell[0] + step[0], x = cell[1] + step[1];
+                            if (y >= 0 && y < rows && x >= 0 && x < cols && grid[y][x] == 1) {
+                                grid[y][x] = 0;
+                                stack.push(new int[] {y, x});
+                            }
+                        }
+                    }
+                }
+            }
+            return islands;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int numIslands(vector<vector<int>>& grid) {
+            int rows = grid.size(), cols = grid[0].size();
+            const int steps[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            int islands = 0;
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (grid[r][c] != 1) continue;
+                    islands++;
+                    grid[r][c] = 0; // sink it, so it isn't counted again
+                    vector<pair<int, int>> stack = {{r, c}};
+                    while (!stack.empty()) {
+                        auto [y, x] = stack.back();
+                        stack.pop_back();
+                        for (auto& step : steps) {
+                            int ny = y + step[0], nx = x + step[1];
+                            if (ny >= 0 && ny < rows && nx >= 0 && nx < cols && grid[ny][nx] == 1) {
+                                grid[ny][nx] = 0;
+                                stack.push_back({ny, nx});
+                            }
+                        }
+                    }
+                }
+            }
+            return islands;
+        }
+    };
+  go: |
+    func numIslands(grid [][]int) int {
+    	rows, cols := len(grid), len(grid[0])
+    	steps := [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+    	islands := 0
+    	for r := 0; r < rows; r++ {
+    		for c := 0; c < cols; c++ {
+    			if grid[r][c] != 1 {
+    				continue
+    			}
+    			islands++
+    			grid[r][c] = 0 // sink it, so it isn't counted again
+    			stack := [][2]int{{r, c}}
+    			for len(stack) > 0 {
+    				cell := stack[len(stack)-1]
+    				stack = stack[:len(stack)-1]
+    				for _, step := range steps {
+    					y, x := cell[0]+step[0], cell[1]+step[1]
+    					if y >= 0 && y < rows && x >= 0 && x < cols && grid[y][x] == 1 {
+    						grid[y][x] = 0
+    						stack = append(stack, [2]int{y, x})
+    					}
+    				}
+    			}
+    		}
+    	}
+    	return islands
+    }
+visualisers: [depth-first-search, breadth-first-search]

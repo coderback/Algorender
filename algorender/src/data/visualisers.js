@@ -47,8 +47,8 @@ const dataStructureEntries = [
     spaceComplexity: 'O(n)'
   },
   {
-    name: 'Binary Tree',
-    description: 'A hierarchical data structure with at most two children per node.',
+    name: 'Binary Search Tree',
+    description: 'A binary tree where every left subtree holds smaller keys and every right subtree larger ones.',
     slug: 'binary-tree',
     category: 'Hierarchical',
     timeComplexity: { best: 'O(1)', average: 'O(log n)', worst: 'O(n)' },
@@ -79,6 +79,22 @@ const dataStructureEntries = [
     spaceComplexity: 'O(n)'
   },
   {
+    name: 'Union-Find',
+    description: 'Disjoint sets as a forest: union joins two trees, find walks to the root, and path compression flattens the way.',
+    slug: 'union-find',
+    category: 'Hierarchical',
+    timeComplexity: { best: 'O(1)', average: 'O(α(n))', worst: 'O(log n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Trie (Prefix Matching)',
+    description: 'A tree data structure used for efficient prefix matching.',
+    slug: 'trie',
+    category: 'Hierarchical',
+    timeComplexity: { best: 'O(1)', average: 'O(m)', worst: 'O(m)' },
+    spaceComplexity: 'O(total letters stored)'
+  },
+  {
     name: 'Graph',
     description: 'A non-linear data structure consisting of vertices and edges.',
     slug: 'graph',
@@ -91,7 +107,7 @@ const dataStructureEntries = [
     description: 'A collection of lists used to represent a graph.',
     slug: 'adjacency-list',
     category: 'Graph-Based',
-    timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
+    timeComplexity: { best: 'O(1)', average: 'O(deg(v))', worst: 'O(V + E)' },
     spaceComplexity: 'O(V + E)'
   },
   {
@@ -99,7 +115,7 @@ const dataStructureEntries = [
     description: 'A 2D matrix used to represent a graph.',
     slug: 'adjacency-matrix',
     category: 'Graph-Based',
-    timeComplexity: { best: 'O(1)', average: 'O(V²)', worst: 'O(V²)' },
+    timeComplexity: { best: 'O(1)', average: 'O(1)', worst: 'O(V²)' },
     spaceComplexity: 'O(V²)'
   },
   {
@@ -112,12 +128,11 @@ const dataStructureEntries = [
   },
   {
     name: 'Bloom Filter',
-    description: 'A probabilistic data structure for testing set membership.',
+    description: 'A compact bit array that answers "definitely not in the set" or "probably in the set".',
     slug: 'bloom-filter',
     category: 'Hash-Based',
     timeComplexity: { best: 'O(k)', average: 'O(k)', worst: 'O(k)' },
-    spaceComplexity: 'O(m)',
-    hidden: true
+    spaceComplexity: 'O(m)'
   },
   {
     name: 'Hash Set',
@@ -184,15 +199,15 @@ const algorithmEntries = [
     slug: 'counting-sort',
     category: 'Sorting',
     timeComplexity: { best: 'O(n + k)', average: 'O(n + k)', worst: 'O(n + k)' },
-    spaceComplexity: 'O(k)'
+    spaceComplexity: 'O(n + k)'
   },
   {
     name: 'Radix Sort',
     description: 'A non-comparative sorting algorithm that sorts data with integer keys.',
     slug: 'radix-sort',
     category: 'Sorting',
-    timeComplexity: { best: 'O(nk)', average: 'O(nk)', worst: 'O(nk)' },
-    spaceComplexity: 'O(n + k)'
+    timeComplexity: { best: 'O(d·(n + b))', average: 'O(d·(n + b))', worst: 'O(d·(n + b))' },
+    spaceComplexity: 'O(n + b)'
   },
   {
     name: 'Linear Search',
@@ -220,7 +235,7 @@ const algorithmEntries = [
   },
   {
     name: 'Interpolation Search',
-    description: 'A search algorithm that uses position formula for better performance.',
+    description: 'A search for sorted arrays that estimates where the target should be from its value.',
     slug: 'interpolation-search',
     category: 'Searching',
     timeComplexity: { best: 'O(1)', average: 'O(log log n)', worst: 'O(n)' },
@@ -247,7 +262,7 @@ const algorithmEntries = [
     description: 'A graph traversal algorithm that explores all vertices at the present depth.',
     slug: 'breadth-first-search',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
+    timeComplexity: { best: 'O(V + E)', average: 'O(V + E)', worst: 'O(V + E)' },
     spaceComplexity: 'O(V)'
   },
   {
@@ -255,7 +270,7 @@ const algorithmEntries = [
     description: 'A graph traversal algorithm that explores as far as possible along each branch.',
     slug: 'depth-first-search',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
+    timeComplexity: { best: 'O(V + E)', average: 'O(V + E)', worst: 'O(V + E)' },
     spaceComplexity: 'O(V)'
   },
   {
@@ -263,15 +278,15 @@ const algorithmEntries = [
     description: 'An algorithm for finding the shortest paths between nodes in a graph.',
     slug: 'dijkstra',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O((V + E) log V)', worst: 'O((V + E) log V)' },
-    spaceComplexity: 'O(V)'
+    timeComplexity: { best: 'O((V + E) log V)', average: 'O((V + E) log V)', worst: 'O((V + E) log V)' },
+    spaceComplexity: 'O(V + E)'
   },
   {
     name: 'Bellman-Ford Algorithm',
     description: 'An algorithm that computes shortest paths from a source vertex to all other vertices.',
     slug: 'bellman-ford',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(VE)', worst: 'O(VE)' },
+    timeComplexity: { best: 'O(E)', average: 'O(VE)', worst: 'O(VE)' },
     spaceComplexity: 'O(V)'
   },
   {
@@ -279,7 +294,7 @@ const algorithmEntries = [
     description: 'An algorithm for finding shortest paths in a weighted graph with positive or negative edge weights.',
     slug: 'floyd-warshall',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(V³)', worst: 'O(V³)' },
+    timeComplexity: { best: 'O(V³)', average: 'O(V³)', worst: 'O(V³)' },
     spaceComplexity: 'O(V²)'
   },
   {
@@ -287,23 +302,23 @@ const algorithmEntries = [
     description: 'A greedy algorithm that finds a minimum spanning tree for a weighted undirected graph.',
     slug: 'prims',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(E log V)', worst: 'O(E log V)' },
-    spaceComplexity: 'O(V)'
+    timeComplexity: { best: 'O(E log V)', average: 'O(E log V)', worst: 'O(E log V)' },
+    spaceComplexity: 'O(V + E)'
   },
   {
     name: 'Kruskal\'s Algorithm',
     description: 'A minimum-spanning-tree algorithm that finds an edge of the least possible weight.',
     slug: 'kruskals',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(E log E)', worst: 'O(E log E)' },
-    spaceComplexity: 'O(V)'
+    timeComplexity: { best: 'O(E log E)', average: 'O(E log E)', worst: 'O(E log E)' },
+    spaceComplexity: 'O(V + E)'
   },
   {
     name: 'Topological Sort',
     description: 'A linear ordering of vertices such that for every directed edge uv, vertex u comes before v.',
     slug: 'topological-sort',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
+    timeComplexity: { best: 'O(V + E)', average: 'O(V + E)', worst: 'O(V + E)' },
     spaceComplexity: 'O(V)'
   },
   {
@@ -311,15 +326,15 @@ const algorithmEntries = [
     description: 'An algorithm for finding strongly connected components of a directed graph.',
     slug: 'kosaraju',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
-    spaceComplexity: 'O(V)'
+    timeComplexity: { best: 'O(V + E)', average: 'O(V + E)', worst: 'O(V + E)' },
+    spaceComplexity: 'O(V + E)'
   },
   {
     name: 'Tarjan\'s Algorithm',
     description: 'An algorithm for finding strongly connected components of a directed graph.',
     slug: 'tarjan',
     category: 'Graph',
-    timeComplexity: { best: 'O(1)', average: 'O(V + E)', worst: 'O(V + E)' },
+    timeComplexity: { best: 'O(V + E)', average: 'O(V + E)', worst: 'O(V + E)' },
     spaceComplexity: 'O(V)'
   },
   {
@@ -351,7 +366,7 @@ const algorithmEntries = [
     description: 'A dynamic programming solution to the 0/1 knapsack problem.',
     slug: 'knapsack-01',
     category: 'Dynamic Programming',
-    timeComplexity: { best: 'O(1)', average: 'O(nW)', worst: 'O(nW)' },
+    timeComplexity: { best: 'O(nW)', average: 'O(nW)', worst: 'O(nW)' },
     spaceComplexity: 'O(nW)'
   },
   {
@@ -359,7 +374,7 @@ const algorithmEntries = [
     description: 'Finds the longest subsequence present in both strings.',
     slug: 'longest-common-subsequence',
     category: 'Dynamic Programming',
-    timeComplexity: { best: 'O(1)', average: 'O(mn)', worst: 'O(mn)' },
+    timeComplexity: { best: 'O(mn)', average: 'O(mn)', worst: 'O(mn)' },
     spaceComplexity: 'O(mn)'
   },
   {
@@ -367,8 +382,40 @@ const algorithmEntries = [
     description: 'Calculates the minimum number of operations to convert one string to another.',
     slug: 'edit-distance',
     category: 'Dynamic Programming',
-    timeComplexity: { best: 'O(1)', average: 'O(mn)', worst: 'O(mn)' },
+    timeComplexity: { best: 'O(mn)', average: 'O(mn)', worst: 'O(mn)' },
     spaceComplexity: 'O(mn)'
+  },
+  {
+    name: 'Coin Change',
+    description: 'The fewest coins that add up to an amount, built up from every smaller amount.',
+    slug: 'coin-change',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(nA)', average: 'O(nA)', worst: 'O(nA)' },
+    spaceComplexity: 'O(A)'
+  },
+  {
+    name: 'Longest Increasing Subsequence',
+    description: 'The longest run of values that rises from left to right, not necessarily adjacent.',
+    slug: 'longest-increasing-subsequence',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(n²)', average: 'O(n²)', worst: 'O(n²)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Grid Paths',
+    description: 'Count the paths across a grid moving only right or down, around obstacles.',
+    slug: 'unique-paths',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(mn)', average: 'O(mn)', worst: 'O(mn)' },
+    spaceComplexity: 'O(mn)'
+  },
+  {
+    name: 'House Robber',
+    description: 'The largest total from values where no two chosen ones are neighbours.',
+    slug: 'house-robber',
+    category: 'Dynamic Programming',
+    timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
+    spaceComplexity: 'O(n)'
   },
   {
     name: 'N-Queens Problem',
@@ -383,8 +430,24 @@ const algorithmEntries = [
     description: 'A backtracking algorithm to solve a Sudoku puzzle.',
     slug: 'sudoku-solver',
     category: 'Backtracking',
-    timeComplexity: { best: 'O(1)', average: 'O(9^(n²))', worst: 'O(9^(n²))' },
+    timeComplexity: { best: 'O(1)', average: 'O(9^m)', worst: 'O(9^m)' },
     spaceComplexity: 'O(n²)'
+  },
+  {
+    name: 'Subsets',
+    description: 'List every subset by deciding, for each item in turn, to include it or leave it out.',
+    slug: 'subsets',
+    category: 'Backtracking',
+    timeComplexity: { best: 'O(n·2ⁿ)', average: 'O(n·2ⁿ)', worst: 'O(n·2ⁿ)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Permutations',
+    description: 'List every ordering by choosing an unused item for each position, then undoing the choice.',
+    slug: 'permutations',
+    category: 'Backtracking',
+    timeComplexity: { best: 'O(n·n!)', average: 'O(n·n!)', worst: 'O(n·n!)' },
+    spaceComplexity: 'O(n)'
   },
   {
     name: 'Rabin-Karp Algorithm',
@@ -410,20 +473,53 @@ const algorithmEntries = [
     timeComplexity: { best: 'O(n + m)', average: 'O(n + m)', worst: 'O(n + m)' },
     spaceComplexity: 'O(n + m)'
   },
-  {
-    name: 'Trie (Prefix Matching)',
-    description: 'A tree data structure used for efficient prefix matching.',
-    slug: 'trie',
-    category: 'String Matching',
-    timeComplexity: { best: 'O(1)', average: 'O(m)', worst: 'O(m)' },
-    spaceComplexity: 'O(ALPHABET_SIZE * N * M)'
-  },
+
   {
     name: 'Manacher\'s Algorithm',
     description: 'An algorithm to find the longest palindromic substring in linear time.',
     slug: 'manacher',
     category: 'String Matching',
+    timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Two Pointers',
+    description: 'Find a pair with a given sum in a sorted array by moving one pointer from each end.',
+    slug: 'two-pointers',
+    category: 'Patterns',
     timeComplexity: { best: 'O(1)', average: 'O(n)', worst: 'O(n)' },
+    spaceComplexity: 'O(1)'
+  },
+  {
+    name: 'Sliding Window',
+    description: 'Find the best run of k consecutive values by sliding a window and updating one running sum.',
+    slug: 'sliding-window',
+    category: 'Patterns',
+    timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
+    spaceComplexity: 'O(1)'
+  },
+  {
+    name: 'Monotonic Stack',
+    description: 'Find the next greater value for every element with a stack that stays in decreasing order.',
+    slug: 'monotonic-stack',
+    category: 'Patterns',
+    timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Merge Intervals',
+    description: 'Sort intervals by start, then sweep once, merging each one that overlaps the last.',
+    slug: 'merge-intervals',
+    category: 'Patterns',
+    timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
+    spaceComplexity: 'O(n)'
+  },
+  {
+    name: 'Meeting Rooms',
+    description: 'The fewest rooms that fit every meeting: sweep by start time and reuse rooms as they free up.',
+    slug: 'meeting-rooms',
+    category: 'Patterns',
+    timeComplexity: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' },
     spaceComplexity: 'O(n)'
   }
 ];
@@ -442,4 +538,8 @@ export const algorithms = visualisers.filter(v => v.type === 'algorithm' && !v.h
 export function getVisualiserByPath(pathname) {
   const path = (pathname || '').replace(/\/+$/, '');
   return visualisers.find(v => v.path === path);
+}
+
+export function getVisualiserBySlug(slug) {
+  return visualisers.find(v => v.slug === slug);
 }

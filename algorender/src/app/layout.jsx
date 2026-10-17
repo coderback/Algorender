@@ -1,5 +1,9 @@
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
+import { ServiceWorker } from "@/components/ServiceWorker";
+import { SITE_URL } from "@/lib/site";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,16 +17,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Algorender - Algorithm & Data Structure Visualizer",
   description: "Interactive visualizations of algorithms and data structures to help you understand how they work. Learn through step-by-step execution with real-time statistics and educational content.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en-GB" className={`${geistSans.variable} ${geistMono.variable}`}>
+    // The theme script may stamp data-theme before React hydrates.
+    <html lang="en-GB" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="antialiased">
+        {/* Next moves beforeInteractive scripts into <head>, ahead of hydration, so a saved theme never flashes. */}
+        <Script id="theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
         {children}
         <Analytics />
+        <ServiceWorker />
       </body>
     </html>
   );

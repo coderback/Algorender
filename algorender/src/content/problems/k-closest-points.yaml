@@ -1,0 +1,199 @@
+title: Closest Points to the Origin
+difficulty: medium
+patterns: [heap]
+why: >-
+  You want the k smallest distances out of many points, without sorting them all. A max-heap of k
+  points keeps the closest so far and drops the farthest of them whenever a nearer point turns up.
+summary: Return the k points nearest to (0, 0).
+statement: |
+  You are given `points`, a list of points on a plane, each written `[x, y]`, and an integer `k`.
+  Return the `k` points closest to the origin `(0, 0)`, measured by ordinary straight-line distance,
+  √(x² + y²).
+
+  Return the points in any order. The tests make sure the answer is unique: the k-th closest point
+  is always strictly closer than every point left out. The same point may appear more than once in
+  `points`; each copy counts as a separate point.
+constraints:
+  - "1 ≤ `k` ≤ length of `points` ≤ 10⁴"
+  - "−10⁴ ≤ x, y ≤ 10⁴"
+signature:
+  function: kClosest
+  params:
+    - { name: points, type: "int[][]" }
+    - { name: k, type: int }
+  returns: "int[][]"
+compare: unordered
+view: memory
+examples:
+  - input: { points: [[2, -1], [-3, 0], [1, 4]], k: 1 }
+    output: [[2, -1]]
+    explanation: "The squared distances are 5, 9 and 17, so `[2, -1]` is closest."
+  - input: { points: [[0, 5], [4, 4], [-1, -2], [3, -3]], k: 2 }
+    output: [[-1, -2], [3, -3]]
+    explanation: "The squared distances are 25, 32, 5 and 18. The two smallest are 5 and 18; `[[3, -3], [-1, -2]]` is right too."
+tests:
+  - input: { points: [[0, 0]], k: 1 }
+    output: [[0, 0]]
+  - input: { points: [[1, 0], [0, 2], [-3, 0]], k: 3 }
+    output: [[1, 0], [0, 2], [-3, 0]]
+  - input: { points: [[2, 2], [5, 5], [2, 2]], k: 2 }
+    output: [[2, 2], [2, 2]]
+  - input: { points: [[-1, -1], [10000, -10000], [0, 1]], k: 1 }
+    output: [[0, 1]]
+  - input: { points: [[1, 1], [3, 0], [-1, 1]], k: 2 }
+    output: [[1, 1], [-1, 1]]
+generated: { count: 8, seed: 33 }
+hints:
+  - "Comparing squared distances, x² + y², gives the same order as real distances and needs no square roots."
+  - "Sorting every point works in O(n log n). Can you keep just k candidates as you go?"
+  - "Keep a max-heap of the k closest points so far, keyed by distance. Push each point; if the heap holds more than k, pop the farthest."
+approach: |
+  Compare points by squared distance `x² + y²`, which orders them exactly as the real distance does.
+  Walk through the points keeping a max-heap of the k closest seen so far, the farthest of them on
+  top. Push each point; if the heap now holds k + 1 points, pop the top, which is farther than the
+  other k and so can't be in the answer. At the end the heap holds the k closest points.
+
+  In Python, `heapq` is a min-heap, so push `(-distance, x, y)` to keep the farthest on top.
+complexity: { time: "O(n log k)", space: "O(k)" }
+solutions:
+  python: |
+    import heapq
+
+    def k_closest(points: list[list[int]], k: int) -> list[list[int]]:
+        heap = []  # (-squared distance, x, y): the farthest kept point is on top
+        for x, y in points:
+            heapq.heappush(heap, (-(x * x + y * y), x, y))
+            if len(heap) > k:
+                heapq.heappop(heap)
+        return [[x, y] for _, x, y in heap]
+  typescript: |
+    class Heap<T> {
+      private items: T[] = [];
+      private before: (a: T, b: T) => boolean;
+
+      // before(a, b) is true when a belongs nearer the top than b.
+      constructor(before: (a: T, b: T) => boolean) {
+        this.before = before;
+      }
+
+      size(): number {
+        return this.items.length;
+      }
+
+      peek(): T {
+        return this.items[0];
+      }
+
+      push(item: T): void {
+        const a = this.items;
+        a.push(item);
+        let i = a.length - 1;
+        while (i > 0) {
+          const parent = (i - 1) >> 1;
+          if (!this.before(a[i], a[parent])) break;
+          [a[i], a[parent]] = [a[parent], a[i]];
+          i = parent;
+        }
+      }
+
+      pop(): T {
+        const a = this.items;
+        const top = a[0];
+        const last = a.pop()!;
+        if (a.length > 0) {
+          a[0] = last;
+          let i = 0;
+          while (true) {
+            const left = 2 * i + 1;
+            const right = left + 1;
+            let first = i;
+            if (left < a.length && this.before(a[left], a[first])) first = left;
+            if (right < a.length && this.before(a[right], a[first])) first = right;
+            if (first === i) break;
+            [a[i], a[first]] = [a[first], a[i]];
+            i = first;
+          }
+        }
+        return top;
+      }
+    }
+
+    function kClosest(points: number[][], k: number): number[][] {
+      const distance = (p: number[]) => p[0] * p[0] + p[1] * p[1];
+      const heap = new Heap<number[]>((a, b) => distance(a) > distance(b)); // farthest on top
+      for (const p of points) {
+        heap.push(p);
+        if (heap.size() > k) heap.pop();
+      }
+      const closest: number[][] = [];
+      while (heap.size() > 0) closest.push(heap.pop());
+      return closest;
+    }
+  java: |
+    class Solution {
+        public List<List<Integer>> kClosest(int[][] points, int k) {
+            // The k closest so far, farthest on top.
+            PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(distance(b), distance(a)));
+            for (int[] p : points) {
+                heap.add(p);
+                if (heap.size() > k) heap.poll();
+            }
+            List<List<Integer>> closest = new ArrayList<>();
+            for (int[] p : heap) closest.add(List.of(p[0], p[1]));
+            return closest;
+        }
+
+        private static int distance(int[] p) {
+            return p[0] * p[0] + p[1] * p[1];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> kClosest(vector<vector<int>>& points, int k) {
+            auto distance = [](const vector<int>& p) { return p[0] * p[0] + p[1] * p[1]; };
+            auto fartherFirst = [&](const vector<int>& a, const vector<int>& b) { return distance(a) < distance(b); };
+            // The k closest so far, farthest on top.
+            priority_queue<vector<int>, vector<vector<int>>, decltype(fartherFirst)> heap(fartherFirst);
+            for (auto& p : points) {
+                heap.push(p);
+                if ((int)heap.size() > k) heap.pop();
+            }
+            vector<vector<int>> closest;
+            while (!heap.empty()) {
+                closest.push_back(heap.top());
+                heap.pop();
+            }
+            return closest;
+        }
+    };
+  go: |
+    func distance(p []int) int {
+    	return p[0]*p[0] + p[1]*p[1]
+    }
+
+    // farthestFirst is a max-heap of points by their distance from the origin.
+    type farthestFirst [][]int
+
+    func (h farthestFirst) Len() int           { return len(h) }
+    func (h farthestFirst) Less(i, j int) bool { return distance(h[i]) > distance(h[j]) }
+    func (h farthestFirst) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *farthestFirst) Push(x any)        { *h = append(*h, x.([]int)) }
+    func (h *farthestFirst) Pop() any {
+    	old := *h
+    	last := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return last
+    }
+
+    func kClosest(points [][]int, k int) [][]int {
+    	closest := &farthestFirst{} // the k closest so far, farthest on top
+    	for _, p := range points {
+    		heap.Push(closest, p)
+    		if closest.Len() > k {
+    			heap.Pop(closest)
+    		}
+    	}
+    	return *closest
+    }
+visualisers: [heap]

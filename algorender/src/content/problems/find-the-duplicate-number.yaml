@@ -1,0 +1,148 @@
+title: Find the Repeated Number
+difficulty: medium
+patterns: [linked-list, binary-search]
+why: >-
+  Read each value as a pointer to the position it names, and the list becomes a chain of next
+  pointers that must loop. The repeated value is where the loop begins, and fast and slow pointers
+  find that in constant space.
+summary: Find the one value that repeats among n + 1 numbers from 1 to n, without changing the list.
+statement: |
+  You are given `nums`, a list of n + 1 integers, each between 1 and n. There are more numbers than
+  possible values, so some value must appear more than once. Here exactly one value does, though it
+  may appear more than twice.
+
+  Return that repeated value. Don't change `nums` (no sorting it and no marking its entries), and
+  use only a constant amount of extra memory, so no set or extra list.
+constraints:
+  - "1 ≤ n ≤ 10⁵, and `nums` holds n + 1 numbers."
+  - "Every number is between 1 and n."
+  - "Exactly one value appears two or more times; every other value appears at most once."
+signature:
+  function: findDuplicate
+  params:
+    - { name: nums, type: "int[]" }
+  returns: int
+examples:
+  - input: { nums: [2, 5, 1, 4, 3, 5] }
+    output: 5
+    explanation: "5 appears at positions 1 and 5."
+  - input: { nums: [4, 4, 4, 1, 4] }
+    output: 4
+    explanation: The repeated value can appear more than twice, which leaves room for other values (2 and 3) to be missing.
+tests:
+  - input: { nums: [1, 1] }
+    output: 1
+  - input: { nums: [2, 1, 2] }
+    output: 2
+  - input: { nums: [1, 3, 2, 4, 4] }
+    output: 4
+  - input: { nums: [3, 3, 3, 3] }
+    output: 3
+  - input: { nums: [6, 2, 4, 1, 3, 2, 5] }
+    output: 2
+generated: { count: 9, seed: 38 }
+hints:
+  - "Without the rules, a set or sorting would do. The rules forbid both, so look at the list another way."
+  - "Treat each position i as a node whose next node is `nums[i]`. Starting from position 0, which no value points to, the walk must end up going round a loop. Where does the loop begin?"
+  - "The node where the loop begins is reached from two different positions holding the same value: that value is the answer. Floyd's fast and slow pointers find the start of a loop in O(1) memory."
+  - "A slower alternative is binary search on the value: if more than `mid` numbers are at most `mid`, the repeat is at most `mid`."
+approach: |
+  Think of position `i` as a node whose next node is `nums[i]`. Every value is between 1 and n, so a
+  walk that starts at position 0 never leaves the list and never comes back to 0; it must end up
+  going round a loop. The node where the loop begins is entered from two different positions, so
+  those two positions hold the same value. That value, the loop's entrance, is the answer.
+
+  Floyd's cycle finding locates the entrance. Move `slow` one step at a time (`slow = nums[slow]`)
+  and `fast` two (`fast = nums[nums[fast]]`) until they meet inside the loop. Then put `slow` back at
+  the start and move both one step at a time: they meet again exactly at the entrance.
+
+  (Binary search on the answer also uses constant memory, in O(n log n) time: count how many
+  numbers are at most `mid`; more than `mid` of them means the repeat is at most `mid`.)
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def find_duplicate(nums: list[int]) -> int:
+        # Position i points to nums[i]. Find where the slow and fast walks meet...
+        slow, fast = nums[0], nums[nums[0]]
+        while slow != fast:
+            slow = nums[slow]
+            fast = nums[nums[fast]]
+        # ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+        slow = 0
+        while slow != fast:
+            slow = nums[slow]
+            fast = nums[fast]
+        return slow
+  typescript: |
+    function findDuplicate(nums: number[]): number {
+      // Position i points to nums[i]. Find where the slow and fast walks meet...
+      let slow = nums[0];
+      let fast = nums[nums[0]];
+      while (slow !== fast) {
+        slow = nums[slow];
+        fast = nums[nums[fast]];
+      }
+      // ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+      slow = 0;
+      while (slow !== fast) {
+        slow = nums[slow];
+        fast = nums[fast];
+      }
+      return slow;
+    }
+  java: |
+    class Solution {
+        public int findDuplicate(int[] nums) {
+            // Position i points to nums[i]. Find where the slow and fast walks meet...
+            int slow = nums[0];
+            int fast = nums[nums[0]];
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[nums[fast]];
+            }
+            // ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+            slow = 0;
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[fast];
+            }
+            return slow;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int findDuplicate(vector<int>& nums) {
+            // Position i points to nums[i]. Find where the slow and fast walks meet...
+            int slow = nums[0];
+            int fast = nums[nums[0]];
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[nums[fast]];
+            }
+            // ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+            slow = 0;
+            while (slow != fast) {
+                slow = nums[slow];
+                fast = nums[fast];
+            }
+            return slow;
+        }
+    };
+  go: |
+    func findDuplicate(nums []int) int {
+    	// Position i points to nums[i]. Find where the slow and fast walks meet...
+    	slow, fast := nums[0], nums[nums[0]]
+    	for slow != fast {
+    		slow = nums[slow]
+    		fast = nums[nums[fast]]
+    	}
+    	// ...then walk from the start and from the meeting point: they meet at the loop's entrance.
+    	slow = 0
+    	for slow != fast {
+    		slow = nums[slow]
+    		fast = nums[fast]
+    	}
+    	return slow
+    }
+visualisers: [linked-list, binary-search]

@@ -1,0 +1,133 @@
+title: Longest Common Subsequence
+difficulty: medium
+patterns: [dp-2d]
+why: >-
+  Two strings, and the answer for a pair of prefixes comes from the answers for slightly shorter
+  pairs: a 2D table indexed by a position in each string.
+summary: Find the length of the longest sequence of characters that appears, in order, in both strings.
+statement: |
+  A subsequence of a string keeps some of its characters, in their original order, and drops the
+  rest: `ace` is a subsequence of `abcde`, but `aec` is not.
+
+  Given two strings `text1` and `text2`, return the length of the longest string that is a
+  subsequence of both. If they share no character, return 0.
+constraints:
+  - "`text1` and `text2` each hold 1 to 1000 lowercase letters."
+signature:
+  function: longestCommonSubsequence
+  params:
+    - { name: text1, type: string }
+    - { name: text2, type: string }
+  returns: int
+examples:
+  - input: { text1: "stone", text2: "longest" }
+    output: 3
+    explanation: "`one` appears, in order, in both."
+  - input: { text1: "abc", text2: "def" }
+    output: 0
+    explanation: The strings share no character.
+tests:
+  - input: { text1: "a", text2: "a" }
+    output: 1
+  - input: { text1: "a", text2: "b" }
+    output: 0
+  - input: { text1: "aaaa", text2: "aa" }
+    output: 2
+  - input: { text1: "abcba", text2: "abcbcba" }
+    output: 5
+  - input: { text1: "kitten", text2: "sitting" }
+    output: 4
+  - input: { text1: "xyz", text2: "zyx" }
+    output: 1
+generated: { count: 8, seed: 30 }
+hints:
+  - "Compare the last characters of the two strings. If they match, what can you say? If they don't?"
+  - "Let `L[i][j]` be the answer for the first i characters of `text1` and the first j of `text2`. If those last characters match, `L[i][j] = L[i − 1][j − 1] + 1`; otherwise it is the larger of `L[i − 1][j]` and `L[i][j − 1]`."
+  - "Row i only reads row i − 1, so two rows of the table are enough."
+approach: |
+  Let `L[i][j]` be the length of the longest common subsequence of the first `i` characters of
+  `text1` and the first `j` characters of `text2`. An empty prefix shares nothing, so the first row
+  and column are 0.
+
+  Look at the last characters of the two prefixes. If they are equal, a longest common subsequence
+  can end with that character, so `L[i][j] = L[i − 1][j − 1] + 1`. If not, at least one of them
+  isn't used, so `L[i][j]` is the larger of `L[i − 1][j]` (drop the last of `text1`) and
+  `L[i][j − 1]` (drop the last of `text2`).
+
+  Fill the table row by row; each row reads only the one above, so two rows are enough. The answer
+  is the bottom-right entry.
+complexity: { time: "O(m × n)", space: "O(n)" }
+solutions:
+  python: |
+    def longest_common_subsequence(text1: str, text2: str) -> int:
+        above = [0] * (len(text2) + 1)  # the row for the previous prefix of text1
+        for a in text1:
+            row = [0]
+            for j, b in enumerate(text2):
+                if a == b:
+                    row.append(above[j] + 1)
+                else:
+                    row.append(max(above[j + 1], row[j]))
+            above = row
+        return above[-1]
+  typescript: |
+    function longestCommonSubsequence(text1: string, text2: string): number {
+      let above = new Array<number>(text2.length + 1).fill(0); // the row for the previous prefix of text1
+      for (const a of text1) {
+        const row = [0];
+        for (let j = 0; j < text2.length; j++) {
+          row.push(a === text2[j] ? above[j] + 1 : Math.max(above[j + 1], row[j]));
+        }
+        above = row;
+      }
+      return above[text2.length];
+    }
+  java: |
+    class Solution {
+        public int longestCommonSubsequence(String text1, String text2) {
+            int n = text2.length();
+            int[] above = new int[n + 1]; // the row for the previous prefix of text1
+            for (char a : text1.toCharArray()) {
+                int[] row = new int[n + 1];
+                for (int j = 0; j < n; j++) {
+                    row[j + 1] = a == text2.charAt(j) ? above[j] + 1 : Math.max(above[j + 1], row[j]);
+                }
+                above = row;
+            }
+            return above[n];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int longestCommonSubsequence(string& text1, string& text2) {
+            int n = text2.size();
+            vector<int> above(n + 1, 0); // the row for the previous prefix of text1
+            for (char a : text1) {
+                vector<int> row(n + 1, 0);
+                for (int j = 0; j < n; j++) {
+                    row[j + 1] = a == text2[j] ? above[j] + 1 : max(above[j + 1], row[j]);
+                }
+                above = move(row);
+            }
+            return above[n];
+        }
+    };
+  go: |
+    func longestCommonSubsequence(text1 string, text2 string) int {
+    	n := len(text2)
+    	above := make([]int, n+1) // the row for the previous prefix of text1
+    	for i := 0; i < len(text1); i++ {
+    		row := make([]int, n+1)
+    		for j := 0; j < n; j++ {
+    			if text1[i] == text2[j] {
+    				row[j+1] = above[j] + 1
+    			} else {
+    				row[j+1] = max(above[j+1], row[j])
+    			}
+    		}
+    		above = row
+    	}
+    	return above[n]
+    }
+visualisers: [longest-common-subsequence]

@@ -1,0 +1,153 @@
+title: Palindrome, Ignoring Punctuation
+difficulty: easy
+patterns: [two-pointers]
+why: >-
+  A palindrome reads the same from both ends, so compare the two ends and move inwards: two
+  pointers, each skipping the characters that don't count.
+summary: Decide whether a sentence reads the same backwards once you keep only letters and digits.
+statement: |
+  You are given a string `s`. Keep only its letters and digits, treat upper and lower case as the
+  same, and return `true` if what is left reads the same forwards and backwards. Otherwise return
+  `false`.
+
+  Spaces, punctuation and every other character are ignored. A string with no letters or digits at
+  all counts as a palindrome.
+constraints:
+  - "`s` holds 1 to 2 × 10⁵ characters."
+  - "Every character is printable ASCII: letters, digits, spaces and punctuation."
+signature:
+  function: isPalindrome
+  params:
+    - { name: s, type: string }
+  returns: bool
+examples:
+  - input: { s: "Was it a car, or a cat I saw?" }
+    output: true
+    explanation: "Keeping letters only gives `wasitacaroracatisaw`, which reverses to itself."
+  - input: { s: "Race a car" }
+    output: false
+    explanation: "`raceacar` backwards is `racaecar`."
+  - input: { s: "0P" }
+    output: false
+    explanation: "Digits count too: `0p` backwards is `p0`."
+tests:
+  - input: { s: " " }
+    output: true
+  - input: { s: ".,!" }
+    output: true
+  - input: { s: "a" }
+    output: true
+  - input: { s: "ab" }
+    output: false
+  - input: { s: "Madam, I'm Adam." }
+    output: true
+  - input: { s: "1a2" }
+    output: false
+  - input: { s: "Step on no pets" }
+    output: true
+  - input: { s: "1 2 3 2 1" }
+    output: true
+generated: { count: 8, seed: 26 }
+hints:
+  - "Building a cleaned-up copy and comparing it with its reverse works. Can you do it without the copy?"
+  - "Put one index at each end. Move each one inwards past any character that isn't a letter or digit."
+  - "When both point at letters or digits, compare them in lower case. A mismatch means no; if the indices meet, the answer is yes."
+approach: |
+  Use two indices: `left` at the start and `right` at the end. If `s[left]` isn't a letter or
+  digit, step `left` forwards; if `s[right]` isn't, step `right` backwards. Once both point at
+  letters or digits, compare them in lower case: if they differ, return `false`; otherwise step both
+  inwards. When the indices meet or cross, every pair matched, so return `true`.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def is_palindrome(s: str) -> bool:
+        left, right = 0, len(s) - 1
+        while left < right:
+            if not s[left].isalnum():
+                left += 1
+            elif not s[right].isalnum():
+                right -= 1
+            elif s[left].lower() != s[right].lower():
+                return False
+            else:
+                left += 1
+                right -= 1
+        return True
+  typescript: |
+    function isPalindrome(s: string): boolean {
+      const isAlnum = (ch: string) => /[a-z0-9]/i.test(ch);
+      let left = 0;
+      let right = s.length - 1;
+      while (left < right) {
+        if (!isAlnum(s[left])) left++;
+        else if (!isAlnum(s[right])) right--;
+        else if (s[left].toLowerCase() !== s[right].toLowerCase()) return false;
+        else {
+          left++;
+          right--;
+        }
+      }
+      return true;
+    }
+  java: |
+    class Solution {
+        public boolean isPalindrome(String s) {
+            int left = 0, right = s.length() - 1;
+            while (left < right) {
+                char a = s.charAt(left), b = s.charAt(right);
+                if (!Character.isLetterOrDigit(a)) {
+                    left++;
+                } else if (!Character.isLetterOrDigit(b)) {
+                    right--;
+                } else if (Character.toLowerCase(a) != Character.toLowerCase(b)) {
+                    return false;
+                } else {
+                    left++;
+                    right--;
+                }
+            }
+            return true;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isPalindrome(string& s) {
+            int left = 0, right = s.size() - 1;
+            while (left < right) {
+                unsigned char a = s[left], b = s[right];
+                if (!isalnum(a)) {
+                    left++;
+                } else if (!isalnum(b)) {
+                    right--;
+                } else if (tolower(a) != tolower(b)) {
+                    return false;
+                } else {
+                    left++;
+                    right--;
+                }
+            }
+            return true;
+        }
+    };
+  go: |
+    import "unicode"
+
+    func isPalindrome(s string) bool {
+    	left, right := 0, len(s)-1
+    	for left < right {
+    		a, b := rune(s[left]), rune(s[right])
+    		if !unicode.IsLetter(a) && !unicode.IsDigit(a) {
+    			left++
+    		} else if !unicode.IsLetter(b) && !unicode.IsDigit(b) {
+    			right--
+    		} else if unicode.ToLower(a) != unicode.ToLower(b) {
+    			return false
+    		} else {
+    			left++
+    			right--
+    		}
+    	}
+    	return true
+    }
+visualisers: [two-pointers]

@@ -1,0 +1,111 @@
+title: Best Single Trade
+difficulty: easy
+patterns: [sliding-window]
+why: >-
+  The best sale on each day pairs it with the cheapest day before it. The sell day slides forward
+  one day at a time, and the buy day jumps forward whenever a new low appears: a window that only
+  ever moves right.
+summary: Choose one day to buy and a later day to sell for the biggest profit.
+statement: |
+  You are given `prices`, where `prices[i]` is the price of a share on day `i`. You may buy one
+  share on one day and sell it on a **later** day.
+
+  Return the largest profit you can make. If no trade makes money, return `0` (you simply don't
+  trade).
+constraints:
+  - "`prices` holds 1 to 10⁵ numbers."
+  - "Every price is between 0 and 10⁴."
+signature:
+  function: maxProfit
+  params:
+    - { name: prices, type: "int[]" }
+  returns: int
+examples:
+  - input: { prices: [8, 3, 6, 1, 5, 4] }
+    output: 4
+    explanation: "Buy at 1 on day 3 and sell at 5 on day 4."
+  - input: { prices: [9, 7, 4, 2] }
+    output: 0
+    explanation: "Prices only fall, so the best plan is not to trade."
+tests:
+  - input: { prices: [5] }
+    output: 0
+  - input: { prices: [1, 2] }
+    output: 1
+  - input: { prices: [3, 3, 3] }
+    output: 0
+  - input: { prices: [2, 10, 1, 4] }
+    output: 8
+  - input: { prices: [0, 10000] }
+    output: 10000
+  - input: { prices: [6, 1, 3, 2, 8, 0, 7] }
+    output: 7
+generated: { count: 8, seed: 31 }
+hints:
+  - "Fix the day you sell. Which day is the best day to have bought?"
+  - "The best buying day for selling on day `i` is the cheapest day before it. Can you keep track of that as you walk forwards?"
+  - "Walk once, keeping the lowest price so far and the best `price − lowest`."
+approach: |
+  Walk through the days once. Keep `lowest`, the cheapest price so far (the best day to have
+  bought), and `best`, the largest profit so far. For each price, first try selling today:
+  `best = max(best, price − lowest)`. Then update `lowest` with today's price.
+
+  Think of it as a window from the buy day to the sell day. The right end moves every day, and the
+  left end jumps forward whenever a new low appears, since a cheaper start is better for every
+  later sale.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def max_profit(prices: list[int]) -> int:
+        lowest = prices[0]
+        best = 0
+        for price in prices:
+            best = max(best, price - lowest)
+            lowest = min(lowest, price)
+        return best
+  typescript: |
+    function maxProfit(prices: number[]): number {
+      let lowest = prices[0];
+      let best = 0;
+      for (const price of prices) {
+        best = Math.max(best, price - lowest);
+        lowest = Math.min(lowest, price);
+      }
+      return best;
+    }
+  java: |
+    class Solution {
+        public int maxProfit(int[] prices) {
+            int lowest = prices[0];
+            int best = 0;
+            for (int price : prices) {
+                best = Math.max(best, price - lowest);
+                lowest = Math.min(lowest, price);
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int maxProfit(vector<int>& prices) {
+            int lowest = prices[0];
+            int best = 0;
+            for (int price : prices) {
+                best = max(best, price - lowest);
+                lowest = min(lowest, price);
+            }
+            return best;
+        }
+    };
+  go: |
+    func maxProfit(prices []int) int {
+    	lowest := prices[0]
+    	best := 0
+    	for _, price := range prices {
+    		best = max(best, price-lowest)
+    		lowest = min(lowest, price)
+    	}
+    	return best
+    }
+visualisers: [sliding-window]

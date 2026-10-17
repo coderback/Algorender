@@ -35,11 +35,11 @@ export default function SearchBar({ dataStructures, algorithms }) {
           }}
           onFocus={() => setShowSuggestions(true)}
           placeholder="Search visualizers..."
-          className="w-full px-4 py-2 text-gray-700 bg-white border rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          className="w-full px-4 py-2 text-ink-soft bg-surface border rounded-lg focus:border-accent focus:outline-hidden focus:ring-2 focus:ring-accent-line"
         />
         <button
           onClick={() => setSearchQuery('')}
-          className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 ${
+          className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-ink-muted hover:text-ink-soft ${
             !searchQuery && 'hidden'
           }`}
         >
@@ -48,22 +48,22 @@ export default function SearchBar({ dataStructures, algorithms }) {
       </div>
 
       {showSuggestions && searchQuery && (
-        <div className="absolute z-10 w-full mt-1 max-h-80 overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-200">
+        <div className="absolute z-10 w-full mt-1 max-h-80 overflow-y-auto bg-surface rounded-lg shadow-lg border border-line">
           {filteredItems.length > 0 ? (
             <ul className="py-1">
               {filteredItems.map((item, index) => (
                 <li
                   key={index}
                   onClick={() => handleSearch(item)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                  className="px-4 py-2 text-ink-soft hover:bg-sunken cursor-pointer flex justify-between items-center"
                 >
-                  <span className="text-gray-900 font-medium">{item.name}</span>
-                  <span className="text-xs text-blue-500">{item.type}</span>
+                  <span className="text-ink font-medium">{item.name}</span>
+                  <span className="text-xs text-accent-ink">{item.type}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="px-4 py-2 text-gray-500">No results found</div>
+            <div className="px-4 py-2 text-ink-muted">No results found</div>
           )}
         </div>
       )}

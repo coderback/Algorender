@@ -1,0 +1,136 @@
+title: Longest Increasing Subsequence
+difficulty: medium
+patterns: [dp-1d, binary-search]
+why: >-
+  The longest increasing run that ends at a position extends the best run ending at some earlier,
+  smaller value: one answer per position, each built from the answers before it.
+summary: Find the length of the longest strictly increasing subsequence of a list.
+statement: |
+  A subsequence keeps some of the items of a list, in their original order, and drops the rest:
+  `[3, 7]` is a subsequence of `[3, 1, 7]`, but `[7, 3]` is not.
+
+  Given a list of integers `nums`, return the length of its longest subsequence whose values
+  strictly increase from left to right.
+constraints:
+  - "`nums` holds 1 to 2500 numbers."
+  - "−10⁴ ≤ `nums[i]` ≤ 10⁴"
+signature:
+  function: lengthOfLIS
+  params:
+    - { name: nums, type: "int[]" }
+  returns: int
+examples:
+  - input: { nums: [4, 10, 4, 3, 8, 9] }
+    output: 3
+    explanation: "`[4, 8, 9]` is one; `[3, 8, 9]` is another."
+  - input: { nums: [0, 8, 4, 12, 2, 10, 6, 14] }
+    output: 4
+    explanation: "`[0, 4, 10, 14]` is one of several of length 4."
+  - input: { nums: [5, 5, 5] }
+    output: 1
+    explanation: The values must strictly increase, so equal values can't both be used.
+tests:
+  - input: { nums: [42] }
+    output: 1
+  - input: { nums: [1, 2, 3, 4, 5] }
+    output: 5
+  - input: { nums: [9, 7, 5, 3] }
+    output: 1
+  - input: { nums: [-3, -3, -2, -2, -1] }
+    output: 3
+  - input: { nums: [3, 1, 2, 1, 8, 5, 6] }
+    output: 4
+generated: { count: 8, seed: 25 }
+hints:
+  - "For each position, what is the longest increasing subsequence that *ends* there?"
+  - "`ends[i]` is 1 more than the largest `ends[j]` over earlier positions j with `nums[j] < nums[i]`, or just 1. The answer is the largest `ends[i]`. That takes O(n²) time."
+  - "Faster: keep `tails`, where `tails[k]` is the smallest last value of any increasing subsequence of length k + 1 found so far. It is always sorted, so binary search for where each new value goes."
+approach: |
+  The direct table: let `ends[i]` be the length of the longest increasing subsequence that ends at
+  position i. It extends the best one ending at an earlier, smaller value, so
+  `ends[i] = 1 + max(ends[j])` over `j < i` with `nums[j] < nums[i]` (or 1 if there is none). The
+  answer is the largest entry. That is O(n²), fast enough here.
+
+  The O(n log n) version keeps `tails`, where `tails[k]` is the smallest value that ends an
+  increasing subsequence of length k + 1 seen so far. A smaller ending is always at least as good,
+  because more values can follow it. `tails` stays sorted, so for each value `x`, binary search for
+  the first tail that is at least `x`: replace it with `x`, or append `x` when every tail is
+  smaller (the longest subsequence just grew by one). The answer is the length of `tails`.
+complexity: { time: "O(n log n)", space: "O(n)" }
+solutions:
+  python: |
+    from bisect import bisect_left
+
+
+    def length_of_lis(nums: list[int]) -> int:
+        tails = []  # tails[k]: the smallest last value of an increasing run of length k + 1
+        for x in nums:
+            pos = bisect_left(tails, x)  # the first tail that is >= x
+            if pos == len(tails):
+                tails.append(x)
+            else:
+                tails[pos] = x
+        return len(tails)
+  typescript: |
+    function lengthOfLIS(nums: number[]): number {
+      const tails: number[] = []; // tails[k]: the smallest last value of an increasing run of length k + 1
+      for (const x of nums) {
+        // Binary search for the first tail that is >= x.
+        let below = 0;
+        let above = tails.length;
+        while (below < above) {
+          const middle = Math.floor((below + above) / 2);
+          if (tails[middle] < x) below = middle + 1;
+          else above = middle;
+        }
+        tails[below] = x;
+      }
+      return tails.length;
+    }
+  java: |
+    class Solution {
+        public int lengthOfLIS(int[] nums) {
+            int[] tails = new int[nums.length]; // tails[k]: the smallest last value of an increasing run of length k + 1
+            int size = 0;
+            for (int x : nums) {
+                // Binary search for the first tail that is >= x.
+                int below = 0;
+                int above = size;
+                while (below < above) {
+                    int middle = (below + above) / 2;
+                    if (tails[middle] < x) below = middle + 1;
+                    else above = middle;
+                }
+                tails[below] = x;
+                if (below == size) size++;
+            }
+            return size;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int lengthOfLIS(vector<int>& nums) {
+            vector<int> tails; // tails[k]: the smallest last value of an increasing run of length k + 1
+            for (int x : nums) {
+                auto first = lower_bound(tails.begin(), tails.end(), x); // the first tail that is >= x
+                if (first == tails.end()) tails.push_back(x);
+                else *first = x;
+            }
+            return tails.size();
+        }
+    };
+  go: |
+    func lengthOfLIS(nums []int) int {
+    	var tails []int // tails[k]: the smallest last value of an increasing run of length k + 1
+    	for _, x := range nums {
+    		i, _ := slices.BinarySearch(tails, x) // the first tail that is >= x
+    		if i == len(tails) {
+    			tails = append(tails, x)
+    		} else {
+    			tails[i] = x
+    		}
+    	}
+    	return len(tails)
+    }
+visualisers: [longest-increasing-subsequence, binary-search]

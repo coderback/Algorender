@@ -1,0 +1,188 @@
+title: Read a Matrix in a Spiral
+difficulty: medium
+patterns: [math]
+why: >-
+  It is index arithmetic on a 2D layout: walk round the outer ring with four bounds (top, bottom,
+  left, right), pull each bound in once its side is read, and repeat on the ring inside.
+summary: List a grid's values in clockwise spiral order, starting from the top-left corner.
+statement: |
+  You are given `matrix`, a grid of integers with m rows and n columns.
+
+  Return all of its values in spiral order: start at the top-left corner, go right along the top
+  row, down the right column, left along the bottom row and up the left column, then carry on the
+  same way round the part not yet read, until every value is listed exactly once.
+constraints:
+  - "1 ≤ m, n ≤ 20"
+  - "−1000 ≤ `matrix[r][c]` ≤ 1000"
+signature:
+  function: spiralOrder
+  params:
+    - { name: matrix, type: "int[][]" }
+  returns: "int[]"
+view: memory
+examples:
+  - input: { matrix: [[1, 2, 3, 4], [10, 11, 12, 5], [9, 8, 7, 6]] }
+    output: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    explanation: Read in spiral order, this grid counts from 1 to 12.
+  - input: { matrix: [[1, 2], [3, 4], [5, 6]] }
+    output: [1, 2, 4, 6, 5, 3]
+tests:
+  - input: { matrix: [[7]] }
+    output: [7]
+  - input: { matrix: [[1, 2, 3]] }
+    output: [1, 2, 3]
+  - input: { matrix: [[1], [2], [3]] }
+    output: [1, 2, 3]
+  - input: { matrix: [[1, 2], [4, 3]] }
+    output: [1, 2, 3, 4]
+  - input: { matrix: [[1, 2, 3, 4], [12, 13, 14, 5], [11, 16, 15, 6], [10, 9, 8, 7]] }
+    output: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+  - input: { matrix: [[1, 2, 3, 4, 5], [12, 13, 14, 15, 6], [11, 10, 9, 8, 7]] }
+    output: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  - input: { matrix: [[1, 2, 3], [12, 13, 4], [11, 14, 5], [10, 15, 6], [9, 8, 7]] }
+    output: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  - input: { matrix: [[-1, -2, -3], [-4, -5, -6]] }
+    output: [-1, -2, -3, -6, -5, -4]
+generated: { count: 8, seed: 39 }
+hints:
+  - "Keep four bounds: the first and last rows, and the first and last columns, not read yet."
+  - "Read the top row from left to right, then move the top bound down. Then the right column (and move the right bound in), the bottom row from right to left, and the left column from bottom to top."
+  - "When a single row or column is left, take care not to read it twice: check the bounds again before reading the bottom row and the left column."
+approach: |
+  Keep four bounds around the part of the grid not read yet: `top`, `bottom`, `left` and `right`.
+  While they still enclose something, read one ring:
+
+  1. the top row, from `left` to `right`, then move `top` down one;
+  2. the right column, from `top` to `bottom`, then move `right` in one;
+  3. if a row is still left, the bottom row from `right` back to `left`, then move `bottom` up one;
+  4. if a column is still left, the left column from `bottom` back up to `top`, then move `left` in
+     one.
+
+  The two checks matter when the last part is a single row or a single column: without them, it
+  would be read twice.
+complexity: { time: "O(m × n)", space: "O(1) beyond the answer" }
+solutions:
+  python: |
+    def spiral_order(matrix: list[list[int]]) -> list[int]:
+        top, bottom = 0, len(matrix) - 1
+        left, right = 0, len(matrix[0]) - 1
+        order = []
+        while top <= bottom and left <= right:
+            for c in range(left, right + 1):  # top row, left to right
+                order.append(matrix[top][c])
+            top += 1
+            for r in range(top, bottom + 1):  # right column, downwards
+                order.append(matrix[r][right])
+            right -= 1
+            if top <= bottom:
+                for c in range(right, left - 1, -1):  # bottom row, right to left
+                    order.append(matrix[bottom][c])
+                bottom -= 1
+            if left <= right:
+                for r in range(bottom, top - 1, -1):  # left column, upwards
+                    order.append(matrix[r][left])
+                left += 1
+        return order
+  typescript: |
+    function spiralOrder(matrix: number[][]): number[] {
+      let top = 0;
+      let bottom = matrix.length - 1;
+      let left = 0;
+      let right = matrix[0].length - 1;
+      const order: number[] = [];
+      while (top <= bottom && left <= right) {
+        for (let c = left; c <= right; c++) order.push(matrix[top][c]); // top row, left to right
+        top++;
+        for (let r = top; r <= bottom; r++) order.push(matrix[r][right]); // right column, downwards
+        right--;
+        if (top <= bottom) {
+          for (let c = right; c >= left; c--) order.push(matrix[bottom][c]); // bottom row, right to left
+          bottom--;
+        }
+        if (left <= right) {
+          for (let r = bottom; r >= top; r--) order.push(matrix[r][left]); // left column, upwards
+          left++;
+        }
+      }
+      return order;
+    }
+  java: |
+    class Solution {
+        public int[] spiralOrder(int[][] matrix) {
+            int top = 0, bottom = matrix.length - 1;
+            int left = 0, right = matrix[0].length - 1;
+            int[] order = new int[matrix.length * matrix[0].length];
+            int k = 0;
+            while (top <= bottom && left <= right) {
+                // top row, left to right; then right column, downwards
+                for (int c = left; c <= right; c++) order[k++] = matrix[top][c];
+                top++;
+                for (int r = top; r <= bottom; r++) order[k++] = matrix[r][right];
+                right--;
+                if (top <= bottom) { // bottom row, right to left
+                    for (int c = right; c >= left; c--) order[k++] = matrix[bottom][c];
+                    bottom--;
+                }
+                if (left <= right) { // left column, upwards
+                    for (int r = bottom; r >= top; r--) order[k++] = matrix[r][left];
+                    left++;
+                }
+            }
+            return order;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> spiralOrder(vector<vector<int>>& matrix) {
+            int top = 0, bottom = matrix.size() - 1;
+            int left = 0, right = matrix[0].size() - 1;
+            vector<int> order;
+            while (top <= bottom && left <= right) {
+                // top row, left to right; then right column, downwards
+                for (int c = left; c <= right; c++) order.push_back(matrix[top][c]);
+                top++;
+                for (int r = top; r <= bottom; r++) order.push_back(matrix[r][right]);
+                right--;
+                if (top <= bottom) { // bottom row, right to left
+                    for (int c = right; c >= left; c--) order.push_back(matrix[bottom][c]);
+                    bottom--;
+                }
+                if (left <= right) { // left column, upwards
+                    for (int r = bottom; r >= top; r--) order.push_back(matrix[r][left]);
+                    left++;
+                }
+            }
+            return order;
+        }
+    };
+  go: |
+    func spiralOrder(matrix [][]int) []int {
+    	top, bottom := 0, len(matrix)-1
+    	left, right := 0, len(matrix[0])-1
+    	order := []int{}
+    	for top <= bottom && left <= right {
+    		for c := left; c <= right; c++ { // top row, left to right
+    			order = append(order, matrix[top][c])
+    		}
+    		top++
+    		for r := top; r <= bottom; r++ { // right column, downwards
+    			order = append(order, matrix[r][right])
+    		}
+    		right--
+    		if top <= bottom {
+    			for c := right; c >= left; c-- { // bottom row, right to left
+    				order = append(order, matrix[bottom][c])
+    			}
+    			bottom--
+    		}
+    		if left <= right {
+    			for r := bottom; r >= top; r-- { // left column, upwards
+    				order = append(order, matrix[r][left])
+    			}
+    			left++
+    		}
+    	}
+    	return order
+    }
+visualisers: []

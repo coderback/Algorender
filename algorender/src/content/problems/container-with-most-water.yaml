@@ -1,0 +1,121 @@
+title: Most Water Between Two Walls
+difficulty: medium
+patterns: [two-pointers]
+why: >-
+  The water level is capped by the shorter wall, so moving the taller wall inwards can never help.
+  Two pointers that always move the shorter wall check every pair that could win, in one pass.
+summary: Pick two vertical walls that, with the ground, hold the most water.
+statement: |
+  You are given a list `height` of n non-negative integers. Picture a vertical wall at each
+  position `i`, `height[i]` units tall, with neighbouring walls one unit apart.
+
+  Choose two walls. With the ground they form a tank: its width is the distance between the two
+  walls, and the water can rise only as high as the shorter of them. The walls in between don't get
+  in the way. Return the most water (width × the shorter height) that any pair of walls can hold.
+constraints:
+  - "`height` holds 2 to 10⁵ numbers."
+  - "Every height is between 0 and 10⁴."
+signature:
+  function: maxArea
+  params:
+    - { name: height, type: "int[]" }
+  returns: int
+examples:
+  - input: { height: [2, 7, 4, 8, 3, 6] }
+    output: 24
+    explanation: "The walls at positions 1 and 5 are 4 apart, and the shorter is 6 tall: 4 × 6 = 24."
+  - input: { height: [1, 1] }
+    output: 1
+    explanation: "The only pair: width 1, height 1."
+tests:
+  - input: { height: [0, 0] }
+    output: 0
+  - input: { height: [5, 0, 0, 0, 5] }
+    output: 20
+  - input: { height: [1, 2, 3, 4, 5] }
+    output: 6
+  - input: { height: [10, 1, 1, 1, 1, 1, 1, 1, 1, 9] }
+    output: 81
+  - input: { height: [4, 4, 4, 4] }
+    output: 12
+generated: { count: 8, seed: 29 }
+hints:
+  - "Start with the widest tank: the first and the last wall. How could a narrower tank ever hold more?"
+  - "The level is set by the shorter wall. If you move the taller wall inwards, the width shrinks and the level still can't rise above the shorter wall. So which wall should move?"
+  - "Always move the shorter wall inwards, and keep the best amount seen."
+approach: |
+  Start with `left = 0` and `right = n − 1`, the widest tank, which holds
+  `(right − left) × min(height[left], height[right])`. Now move the shorter of the two walls
+  inwards. Any other tank that uses the shorter wall would be narrower, and its level would still be
+  at most that wall's height, so none of them can beat the current one: that wall is done with.
+  Keep the best amount seen and repeat until the walls meet. (When the two are equally tall, moving
+  either is safe.)
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def max_area(height: list[int]) -> int:
+        left, right = 0, len(height) - 1
+        best = 0
+        while left < right:
+            best = max(best, (right - left) * min(height[left], height[right]))
+            if height[left] < height[right]:
+                left += 1
+            else:
+                right -= 1
+        return best
+  typescript: |
+    function maxArea(height: number[]): number {
+      let left = 0;
+      let right = height.length - 1;
+      let best = 0;
+      while (left < right) {
+        best = Math.max(best, (right - left) * Math.min(height[left], height[right]));
+        if (height[left] < height[right]) left++;
+        else right--;
+      }
+      return best;
+    }
+  java: |
+    class Solution {
+        public int maxArea(int[] height) {
+            int left = 0;
+            int right = height.length - 1;
+            int best = 0;
+            while (left < right) {
+                best = Math.max(best, (right - left) * Math.min(height[left], height[right]));
+                if (height[left] < height[right]) left++;
+                else right--;
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int maxArea(vector<int>& height) {
+            int left = 0;
+            int right = (int)height.size() - 1;
+            int best = 0;
+            while (left < right) {
+                best = max(best, (right - left) * min(height[left], height[right]));
+                if (height[left] < height[right]) left++;
+                else right--;
+            }
+            return best;
+        }
+    };
+  go: |
+    func maxArea(height []int) int {
+    	left, right := 0, len(height)-1
+    	best := 0
+    	for left < right {
+    		best = max(best, (right-left)*min(height[left], height[right]))
+    		if height[left] < height[right] {
+    			left++
+    		} else {
+    			right--
+    		}
+    	}
+    	return best
+    }
+visualisers: [two-pointers]

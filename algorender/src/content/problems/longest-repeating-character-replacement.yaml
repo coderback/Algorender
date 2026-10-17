@@ -1,0 +1,142 @@
+title: Longest Run After k Changes
+difficulty: medium
+patterns: [sliding-window]
+why: >-
+  You want the longest contiguous stretch that can be made into one repeated letter. A window works
+  while its length minus its most common letter's count is at most k, so grow it on the right and
+  shrink it on the left when it stops working.
+summary: Change at most k letters to make the longest possible run of one repeated letter.
+statement: |
+  You are given a string `s` of uppercase English letters and an integer `k`. You may change any
+  character of `s` into any other uppercase letter, at most `k` times in total.
+
+  Return the length of the longest substring that holds a single repeated letter after your
+  changes.
+constraints:
+  - "`s` holds 1 to 10⁵ letters, each from `A` to `Z`."
+  - "0 ≤ `k` ≤ the length of `s`"
+signature:
+  function: characterReplacement
+  params:
+    - { name: s, type: string }
+    - { name: k, type: int }
+  returns: int
+examples:
+  - input: { s: "ABBCB", k: 1 }
+    output: 4
+    explanation: "Change the `C` to `B`, and `BBCB` becomes `BBBB`."
+  - input: { s: "AABCAAB", k: 2 }
+    output: 6
+    explanation: "`AABCAA` has four `A`s; changing its `B` and `C` gives six `A`s in a row."
+  - input: { s: "XYZ", k: 0 }
+    output: 1
+tests:
+  - input: { s: "A", k: 0 }
+    output: 1
+  - input: { s: "A", k: 1 }
+    output: 1
+  - input: { s: "ABAB", k: 2 }
+    output: 4
+  - input: { s: "AAAA", k: 0 }
+    output: 4
+  - input: { s: "ABCDE", k: 1 }
+    output: 2
+  - input: { s: "BAAAB", k: 0 }
+    output: 3
+generated: { count: 8, seed: 33 }
+hints:
+  - "Take any window. How many changes would it need to become one repeated letter?"
+  - "It needs its length minus the count of its most common letter. The window is usable when that is at most `k`."
+  - "Grow the window on the right, keeping a count of each letter. While it would need more than `k` changes, drop its leftmost letter."
+approach: |
+  Slide a window over `s`, counting the letters inside it. A window can be made into one repeated
+  letter with `length − (count of its most common letter)` changes. Move `right` one step at a
+  time, adding its letter to the counts. While the window would need more than `k` changes, take
+  its leftmost letter out of the counts and move `left` on. Every window you keep is usable, so the
+  answer is the longest one seen.
+
+  Finding the most common letter means looking at no more than 26 counts, so the pass is O(26 · n).
+  (A known refinement keeps the highest count ever reached instead of recomputing it, which gives
+  the same answer in O(n).)
+complexity: { time: "O(26 · n), which is O(n)", space: "O(1): at most 26 counts" }
+solutions:
+  python: |
+    def character_replacement(s: str, k: int) -> int:
+        counts = {}
+        left = 0
+        best = 0
+        for right, ch in enumerate(s):
+            counts[ch] = counts.get(ch, 0) + 1
+            while right - left + 1 - max(counts.values()) > k:
+                counts[s[left]] -= 1
+                left += 1
+            best = max(best, right - left + 1)
+        return best
+  typescript: |
+    function characterReplacement(s: string, k: number): number {
+      const counts = new Map<string, number>();
+      let left = 0;
+      let best = 0;
+      for (let right = 0; right < s.length; right++) {
+        counts.set(s[right], (counts.get(s[right]) ?? 0) + 1);
+        while (right - left + 1 - Math.max(...counts.values()) > k) {
+          counts.set(s[left], counts.get(s[left])! - 1);
+          left++;
+        }
+        best = Math.max(best, right - left + 1);
+      }
+      return best;
+    }
+  java: |
+    class Solution {
+        public int characterReplacement(String s, int k) {
+            int[] counts = new int[26];
+            int left = 0;
+            int best = 0;
+            for (int right = 0; right < s.length(); right++) {
+                counts[s.charAt(right) - 'A']++;
+                // Letters in the window that aren't its most common one must all be replaced.
+                while (right - left + 1 - Arrays.stream(counts).max().getAsInt() > k) {
+                    counts[s.charAt(left) - 'A']--;
+                    left++;
+                }
+                best = Math.max(best, right - left + 1);
+            }
+            return best;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int characterReplacement(string& s, int k) {
+            array<int, 26> counts{};
+            int left = 0;
+            int best = 0;
+            for (int right = 0; right < (int)s.size(); right++) {
+                counts[s[right] - 'A']++;
+                // Letters in the window that aren't its most common one must all be replaced.
+                while (right - left + 1 - *max_element(counts.begin(), counts.end()) > k) {
+                    counts[s[left] - 'A']--;
+                    left++;
+                }
+                best = max(best, right - left + 1);
+            }
+            return best;
+        }
+    };
+  go: |
+    func characterReplacement(s string, k int) int {
+    	var counts [26]int
+    	left, best := 0, 0
+    	for right := 0; right < len(s); right++ {
+    		counts[s[right]-'A']++
+    		// Letters in the window that aren't its most common one must all be replaced.
+    		for right-left+1-slices.Max(counts[:]) > k {
+    			counts[s[left]-'A']--
+    			left++
+    		}
+    		best = max(best, right-left+1)
+    	}
+    	return best
+    }
+visualisers: [sliding-window]

@@ -1,0 +1,168 @@
+title: Rebuild a Binary Tree from Two Traversals
+difficulty: medium
+patterns: [trees]
+why: >-
+  The preorder's first value is the root, and finding the root in the inorder splits the rest into
+  the left and right subtrees. Each side is a smaller copy of the same problem: recursion.
+summary: Rebuild a binary tree from its preorder and inorder traversals.
+statement: |
+  You are given two lists describing the same binary tree, whose values are all different:
+
+  - `preorder` lists the values in preorder: a node, then its left subtree, then its right subtree.
+  - `inorder` lists them in inorder: a node's left subtree, then the node, then its right subtree.
+
+  Build the tree and return its root.
+
+  The answer is checked as the tree written in level order, row by row from the top, with `null`
+  where a node is missing: `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the
+  right child of 2.
+constraints:
+  - "Both lists hold the same 1 to 1000 values."
+  - "Values are distinct, between −3000 and 3000."
+  - "The tree is at most 100 levels deep."
+signature:
+  function: buildTree
+  params:
+    - { name: preorder, type: "int[]" }
+    - { name: inorder, type: "int[]" }
+  returns: TreeNode
+view: memory
+examples:
+  - input: { preorder: [5, 2, 1, 4, 8, 9], inorder: [1, 2, 4, 5, 8, 9] }
+    output: [5, 2, 8, 1, 4, null, 9]
+    explanation: "5 comes first in the preorder, so it is the root. In the inorder, 1, 2 and 4 come before it (the left subtree) and 8 and 9 after it (the right subtree)."
+  - input: { preorder: [1, 2], inorder: [1, 2] }
+    output: [1, null, 2]
+    explanation: Nothing comes before 1 in the inorder, so its left subtree is empty and 2 is its right child.
+tests:
+  - input: { preorder: [7], inorder: [7] }
+    output: [7]
+  - input: { preorder: [3, 2, 1], inorder: [1, 2, 3] }
+    output: [3, 2, null, 1]
+  - input: { preorder: [1, 2, 3], inorder: [1, 2, 3] }
+    output: [1, null, 2, null, 3]
+  - input: { preorder: [4, 2, 1, 3, 6, 5, 7], inorder: [1, 2, 3, 4, 5, 6, 7] }
+    output: [4, 2, 6, 1, 3, 5, 7]
+  - input: { preorder: [-1, 0, -2], inorder: [0, -1, -2] }
+    output: [-1, 0, -2]
+generated: { count: 8, seed: 49 }
+hints:
+  - "Which value in `preorder` is the root? Where is that value in `inorder`, and what does it split?"
+  - "Everything before the root in `inorder` is the left subtree and everything after it the right. In `preorder`, the root is followed by the whole left subtree, then the whole right subtree."
+  - "Recurse on stretches of `inorder` while reading `preorder` from left to right with one shared index, building each left subtree before its right one. A map from each value to its position in `inorder` makes every split O(1)."
+approach: |
+  The first value in `preorder` is the root. Its position in `inorder` splits the inorder into the
+  left subtree's values (before it) and the right subtree's (after it). In the preorder, the root
+  is followed by the whole left subtree and then the whole right subtree.
+
+  So build recursively over a stretch `lo..hi` of the inorder, reading the preorder from left to
+  right with one shared index. Take the next preorder value as this stretch's root and find its
+  inorder position `m`, using a hash map from value to position. Build the left subtree from
+  `lo..m − 1`, then the right subtree from `m + 1..hi`. An empty stretch is an empty subtree.
+  Building the left side before the right is what keeps the shared preorder index in step.
+complexity: { time: "O(n)", space: "O(n) for the map, plus O(h) for the recursion" }
+solutions:
+  python: |
+    def build_tree(preorder: list[int], inorder: list[int]) -> TreeNode | None:
+        position = {value: i for i, value in enumerate(inorder)}
+        next_root = 0  # where the next subtree's root is in preorder
+
+        def build(lo: int, hi: int) -> TreeNode | None:
+            """The subtree made of inorder[lo..hi]."""
+            nonlocal next_root
+            if lo > hi:
+                return None
+            node = TreeNode(preorder[next_root])
+            next_root += 1
+            m = position[node.val]
+            node.left = build(lo, m - 1)
+            node.right = build(m + 1, hi)
+            return node
+
+        return build(0, len(inorder) - 1)
+  typescript: |
+    function buildTree(preorder: number[], inorder: number[]): TreeNode | null {
+      const position = new Map<number, number>();
+      inorder.forEach((value, i) => position.set(value, i));
+      let nextRoot = 0; // where the next subtree's root is in preorder
+
+      // The subtree made of inorder[lo..hi].
+      const build = (lo: number, hi: number): TreeNode | null => {
+        if (lo > hi) return null;
+        const node = new TreeNode(preorder[nextRoot]);
+        nextRoot++;
+        const m = position.get(node.val)!;
+        node.left = build(lo, m - 1);
+        node.right = build(m + 1, hi);
+        return node;
+      };
+      return build(0, inorder.length - 1);
+    }
+  java: |
+    class Solution {
+        private int[] preorder;
+        private Map<Integer, Integer> position;
+        private int nextRoot; // where the next subtree's root is in preorder
+
+        public TreeNode buildTree(int[] preorder, int[] inorder) {
+            this.preorder = preorder;
+            position = new HashMap<>();
+            for (int i = 0; i < inorder.length; i++) position.put(inorder[i], i);
+            nextRoot = 0;
+            return build(0, inorder.length - 1);
+        }
+
+        // The subtree made of inorder[lo..hi].
+        private TreeNode build(int lo, int hi) {
+            if (lo > hi) return null;
+            TreeNode node = new TreeNode(preorder[nextRoot++]);
+            int m = position.get(node.val);
+            node.left = build(lo, m - 1);
+            node.right = build(m + 1, hi);
+            return node;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {
+            unordered_map<int, int> position;
+            for (int i = 0; i < (int)inorder.size(); i++) position[inorder[i]] = i;
+            int nextRoot = 0; // where the next subtree's root is in preorder
+
+            // The subtree made of inorder[lo..hi].
+            function<TreeNode*(int, int)> build = [&](int lo, int hi) -> TreeNode* {
+                if (lo > hi) return nullptr;
+                TreeNode* node = new TreeNode(preorder[nextRoot++]);
+                int m = position[node->val];
+                node->left = build(lo, m - 1);
+                node->right = build(m + 1, hi);
+                return node;
+            };
+            return build(0, (int)inorder.size() - 1);
+        }
+    };
+  go: |
+    func buildTree(preorder []int, inorder []int) *TreeNode {
+    	position := make(map[int]int, len(inorder))
+    	for i, value := range inorder {
+    		position[value] = i
+    	}
+    	nextRoot := 0 // where the next subtree's root is in preorder
+
+    	// build returns the subtree made of inorder[lo..hi].
+    	var build func(lo, hi int) *TreeNode
+    	build = func(lo, hi int) *TreeNode {
+    		if lo > hi {
+    			return nil
+    		}
+    		node := &TreeNode{Val: preorder[nextRoot]}
+    		nextRoot++
+    		m := position[node.Val]
+    		node.Left = build(lo, m-1)
+    		node.Right = build(m+1, hi)
+    		return node
+    	}
+    	return build(0, len(inorder)-1)
+    }
+visualisers: [binary-tree]

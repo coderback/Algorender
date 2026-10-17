@@ -1,0 +1,140 @@
+title: Kth Smallest Value in a Binary Search Tree
+difficulty: medium
+patterns: [trees]
+why: >-
+  An in-order traversal of a binary search tree visits its values in increasing order, so the kth
+  value it visits is the answer, and you can stop right there.
+summary: Find the kth smallest value stored in a binary search tree.
+statement: |
+  You are given `root`, the root of a binary search tree, and a number `k`. The values in the tree
+  are all different; every node's left subtree holds smaller values and its right subtree larger
+  ones.
+
+  Return the `k`th smallest value in the tree, counting from 1, so `k = 1` asks for the minimum.
+
+  Trees are written in level order, row by row from the top, with `null` where a node is missing:
+  `[4, 2, 7, null, 3]` is 4 at the root, 2 and 7 below it, and 3 as the right child of 2.
+constraints:
+  - "The tree holds n nodes, and 1 ≤ `k` ≤ n ≤ 1000."
+  - "Values are distinct, between 0 and 10⁴."
+signature:
+  function: kthSmallest
+  params:
+    - { name: root, type: TreeNode }
+    - { name: k, type: int }
+  returns: int
+examples:
+  - input: { root: [6, 3, 9, 1, 4, 8], k: 3 }
+    output: 4
+    explanation: "In increasing order the values are 1, 3, 4, 6, 8, 9; the third is 4."
+  - input: { root: [2, null, 5], k: 1 }
+    output: 2
+    explanation: With no left child, the root itself is the smallest value.
+tests:
+  - input: { root: [7], k: 1 }
+    output: 7
+  - input: { root: [10, 5, 15], k: 3 }
+    output: 15
+  - input: { root: [10, 5, 15], k: 2 }
+    output: 10
+  - input: { root: [50, 30, 70, 20, 40, 60, 80, 10], k: 8 }
+    output: 80
+  - input: { root: [4, 2, 6, 1, 3, 5, 7], k: 5 }
+    output: 5
+  - input: { root: [3, 2, null, 1], k: 2 }
+    output: 2
+generated: { count: 8, seed: 47 }
+hints:
+  - "In which traversal order does a binary search tree give up its values smallest first?"
+  - "In order: left subtree, then the node, then the right subtree. Count the nodes as you visit them and stop at the kth."
+  - "An explicit stack makes stopping early easy: push nodes as you go down to the left, pop one to visit it, then step to its right child and go left again."
+approach: |
+  An in-order traversal (left subtree, node, right subtree) visits a binary search tree's values
+  in increasing order. Run it with an explicit stack: from the current node, push nodes while going
+  left. When you can't go further, pop a node and visit it; it is the next smallest value. Then
+  move to its right child and repeat.
+
+  The kth node visited is the answer, and the rest of the tree is never touched.
+complexity: { time: "O(h + k), h the tree's height", space: "O(h)" }
+solutions:
+  python: |
+    def kth_smallest(root: TreeNode | None, k: int) -> int:
+        stack = []
+        node = root
+        while True:
+            while node:
+                stack.append(node)
+                node = node.left
+            node = stack.pop()  # the next smallest value
+            k -= 1
+            if k == 0:
+                return node.val
+            node = node.right
+  typescript: |
+    function kthSmallest(root: TreeNode | null, k: number): number {
+      const stack: TreeNode[] = [];
+      let node = root;
+      while (true) {
+        while (node) {
+          stack.push(node);
+          node = node.left;
+        }
+        const next = stack.pop()!; // the next smallest value
+        k--;
+        if (k === 0) return next.val;
+        node = next.right;
+      }
+    }
+  java: |
+    class Solution {
+        public int kthSmallest(TreeNode root, int k) {
+            Deque<TreeNode> stack = new ArrayDeque<>();
+            TreeNode node = root;
+            while (true) {
+                while (node != null) {
+                    stack.push(node);
+                    node = node.left;
+                }
+                TreeNode next = stack.pop(); // the next smallest value
+                if (--k == 0) return next.val;
+                node = next.right;
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int kthSmallest(TreeNode* root, int k) {
+            vector<TreeNode*> stack;
+            TreeNode* node = root;
+            while (true) {
+                while (node) {
+                    stack.push_back(node);
+                    node = node->left;
+                }
+                TreeNode* next = stack.back(); // the next smallest value
+                stack.pop_back();
+                if (--k == 0) return next->val;
+                node = next->right;
+            }
+        }
+    };
+  go: |
+    func kthSmallest(root *TreeNode, k int) int {
+    	var stack []*TreeNode
+    	node := root
+    	for {
+    		for node != nil {
+    			stack = append(stack, node)
+    			node = node.Left
+    		}
+    		next := stack[len(stack)-1] // the next smallest value
+    		stack = stack[:len(stack)-1]
+    		k--
+    		if k == 0 {
+    			return next.Val
+    		}
+    		node = next.Right
+    	}
+    }
+visualisers: [binary-tree]

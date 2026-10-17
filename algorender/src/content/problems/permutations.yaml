@@ -1,0 +1,197 @@
+title: All Orderings
+difficulty: medium
+patterns: [backtracking]
+why: >-
+  An ordering is built one position at a time from the numbers not used yet. Backtracking picks an
+  unused number, fills the remaining positions, then puts the number back to try the next one.
+summary: List every ordering of a list of distinct numbers.
+statement: |
+  You are given `nums`, a list of distinct integers. Return every permutation of it: every list that
+  holds each number of `nums` exactly once, in some order.
+
+  The permutations may come in any order (the numbers inside each one, of course, may not).
+constraints:
+  - "`nums` holds 1 to 6 numbers."
+  - "Every number is between −10 and 10, and no number appears twice."
+signature:
+  function: permute
+  params:
+    - { name: nums, type: "int[]" }
+  returns: "int[][]"
+compare: unordered
+examples:
+  - input: { nums: [2, 5, 8] }
+    output: [[2, 5, 8], [2, 8, 5], [5, 2, 8], [5, 8, 2], [8, 2, 5], [8, 5, 2]]
+    explanation: "Three choices for the first place, two for the second and one for the last: 3! = 6 orderings."
+  - input: { nums: [-1, 4] }
+    output: [[-1, 4], [4, -1]]
+tests:
+  - input: { nums: [5] }
+    output: [[5]]
+  - input: { nums: [-10, 10] }
+    output: [[-10, 10], [10, -10]]
+  - input: { nums: [3, -2, 0] }
+    output: [[3, -2, 0], [3, 0, -2], [-2, 3, 0], [-2, 0, 3], [0, 3, -2], [0, -2, 3]]
+  - input: { nums: [1, 2, 3, 4] }
+    output:
+      - [1, 2, 3, 4]
+      - [1, 2, 4, 3]
+      - [1, 3, 2, 4]
+      - [1, 3, 4, 2]
+      - [1, 4, 2, 3]
+      - [1, 4, 3, 2]
+      - [2, 1, 3, 4]
+      - [2, 1, 4, 3]
+      - [2, 3, 1, 4]
+      - [2, 3, 4, 1]
+      - [2, 4, 1, 3]
+      - [2, 4, 3, 1]
+      - [3, 1, 2, 4]
+      - [3, 1, 4, 2]
+      - [3, 2, 1, 4]
+      - [3, 2, 4, 1]
+      - [3, 4, 1, 2]
+      - [3, 4, 2, 1]
+      - [4, 1, 2, 3]
+      - [4, 1, 3, 2]
+      - [4, 2, 1, 3]
+      - [4, 2, 3, 1]
+      - [4, 3, 1, 2]
+      - [4, 3, 2, 1]
+generated: { count: 6, seed: 39 }
+hints:
+  - "How many choices are there for the first position? And for the second, once the first is fixed?"
+  - "Build the ordering from left to right, and keep track of which numbers are already used."
+  - "Recurse: for each unused number, mark it used, append it, recurse, then pop it and unmark it. A list as long as `nums` is one permutation."
+approach: |
+  Backtrack, filling positions from left to right. Keep the ordering built so far in `chosen`, and a
+  `used` flag for each index of `nums`.
+
+  - When `chosen` holds every number, save a copy of it.
+  - Otherwise, for each index not used yet: mark it, append its number, recurse, then pop the number
+    and unmark the index so the next choice can be tried.
+
+  There are n choices for the first place, n − 1 for the next, and so on: n! permutations, each
+  copied in O(n). Leave `nums` itself unchanged and build the answer in your own lists.
+complexity: { time: "O(n · n!)", space: "O(n) besides the output" }
+solutions:
+  python: |
+    def permute(nums: list[int]) -> list[list[int]]:
+        result = []
+        chosen = []
+        used = [False] * len(nums)
+
+        def explore():
+            if len(chosen) == len(nums):
+                result.append(chosen[:])
+                return
+            for i in range(len(nums)):
+                if used[i]:
+                    continue
+                used[i] = True
+                chosen.append(nums[i])
+                explore()
+                chosen.pop()  # undo, so the next number can take this place
+                used[i] = False
+
+        explore()
+        return result
+  typescript: |
+    function permute(nums: number[]): number[][] {
+      const result: number[][] = [];
+      const chosen: number[] = [];
+      const used = new Array<boolean>(nums.length).fill(false);
+      const explore = (): void => {
+        if (chosen.length === nums.length) {
+          result.push([...chosen]);
+          return;
+        }
+        for (let i = 0; i < nums.length; i++) {
+          if (used[i]) continue;
+          used[i] = true;
+          chosen.push(nums[i]);
+          explore();
+          chosen.pop(); // undo, so the next number can take this place
+          used[i] = false;
+        }
+      };
+      explore();
+      return result;
+    }
+  java: |
+    class Solution {
+        public List<List<Integer>> permute(int[] nums) {
+            List<List<Integer>> result = new ArrayList<>();
+            explore(nums, new boolean[nums.length], new ArrayList<>(), result);
+            return result;
+        }
+
+        private void explore(int[] nums, boolean[] used, List<Integer> chosen, List<List<Integer>> result) {
+            if (chosen.size() == nums.length) {
+                result.add(new ArrayList<>(chosen));
+                return;
+            }
+            for (int i = 0; i < nums.length; i++) {
+                if (used[i]) continue;
+                used[i] = true;
+                chosen.add(nums[i]);
+                explore(nums, used, chosen, result);
+                chosen.remove(chosen.size() - 1); // undo, so the next number can take this place
+                used[i] = false;
+            }
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<vector<int>> permute(vector<int>& nums) {
+            vector<vector<int>> result;
+            vector<int> chosen;
+            vector<bool> used(nums.size(), false);
+            explore(nums, used, chosen, result);
+            return result;
+        }
+
+    private:
+        void explore(const vector<int>& nums, vector<bool>& used, vector<int>& chosen,
+                     vector<vector<int>>& result) {
+            if (chosen.size() == nums.size()) {
+                result.push_back(chosen);
+                return;
+            }
+            for (size_t i = 0; i < nums.size(); i++) {
+                if (used[i]) continue;
+                used[i] = true;
+                chosen.push_back(nums[i]);
+                explore(nums, used, chosen, result);
+                chosen.pop_back(); // undo, so the next number can take this place
+                used[i] = false;
+            }
+        }
+    };
+  go: |
+    func permute(nums []int) [][]int {
+    	result := [][]int{}
+    	chosen := []int{}
+    	used := make([]bool, len(nums))
+    	var explore func()
+    	explore = func() {
+    		if len(chosen) == len(nums) {
+    			result = append(result, slices.Clone(chosen))
+    			return
+    		}
+    		for i, x := range nums {
+    			if used[i] {
+    				continue
+    			}
+    			used[i] = true
+    			chosen = append(chosen, x)
+    			explore()
+    			chosen = chosen[:len(chosen)-1] // undo, so the next number can take this place
+    			used[i] = false
+    		}
+    	}
+    	explore()
+    	return result
+    }
+visualisers: [permutations]

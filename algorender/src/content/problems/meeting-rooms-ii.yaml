@@ -1,0 +1,160 @@
+title: Fewest Meeting Rooms
+difficulty: medium
+patterns: [intervals, heap]
+why: >-
+  Taking meetings in order of start time, you need to know when the earliest-finishing room frees
+  up. A min-heap of end times gives that at once, and its size is the number of rooms in use.
+summary: Work out how many rooms you need to hold every meeting.
+statement: |
+  You are given `intervals`, the meetings of one day, each `[start, end]` with `start < end`. A
+  room holds one meeting at a time. A meeting that ends at time `t` frees its room for a meeting
+  that starts at `t`.
+
+  Return the smallest number of rooms that can hold every meeting.
+constraints:
+  - "`intervals` holds 1 to 10⁴ meetings."
+  - "0 ≤ `start` < `end` ≤ 10⁶"
+signature:
+  function: minMeetingRooms
+  params:
+    - { name: intervals, type: "int[][]" }
+  returns: int
+view: memory
+examples:
+  - input: { intervals: [[9, 12], [10, 11], [11, 14], [13, 15]] }
+    output: 2
+    explanation: "`[9, 12]` and `[10, 11]` overlap, so two rooms. `[11, 14]` takes the room freed at 11, and `[13, 15]` the one freed at 12."
+  - input: { intervals: [[1, 5], [2, 6], [3, 7]] }
+    output: 3
+    explanation: All three meetings are going on at time 3.
+tests:
+  - input: { intervals: [[3, 8]] }
+    output: 1
+  - input: { intervals: [[4, 6], [1, 4]] }
+    output: 1
+  - input: { intervals: [[1, 2], [1, 2], [1, 2], [1, 2]] }
+    output: 4
+  - input: { intervals: [[0, 10], [1, 2], [3, 4], [5, 6]] }
+    output: 2
+  - input: { intervals: [[5, 8], [6, 8], [8, 9], [8, 10]] }
+    output: 2
+generated: { count: 8, seed: 43 }
+hints:
+  - "Take the meetings in order of start time. When a meeting starts, which room should it try to use?"
+  - "The room that frees up earliest. If even that one is still busy, every room is busy, so you need a new one."
+  - "Keep the end times of the rooms in use in a min-heap. If the smallest is at most the new start, pop it; then push the new end. The heap's final size is the answer."
+approach: |
+  Sort the meetings by start time, and keep a min-heap of the end times of the rooms in use. For
+  each meeting, if the earliest end time in the heap is at most this meeting's start, that room is
+  free again: pop it. Then push this meeting's end time (it takes that room, or a new one). The heap
+  only grows when every room is busy, so its final size is the number of rooms needed.
+
+  Another way: sort the start times and the end times separately and sweep through them together,
+  adding one for each start and taking one away for each end at or before it; the highest count
+  is the answer.
+complexity: { time: "O(n log n)", space: "O(n)" }
+solutions:
+  python: |
+    import heapq
+
+    def min_meeting_rooms(intervals: list[list[int]]) -> int:
+        ends = []  # a min-heap of the end times of rooms in use
+        for start, end in sorted(intervals):
+            if ends and ends[0] <= start:
+                heapq.heapreplace(ends, end)
+            else:
+                heapq.heappush(ends, end)
+        return len(ends)
+  typescript: |
+    function pushHeap(heap: number[], value: number): void {
+      heap.push(value);
+      let i = heap.length - 1;
+      while (i > 0) {
+        const parent = (i - 1) >> 1;
+        if (heap[parent] <= heap[i]) break;
+        [heap[parent], heap[i]] = [heap[i], heap[parent]];
+        i = parent;
+      }
+    }
+
+    function popHeap(heap: number[]): number {
+      const top = heap[0];
+      const last = heap.pop()!;
+      if (heap.length > 0) {
+        heap[0] = last;
+        let i = 0;
+        while (true) {
+          const left = 2 * i + 1;
+          const right = left + 1;
+          let smallest = i;
+          if (left < heap.length && heap[left] < heap[smallest]) smallest = left;
+          if (right < heap.length && heap[right] < heap[smallest]) smallest = right;
+          if (smallest === i) break;
+          [heap[i], heap[smallest]] = [heap[smallest], heap[i]];
+          i = smallest;
+        }
+      }
+      return top;
+    }
+
+    function minMeetingRooms(intervals: number[][]): number {
+      const meetings = [...intervals].sort((a, b) => a[0] - b[0]);
+      const ends: number[] = []; // a min-heap of the end times of rooms in use
+      for (const [start, end] of meetings) {
+        if (ends.length > 0 && ends[0] <= start) popHeap(ends);
+        pushHeap(ends, end);
+      }
+      return ends.length;
+    }
+  java: |
+    class Solution {
+        public int minMeetingRooms(int[][] intervals) {
+            Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+            PriorityQueue<Integer> ends = new PriorityQueue<>(); // end times of the rooms in use
+            for (int[] meeting : intervals) {
+                if (!ends.isEmpty() && ends.peek() <= meeting[0]) ends.poll(); // that room is free again
+                ends.offer(meeting[1]);
+            }
+            return ends.size();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int minMeetingRooms(vector<vector<int>>& intervals) {
+            sort(intervals.begin(), intervals.end());
+            priority_queue<int, vector<int>, greater<int>> ends; // end times of the rooms in use
+            for (auto& meeting : intervals) {
+                if (!ends.empty() && ends.top() <= meeting[0]) ends.pop(); // that room is free again
+                ends.push(meeting[1]);
+            }
+            return ends.size();
+        }
+    };
+  go: |
+    // intHeap is a min-heap of ints for container/heap.
+    type intHeap []int
+
+    func (h intHeap) Len() int           { return len(h) }
+    func (h intHeap) Less(i, j int) bool { return h[i] < h[j] }
+    func (h intHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *intHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *intHeap) Pop() any {
+    	old := *h
+    	x := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return x
+    }
+
+    func minMeetingRooms(intervals [][]int) int {
+    	sort.Slice(intervals, func(i, j int) bool { return intervals[i][0] < intervals[j][0] })
+    	ends := &intHeap{} // end times of the rooms in use
+    	for _, meeting := range intervals {
+    		if ends.Len() > 0 && (*ends)[0] <= meeting[0] {
+    			heap.Pop(ends) // that room is free again
+    		}
+    		heap.Push(ends, meeting[1])
+    	}
+    	return ends.Len()
+    }
+visualisers: [meeting-rooms, heap]

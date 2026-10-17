@@ -1,0 +1,187 @@
+title: Smash the Heaviest Stones
+difficulty: easy
+patterns: [heap]
+why: >-
+  Every turn needs the two heaviest stones, and a smash can put a new stone back in the pile. A
+  max-heap hands over the heaviest item again and again while the pile keeps changing.
+summary: Keep smashing the two heaviest stones together and report what is left.
+statement: |
+  You have a pile of stones, and `stones[i]` is the weight of one of them. Each turn, take the two
+  heaviest stones, weighing `x` and `y` with `x ≤ y`, and smash them together:
+
+  - If `x == y`, both stones are destroyed.
+  - Otherwise the lighter stone is destroyed and the heavier one now weighs `y − x`. It goes back
+    in the pile.
+
+  Keep going until at most one stone is left. Return its weight, or `0` if no stone is left.
+constraints:
+  - "`stones` holds 1 to 1000 weights."
+  - "Every weight is between 1 and 1000."
+signature:
+  function: lastStoneWeight
+  params:
+    - { name: stones, type: "int[]" }
+  returns: int
+examples:
+  - input: { stones: [6, 3, 10, 2] }
+    output: 1
+    explanation: "Smash 10 and 6 (a 4 is left), then 4 and 3 (a 1 is left), then 2 and 1: one stone weighing 1 remains."
+  - input: { stones: [3, 9, 4, 2, 8] }
+    output: 0
+    explanation: "9 and 8 leave a 1, 4 and 3 leave a 1, 2 and 1 leave a 1, and the last two stones weigh 1 each, so they destroy each other."
+tests:
+  - input: { stones: [5] }
+    output: 5
+  - input: { stones: [10, 4] }
+    output: 6
+  - input: { stones: [1, 1, 1] }
+    output: 1
+  - input: { stones: [9, 3, 3, 3] }
+    output: 0
+  - input: { stones: [1000, 1, 1] }
+    output: 998
+generated: { count: 8, seed: 32 }
+hints:
+  - "Each turn needs the two heaviest stones. Which structure gives you the largest item quickly, even as items come and go?"
+  - "A max-heap. Python's `heapq` is a min-heap, so store the weights negated."
+  - "Pop two, push back the difference if it isn't zero, and stop when fewer than two stones remain."
+approach: |
+  Put every weight in a max-heap. While it holds at least two stones, pop the heaviest, `y`, and the
+  next heaviest, `x`; if they differ, push `y − x` back. Each turn removes at least one stone, so
+  there are fewer than n turns, each costing O(log n). At the end, return the remaining stone's
+  weight, or 0 if the heap is empty.
+complexity: { time: "O(n log n)", space: "O(n)" }
+solutions:
+  python: |
+    import heapq
+
+    def last_stone_weight(stones: list[int]) -> int:
+        heap = [-w for w in stones]  # negated, so the heaviest is on top
+        heapq.heapify(heap)
+        while len(heap) > 1:
+            y = -heapq.heappop(heap)
+            x = -heapq.heappop(heap)
+            if y != x:
+                heapq.heappush(heap, -(y - x))
+        return -heap[0] if heap else 0
+  typescript: |
+    class Heap<T> {
+      private items: T[] = [];
+      private before: (a: T, b: T) => boolean;
+
+      // before(a, b) is true when a belongs nearer the top than b.
+      constructor(before: (a: T, b: T) => boolean) {
+        this.before = before;
+      }
+
+      size(): number {
+        return this.items.length;
+      }
+
+      peek(): T {
+        return this.items[0];
+      }
+
+      push(item: T): void {
+        const a = this.items;
+        a.push(item);
+        let i = a.length - 1;
+        while (i > 0) {
+          const parent = (i - 1) >> 1;
+          if (!this.before(a[i], a[parent])) break;
+          [a[i], a[parent]] = [a[parent], a[i]];
+          i = parent;
+        }
+      }
+
+      pop(): T {
+        const a = this.items;
+        const top = a[0];
+        const last = a.pop()!;
+        if (a.length > 0) {
+          a[0] = last;
+          let i = 0;
+          while (true) {
+            const left = 2 * i + 1;
+            const right = left + 1;
+            let first = i;
+            if (left < a.length && this.before(a[left], a[first])) first = left;
+            if (right < a.length && this.before(a[right], a[first])) first = right;
+            if (first === i) break;
+            [a[i], a[first]] = [a[first], a[i]];
+            i = first;
+          }
+        }
+        return top;
+      }
+    }
+
+    function lastStoneWeight(stones: number[]): number {
+      const heap = new Heap<number>((a, b) => a > b); // heaviest on top
+      for (const w of stones) heap.push(w);
+      while (heap.size() > 1) {
+        const y = heap.pop();
+        const x = heap.pop();
+        if (y !== x) heap.push(y - x);
+      }
+      return heap.size() === 1 ? heap.peek() : 0;
+    }
+  java: |
+    class Solution {
+        public int lastStoneWeight(int[] stones) {
+            PriorityQueue<Integer> heap = new PriorityQueue<>(Collections.reverseOrder()); // heaviest on top
+            for (int w : stones) heap.add(w);
+            while (heap.size() > 1) {
+                int y = heap.poll();
+                int x = heap.poll();
+                if (y != x) heap.add(y - x);
+            }
+            return heap.isEmpty() ? 0 : heap.peek();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int lastStoneWeight(vector<int>& stones) {
+            priority_queue<int> heap(stones.begin(), stones.end()); // heaviest on top
+            while (heap.size() > 1) {
+                int y = heap.top();
+                heap.pop();
+                int x = heap.top();
+                heap.pop();
+                if (y != x) heap.push(y - x);
+            }
+            return heap.empty() ? 0 : heap.top();
+        }
+    };
+  go: |
+    // maxHeap is a container/heap of ints, largest on top.
+    type maxHeap []int
+
+    func (h maxHeap) Len() int           { return len(h) }
+    func (h maxHeap) Less(i, j int) bool { return h[i] > h[j] }
+    func (h maxHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+    func (h *maxHeap) Push(x any)        { *h = append(*h, x.(int)) }
+    func (h *maxHeap) Pop() any {
+    	old := *h
+    	last := old[len(old)-1]
+    	*h = old[:len(old)-1]
+    	return last
+    }
+
+    func lastStoneWeight(stones []int) int {
+    	stonesLeft := maxHeap(slices.Clone(stones)) // heaviest on top
+    	heap.Init(&stonesLeft)
+    	for stonesLeft.Len() > 1 {
+    		y := heap.Pop(&stonesLeft).(int)
+    		x := heap.Pop(&stonesLeft).(int)
+    		if y != x {
+    			heap.Push(&stonesLeft, y-x)
+    		}
+    	}
+    	if stonesLeft.Len() == 0 {
+    		return 0
+    	}
+    	return stonesLeft[0]
+    }
+visualisers: [heap]

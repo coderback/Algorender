@@ -1,0 +1,262 @@
+title: Build a Prefix Tree
+difficulty: medium
+patterns: [trie]
+why: >-
+  Words that start the same way should share the work. A tree with one edge per letter stores each
+  shared start once, and every lookup walks it in time proportional to the word's length.
+summary: Build a trie that stores words and answers whole-word and prefix lookups.
+statement: |
+  Write a class `Trie` (a prefix tree) that stores lowercase words:
+
+  - `Trie()` makes an empty trie.
+  - `insert(word)` stores `word`.
+  - `search(word)` returns `true` if `word` has been stored, and `false` otherwise.
+  - `startsWith(prefix)` returns `true` if some stored word begins with `prefix`, and `false`
+    otherwise. A word counts as beginning with itself.
+
+  Each test is a list of calls, starting with the constructor; the expected answer lists what each
+  call returns (`null` for the constructor and for `insert`).
+constraints:
+  - "Words and prefixes have 1 to 2000 lowercase English letters."
+  - "A test makes at most 3 × 10⁴ calls."
+design:
+  class: Trie
+  methods:
+    - { name: insert, params: [{ name: word, type: string }], returns: void }
+    - { name: search, params: [{ name: word, type: string }], returns: bool }
+    - { name: startsWith, params: [{ name: prefix, type: string }], returns: bool }
+examples:
+  - calls: [[Trie], [insert, "card"], [search, "car"], [startsWith, "car"], [insert, "car"], [search, "car"]]
+    output: [null, null, false, true, null, true]
+    explanation: 'Until "car" is inserted, it is only the start of "card", not a stored word.'
+  - calls: [[Trie], [insert, "on"], [insert, "one"], [startsWith, "onex"], [search, "one"], [search, "o"]]
+    output: [null, null, null, false, true, false]
+tests:
+  - calls: [[Trie], [search, "a"], [startsWith, "a"]]
+    output: [null, false, false]
+  - calls: [[Trie], [insert, "a"], [search, "a"], [startsWith, "a"], [search, "aa"]]
+    output: [null, null, true, true, false]
+  - calls: [[Trie], [insert, "stone"], [insert, "stone"], [search, "stone"], [startsWith, "stones"]]
+    output: [null, null, null, true, false]
+  - calls: [[Trie], [insert, "tea"], [insert, "ten"], [insert, "to"], [startsWith, "te"], [search, "te"], [startsWith, "tx"], [search, "ten"]]
+    output: [null, null, null, null, true, false, false, true]
+generated: { count: 6, seed: 51 }
+hints:
+  - "Many words start the same way. How could you store a shared start only once?"
+  - "Make a tree whose edges are letters, so a word is a path down from the root. Each node maps a letter to a child node."
+  - "A node also needs a flag saying whether a stored word ends there. That flag is the difference between `search` and `startsWith`."
+approach: |
+  Each node holds a map from a letter to a child node, and a flag `end` saying whether a stored
+  word ends there. The root stands for the empty start.
+
+  - `insert`: walk down from the root letter by letter, making any missing child, then set `end`
+    on the node you finish on.
+  - `search` and `startsWith`: walk down the same way, and give up as soon as a letter's child is
+    missing. If the walk finishes, `startsWith` answers `true`, while `search` answers the last
+    node's `end` flag.
+complexity: { time: "O(L) per call, for a word of length L", space: "O(total letters stored)" }
+solutions:
+  python: |
+    class TrieNode:
+        def __init__(self):
+            self.children = {}
+            self.end = False  # a stored word ends here
+
+
+    class Trie:
+        def __init__(self):
+            self.root = TrieNode()
+
+        def insert(self, word: str) -> None:
+            node = self.root
+            for ch in word:
+                if ch not in node.children:
+                    node.children[ch] = TrieNode()
+                node = node.children[ch]
+            node.end = True
+
+        def _walk(self, text: str) -> TrieNode | None:
+            """The node text leads to, or None if it falls off the trie."""
+            node = self.root
+            for ch in text:
+                node = node.children.get(ch)
+                if node is None:
+                    return None
+            return node
+
+        def search(self, word: str) -> bool:
+            node = self._walk(word)
+            return node is not None and node.end
+
+        def starts_with(self, prefix: str) -> bool:
+            return self._walk(prefix) is not None
+  typescript: |
+    class TrieNode {
+      children = new Map<string, TrieNode>();
+      end = false; // a stored word ends here
+    }
+
+    class Trie {
+      private root = new TrieNode();
+
+      insert(word: string): void {
+        let node = this.root;
+        for (const ch of word) {
+          let child = node.children.get(ch);
+          if (child === undefined) {
+            child = new TrieNode();
+            node.children.set(ch, child);
+          }
+          node = child;
+        }
+        node.end = true;
+      }
+
+      // The node text leads to, or null if it falls off the trie.
+      private walk(text: string): TrieNode | null {
+        let node = this.root;
+        for (const ch of text) {
+          const child = node.children.get(ch);
+          if (child === undefined) return null;
+          node = child;
+        }
+        return node;
+      }
+
+      search(word: string): boolean {
+        const node = this.walk(word);
+        return node !== null && node.end;
+      }
+
+      startsWith(prefix: string): boolean {
+        return this.walk(prefix) !== null;
+      }
+    }
+  java: |
+    class Trie {
+        private final TrieNode root = new TrieNode();
+
+        public Trie() {
+        }
+
+        public void insert(String word) {
+            TrieNode node = root;
+            for (char ch : word.toCharArray()) {
+                int i = ch - 'a';
+                if (node.children[i] == null) node.children[i] = new TrieNode();
+                node = node.children[i];
+            }
+            node.end = true;
+        }
+
+        public boolean search(String word) {
+            TrieNode node = walk(word);
+            return node != null && node.end;
+        }
+
+        public boolean startsWith(String prefix) {
+            return walk(prefix) != null;
+        }
+
+        // The node text leads to, or null if it falls off the trie.
+        private TrieNode walk(String text) {
+            TrieNode node = root;
+            for (char ch : text.toCharArray()) {
+                node = node.children[ch - 'a'];
+                if (node == null) return null;
+            }
+            return node;
+        }
+
+        private static class TrieNode {
+            TrieNode[] children = new TrieNode[26];
+            boolean end; // a stored word ends here
+        }
+    }
+  cpp: |
+    struct TrieNode {
+        array<unique_ptr<TrieNode>, 26> children;
+        bool end = false; // a stored word ends here
+    };
+
+    class Trie {
+    public:
+        Trie() : root(make_unique<TrieNode>()) {
+        }
+
+        void insert(string& word) {
+            TrieNode* node = root.get();
+            for (char ch : word) {
+                auto& child = node->children[ch - 'a'];
+                if (!child) child = make_unique<TrieNode>();
+                node = child.get();
+            }
+            node->end = true;
+        }
+
+        bool search(string& word) {
+            TrieNode* node = walk(word);
+            return node && node->end;
+        }
+
+        bool startsWith(string& prefix) {
+            return walk(prefix) != nullptr;
+        }
+
+    private:
+        unique_ptr<TrieNode> root;
+
+        // The node text leads to, or nullptr if it falls off the trie.
+        TrieNode* walk(const string& text) {
+            TrieNode* node = root.get();
+            for (char ch : text) {
+                node = node->children[ch - 'a'].get();
+                if (!node) return nullptr;
+            }
+            return node;
+        }
+    };
+  go: |
+    type trieNode struct {
+    	children [26]*trieNode
+    	end      bool // a stored word ends here
+    }
+
+    type Trie struct {
+    	root *trieNode
+    }
+
+    func Constructor() Trie {
+    	return Trie{root: &trieNode{}}
+    }
+
+    func (this *Trie) Insert(word string) {
+    	node := this.root
+    	for i := 0; i < len(word); i++ {
+    		c := word[i] - 'a'
+    		if node.children[c] == nil {
+    			node.children[c] = &trieNode{}
+    		}
+    		node = node.children[c]
+    	}
+    	node.end = true
+    }
+
+    func (this *Trie) Search(word string) bool {
+    	node := this.walk(word)
+    	return node != nil && node.end
+    }
+
+    func (this *Trie) StartsWith(prefix string) bool {
+    	return this.walk(prefix) != nil
+    }
+
+    // walk returns the node text leads to, or nil if it falls off the trie.
+    func (this *Trie) walk(text string) *trieNode {
+    	node := this.root
+    	for i := 0; i < len(text) && node != nil; i++ {
+    		node = node.children[text[i]-'a']
+    	}
+    	return node
+    }
+visualisers: [trie]

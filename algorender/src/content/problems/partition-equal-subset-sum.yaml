@@ -1,0 +1,140 @@
+title: Split into Two Equal Totals
+difficulty: medium
+patterns: [dp-1d]
+why: >-
+  Splitting evenly means finding a group that adds up to half the total, and the sums you can reach
+  with the first k numbers build from those you could reach with the first k − 1: a table indexed
+  by sum.
+summary: Decide whether a list of positive numbers can be split into two groups with the same total.
+statement: |
+  You are given a list of positive integers `nums`. Return `true` if you can put every number into
+  one of two groups so that the two groups have the same total, and `false` otherwise.
+constraints:
+  - "`nums` holds 1 to 200 numbers."
+  - "1 ≤ `nums[i]` ≤ 100"
+signature:
+  function: canPartition
+  params:
+    - { name: nums, type: "int[]" }
+  returns: bool
+examples:
+  - input: { nums: [2, 7, 4, 3, 6] }
+    output: true
+    explanation: "`[7, 4]` and `[2, 3, 6]` both add up to 11."
+  - input: { nums: [1, 2, 5] }
+    output: false
+    explanation: "The total is 8, but no group adds up to 4."
+  - input: { nums: [3, 3, 3] }
+    output: false
+    explanation: An odd total can't be split into two equal halves.
+tests:
+  - input: { nums: [7] }
+    output: false
+  - input: { nums: [8, 8] }
+    output: true
+  - input: { nums: [1, 1, 1, 1, 1, 1] }
+    output: true
+  - input: { nums: [100, 50, 50] }
+    output: true
+  - input: { nums: [2, 4, 6, 10] }
+    output: false
+  - input: { nums: [2, 2, 3, 5] }
+    output: false
+generated: { count: 9, seed: 28 }
+hints:
+  - "If the total is odd, the answer is no. If it is even, what are you really looking for?"
+  - "You need a group that adds up to exactly half the total. Which sums can you make from the first few numbers?"
+  - "Keep `reachable[s]` for every s up to half the total. For each number x, mark s reachable if `s − x` was reachable before x came along. Go through s from high to low, so x is used at most once."
+approach: |
+  If the total is odd, no split works. Otherwise you need a group adding up to `half`, half the
+  total: the other numbers then add up to `half` too. This is the 0/1 knapsack question "which
+  sums can a subset make?".
+
+  Keep a list `reachable` where `reachable[s]` is true when some of the numbers seen so far add up
+  to `s`; at first only `reachable[0]` is true. For each number `x`, every sum `s` with
+  `reachable[s − x]` becomes reachable. Update `s` from `half` down to `x`, so the sums made with
+  `x` in this round aren't extended by `x` again. The answer is `reachable[half]`.
+complexity: { time: "O(n × S) where S is half the total", space: "O(S)" }
+solutions:
+  python: |
+    def can_partition(nums: list[int]) -> bool:
+        total = sum(nums)
+        if total % 2 == 1:
+            return False
+        half = total // 2
+        reachable = [True] + [False] * half  # reachable[s]: some of the numbers add up to s
+        for x in nums:
+            for s in range(half, x - 1, -1):
+                if reachable[s - x]:
+                    reachable[s] = True
+        return reachable[half]
+  typescript: |
+    function canPartition(nums: number[]): boolean {
+      const total = nums.reduce((sum, x) => sum + x, 0);
+      if (total % 2 === 1) return false;
+      const half = total / 2;
+      const reachable = new Array<boolean>(half + 1).fill(false); // reachable[s]: some of the numbers add up to s
+      reachable[0] = true;
+      for (const x of nums) {
+        for (let s = half; s >= x; s--) {
+          if (reachable[s - x]) reachable[s] = true;
+        }
+      }
+      return reachable[half];
+    }
+  java: |
+    class Solution {
+        public boolean canPartition(int[] nums) {
+            int total = 0;
+            for (int x : nums) total += x;
+            if (total % 2 == 1) return false;
+            int half = total / 2;
+            boolean[] reachable = new boolean[half + 1]; // reachable[s]: some of the numbers add up to s
+            reachable[0] = true;
+            for (int x : nums) {
+                for (int s = half; s >= x; s--) {
+                    if (reachable[s - x]) reachable[s] = true;
+                }
+            }
+            return reachable[half];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool canPartition(vector<int>& nums) {
+            int total = accumulate(nums.begin(), nums.end(), 0);
+            if (total % 2 == 1) return false;
+            int half = total / 2;
+            vector<bool> reachable(half + 1, false); // reachable[s]: some of the numbers add up to s
+            reachable[0] = true;
+            for (int x : nums) {
+                for (int s = half; s >= x; s--) {
+                    if (reachable[s - x]) reachable[s] = true;
+                }
+            }
+            return reachable[half];
+        }
+    };
+  go: |
+    func canPartition(nums []int) bool {
+    	total := 0
+    	for _, x := range nums {
+    		total += x
+    	}
+    	if total%2 == 1 {
+    		return false
+    	}
+    	half := total / 2
+    	reachable := make([]bool, half+1) // reachable[s]: some of the numbers add up to s
+    	reachable[0] = true
+    	for _, x := range nums {
+    		for s := half; s >= x; s-- {
+    			if reachable[s-x] {
+    				reachable[s] = true
+    			}
+    		}
+    	}
+    	return reachable[half]
+    }
+visualisers: [knapsack-01]

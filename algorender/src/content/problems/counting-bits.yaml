@@ -1,0 +1,95 @@
+title: Count the 1 Bits up to n
+difficulty: easy
+patterns: [bit-manipulation]
+why: >-
+  Shifting `i` right by one drops its last bit, so the count for `i` is the count for `i >> 1`
+  (already worked out) plus that last bit, `i & 1`: bit operations turn it into one pass.
+summary: For every number from 0 to n, count the 1s in its binary form.
+statement: |
+  Given an integer `n`, return a list of `n + 1` numbers where item `i` is the number of 1 bits in
+  the binary form of `i`, for every `i` from 0 to `n`.
+
+  For example, 5 is `101` in binary, so item 5 is 2. Counting each number's bits one at a time
+  takes O(n log n) time; aim for O(n).
+constraints:
+  - "0 ≤ `n` ≤ 10⁴"
+signature:
+  function: countBits
+  params:
+    - { name: n, type: int }
+  returns: "int[]"
+examples:
+  - input: { n: 2 }
+    output: [0, 1, 1]
+    explanation: "0 is `0`, 1 is `1` and 2 is `10`."
+  - input: { n: 6 }
+    output: [0, 1, 1, 2, 1, 2, 2]
+    explanation: "3 is `11`, 5 is `101` and 6 is `110`: two 1s each."
+tests:
+  - input: { n: 0 }
+    output: [0]
+  - input: { n: 1 }
+    output: [0, 1]
+  - input: { n: 8 }
+    output: [0, 1, 1, 2, 1, 2, 2, 3, 1]
+  - input: { n: 16 }
+    output: [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1]
+generated: { count: 6, seed: 37 }
+hints:
+  - "How does the binary form of `i` relate to the binary form of `i // 2`?"
+  - "`i >> 1` is `i` with its last bit dropped, and `i & 1` is that last bit."
+  - "So `bits[i] = bits[i >> 1] + (i & 1)`. Since `i >> 1` is smaller than `i`, its count is already in the list."
+approach: |
+  Build the list from 0 upwards. Shifting `i` right by one (`i >> 1`, the same as `i // 2`) drops
+  its last bit and keeps the rest, so `i` has as many 1 bits as `i >> 1`, plus one more when its
+  last bit, `i & 1`, is 1. Since `i >> 1 < i` for every `i ≥ 1`, that count is already in the list:
+  `bits[i] = bits[i >> 1] + (i & 1)`.
+
+  Another rule works the same way: `i & (i − 1)` clears the lowest 1 bit of `i`, so
+  `bits[i] = bits[i & (i − 1)] + 1`.
+complexity: { time: "O(n)", space: "O(n) for the answer" }
+solutions:
+  python: |
+    def count_bits(n: int) -> list[int]:
+        bits = [0] * (n + 1)
+        for i in range(1, n + 1):
+            bits[i] = bits[i >> 1] + (i & 1)  # i without its last bit, plus that bit
+        return bits
+  typescript: |
+    function countBits(n: number): number[] {
+      const bits = new Array<number>(n + 1).fill(0);
+      for (let i = 1; i <= n; i++) {
+        bits[i] = bits[i >> 1] + (i & 1); // i without its last bit, plus that bit
+      }
+      return bits;
+    }
+  java: |
+    class Solution {
+        public int[] countBits(int n) {
+            int[] bits = new int[n + 1];
+            for (int i = 1; i <= n; i++) {
+                bits[i] = bits[i >> 1] + (i & 1); // i without its last bit, plus that bit
+            }
+            return bits;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> countBits(int n) {
+            vector<int> bits(n + 1, 0);
+            for (int i = 1; i <= n; i++) {
+                bits[i] = bits[i >> 1] + (i & 1); // i without its last bit, plus that bit
+            }
+            return bits;
+        }
+    };
+  go: |
+    func countBits(n int) []int {
+    	bits := make([]int, n+1)
+    	for i := 1; i <= n; i++ {
+    		bits[i] = bits[i>>1] + i&1 // i without its last bit, plus that bit
+    	}
+    	return bits
+    }
+visualisers: []

@@ -1,0 +1,132 @@
+title: Valid Brackets
+difficulty: easy
+patterns: [stack]
+why: >-
+  Every closing bracket must match the most recent opening bracket that is still open. "Most recent
+  first" is exactly what a stack gives you.
+summary: Decide whether every bracket in a string is closed in the right order.
+statement: |
+  A string `s` contains only the six characters `(`, `)`, `[`, `]`, `{` and `}`.
+
+  Return `true` if the brackets are balanced: every opening bracket is closed by a bracket of the
+  same kind, closings happen in the reverse order of openings (so `([)]` is not balanced), and no
+  closing bracket appears without an opening one before it. Return `false` otherwise.
+constraints:
+  - "`s` holds 1 to 10⁴ characters."
+  - "Every character is one of `()[]{}`."
+signature:
+  function: isValid
+  params:
+    - { name: s, type: string }
+  returns: bool
+examples:
+  - input: { s: "{[]()}" }
+    output: true
+    explanation: "`[]` and `()` close inside the braces, and the braces close last."
+  - input: { s: "([)]" }
+    output: false
+    explanation: "`)` arrives while `[` is the most recent open bracket."
+  - input: { s: "((" }
+    output: false
+    explanation: Two brackets are never closed.
+tests:
+  - input: { s: ")" }
+    output: false
+  - input: { s: "()" }
+    output: true
+  - input: { s: "]{}" }
+    output: false
+  - input: { s: "([{}])[]" }
+    output: true
+  - input: { s: "{{{{}}}" }
+    output: false
+  - input: { s: "(]" }
+    output: false
+generated: { count: 10, seed: 3 }
+hints:
+  - "When you meet a closing bracket, which opening bracket must it match?"
+  - "Keep the open brackets you haven't closed yet, newest last. A closing bracket must match the newest one."
+  - "At the end, anything still open means the string isn't balanced."
+approach: |
+  Scan the string with a stack of brackets that are still open. Push every opening bracket. For a
+  closing bracket, the stack's top must be its partner: if the stack is empty or the top is a
+  different kind, the string is unbalanced; otherwise pop it. The string is balanced exactly when
+  the stack is empty at the end.
+complexity: { time: "O(n)", space: "O(n)" }
+solutions:
+  python: |
+    def is_valid(s: str) -> bool:
+        partner = {')': '(', ']': '[', '}': '{'}
+        stack = []
+        for ch in s:
+            if ch in partner:
+                if not stack or stack[-1] != partner[ch]:
+                    return False
+                stack.pop()
+            else:
+                stack.append(ch)
+        return not stack
+  typescript: |
+    function isValid(s: string): boolean {
+      const partner: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+      const stack: string[] = [];
+      for (const ch of s) {
+        if (ch in partner) {
+          if (stack.length === 0 || stack[stack.length - 1] !== partner[ch]) return false;
+          stack.pop();
+        } else {
+          stack.push(ch);
+        }
+      }
+      return stack.length === 0;
+    }
+  java: |
+    class Solution {
+        public boolean isValid(String s) {
+            Map<Character, Character> partner = Map.of(')', '(', ']', '[', '}', '{');
+            Deque<Character> stack = new ArrayDeque<>();
+            for (char ch : s.toCharArray()) {
+                if (partner.containsKey(ch)) {
+                    if (stack.isEmpty() || !stack.peek().equals(partner.get(ch))) return false;
+                    stack.pop();
+                } else {
+                    stack.push(ch);
+                }
+            }
+            return stack.isEmpty();
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool isValid(string& s) {
+            unordered_map<char, char> partner = {{')', '('}, {']', '['}, {'}', '{'}};
+            vector<char> stack;
+            for (char ch : s) {
+                if (partner.count(ch)) {
+                    if (stack.empty() || stack.back() != partner[ch]) return false;
+                    stack.pop_back();
+                } else {
+                    stack.push_back(ch);
+                }
+            }
+            return stack.empty();
+        }
+    };
+  go: |
+    func isValid(s string) bool {
+    	partner := map[rune]rune{')': '(', ']': '[', '}': '{'}
+    	stack := []rune{}
+    	for _, ch := range s {
+    		if open, closing := partner[ch]; closing {
+    			if len(stack) == 0 || stack[len(stack)-1] != open {
+    				return false
+    			}
+    			stack = stack[:len(stack)-1]
+    		} else {
+    			stack = append(stack, ch)
+    		}
+    	}
+    	return len(stack) == 0
+    }
+visualisers: [stack]

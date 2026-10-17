@@ -1,0 +1,129 @@
+title: Fewest Coins for an Amount
+difficulty: medium
+patterns: [dp-1d]
+why: >-
+  The fewest coins for an amount is one coin plus the fewest for what is left, and the same smaller
+  amounts come up again and again: a table indexed by amount answers each of them once.
+summary: Make an amount with as few coins as possible, using as many of each coin as you like.
+statement: |
+  You have coins worth each of the values in `coins`, as many of each as you like. Return the
+  fewest coins that add up to exactly `amount`, or `-1` if no combination of coins does.
+
+  An amount of 0 takes no coins.
+constraints:
+  - "`coins` holds 1 to 12 different values."
+  - "1 ≤ `coins[i]` ≤ 10⁴"
+  - "0 ≤ `amount` ≤ 10⁴"
+signature:
+  function: coinChange
+  params:
+    - { name: coins, type: "int[]" }
+    - { name: amount, type: int }
+  returns: int
+examples:
+  - input: { coins: [1, 2, 5], amount: 11 }
+    output: 3
+    explanation: "5 + 5 + 1 = 11."
+  - input: { coins: [2], amount: 3 }
+    output: -1
+    explanation: Coins worth 2 only ever make even amounts.
+  - input: { coins: [1, 3, 4], amount: 6 }
+    output: 2
+    explanation: "3 + 3. Taking the biggest coin first (4 + 1 + 1) needs three coins."
+tests:
+  - input: { coins: [7], amount: 0 }
+    output: 0
+  - input: { coins: [5], amount: 5 }
+    output: 1
+  - input: { coins: [9, 6, 5, 1], amount: 11 }
+    output: 2
+  - input: { coins: [4, 6], amount: 7 }
+    output: -1
+  - input: { coins: [7, 3], amount: 23 }
+    output: 5
+  - input: { coins: [2, 5, 10], amount: 10000 }
+    output: 1000
+generated: { count: 9, seed: 24 }
+hints:
+  - "Always taking the biggest coin that fits doesn't work: try coins 1, 3 and 4 with amount 6."
+  - "If you knew the fewest coins for every amount below `a`, how would you find it for `a`? Try each coin as the last one."
+  - "`fewest[a] = 1 + min(fewest[a − c])` over the coins c ≤ a, with `fewest[0] = 0`. Fill the table from 0 upwards, and mark amounts that can't be made."
+approach: |
+  Let `fewest[a]` be the fewest coins that make the amount `a`. Whatever the best way to make `a`
+  is, it has a last coin `c`, and the coins before it make `a − c` as cheaply as possible. So
+  `fewest[a] = 1 + min(fewest[a − c])` over every coin `c ≤ a`, with `fewest[0] = 0`.
+
+  Fill the table from 1 up to `amount`. Use `amount + 1` to mean "can't be made": no real answer
+  needs that many coins, since every coin is worth at least 1. If `fewest[amount]` is still
+  `amount + 1` at the end, return `-1`.
+complexity: { time: "O(amount × k) for k coins", space: "O(amount)" }
+solutions:
+  python: |
+    def coin_change(coins: list[int], amount: int) -> int:
+        impossible = amount + 1  # more coins than any real answer needs
+        fewest = [0] + [impossible] * amount
+        for total in range(1, amount + 1):
+            for coin in coins:
+                if coin <= total:
+                    fewest[total] = min(fewest[total], fewest[total - coin] + 1)
+        return -1 if fewest[amount] == impossible else fewest[amount]
+  typescript: |
+    function coinChange(coins: number[], amount: number): number {
+      const impossible = amount + 1; // more coins than any real answer needs
+      const fewest = new Array<number>(amount + 1).fill(impossible);
+      fewest[0] = 0;
+      for (let total = 1; total <= amount; total++) {
+        for (const coin of coins) {
+          if (coin <= total) fewest[total] = Math.min(fewest[total], fewest[total - coin] + 1);
+        }
+      }
+      return fewest[amount] === impossible ? -1 : fewest[amount];
+    }
+  java: |
+    class Solution {
+        public int coinChange(int[] coins, int amount) {
+            int impossible = amount + 1; // more coins than any real answer needs
+            int[] fewest = new int[amount + 1];
+            Arrays.fill(fewest, impossible);
+            fewest[0] = 0;
+            for (int total = 1; total <= amount; total++) {
+                for (int coin : coins) {
+                    if (coin <= total) fewest[total] = Math.min(fewest[total], fewest[total - coin] + 1);
+                }
+            }
+            return fewest[amount] == impossible ? -1 : fewest[amount];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int coinChange(vector<int>& coins, int amount) {
+            int impossible = amount + 1; // more coins than any real answer needs
+            vector<int> fewest(amount + 1, impossible);
+            fewest[0] = 0;
+            for (int total = 1; total <= amount; total++) {
+                for (int coin : coins) {
+                    if (coin <= total) fewest[total] = min(fewest[total], fewest[total - coin] + 1);
+                }
+            }
+            return fewest[amount] == impossible ? -1 : fewest[amount];
+        }
+    };
+  go: |
+    func coinChange(coins []int, amount int) int {
+    	impossible := amount + 1 // more coins than any real answer needs
+    	fewest := make([]int, amount+1)
+    	for total := 1; total <= amount; total++ {
+    		fewest[total] = impossible
+    		for _, coin := range coins {
+    			if coin <= total {
+    				fewest[total] = min(fewest[total], fewest[total-coin]+1)
+    			}
+    		}
+    	}
+    	if fewest[amount] == impossible {
+    		return -1
+    	}
+    	return fewest[amount]
+    }
+visualisers: [coin-change]

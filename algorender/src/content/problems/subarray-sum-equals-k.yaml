@@ -1,0 +1,120 @@
+title: Count Runs That Sum to k
+difficulty: medium
+patterns: [prefix-sum, hashing]
+why: >-
+  A run's sum is the difference of two running totals, so "runs ending here that sum to k" becomes
+  "earlier running totals equal to this total minus k", which a hash map of counts answers at once.
+summary: Count the contiguous runs of a list whose numbers add up to k.
+statement: |
+  You are given a list of integers `nums` and an integer `k`. Return how many non-empty subarrays
+  (contiguous runs of positions) of `nums` add up to exactly `k`.
+
+  The numbers can be negative, so adding a number to a run can make its sum go down as well as up.
+  Runs at different positions count separately, even when they hold the same numbers.
+constraints:
+  - "`nums` holds 1 to 2 × 10⁴ numbers."
+  - "Every number is between −1000 and 1000."
+  - "`k` is between −10⁷ and 10⁷."
+signature:
+  function: subarraySum
+  params:
+    - { name: nums, type: "int[]" }
+    - { name: k, type: int }
+  returns: int
+view: memory
+examples:
+  - input: { nums: [2, -1, 1, 3, -2], k: 3 }
+    output: 3
+    explanation: "`[3]`, `[-1, 1, 3]` and the whole list each add up to 3."
+  - input: { nums: [0, 0, 0], k: 0 }
+    output: 6
+    explanation: "All six runs (three of length 1, two of length 2, one of length 3) add up to 0."
+tests:
+  - input: { nums: [5], k: 5 }
+    output: 1
+  - input: { nums: [5], k: -5 }
+    output: 0
+  - input: { nums: [1, -1, 1, -1], k: 0 }
+    output: 4
+  - input: { nums: [1, 2, 3], k: 3 }
+    output: 2
+  - input: { nums: [-1, -1, -1], k: -2 }
+    output: 2
+  - input: { nums: [1000, -1000, 1000], k: 1000 }
+    output: 3
+generated: { count: 8, seed: 35 }
+hints:
+  - "With negative numbers a sliding window doesn't work: growing a run can make its sum go either way. What else gives a run's sum quickly?"
+  - "With running totals, the run from `i` to `j` sums to `total[j] − total[i − 1]`. So a run ending here sums to `k` when an earlier running total equals the current total minus `k`."
+  - "Walk once, keeping a hash map from each running total to how many times it has occurred. Start it with `{0: 1}`, the total before any numbers."
+approach: |
+  Let `total` be the sum of the numbers so far. A run that ends at the current position adds up to
+  `k` exactly when the running total just before the run began was `total − k`. So walk through
+  `nums` once with a hash map `seen` from each running total to how many times it has occurred,
+  starting with `{0: 1}` for the empty start. At each number, add it to `total`, add
+  `seen[total − k]` (0 if missing) to the count, then record `total` in `seen`.
+complexity: { time: "O(n)", space: "O(n)" }
+solutions:
+  python: |
+    def subarray_sum(nums: list[int], k: int) -> int:
+        seen = {0: 1}
+        total = 0
+        count = 0
+        for x in nums:
+            total += x
+            count += seen.get(total - k, 0)
+            seen[total] = seen.get(total, 0) + 1
+        return count
+  typescript: |
+    function subarraySum(nums: number[], k: number): number {
+      const seen = new Map<number, number>([[0, 1]]);
+      let total = 0;
+      let count = 0;
+      for (const x of nums) {
+        total += x;
+        count += seen.get(total - k) ?? 0;
+        seen.set(total, (seen.get(total) ?? 0) + 1);
+      }
+      return count;
+    }
+  java: |
+    class Solution {
+        public int subarraySum(int[] nums, int k) {
+            Map<Integer, Integer> seen = new HashMap<>(); // running total -> how often it has occurred
+            seen.put(0, 1);
+            int total = 0, count = 0;
+            for (int x : nums) {
+                total += x;
+                count += seen.getOrDefault(total - k, 0);
+                seen.merge(total, 1, Integer::sum);
+            }
+            return count;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        int subarraySum(vector<int>& nums, int k) {
+            unordered_map<int, int> seen{{0, 1}}; // running total -> how often it has occurred
+            int total = 0, count = 0;
+            for (int x : nums) {
+                total += x;
+                auto it = seen.find(total - k);
+                if (it != seen.end()) count += it->second;
+                seen[total]++;
+            }
+            return count;
+        }
+    };
+  go: |
+    func subarraySum(nums []int, k int) int {
+    	seen := map[int]int{0: 1} // running total -> how often it has occurred
+    	total, count := 0, 0
+    	for _, x := range nums {
+    		total += x
+    		count += seen[total-k]
+    		seen[total]++
+    	}
+    	return count
+    }
+visualisers: [hash-table]

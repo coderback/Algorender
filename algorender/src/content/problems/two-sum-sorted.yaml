@@ -1,0 +1,126 @@
+title: Pair Sum in a Sorted List
+difficulty: medium
+patterns: [two-pointers]
+why: >-
+  The list is sorted, so the sum of the two ends tells you which end to move: too small, move the
+  left end up; too big, move the right end down. Each move rules out one number for good.
+summary: Find two positions in a sorted list whose numbers add up to a target, with constant extra memory.
+statement: |
+  You are given a list of integers `nums`, sorted from smallest to largest (equal neighbours are
+  allowed), and an integer `target`. Find two different positions `i` and `j` whose numbers add up
+  to `target`, and return them as `[i, j]` with `i < j`. Indices count from 0.
+
+  At least one such pair exists; if several do, any one of them is accepted. Try to use only a
+  constant amount of extra memory.
+constraints:
+  - "`nums` holds 2 to 3 × 10⁴ numbers, sorted in non-decreasing order."
+  - "Every number is between −10⁹ and 10⁹."
+  - "At least one pair adds up to `target`."
+signature:
+  function: twoSumSorted
+  params:
+    - { name: nums, type: "int[]" }
+    - { name: target, type: int }
+  returns: "int[]"
+check: ordered-pair-sum
+examples:
+  - input: { nums: [1, 3, 4, 6, 9], target: 10 }
+    output: [0, 4]
+    explanation: "`1 + 9` is 10. `[2, 3]` (4 + 6) would be accepted too."
+  - input: { nums: [-5, -2, -2, 7], target: -4 }
+    output: [1, 2]
+    explanation: Equal numbers at two different positions are fine.
+tests:
+  - input: { nums: [2, 5], target: 7 }
+    output: [0, 1]
+  - input: { nums: [0, 0, 0], target: 0 }
+    output: [0, 2]
+  - input: { nums: [-10, -3, 1, 8], target: -2 }
+    output: [1, 2]
+  - input: { nums: [1, 2, 3, 4, 4, 9, 56, 90], target: 8 }
+    output: [3, 4]
+  - input: { nums: [-1000000000, 1000000000], target: 0 }
+    output: [0, 1]
+generated: { count: 8, seed: 27 }
+hints:
+  - "Look at the smallest and the largest number. If their sum is too small, can the smallest number be part of any answer?"
+  - "Start with one index at each end. Compare their sum with `target` and move exactly one index inwards."
+  - "Too small: move the left index right. Too big: move the right index left. Equal: you're done."
+approach: |
+  Put `left` at 0 and `right` at the last index. If `nums[left] + nums[right]` equals the target,
+  return `[left, right]`. If the sum is too small, `nums[left]` can't be in any answer (even the
+  largest number left isn't big enough for it), so move `left` right. If the sum is too big,
+  `nums[right]` can't be in any answer, so move `right` left.
+
+  Every step rules out one number for good, so the indices meet within n steps, and nothing is
+  stored besides the two indices.
+complexity: { time: "O(n)", space: "O(1)" }
+solutions:
+  python: |
+    def two_sum_sorted(nums: list[int], target: int) -> list[int]:
+        left, right = 0, len(nums) - 1
+        while left < right:
+            total = nums[left] + nums[right]
+            if total == target:
+                return [left, right]
+            if total < target:
+                left += 1
+            else:
+                right -= 1
+        return []
+  typescript: |
+    function twoSumSorted(nums: number[], target: number): number[] {
+      let left = 0;
+      let right = nums.length - 1;
+      while (left < right) {
+        const total = nums[left] + nums[right];
+        if (total === target) return [left, right];
+        if (total < target) left++;
+        else right--;
+      }
+      return [];
+    }
+  java: |
+    class Solution {
+        public int[] twoSumSorted(int[] nums, int target) {
+            int left = 0, right = nums.length - 1;
+            while (left < right) {
+                long total = (long) nums[left] + nums[right]; // the sum can exceed an int
+                if (total == target) return new int[] {left, right};
+                if (total < target) left++;
+                else right--;
+            }
+            return new int[0];
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        vector<int> twoSumSorted(vector<int>& nums, int target) {
+            int left = 0, right = nums.size() - 1;
+            while (left < right) {
+                long long total = (long long)nums[left] + nums[right]; // the sum can exceed an int
+                if (total == target) return {left, right};
+                if (total < target) left++;
+                else right--;
+            }
+            return {};
+        }
+    };
+  go: |
+    func twoSumSorted(nums []int, target int) []int {
+    	left, right := 0, len(nums)-1
+    	for left < right {
+    		total := nums[left] + nums[right]
+    		if total == target {
+    			return []int{left, right}
+    		}
+    		if total < target {
+    			left++
+    		} else {
+    			right--
+    		}
+    	}
+    	return []int{}
+    }
+visualisers: [two-pointers]

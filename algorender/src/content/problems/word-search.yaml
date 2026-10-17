@@ -1,0 +1,206 @@
+title: Find a Word in a Letter Grid
+difficulty: medium
+patterns: [backtracking]
+why: >-
+  A match is a path through neighbouring cells that never reuses a cell. You step in, go deeper
+  while the letters keep matching, and step back out to try another direction when they don't:
+  backtracking on a grid.
+summary: Decide whether a word can be traced through neighbouring cells of a letter grid.
+statement: |
+  You are given `board`, a grid of letters (each cell holds one uppercase letter), and a string
+  `word`. Return `true` if you can spell `word` by starting at any cell and stepping to a
+  neighbouring cell for each next letter, and `false` otherwise.
+
+  Neighbours share a side: up, down, left or right, never diagonally. A path may not use the same
+  cell twice.
+constraints:
+  - "The board has 1 to 6 rows and 1 to 6 columns."
+  - "`word` has 1 to 15 letters."
+  - "The board and `word` hold only uppercase English letters."
+signature:
+  function: exist
+  params:
+    - { name: board, type: "string[][]" }
+    - { name: word, type: string }
+  returns: bool
+examples:
+  - input: { board: [["C", "A", "T", "S"], ["O", "R", "E", "D"], ["D", "O", "G", "E"]], word: "CARE" }
+    output: true
+    explanation: "Start at the top-left C, step right to A, down to R, then right to E."
+  - input: { board: [["C", "A", "T", "S"], ["O", "R", "E", "D"], ["D", "O", "G", "E"]], word: "CODE" }
+    output: false
+    explanation: "C, O and D run down the first column, but no E touches that D, and the other D has no O next to it."
+  - input: { board: [["C", "A", "T", "S"], ["O", "R", "E", "D"], ["D", "O", "G", "E"]], word: "ERE" }
+    output: false
+    explanation: "The only E next to the R is the one you would start from, and a cell can't be used twice."
+tests:
+  - input: { board: [["A"]], word: "A" }
+    output: true
+  - input: { board: [["A"]], word: "B" }
+    output: false
+  - input: { board: [["A", "A"], ["A", "A"]], word: "AAAA" }
+    output: true
+  - input: { board: [["A", "A"], ["A", "A"]], word: "AAAAA" }
+    output: false
+  - input: { board: [["A", "B"], ["C", "D"]], word: "ABDC" }
+    output: true
+  - input: { board: [["A", "B"], ["C", "D"]], word: "AD" }
+    output: false
+  - input: { board: [["H", "E", "L", "L", "O"]], word: "OLLEH" }
+    output: true
+generated: { count: 8, seed: 40 }
+hints:
+  - "Try every cell as a starting point. From a cell that matches the next letter, where can the path go?"
+  - "Write a recursive helper `found(r, c, i)`: can `word[i:]` be traced starting at cell (r, c)? It fails if the cell is off the board, already on the path, or holds the wrong letter."
+  - "Mark the cell as on the path before trying its four neighbours, and unmark it afterwards, so other paths can use it."
+approach: |
+  Try every cell as a starting point with a recursive helper `found(r, c, i)`, which asks whether
+  `word[i:]` can be traced starting at cell (r, c):
+
+  - If (r, c) is off the board, already on the current path, or doesn't hold `word[i]`, it can't.
+  - If `i` is the last index, the whole word is traced.
+  - Otherwise put (r, c) on the path, try the four neighbours with `i + 1`, then take (r, c) off
+    the path again (the backtracking step) and report whether any neighbour succeeded.
+
+  A set of cells on the path does the marking; writing a placeholder into the board and restoring
+  it afterwards works too. The search stops at the first full match. The recursion is only as deep
+  as the word is long.
+complexity: { time: "O(rows · cols · 3^L) for a word of length L: after the first step, each step has at most three new directions", space: "O(L) for the path and the recursion" }
+solutions:
+  python: |
+    def exist(board: list[list[str]], word: str) -> bool:
+        rows, cols = len(board), len(board[0])
+        path = set()  # cells on the current path
+
+        def found(r, c, i):
+            # Can word[i:] be traced starting at (r, c)?
+            if not (0 <= r < rows and 0 <= c < cols):
+                return False
+            if (r, c) in path or board[r][c] != word[i]:
+                return False
+            if i == len(word) - 1:
+                return True
+            path.add((r, c))
+            ok = (found(r + 1, c, i + 1) or found(r - 1, c, i + 1)
+                  or found(r, c + 1, i + 1) or found(r, c - 1, i + 1))
+            path.remove((r, c))  # free the cell for other paths
+            return ok
+
+        for r in range(rows):
+            for c in range(cols):
+                if found(r, c, 0):
+                    return True
+        return False
+  typescript: |
+    function exist(board: string[][], word: string): boolean {
+      const rows = board.length;
+      const cols = board[0].length;
+      const path = new Set<number>(); // cells on the current path, as r * cols + c
+
+      // Can word[i:] be traced starting at (r, c)?
+      const found = (r: number, c: number, i: number): boolean => {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return false;
+        if (path.has(r * cols + c) || board[r][c] !== word[i]) return false;
+        if (i === word.length - 1) return true;
+        path.add(r * cols + c);
+        const ok = found(r + 1, c, i + 1) || found(r - 1, c, i + 1) || found(r, c + 1, i + 1) || found(r, c - 1, i + 1);
+        path.delete(r * cols + c); // free the cell for other paths
+        return ok;
+      };
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (found(r, c, 0)) return true;
+        }
+      }
+      return false;
+    }
+  java: |
+    class Solution {
+        public boolean exist(String[][] board, String word) {
+            boolean[][] onPath = new boolean[board.length][board[0].length]; // cells on the current path
+            for (int r = 0; r < board.length; r++) {
+                for (int c = 0; c < board[0].length; c++) {
+                    if (found(board, word, onPath, r, c, 0)) return true;
+                }
+            }
+            return false;
+        }
+
+        // Can word from position i on be traced starting at (r, c)?
+        private boolean found(String[][] board, String word, boolean[][] onPath, int r, int c, int i) {
+            if (r < 0 || r >= board.length || c < 0 || c >= board[0].length) return false;
+            if (onPath[r][c] || board[r][c].charAt(0) != word.charAt(i)) return false;
+            if (i == word.length() - 1) return true;
+            onPath[r][c] = true;
+            boolean ok = found(board, word, onPath, r + 1, c, i + 1)
+                    || found(board, word, onPath, r - 1, c, i + 1)
+                    || found(board, word, onPath, r, c + 1, i + 1)
+                    || found(board, word, onPath, r, c - 1, i + 1);
+            onPath[r][c] = false; // free the cell for other paths
+            return ok;
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        bool exist(vector<vector<string>>& board, string& word) {
+            int rows = board.size(), cols = board[0].size();
+            vector<vector<bool>> onPath(rows, vector<bool>(cols, false)); // cells on the current path
+
+            // Can word from position i on be traced starting at (r, c)?
+            function<bool(int, int, size_t)> found = [&](int r, int c, size_t i) {
+                if (r < 0 || r >= rows || c < 0 || c >= cols) return false;
+                if (onPath[r][c] || board[r][c][0] != word[i]) return false;
+                if (i == word.size() - 1) return true;
+                onPath[r][c] = true;
+                bool ok = found(r + 1, c, i + 1) || found(r - 1, c, i + 1)
+                       || found(r, c + 1, i + 1) || found(r, c - 1, i + 1);
+                onPath[r][c] = false; // free the cell for other paths
+                return ok;
+            };
+
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (found(r, c, 0)) return true;
+                }
+            }
+            return false;
+        }
+    };
+  go: |
+    func exist(board [][]string, word string) bool {
+    	rows, cols := len(board), len(board[0])
+    	onPath := make([][]bool, rows) // cells on the current path
+    	for r := range onPath {
+    		onPath[r] = make([]bool, cols)
+    	}
+
+    	// found reports whether word[i:] can be traced starting at (r, c).
+    	var found func(r, c, i int) bool
+    	found = func(r, c, i int) bool {
+    		if r < 0 || r >= rows || c < 0 || c >= cols {
+    			return false
+    		}
+    		if onPath[r][c] || board[r][c][0] != word[i] {
+    			return false
+    		}
+    		if i == len(word)-1 {
+    			return true
+    		}
+    		onPath[r][c] = true
+    		ok := found(r+1, c, i+1) || found(r-1, c, i+1) || found(r, c+1, i+1) || found(r, c-1, i+1)
+    		onPath[r][c] = false // free the cell for other paths
+    		return ok
+    	}
+
+    	for r := 0; r < rows; r++ {
+    		for c := 0; c < cols; c++ {
+    			if found(r, c, 0) {
+    				return true
+    			}
+    		}
+    	}
+    	return false
+    }
+visualisers: [depth-first-search]

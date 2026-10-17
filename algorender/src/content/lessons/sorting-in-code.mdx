@@ -1,0 +1,81 @@
+<Section step="hook" title="Read code before you write it">
+
+Most of programming is reading code: your own from last week, a library's, a colleague's. Yet beginners are usually handed a blank editor first. Classroom studies of an approach called **PRIMM** found that learners understand more when they first **predict** what working code does, **run** it to check, **investigate** it, **modify** it, and only then **make** their own.
+
+That is the plan here, with bubble sort: the simplest sort that actually works. Pick Python, JavaScript or TypeScript; every step works in all three, and your choice is remembered.
+
+</Section>
+
+<Section step="predict" title="Predict what one pass does">
+
+The outer loop runs passes. In each pass, the inner loop walks along neighbouring pairs and swaps any pair that is out of order. Read the code, then answer before you run anything.
+
+<PredictCode
+  exercise="bubble-sort"
+  example="random"
+  question="On [5, 2, 9, 1, 6, 3], where is the 9 after the first pass?"
+  choices={['Still at index 2', 'At the start', 'At the end, index 5', 'Next to the 1']}
+  answer={2}
+  why="Once the pass reaches the 9, every comparison after that finds it bigger than its right neighbour, so it is swapped one step right each time. The biggest value always ends a pass at the end."
+/>
+
+</Section>
+
+<Section step="run" title="Run it and check">
+
+Now press **Run** and step through the first pass, five comparisons long. Watch the 9. The narration names the line of code behind every step, and the variables panel shows `i` and `j` changing as you go.
+
+<KeyIdea>After pass `i`, the biggest `i + 1` values sit at the end in their final order. That is the invariant that makes bubble sort correct.</KeyIdea>
+
+</Section>
+
+<Section step="investigate" title="Investigate the run">
+
+<Quiz
+  id="investigate"
+  questions={[
+    {
+      q: 'Why does the inner loop stop at n - 1 - i, not at n - 1?',
+      choices: ['Only to avoid reading past the end', 'Because the last i elements are already in their final places', 'To make sorted input faster', 'It is a mistake'],
+      answer: 1,
+      why: 'After pass i the biggest values are already at the end, so comparing them again can never cause a swap; stopping early skips that work. The extra "- 1" keeps j + 1 inside the array.',
+    },
+    {
+      q: 'How many swaps does this code make on an array that is already sorted?',
+      choices: ['0', 'n', 'n − 1', 'n²'],
+      answer: 0,
+      why: 'Every comparison finds the left value no bigger than the right one, so the swap line never runs. It still makes every comparison, though: stopping when a pass makes no swaps would fix that.',
+    },
+    {
+      q: 'Which line decides the order the array ends up in?',
+      choices: ['The outer loop', 'The inner loop', 'The comparison', 'The swap'],
+      answer: 2,
+      why: 'The comparison decides when a pair counts as out of order. Flip it, and the same code sorts the other way, which is exactly what you will do next.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="modify" title="Change it: largest first">
+
+<CodeExercise exercise="bubble-sort-descending" />
+
+</Section>
+
+<Section step="make" title="Make your own: selection sort">
+
+Selection sort uses the same two moves, compare and swap, in a different plan: find the smallest value that is left, then swap it into the next place. Start by putting its lines in order, then fill the gaps, then write it from scratch.
+
+<CodeExercise exercise="selection-sort" />
+
+</Section>
+
+<Section step="recap" title="Recap">
+
+- Read before you write: predict, run, investigate, modify, then make.
+- One pass of bubble sort carries the biggest remaining value to the end, so after `i` passes the last `i` values are final.
+- One comparison decides the order, and one swap fixes a pair. Flip the comparison to reverse the order.
+- Next: [write insertion sort](/code/insertion-sort), or try the [bug hunts](/code), where the code is almost right.
+
+</Section>

@@ -1,0 +1,163 @@
+title: Longest Palindromic Substring
+difficulty: medium
+patterns: [dp-2d, two-pointers]
+why: >-
+  Whether `s[i..j]` reads the same both ways depends on its two ends matching and on `s[i+1..j−1]`:
+  a question about a pair of positions, answered from a shorter pair. That is a 2D table, or the
+  same idea run outwards from each centre.
+summary: Find the longest stretch of a string that reads the same forwards and backwards.
+statement: |
+  A palindrome reads the same forwards and backwards, like `level` or `abba`. A substring is a
+  run of consecutive characters.
+
+  Given a string `s`, return its longest substring that is a palindrome. If several are equally
+  long, return the one that starts first.
+constraints:
+  - "`s` holds 1 to 1000 characters, each a lowercase letter or a digit."
+signature:
+  function: longestPalindrome
+  params:
+    - { name: s, type: string }
+  returns: string
+examples:
+  - input: { s: "cabbad" }
+    output: "abba"
+    explanation: "`abba` reads the same both ways, and nothing longer does."
+  - input: { s: "abcd" }
+    output: "a"
+    explanation: "Only single letters are palindromes here; `a` starts first."
+  - input: { s: "abacdc" }
+    output: "aba"
+    explanation: "`aba` and `cdc` are both 3 long; `aba` starts first."
+tests:
+  - input: { s: "z" }
+    output: "z"
+  - input: { s: "aa" }
+    output: "aa"
+  - input: { s: "ab" }
+    output: "a"
+  - input: { s: "1221x" }
+    output: "1221"
+  - input: { s: "aaaa" }
+    output: "aaaa"
+  - input: { s: "xyzzyabcbaq" }
+    output: "abcba"
+generated: { count: 8, seed: 32 }
+hints:
+  - "Every palindrome has a centre: one character (odd length) or the gap between two characters (even length)."
+  - "From each of the 2n − 1 centres, expand outwards while the characters on both sides match. That finds the longest palindrome around that centre."
+  - "Replace your best answer only with a strictly longer palindrome, and go through the centres from left to right: then a tie keeps the one that starts first."
+approach: |
+  As a table: `pal[i][j]` is true when `s[i] == s[j]` and the inside, `s[i+1..j−1]`, is a
+  palindrome too (or is empty or one character). Filling it by length takes O(n²) time and space.
+
+  Expanding from centres does the same work with no table. A palindrome is centred on a character
+  (odd length) or on the gap between two (even length), so there are 2n − 1 centres. From each,
+  move two pointers outwards while they stay in the string and point at equal characters; the
+  longest palindrome around that centre lies just inside where they stop.
+
+  Keep the best start and length, replacing them only when a palindrome is strictly longer. The
+  centres are visited from left to right, and of two equally long palindromes the one with the
+  earlier centre starts first, so ties keep the earliest.
+complexity: { time: "O(n²)", space: "O(1) beyond the answer" }
+solutions:
+  python: |
+    def longest_palindrome(s: str) -> str:
+        best_start, best_length = 0, 1
+        for centre in range(len(s)):
+            for lo, hi in ((centre, centre), (centre, centre + 1)):  # odd, then even length
+                while lo >= 0 and hi < len(s) and s[lo] == s[hi]:
+                    lo -= 1
+                    hi += 1
+                length = hi - lo - 1  # s[lo + 1:hi] is the palindrome around this centre
+                if length > best_length:
+                    best_start, best_length = lo + 1, length
+        return s[best_start:best_start + best_length]
+  typescript: |
+    function longestPalindrome(s: string): string {
+      let bestStart = 0;
+      let bestLength = 1;
+      for (let centre = 0; centre < s.length; centre++) {
+        for (const [left, right] of [[centre, centre], [centre, centre + 1]]) { // odd, then even length
+          let lo = left;
+          let hi = right;
+          while (lo >= 0 && hi < s.length && s[lo] === s[hi]) {
+            lo--;
+            hi++;
+          }
+          const length = hi - lo - 1; // s.slice(lo + 1, hi) is the palindrome around this centre
+          if (length > bestLength) {
+            bestStart = lo + 1;
+            bestLength = length;
+          }
+        }
+      }
+      return s.slice(bestStart, bestStart + bestLength);
+    }
+  java: |
+    class Solution {
+        public String longestPalindrome(String s) {
+            int bestStart = 0;
+            int bestLength = 1;
+            for (int centre = 0; centre < s.length(); centre++) {
+                for (int width = 0; width <= 1; width++) { // odd, then even length
+                    int lo = centre;
+                    int hi = centre + width;
+                    while (lo >= 0 && hi < s.length() && s.charAt(lo) == s.charAt(hi)) {
+                        lo--;
+                        hi++;
+                    }
+                    int length = hi - lo - 1; // s.substring(lo + 1, hi) is the palindrome around this centre
+                    if (length > bestLength) {
+                        bestStart = lo + 1;
+                        bestLength = length;
+                    }
+                }
+            }
+            return s.substring(bestStart, bestStart + bestLength);
+        }
+    }
+  cpp: |
+    class Solution {
+    public:
+        string longestPalindrome(string& s) {
+            int n = s.size();
+            int bestStart = 0;
+            int bestLength = 1;
+            for (int centre = 0; centre < n; centre++) {
+                for (int width = 0; width <= 1; width++) { // odd, then even length
+                    int lo = centre;
+                    int hi = centre + width;
+                    while (lo >= 0 && hi < n && s[lo] == s[hi]) {
+                        lo--;
+                        hi++;
+                    }
+                    int length = hi - lo - 1; // s[lo + 1 .. hi - 1] is the palindrome around this centre
+                    if (length > bestLength) {
+                        bestStart = lo + 1;
+                        bestLength = length;
+                    }
+                }
+            }
+            return s.substr(bestStart, bestLength);
+        }
+    };
+  go: |
+    func longestPalindrome(s string) string {
+    	bestStart, bestLength := 0, 1
+    	for centre := range len(s) {
+    		for width := 0; width <= 1; width++ { // odd, then even length
+    			lo, hi := centre, centre+width
+    			for lo >= 0 && hi < len(s) && s[lo] == s[hi] {
+    				lo--
+    				hi++
+    			}
+    			length := hi - lo - 1 // s[lo+1:hi] is the palindrome around this centre
+    			if length > bestLength {
+    				bestStart, bestLength = lo+1, length
+    			}
+    		}
+    	}
+    	return s[bestStart : bestStart+bestLength]
+    }
+visualisers: [manacher, two-pointers]
