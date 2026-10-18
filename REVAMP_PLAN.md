@@ -965,7 +965,25 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Checks:**
       - Unit and property tests: prerequisite order for every goal; packing within the hours, in order and unsplit; dropping known concepts; re-planning from the current week; the behind count against the original schedule; and the hours a target date needs.
       - E2e: make a plan, mark a concept known, see the next one, then stop the plan, with axe on each state.
-- **5c: the AI tutor:** grounded in the reference solution and the live trace, with a hint ladder enforced in the UI, trace tools, a leak check, budgets and a kill switch.
+- **5c: the AI tutor** (`revamp/phase-5c`): grounded in the reference solution and the live trace, with a hint ladder enforced in the UI, trace tools, a leak check, budgets and a kill switch.
+  - **Decisions (2026-10-18, owner):**
+    - **Provider:** Azure AI Foundry, not the Anthropic API directly, for access to more models.
+    - **Models:** `gpt-6.1-luna` for hints and the leak check, and `gpt-6.1-sol` for code review. Both are deployment names held in env vars.
+    - **Access:** free for signed-in learners.
+    - **Budgets:** 30 turns per learner a day, and a $5 a day cap across everyone.
+  - **Status (2026-10-18): 5c is built, switched off until the Azure settings and the migration are in place.**
+    - **Where:** a tutor panel beside every practice problem and code exercise.
+    - **Before the first hint:** the learner says what they think is happening.
+    - **Hint ladder:** a nudge, where to look, the steps, a partial fix. It climbs one level at a time per item, on the server. The last level needs a failed run and two earlier hints.
+    - **Review my code:** the strong model says where the bug is and why, without fixing it.
+    - **Follow-ups and reflection:** follow-up questions stay at the current level. An optional "What will you try?" travels with the next turn.
+    - **Line pointer:** a reply that points at a line highlights it in the editor. This is the first of the plan's trace tools; `seekTrace` and `runTests` are left for later.
+    - **Grounding:** the statement, the authors' hints and approach, and the reference solution in the learner's language, which the tutor is told never to quote.
+    - **Learner data:** fenced and defused against prompt injection.
+    - **Leak check:** deterministic (code allowed per level, and overlap with the solution's token runs the learner doesn't already have), then a fast-model check for the levels that may contain code. A leak is retried once, then replaced.
+    - **Budgets and kill switch:** turns and costs are recorded in a new `tutor_turn` table. They enforce the per-learner turns and the global daily spend cap. `TUTOR_ENABLED=off` switches the tutor off.
+    - **Checks:** 14 service tests on in-memory Postgres with a scripted model, and an e2e test of the whole panel with a stand-in model, including axe.
+    - **Left for later:** streaming replies, the `seekTrace`/`runTests` tools, a tutor on visualisers and lessons, and real price figures for the two deployments.
 - **5d: assessment:** explain-it-back with rubric scoring, and misconception-targeted quizzes.
 
 ### Phase 6 — Play, systems, community

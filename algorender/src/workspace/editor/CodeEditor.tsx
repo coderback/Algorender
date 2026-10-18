@@ -42,6 +42,8 @@ const theme = EditorView.theme({
   // The line the trace is on, and the line an error came from.
   '.cm-run-line': { backgroundColor: 'var(--color-accent-soft)', boxShadow: 'inset 3px 0 var(--color-accent)' },
   '.cm-error-line': { backgroundColor: 'var(--color-bad-soft)', boxShadow: 'inset 3px 0 var(--color-bad-ink)' },
+  // The line the tutor points at.
+  '.cm-point-line': { backgroundColor: 'var(--color-warn-soft)', boxShadow: 'inset 3px 0 var(--color-warn-ink)' },
 });
 
 const highlight = HighlightStyle.define([
@@ -57,8 +59,8 @@ const highlight = HighlightStyle.define([
   { tag: t.invalid, color: 'var(--color-bad-ink)' },
 ]);
 
-/** 1-based lines to highlight: where the trace is, and where an error was raised. */
-type Marks = { run: number | null; error: number | null };
+/** 1-based lines to highlight: where the trace is, where an error was raised, and where the tutor points. */
+type Marks = { run: number | null; error: number | null; point: number | null };
 const setMarks = StateEffect.define<Marks>();
 
 const marksField = StateField.define<DecorationSet>({
@@ -75,13 +77,17 @@ const marksField = StateField.define<DecorationSet>({
           builder.add(at, at, Decoration.line({ class: cls }));
         }
       };
-      const { run, error } = effect.value;
-      // RangeSetBuilder needs ranges in document order.
-      const ordered = [
-        { line: run, cls: 'cm-run-line' },
-        { line: error, cls: 'cm-error-line' },
-      ].sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
-      for (const m of ordered) if (!(m.cls === 'cm-run-line' && m.line === error)) add(m.line, m.cls);
+      const { run, error, point } = effect.value;
+      // One mark per line (an error outranks the trace, which outranks the tutor), in document order as RangeSetBuilder needs.
+      const byLine = new Map<number, string>();
+      for (const [line, cls] of [
+        [point, 'cm-point-line'],
+        [run, 'cm-run-line'],
+        [error, 'cm-error-line'],
+      ] as const) {
+        if (line != null) byLine.set(line, cls);
+      }
+      for (const [line, cls] of [...byLine].sort((a, b) => a[0] - b[0])) add(line, cls);
       next = builder.finish();
     }
     return next;
@@ -116,6 +122,7 @@ export function CodeEditor({
   label,
   runLine = null,
   errorLine = null,
+  pointLine = null,
   readOnly = false,
   minLines = 12,
   onRun,
@@ -129,6 +136,8 @@ export function CodeEditor({
   runLine?: number | null;
   /** 1-based line an error was raised on. */
   errorLine?: number | null;
+  /** 1-based line the tutor points at; scrolled into view when it changes. */
+  pointLine?: number | null;
   readOnly?: boolean;
   minLines?: number;
   /** Ctrl/Cmd+Enter. */
@@ -206,8 +215,14 @@ export function CodeEditor({
   }, [readOnly]);
 
   useEffect(() => {
-    view.current?.dispatch({ effects: setMarks.of({ run: runLine, error: errorLine }) });
-  }, [runLine, errorLine]);
+    view.current?.dispatch({ effects: setMarks.of({ run: runLine, error: errorLine, point: pointLine }) });
+  }, [runLine, errorLine, pointLine]);
+
+  useEffect(() => {
+    const v = view.current;
+    if (!v || pointLine == null || pointLine < 1 || pointLine > v.state.doc.lines) return;
+    v.dispatch({ effects: EditorView.scrollIntoView(v.state.doc.line(pointLine).from, { y: 'center' }) });
+  }, [pointLine]);
 
   return <div ref={host} className="overflow-hidden rounded-xl border border-line bg-surface text-left" />;
 }
