@@ -57,14 +57,52 @@ Count the probes each time and compare them with $\lceil \log_2 (n+1) \rceil$. T
 
 <Explore slug="binary-search" settings={{ preset: 'first', n: 20, seed: 5 }} input caption="Change the input below: try a target that is missing, or the largest array the visualiser allows." />
 
-<Misconception title="hi ← mid instead of hi ← mid − 1">
+<Misconception
+  id="keep-mid"
+  title="hi ← mid instead of hi ← mid − 1"
+  probes={[
+    {
+      q: 'A[mid] = 40 and the target is 25. Which update is right?',
+      choices: ['hi ← mid − 1', 'hi ← mid', 'lo ← mid + 1', 'lo ← mid'],
+      answer: 0,
+      trap: 1,
+      why: '40 > 25 rules out mid itself as well as everything to its right, so the window ends just before mid. Keeping mid can stall the loop once lo = hi.',
+    },
+    {
+      q: 'lo = 3, hi = 3, A[3] = 50 and the target is 20. The code sets hi ← mid. What happens next?',
+      choices: ['It returns position 3', 'hi becomes 2 and the search ends', 'The same probe repeats forever', 'It probes A[2] next'],
+      answer: 2,
+      trap: 1,
+      why: 'mid = 3, so hi ← mid leaves hi = 3: lo = hi = 3 again and nothing changes. Removing mid (hi ← mid − 1) is what guarantees progress.',
+    },
+  ]}
+>
 
 If A[mid] is bigger than the target, mid itself is ruled out too. Setting `hi ← mid` keeps it in the window, and when
 lo = hi the window never shrinks: the loop runs forever. The rule is that every branch must remove mid.
 
 </Misconception>
 
-<Misconception title="Binary search works on any array">
+<Misconception
+  id="unsorted-ok"
+  title="Binary search works on any array"
+  probes={[
+    {
+      q: 'A = [9, 2, 7, 4, 8] (not sorted) and the target is 9. The first probe sees A[2] = 7. What happens?',
+      choices: ['It searches the right half and reports 9 missing', 'It finds 9 at position 0', 'It sorts the array first', 'It searches both halves'],
+      answer: 0,
+      trap: 1,
+      why: '7 < 9 sends the search right, but 9 sits on the left. On unsorted data one comparison says nothing about the other elements, so binary search can miss a target that is there.',
+    },
+    {
+      q: 'You need to find one value, once, in an unsorted list of n items. What is the fastest correct way?',
+      choices: ['Sort it, then binary search: O(log n) in all', 'Binary search it: O(log n)', 'Binary search from both ends', 'Scan it: O(n)'],
+      answer: 3,
+      trap: 1,
+      why: 'Binary search needs sorted data, and sorting costs O(n log n), more than one O(n) scan. Sorting first only pays off when you search many times.',
+    },
+  ]}
+>
 
 On an unsorted array, "A[mid] is too small" says nothing about the elements to the right, so throwing away the left half
 can throw away the target. If the data isn't sorted, either sort it first (O(n log n)) or search it linearly (O(n)).
@@ -94,6 +132,7 @@ can throw away the target. If the data isn't sorted, either sort it first (O(n l
       choices: ['lo ← mid', 'lo ← mid + 1', 'hi ← mid − 1', 'hi ← mid'],
       answer: 1,
       why: 'Everything up to and including mid is too small, so the window starts just after it.',
+      traps: { 0: 'keep-mid' },
     },
     {
       q: 'lo = 4, hi = 4 and A[4] is not the target. What does the next step do?',
@@ -101,7 +140,30 @@ can throw away the target. If the data isn't sorted, either sort it first (O(n l
       answer: 2,
       why: 'Either lo moves past hi or hi moves below lo, so lo > hi and the loop ends: the target is not in the array.',
     },
+    {
+      q: 'Is binary search guaranteed to find 4 in [5, 1, 4, 2, 3]?',
+      choices: ['Yes, in at most 3 probes', 'No: on unsorted data it can throw away the half that holds the target', 'Yes, but only after n probes', 'Only if 4 is the last element'],
+      answer: 1,
+      why: 'Here the first probe happens to land on 4, but that is luck: searching for 5 instead, A[2] = 4 < 5 sends the search right, away from 5 at position 0. Sorted order is what makes discarding a half safe.',
+      traps: { 0: 'unsorted-ok' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-it-works"
+  prompt="Why may binary search throw away half the array after a single comparison, and why does it always stop?"
+  rubric={[
+    'The array is sorted, so comparing the target with A[mid] tells you which side it must be on.',
+    'Mid and everything on the other side can’t hold the target, so discarding them is safe.',
+    'The window [lo, hi] always holds the target if it is in the array (the invariant).',
+    'Every step shrinks the window, so it ends after about log₂ n probes: at the target, or with an empty window.',
+  ]}
+  example="Because the array is sorted, one comparison with the middle element says which half the target must be in: if A[mid] is too small, everything to its left is too small as well. So mid and that whole half can go without losing the target, which, if it is there at all, always stays inside the window from lo to hi. Every step removes at least mid, so the window halves and keeps shrinking; after about log₂ n probes you either land on the target or the window is empty and you know it isn't there."
 />
 
 </Section>

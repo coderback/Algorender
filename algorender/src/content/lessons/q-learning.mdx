@@ -86,11 +86,72 @@ Then use the input box to try:
   keeps going back to, so the other one may never be found.
 - **Too few episodes:** with `episodes = 10`, the arrows from S may still loop.
 
-<Misconception title="The agent has to behave well to learn what behaving well is worth">
+<Misconception
+  id="must-behave-well"
+  title="The agent has to behave well to learn what behaving well is worth"
+  probes={[
+    {
+      q: 'An agent explores at random 80% of the time. Can Q-learning still learn the values of the best moves?',
+      choices: [
+        'Only if ε is lowered to 0 first',
+        'Yes: its target assumes the best next move, so it learns off-policy',
+        'No: it can only learn the value of what it actually does',
+        'Only on worlds without a cliff',
+      ],
+      answer: 1,
+      trap: 2,
+      why: 'The target r + γ · max Q(s′, a′) values the greedy next move whatever the agent really does next, so random behaviour still teaches it the optimal values of the places it visits.',
+    },
+    {
+      q: 'On the cliff world the agent still slips now and then while exploring. What does Q-learning learn the edge route is worth?',
+      choices: [
+        'Its worth with the agent’s own random slips counted in',
+        'Less than any route further from the edge',
+        'Its worth to an agent that never slips',
+        'Nothing useful: the cliff keeps resetting the table',
+      ],
+      answer: 2,
+      trap: 0,
+      why: 'Q-learning is off-policy: its target assumes greedy play from the next state on, so the slips don’t count against the edge. SARSA, which learns the policy it follows, would count them.',
+    },
+  ]}
+>
 
 Q-learning's target always assumes the best next move, so it can learn the optimal values while acting almost at random:
 the near-or-far world explores 80% of the time and still learns the right preference. What it can't do is learn about
 places it never visits, which is why exploration is needed at all.
+
+</Misconception>
+
+<Misconception
+  id="q-is-reward"
+  title="Q(s, a) is the reward for making that move"
+  probes={[
+    {
+      q: 'With γ = 0.9, a move gives r = −1 and lands in a cell whose best Q-value is 9. What is the true Q-value of that move?',
+      choices: ['−1', '9', '7.1', '8.1'],
+      answer: 2,
+      trap: 0,
+      why: 'Q*(s, a) = r + γ · max Q(s′, ·) = −1 + 0.9 · 9 = −1 + 8.1 = 7.1. The reward of the move itself is only the first part.',
+    },
+    {
+      q: 'Two moves both give r = 0 right now. One leads next to the goal, the other into a dead end. After learning, how do their Q-values compare?',
+      choices: [
+        'The move towards the goal has the higher Q-value',
+        'They are equal, because both rewards are 0',
+        'The dead-end move is higher, because it is safer',
+        'Both stay at 0 for ever',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'A Q-value counts the discounted reward still to come, not just this move’s. The goal’s reward flows back into the move that leads towards it.',
+    },
+  ]}
+>
+
+A Q-value is not the reward of one move: it is that reward *plus* the discounted value of everything that can follow.
+That is how a step costing −1 can have a high Q-value: it leads towards the +10. In the first episode almost every
+reward is 0 or −1, yet the Q-values near the goal end up large.
 
 </Misconception>
 
@@ -129,7 +190,42 @@ places it never visits, which is why exploration is needed at all.
       answer: 1,
       why: 'Value iteration sweeps over every state and move using known rules; Q-learning only uses the moves it actually makes and what it observes.',
     },
+    {
+      q: 'A move gives r = 0 but lands next to the goal, where the best Q-value is 10. With γ = 0.9, what value does Q(s, a) head towards?',
+      choices: ['0, the reward for this move', '9', '10', '0.9'],
+      answer: 1,
+      why: 'The target is r + γ · max Q(s′, ·) = 0 + 0.9 · 10 = 9: the reward that follows counts, discounted by one step.',
+      traps: { 0: 'q-is-reward' },
+    },
+    {
+      q: 'An agent picks random moves most of the time. What does the Q-learning update learn about?',
+      choices: [
+        'Only the value of its own random behaviour',
+        'The value of acting greedily from each state it visits',
+        'Nothing until ε reaches 0',
+        'Only the moves that ended in a reward',
+      ],
+      answer: 1,
+      why: 'The max in the target values the best next move, not the one taken, so Q-learning learns optimal values while behaving any way that keeps visiting the states.',
+      traps: { 0: 'must-behave-well' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="learning-from-reward"
+  prompt="How does Q-learning work out which moves are good when the reward only arrives at the end?"
+  rubric={[
+    'Q(s, a) estimates the discounted total reward of making move a in state s and playing well afterwards.',
+    'Each update nudges Q(s, a) a fraction α towards the target r + γ · max Q(s′, a′).',
+    'Because the target uses the next state’s value, reward spreads backwards one step per visit, shrinking by γ each step.',
+    'Exploring with ε-greedy keeps trying other moves, so the agent doesn’t lock onto the first route it finds.',
+  ]}
+  example="The agent keeps a table of Q-values: for each state and move, how much discounted reward it expects if it makes that move and plays well afterwards. After every move it nudges that entry a little towards a target, the reward it just got plus γ times the best Q-value where it landed. At first only the move into the goal learns anything, but the next time the agent reaches the cell before it, the target includes that new value, so the reward creeps backwards one step per visit, shrinking by γ each time. Exploring at random now and then makes sure it tries moves it hasn't rated yet."
 />
 
 </Section>

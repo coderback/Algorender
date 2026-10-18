@@ -63,10 +63,56 @@ Use the slider to change the number of hidden units, and the buttons to change t
 
 <Explore slug="mlp" settings={{ preset: 'no-hidden' }} input />
 
-<Misconception title="More layers always means a better model">
+<Misconception
+  id="bigger-is-better"
+  title="More layers always means a better model"
+  probes={[
+    {
+      q: 'Network A has 4 hidden units: 92% right on training points, 90% on held-out ones. Network B has 200: 100% and 81%. Which is the better model?',
+      choices: ['They are equally good', 'B: a bigger network is always the better model', 'A: it does better on points it hasn’t seen', 'Neither, until B gets more layers'],
+      answer: 2,
+      trap: 1,
+      why: 'B fitted its training points, noise and all, and does worse on new ones. Held-out accuracy is what tells the two apart.',
+    },
+    {
+      q: 'A network with 8 hidden units trains well on 200 points. You switch to 6 layers of 800 units on the same 200 points. What is most likely?',
+      choices: ['It fits the 200 points, noise included, and does worse on new ones', 'A better model on every count', 'The same model, only slower', 'It can no longer fit the training points'],
+      answer: 0,
+      trap: 1,
+      why: 'Far more weights than points lets the network memorise the training set. It is also slower and touchier about the step size.',
+    },
+  ]}
+>
 
 More units and layers can fit more complicated boundaries, but they also fit noise, train more slowly, and with too big a
 step they diverge. The right size depends on the data; that trade-off is what validation sets are for.
+
+</Misconception>
+
+<Misconception
+  id="linear-stack"
+  title="Any stack of layers bends the boundary"
+  probes={[
+    {
+      q: 'A network has two hidden layers with no activation function: each unit outputs just w·x + b. What shape is its decision boundary?',
+      choices: ['A curve, because it has hidden layers', 'A straight line', 'A circle', 'Whatever shape the data needs'],
+      answer: 1,
+      trap: 0,
+      why: 'Linear maps of linear maps are linear, so the whole network is one weighted sum plus a bias: a straight boundary.',
+    },
+    {
+      q: 'Which change lets a network learn XOR?',
+      choices: ['Adding more layers with no activation function', 'Training a single neuron for more epochs', 'Lowering the learning rate', 'Adding a hidden layer of tanh units'],
+      answer: 3,
+      trap: 0,
+      why: 'The squashing function in each hidden unit is what lets the output combine edges into a curve. Without it, extra layers collapse into one.',
+    },
+  ]}
+>
+
+What bends the boundary is the squashing function inside each hidden unit, not the stacking. Without one, two layers
+collapse into one: $W_2(W_1x + b_1) + b_2 = (W_2W_1)x + (W_2b_1 + b_2)$, still a single weighted sum, still a straight
+line. That is why every hidden unit applies tanh, a sigmoid or ReLU to its sum.
 
 </Misconception>
 
@@ -94,7 +140,37 @@ step they diverge. The right size depends on the data; that trade-off is what va
       answer: 1,
       why: 'Each hidden unit computes a new feature (a soft edge); the output combines them.',
     },
+    {
+      q: 'Two hidden units can’t surround the inner ring of Circles. What is the right fix?',
+      choices: ['As many layers and units as you can afford: bigger is always better', 'A few more units, checking accuracy on held-out points as you go', 'Remove the hidden layer', 'Raise the learning rate'],
+      answer: 1,
+      why: 'You need enough edges to surround the ring, but past that, extra units mostly fit noise. Held-out accuracy tells you when to stop.',
+      traps: { 0: 'bigger-is-better' },
+    },
+    {
+      q: 'Two layers with no activation are stacked: y = W₂(W₁x + b₁) + b₂. What can it do that a single layer can’t?',
+      choices: ['Draw curved boundaries', 'Nothing: it equals one layer, (W₂W₁)x + (W₂b₁ + b₂)', 'Learn XOR', 'Train with a larger learning rate'],
+      answer: 1,
+      why: 'Without a squashing function the two layers multiply out into one linear map, so the boundary is still a straight line.',
+      traps: { 0: 'linear-stack', 2: 'linear-stack' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-hidden-layers"
+  prompt="Why can’t a single neuron learn XOR, and how does a hidden layer fix it?"
+  rubric={[
+    'A single neuron squashes a weighted sum plus a bias, so its decision boundary is a straight line.',
+    'No straight line puts the two classes of XOR on separate sides.',
+    'Each hidden unit applies a nonlinear squashing function to its own weighted sum, making a new feature: a soft edge.',
+    'The output combines those edges into a curved boundary, and backpropagation trains all the weights together.',
+  ]}
+  example="A single neuron takes a weighted sum of its inputs plus a bias and squashes it, so the boundary between its two answers is where that sum crosses a threshold: a straight line. XOR puts one class in two opposite corners and the other class in the other two, and no straight line can separate them. A hidden layer gives each hidden unit its own weighted sum passed through tanh, so each one becomes a soft straight edge, a new feature. The output weighs those edges together, and combined edges can bend around the corners. Gradient descent with backpropagation adjusts every weight at once to get there."
 />
 
 </Section>

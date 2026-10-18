@@ -58,10 +58,56 @@ an order in which every value's inputs are already filled in.
 
 <Explore slug="fibonacci-memoization" settings={{ preset: 'table', n: 10 }} input caption="Raise n to 15 and compare: the table needs 14 additions, while plain recursion would make 1,973 calls." />
 
-<Misconception title="Memoization makes every recursion fast">
+<Misconception
+  id="memo-always-helps"
+  title="Memoization makes every recursion fast"
+  probes={[
+    {
+      q: 'You add a memo to merge sort, keyed by the part of the array being sorted. What happens?',
+      choices: ['It gets much faster, like Fibonacci did', 'Nothing gets faster: no part is sorted twice, so the memo only costs memory', 'It stops sorting correctly'],
+      answer: 1,
+      trap: 0,
+      why: 'Merge sort splits the array into halves that never overlap, so every call is a new question. A memo is only ever written, never read.',
+    },
+    {
+      q: 'A recursion’s call tree has no repeated labels: every call asks a different question. What will a memo do?',
+      choices: ['Turn exponential time into linear', 'Cut the calls roughly in half', 'Use extra memory and save nothing'],
+      answer: 2,
+      trap: 0,
+      why: 'A memo saves work only when a question comes back. With no repeats, nothing is ever looked up.',
+    },
+  ]}
+>
 
 It only helps when the **same** subproblems come back. Merge sort's recursion never repeats a subproblem, so a memo would
 just waste memory. Look for overlap first: if the call tree has repeated labels, a memo will help.
+
+</Misconception>
+
+<Misconception
+  id="memo-per-call"
+  title="A fresh memo in every call"
+  probes={[
+    {
+      q: 'fib(n) starts with memo = {}, then checks memo before recursing and stores its answer at the end. How many calls does fib(6) make?',
+      choices: ['11, like the memoised version', '25, the same as with no memo at all', '7, one per value'],
+      answer: 1,
+      trap: 0,
+      why: 'Each call makes its own empty memo, so every look-up misses and every answer is stored where no other call can see it. It does exactly the work of plain recursion: 25 calls.',
+    },
+    {
+      q: 'Where must the memo live, so that later calls can use earlier answers?',
+      choices: ['In the deepest call’s frame', 'In a variable made fresh at the start of each call', 'Somewhere every call shares: outside the function, or passed down to each call'],
+      answer: 2,
+      trap: 1,
+      why: 'The point of a memo is that one call writes an answer and another reads it, so all the calls must share one table.',
+    },
+  ]}
+>
+
+The memo has to be **shared** by every call: a variable outside the function, a table passed down to each call, or a
+cache decorator such as Python's `@cache`. A memo created inside the function starts empty on every call, so nothing is
+ever found and the code is as slow as plain recursion, only with extra work.
 
 </Misconception>
 
@@ -89,7 +135,37 @@ just waste memory. Look for overlap first: if the call tree has repeated labels,
       answer: 1,
       why: 'Top-down discovers the order by recursing; bottom-up must fill dp[i] after dp[i−1] and dp[i−2]. Choosing that order is the heart of dynamic programming.',
     },
+    {
+      q: 'Would adding a memo speed up merge sort?',
+      choices: ['Yes: a memo removes repeated work', 'No: merge sort never sorts the same part of the array twice', 'Only on input that is already sorted'],
+      answer: 1,
+      why: 'A memo turns repeated questions into look-ups. Merge sort’s halves never overlap, so there is nothing to look up.',
+      traps: { 0: 'memo-always-helps' },
+    },
+    {
+      q: 'Someone writes fib(n) so that every call begins with memo = {}. How fast is it?',
+      choices: ['As slow as no memo: each call’s memo starts empty, so nothing is ever found', 'As fast as a normal memo', 'Faster than a normal memo, since each memo is small'],
+      answer: 0,
+      why: 'Answers stored in one call’s private memo are invisible to every other call. The memo has to be shared.',
+      traps: { 1: 'memo-per-call' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-it-helps"
+  prompt="Why is plain recursive Fibonacci so slow, and how does a memo make it fast?"
+  rubric={[
+    'Plain recursion solves the same subproblems again and again, so the number of calls grows exponentially, about 1.6ⁿ.',
+    'A memo stores each answer the first time it is computed.',
+    'Later calls for the same input look the answer up instead of recursing.',
+    'So the work becomes the number of distinct subproblems, n + 1 for Fibonacci: O(n).',
+  ]}
+  example="fib(n) calls fib(n − 1) and fib(n − 2), and fib(n − 1) calls fib(n − 2) again, so the same questions are asked over and over and the calls multiply by about 1.6 for each step up in n. A memo writes each answer down the first time it is worked out. After that, any call for the same value just looks it up and returns at once. Each of fib(0) to fib(n) is then computed only once, so the work drops from exponential to O(n)."
 />
 
 </Section>

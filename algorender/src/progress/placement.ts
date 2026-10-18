@@ -10,7 +10,18 @@ import { areaOf, relatives, settled, type AreaId, type MasteryGraph, type Placem
 export { AREAS, areaOf, settled, type AreaId, type PlacementAnswer } from './mastery';
 
 /** One lesson quiz question, asked about its lesson's concept. */
-export type PlacementQuestion = { concept: string; lesson: string; quiz: string; question: number; q: string; choices: string[]; answer: number; why: string };
+export type PlacementQuestion = {
+  concept: string;
+  lesson: string;
+  quiz: string;
+  question: number;
+  q: string;
+  choices: string[];
+  answer: number;
+  why: string;
+  /** Wrong choices that come from a common mistake the lesson names: choice index → its id. */
+  traps?: Record<string, string>;
+};
 
 /** The most questions one check asks. */
 export const MAX_QUESTIONS = 12;

@@ -57,10 +57,56 @@ Drag the divider (the prior) and the tops of the two shaded strips (the hit rate
 
 <Explore slug="bayes" settings={{ preset: 'rare-disease', step: '7' }} input />
 
-<Misconception title="P(E | H) and P(H | E) are the same thing">
+<Misconception
+  id="flip-conditional"
+  title="P(E | H) and P(H | E) are the same thing"
+  probes={[
+    {
+      q: '90% of people with a certain disease have a fever. Does that mean 90% of people with a fever have the disease?',
+      choices: ['Yes: it’s the same statement turned around', 'No: that also depends on how many people have a fever for other reasons', 'Yes, as long as the disease is rare'],
+      answer: 1,
+      trap: 0,
+      why: 'P(fever | disease) is a fact about the disease. P(disease | fever) also depends on how common the disease is and how many healthy people have fevers, which is usually far more people.',
+    },
+    {
+      q: 'A condition affects 2 people in 100. A test flags 95% of people who have it and 5% of people who don’t. About what share of positives have the condition?',
+      choices: ['About 28%', '95%', '2%', '50%'],
+      answer: 0,
+      trap: 1,
+      why: 'Out of 1000 people, 20 have it and 19 of them test positive; 5% of the 980 others is 49 false positives. 19 of 68 positives is about 28%.',
+    },
+  ]}
+>
 
 "90% of sick people test positive" is not "90% of positive people are sick". Swapping them is called the *prosecutor's
 fallacy*. The first is a fact about the test; the second also depends on how many people were sick to begin with.
+
+</Misconception>
+
+<Misconception
+  id="fitting-evidence-supports"
+  title="Evidence that fits H always makes H more likely"
+  probes={[
+    {
+      q: '60% of liars avoid eye contact, and so do 60% of honest people. Someone avoids eye contact. What happens to the chance they are lying?',
+      choices: ['It goes down', 'It goes up: avoiding eye contact fits lying', 'It stays the same', 'It becomes 60%'],
+      answer: 2,
+      trap: 1,
+      why: 'The evidence is just as likely either way, so the two strips are the same height and lying keeps exactly its prior share.',
+    },
+    {
+      q: 'A clue turns up in 30% of cases where H is true and in 50% of cases where it is false. You see the clue. What happens to P(H)?',
+      choices: ['It rises, since the clue fits H', 'It stays the same', 'It falls'],
+      answer: 2,
+      trap: 0,
+      why: 'The clue is more common without H than with it, so seeing it shifts belief away from H, even though it is consistent with H.',
+    },
+  ]}
+>
+
+Evidence supports H only if it is **more likely when H is true than when it is false**. If both strips are the same
+height, H keeps the share it started with; if the evidence is more common without H, seeing it makes H *less* likely,
+even though it "fits" H.
 
 </Misconception>
 
@@ -81,12 +127,14 @@ fallacy*. The first is a fact about the test; the second also depends on how man
       choices: ['80%', 'About 30%', '10%', '5%'],
       answer: 1,
       why: '40 of the 135 positives have it: about 30%.',
+      traps: { 0: 'flip-conditional' },
     },
     {
       q: 'Evidence is equally likely with or without H. What does seeing it do to P(H)?',
       choices: ['Raises it', 'Lowers it', 'Leaves it unchanged', 'Sets it to 50%'],
       answer: 2,
       why: 'Both strips are the same height, so H keeps the same share of the evidence strip as of the whole square.',
+      traps: { 0: 'fitting-evidence-supports' },
     },
     {
       q: 'A second, independent positive test arrives. How do you update?',
@@ -100,6 +148,22 @@ fallacy*. The first is a fact about the test; the second also depends on how man
       why: 'What you believed after the first test is your prior for the second.',
     },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="rare-positive"
+  prompt="Why can a positive result from an accurate test still leave a rare disease unlikely?"
+  rubric={[
+    'The chance of having the disease after a positive test is the share of all positive results that come from sick people.',
+    'When the disease is rare, the healthy group is far larger than the sick group.',
+    'Even a small false alarm rate, applied to that large healthy group, produces many false positives.',
+    'Those false positives can outnumber the true ones, so P(H | E) stays low even when P(E | H) is high.',
+  ]}
+  example="After a positive test, the question is what share of all the positives come from sick people. If only 1 person in 100 is sick, the healthy group is 99 times bigger. A test that wrongly flags just 9% of healthy people still flags about 89 of every 990 of them, while it can only catch 9 of the 10 sick people. So the false alarms swamp the true hits and only about 1 positive in 11 is really sick. The test’s accuracy, P(E | H), is high, but the posterior, P(H | E), also depends on the prior."
 />
 
 </Section>

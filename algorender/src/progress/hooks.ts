@@ -8,6 +8,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import type { EventData, EventKind, ProgressEvent } from './events';
 import { mastery, type MasteryGraph } from './mastery';
+import { mistakes } from './misconceptions';
 import { exerciseProgress, lessonProgress, problemProgress } from './projections';
 import { reviewCards } from './review';
 import { progressStore, type Snapshot } from './store';
@@ -44,6 +45,12 @@ export function useProblemProgress() {
 export function useReviewCards() {
   const events = useEvents();
   return useMemo(() => reviewCards(events), [events]);
+}
+
+/** The common mistakes the learner has shown, by card id (src/progress/misconceptions.ts). */
+export function useMistakes() {
+  const events = useEvents();
+  return useMemo(() => mistakes(events), [events]);
 }
 
 /** Every concept's mastery (src/progress/mastery.ts). */

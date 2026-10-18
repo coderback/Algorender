@@ -38,6 +38,38 @@ they never see the letters, only the pieces.
 
 </KeyIdea>
 
+<Misconception
+  id="tokens-are-words"
+  title="A token is a word"
+  probes={[
+    {
+      q: 'BPE has learned the merges (t, h) then (th, e), and nothing else. How many tokens does “these” become?',
+      choices: ['1', '2', '3', '5'],
+      answer: 2,
+      trap: 0,
+      why: 'Replaying the merges turns t h e s e into th e s e, then the s e: three tokens. Nothing glues “s” and “e” on, so the word is not one token.',
+    },
+    {
+      q: 'A model meets a made-up word, “glorptastic”, that never appeared in training. What happens?',
+      choices: [
+        'It becomes one special “unknown” token',
+        'The model refuses to read the text',
+        'It is split into smaller pieces the vocabulary does have',
+        'It is skipped, as if it weren’t there',
+      ],
+      answer: 2,
+      trap: 0,
+      why: 'BPE starts from single characters and replays its merges, so any word can be built from known pieces. Only common words end up as one token.',
+    },
+  ]}
+>
+
+Tokens are whatever pieces BPE learned: a common word is often one token, but a rare word is several, and a long number
+can be many. That is why a made-up word never stumps the tokenizer, and why counting tokens is not the same as counting
+words.
+
+</Misconception>
+
 </Section>
 
 <Section step="see" title="From probabilities to one word">
@@ -69,7 +101,36 @@ Switch between the examples, or write your own settings in the input box (for ex
 
 <Explore slug="sampling" settings={{ preset: 'hot', n: '8' }} input />
 
-<Misconception title="Temperature makes the model smarter or more creative">
+<Misconception
+  id="temperature-smarter"
+  title="Temperature makes the model smarter or more creative"
+  probes={[
+    {
+      q: 'You raise the temperature from 0.7 to 1.5. What changes?',
+      choices: [
+        'The vocabulary: rarer tokens are added',
+        'The logits: the model now knows more about the story',
+        'How the pick is made: less likely tokens are chosen more often',
+        'Nothing but the speed of generation',
+      ],
+      answer: 2,
+      trap: 1,
+      why: 'The logits come from the model and stay the same. Temperature divides them before the softmax, which flattens the probabilities, so unlikely tokens win more draws.',
+    },
+    {
+      q: 'At T = 2 a story drifts into nonsense. Why?',
+      choices: [
+        'Less likely tokens are drawn more often, and they really are less likely to fit',
+        'The model thinks more freely at high temperature, and freer thinking wanders',
+        'A temperature above 1 switches off the softmax',
+        'The KV cache fills up',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Temperature adds no ideas; it only flattens the distribution the model already gave. The extra picks are tokens the model rated as poor fits, so the text loses its thread.',
+    },
+  ]}
+>
 
 Temperature doesn't change what the model knows: the logits are the same. It only changes how the pick is made. A higher
 temperature lets less likely tokens through more often, which reads as creative for a while and then as nonsense,
@@ -100,6 +161,7 @@ price of memory: long conversations are expensive mostly because their caches ar
       choices: ['l | o | w | l | y', 'low | l | y', 'lo | w | ly', 'lowly'],
       answer: 1,
       why: 'Replaying the merges in order glues l + o into lo, then lo + w into low. Nothing has been learned for l + y, so those stay as characters.',
+      traps: { 3: 'tokens-are-words' },
     },
     {
       q: 'You lower the temperature from 1 to 0.5. What happens to the most likely token’s probability?',
@@ -125,7 +187,30 @@ price of memory: long conversations are expensive mostly because their caches ar
       answer: 1,
       why: 'Earlier tokens’ keys and values don’t change when a new token arrives, so they are computed once and kept.',
     },
+    {
+      q: 'What does raising the temperature change?',
+      choices: ['What the model knows about the text', 'How the next token is drawn from the same logits', 'The size of the vocabulary', 'How many layers the model uses'],
+      answer: 1,
+      why: 'Temperature divides the logits before the softmax. The model’s scores are unchanged; only the draw becomes bolder (higher T) or safer (lower T).',
+      traps: { 0: 'temperature-smarter' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="next-token-loop"
+  prompt="How does a language model write a whole answer, and what do temperature, top-k and top-p change?"
+  rubric={[
+    'It writes one token at a time: score every possible next token, pick one, append it, and repeat.',
+    'Softmax turns the logits into probabilities; temperature divides the logits first, sharpening them below 1 and flattening them above 1.',
+    'Top-k and top-p cut the unlikely tail before a random draw picks one token.',
+    'These settings change how the pick is made, not what the model knows: the logits stay the same.',
+  ]}
+  example="The model never writes a whole answer at once. It looks at the text so far, gives every token in its vocabulary a score called a logit, turns the scores into probabilities with a softmax, picks one token, appends it and repeats. Temperature divides the logits before the softmax: below 1 the likeliest token gets an even bigger share, above 1 the shares even out. Top-k keeps only the k likeliest tokens and top-p keeps the fewest that add up to p, then a random number picks among what is left. None of this changes what the model knows; it only decides how bold each pick is."
 />
 
 </Section>

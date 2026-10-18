@@ -22,3 +22,11 @@ export const recordScore = (lesson: string, kind: 'quiz' | 'prediction', key: st
 /** One quiz question answered: its first answer starts it in the review queue. */
 export const recordAnswer = (lesson: string, quiz: string, question: number, correct: boolean) =>
   record('quiz.answered', { lesson, quiz, question, correct });
+
+/** An answer that comes from one of the lesson's common mistakes: it starts the mistake in the review queue. */
+export const recordMistake = (lesson: string, misconception: string, from: 'quiz' | 'placement' | 'explanation') =>
+  record('misconception.picked', { lesson, misconception, from });
+
+/** An explain-it-back answer, scored against its rubric. */
+export const recordExplanation = (lesson: string, prompt: string, score: { covered: number; partly: number; total: number }, by: 'self' | 'model') =>
+  record('explanation.scored', { lesson, prompt, ...score, by });

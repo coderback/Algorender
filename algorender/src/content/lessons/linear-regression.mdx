@@ -55,10 +55,56 @@ Drag any point and the fit runs again from the start. Try:
 
 <Explore slug="linear-regression" settings={{ preset: 'outlier', step: '32' }} input />
 
-<Misconception title="The best line passes through as many points as possible">
+<Misconception
+  id="count-hits"
+  title="The best line passes through as many points as possible"
+  probes={[
+    {
+      q: 'Does the least-squares line for the points (0, 1), (1, 3) and (2, 2) pass through any of them?',
+      choices: ['Yes, through two of them', 'No: it is y = 0.5x + 1.5, which misses all three', 'Yes, through (1, 3)'],
+      answer: 1,
+      trap: 0,
+      why: 'The slope is 0.5 and the line goes through the mean point (1, 2), so it predicts 1.5, 2 and 2.5: no hits at all, but the smallest total squared miss.',
+    },
+    {
+      q: 'Four points, (0, 0), (1, 1), (3, 3) and (4, 4), lie on y = x, and a fifth sits at (2, 20). What line does least squares fit?',
+      choices: ['A line through (2, 20) and the origin', 'y = x + 3.6, which passes through none of them', 'y = x, through four of the five points'],
+      answer: 1,
+      trap: 2,
+      why: 'The outlier sits at the mean x, so the slope stays 1, but it lifts the mean y to 5.6: the line becomes y = x + 3.6. Keeping y = x would miss (2, 20) by 18, costing 324 on its own; shifting the line up trades that for five smaller misses.',
+    },
+  ]}
+>
 
 Least squares doesn't count hits; it minimises the total squared distance. The best line may pass through no point at
 all, and a single far-away point can pull it a long way, which is why robust methods sometimes use absolute errors instead.
+
+</Misconception>
+
+<Misconception
+  id="signed-residuals"
+  title="Average the residuals to see how well a line fits"
+  probes={[
+    {
+      q: 'A line’s residuals are 4, −4, 3 and −3. How good is the fit?',
+      choices: ['Perfect: the residuals average 0', 'Poor: the mean squared error is 12.5', 'Good: the average miss is 3.5 below the line'],
+      answer: 1,
+      trap: 0,
+      why: 'The signed residuals cancel to 0, but (16 + 16 + 9 + 9) / 4 = 12.5: every point is 3 or 4 away from the line.',
+    },
+    {
+      q: 'Line A has residuals 1 and −1; line B has residuals 5 and −5. Which fits better?',
+      choices: ['Line A: its MSE is 1, against 25 for B', 'Neither: both average 0, so they fit equally well', 'Line B: its misses balance out'],
+      answer: 0,
+      trap: 1,
+      why: 'Both sets of residuals average 0, which says nothing about fit. Squaring stops misses above and below the line cancelling: A’s MSE is 1 and B’s is 25.',
+    },
+  ]}
+>
+
+Residuals above the line are positive and residuals below it are negative, so they cancel: a terrible line can have
+residuals that average exactly 0. That is why the loss **squares** them first (or takes absolute values), so every miss
+counts against the line whichever side it is on.
 
 </Misconception>
 
@@ -73,6 +119,7 @@ all, and a single far-away point can pull it a long way, which is why robust met
       choices: ['0.67', '2', '4.67', '14'],
       answer: 2,
       why: '(1 + 4 + 9) / 3 = 14 / 3 ≈ 4.67.',
+      traps: { 0: 'signed-residuals' },
     },
     {
       q: 'Every point lies above the line. Which way does gradient descent move b?',
@@ -85,8 +132,25 @@ all, and a single far-away point can pull it a long way, which is why robust met
       choices: ['Its residual is squared, so its loss grows fast', 'It has a larger weight in the data', 'The line must pass through it', 'Gradient descent visits it first'],
       answer: 0,
       why: 'A residual three times bigger costs nine times more, so the fit bends to shrink it.',
+      traps: { 2: 'count-hits' },
     },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-it-fits"
+  prompt="What makes one line fit the data better than another, and how does gradient descent find the best one?"
+  rubric={[
+    'Best means the smallest mean squared error: the average of the squared vertical distances from the points to the line.',
+    'Squaring stops misses above and below the line cancelling, and makes big misses cost much more than small ones.',
+    'The gradient of the MSE says how the loss changes with w and b; each point pulls in proportion to its residual.',
+    'Small steps against the gradient keep lowering the loss until it stops falling, at the least-squares line.',
+  ]}
+  example="A line is judged by its mean squared error: measure how far each point is above or below it, square those residuals and average them. Squaring means misses on either side can’t cancel, and a point twice as far away costs four times as much. Gradient descent starts from any line and works out how the loss would change if w or b moved a little; each point pulls the line towards itself in proportion to its residual. Stepping a little against that gradient, again and again, shrinks the loss until it can’t fall any more, which is the least-squares line."
 />
 
 </Section>

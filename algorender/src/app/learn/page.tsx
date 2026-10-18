@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FiBookOpen, FiClock, FiPlayCircle } from 'react-icons/fi';
-import { ConceptStatus, MasteryProvider, NextSteps } from '@/components/learn/Mastery';
+import { ConceptStatus, MasteryProvider, MistakesToClear, NextSteps } from '@/components/learn/Mastery';
 import { CompletedTick } from '@/components/lesson/Completion';
 import { depths, loadConcepts, type Concept } from '@/content/concepts';
 import { getLesson } from '@/content/lessons';
+import { lessonMisconceptions } from '@/content/lessons/assessment';
+import { misconceptionCard } from '@/progress/misconceptions';
 import { masteryGraph } from '@/content/mastery';
 import { getVisualiserBySlug } from '@/data/visualisers';
 
@@ -12,6 +14,11 @@ export const metadata: Metadata = {
   title: 'Learn: the concept map | Algorender',
   description: 'Every concept in the order it builds on the others, from Big-O to graphs and dynamic programming, with lessons and interactive visualisers.',
 };
+
+/** Each common mistake's card id → its name and its lesson's title. */
+function mistakeTitles() {
+  return Object.fromEntries(lessonMisconceptions().map((m) => [misconceptionCard(m.lesson, m.id), { title: m.title, lessonTitle: getLesson(m.lesson)?.title ?? m.lesson }]));
+}
 
 export default function LearnPage() {
   const { tracks, concepts } = loadConcepts();
@@ -35,6 +42,7 @@ export default function LearnPage() {
         </div>
 
         <NextSteps />
+        <MistakesToClear titles={mistakeTitles()} />
 
         <div className="space-y-10">
           {ordered.map((track) => {

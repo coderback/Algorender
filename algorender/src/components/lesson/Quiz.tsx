@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { FiCheckCircle, FiRotateCcw, FiXCircle } from 'react-icons/fi';
-import { useLessonSlug } from './LessonContext';
-import { recordAnswer, recordScore } from './progress';
+import { mistakeAnchor } from './anchors';
+import { useLessonMistakes, useLessonSlug } from './LessonContext';
+import { recordAnswer, recordMistake, recordScore } from './progress';
 
 export type Question = {
   q: string;
@@ -12,15 +13,24 @@ export type Question = {
   answer: number;
   /** Why the right answer is right (shown after answering, whichever was picked). */
   why: string;
+  /**
+   * Wrong choices that come from a common mistake the lesson names: choice
+   * index → the `<Misconception id>`. Picking one names the mistake and
+   * starts it in the review queue.
+   */
+  traps?: Record<string, string>;
 };
 
 /**
  * Retrieval practice: answer from memory, then see why. One try per question;
  * "Try again" clears the answers. The best score is kept with the lesson, and
  * each question's first answer puts it in the review queue (src/progress/review.ts).
+ * A wrong answer that comes from a mistake the lesson names says so, links to
+ * the correction, and starts that mistake in the review queue too.
  */
 export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Question[] }) {
   const lesson = useLessonSlug();
+  const mistakes = useLessonMistakes();
   const [picked, setPicked] = useState<(number | null)[]>(() => questions.map(() => null));
   const answered = picked.filter((p) => p !== null).length;
   const correct = picked.filter((p, i) => p === questions[i].answer).length;
@@ -31,6 +41,8 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
     const next = picked.map((p, i) => (i === qi ? ci : p));
     setPicked(next);
     recordAnswer(lesson, id, qi, ci === questions[qi].answer);
+    const trap = questions[qi].traps?.[ci];
+    if (trap && mistakes[trap]) recordMistake(lesson, trap, 'quiz');
     if (next.every((p) => p !== null)) {
       recordScore(lesson, 'quiz', id, { correct: next.filter((p, i) => p === questions[i].answer).length, total: questions.length });
     }
@@ -41,6 +53,7 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
       <ol className="space-y-4">
         {questions.map((question, qi) => {
           const choice = picked[qi];
+          const trap = choice !== null ? question.traps?.[choice] : undefined;
           return (
             <li key={qi} className="rounded-xl border border-line bg-surface p-4">
               <p className="mb-3 font-medium text-ink">
@@ -82,6 +95,15 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
                     <span className="font-medium">{choice === question.answer ? 'Right. ' : 'Not quite. '}</span>
                     {question.why}
                   </span>
+                </p>
+              )}
+              {trap && mistakes[trap] && (
+                <p className="mt-2 rounded-lg border border-warn-line bg-warn-soft px-3 py-2 text-sm text-ink">
+                  That answer comes from a common mistake:{' '}
+                  <a href={`#${mistakeAnchor(trap)}`} className="font-medium text-warn-ink underline underline-offset-2">
+                    {mistakes[trap]}
+                  </a>
+                  . It will come back in your daily review until you’ve answered it right twice.
                 </p>
               )}
             </li>

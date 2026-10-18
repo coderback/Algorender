@@ -49,6 +49,21 @@ export const EVENT_DATA = {
    */
   'concept.marked': z.object({ concept: slug, known: z.boolean() }),
   /**
+   * The learner gave an answer that comes from a common mistake a lesson names
+   * (a `<Misconception>`): a quiz or placement choice that is that mistake's
+   * trap, or an explanation the scorer found stating it. It makes the
+   * mistake's review card (src/progress/review.ts) and keeps it open until
+   * the learner answers its questions right (src/progress/misconceptions.ts).
+   */
+  'misconception.picked': z.object({ lesson: slug, misconception: slug, from: z.enum(['quiz', 'placement', 'explanation']) }),
+  /**
+   * An explain-it-back prompt answered in the learner's own words and scored
+   * against its rubric: points fully covered, points partly covered, and how
+   * many there are. `by` says who scored it: the learner ticking off the
+   * points, or the model. The explanation itself is not kept.
+   */
+  'explanation.scored': z.object({ lesson: slug, prompt: slug, covered: count, partly: count, total: count, by: z.enum(['self', 'model']) }),
+  /**
    * A study plan set (src/progress/plan.ts): a goal from src/content/goals.ts,
    * hours a week and an optional target date. The latest wins; a null goal
    * clears the plan.

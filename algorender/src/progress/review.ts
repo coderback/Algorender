@@ -8,6 +8,10 @@
 // - Answering a lesson's quiz question makes `quiz:<lesson>:<quiz>:<n>`,
 //   asked again later. That first answer is its first review: Good if right,
 //   Again if wrong.
+// - Picking an answer that comes from a common mistake a lesson names makes
+//   `misconception:<lesson>:<id>`, which asks that mistake's probe questions.
+//   It starts as a lapse (Again), so it comes back the next day, and picking
+//   the mistake again later sends it back to tomorrow.
 // Every `review.rated` event after that moves the card on.
 //
 // Scheduling is day-based (no same-day learning steps) and without fuzz, so
@@ -15,10 +19,11 @@
 
 import { createEmptyCard, fsrs, Rating, type Card, type Grade } from 'ts-fsrs';
 import type { ProgressEvent } from './events';
+import { misconceptionCard } from './misconceptions';
 
 export const scheduler = fsrs({ enable_fuzz: false, enable_short_term: false });
 
-export type CardKind = 'problem' | 'quiz';
+export type CardKind = 'problem' | 'quiz' | 'misconception';
 
 export type ReviewCard = {
   id: string;
@@ -33,7 +38,9 @@ export type ReviewCard = {
 export const problemCard = (slug: string) => `problem:${slug}`;
 export const quizCard = (lesson: string, quiz: string, question: number) => `quiz:${lesson}:${quiz}:${question}`;
 
-const kindOf = (id: string): CardKind => (id.startsWith('problem:') ? 'problem' : 'quiz');
+export { misconceptionCard };
+
+const kindOf = (id: string): CardKind => (id.startsWith('problem:') ? 'problem' : id.startsWith('misconception:') ? 'misconception' : 'quiz');
 
 /** Every card the events have made, with its current schedule. Events must be in time order. */
 export function reviewCards(events: readonly ProgressEvent[]): Map<string, ReviewCard> {
@@ -52,6 +59,11 @@ export function reviewCards(events: readonly ProgressEvent[]): Map<string, Revie
     } else if (e.kind === 'quiz.answered') {
       const id = quizCard(e.data.lesson, e.data.quiz, e.data.question);
       if (!cards.has(id)) make(id, e.at, e.data.correct ? Rating.Good : Rating.Again);
+    } else if (e.kind === 'misconception.picked') {
+      const id = misconceptionCard(e.data.lesson, e.data.misconception);
+      const c = cards.get(id);
+      if (!c) make(id, e.at, Rating.Again);
+      else cards.set(id, { ...c, card: scheduler.next(c.card, new Date(e.at), Rating.Again).card });
     } else if (e.kind === 'review.rated') {
       const c = cards.get(e.data.card);
       if (!c) continue; // a card from content that no longer exists, or not yet pulled

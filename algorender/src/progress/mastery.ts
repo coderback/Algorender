@@ -7,13 +7,15 @@
 // A concept counts as mastered only after delayed, varied retrieval: a high
 // chance of knowing it, evidence from at least two different items, and a
 // right answer at least DELAY_HOURS after the first contact. A good run in one
-// sitting only makes it "practised".
+// sitting only makes it "practised", and so does a common mistake the learner
+// has shown and not yet cleared (src/progress/misconceptions.ts).
 //
 // The placement check sets where tracing starts. A right answer there says
 // the learner knows that concept, and what it builds on; a wrong one says
 // they don't, nor what builds on it.
 
 import type { ProgressEvent } from './events';
+import { mistakes } from './misconceptions';
 
 /** A concept as mastery needs it: a client-safe slice of src/content/concepts.yaml. */
 export type MasteryConcept = {
@@ -39,7 +41,7 @@ export type MasteryGraph = {
   problems: Record<string, string[]>;
 };
 
-export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review';
+export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review' | 'explanation';
 
 /** One piece of evidence: an item (a question, an exercise, a problem) answered right or wrong. */
 export type Observation = { concept: string; item: string; correct: boolean; at: string; source: Source };
@@ -67,6 +69,8 @@ export type ConceptMastery = {
   last?: string;
   /** A right answer came at least DELAY_HOURS after the first observation. */
   delayed: boolean;
+  /** Common mistakes shown in its lessons and not yet cleared: it can't be mastered while there are any. */
+  mistakes: number;
 };
 
 /** Statuses that count as known when deciding what is ready to learn. */
@@ -82,6 +86,8 @@ export const BKT = { learn: 0.15, slip: 0.1, guess: 0.2, prior: 0.1 } as const;
 export const PLACED = { known: 0.85, implied: 0.75, unknown: 0.05 } as const;
 export const PRACTISED_AT = 0.8;
 export const MASTERED_AT = 0.95;
+/** The share of an explain-it-back rubric (a partly covered point counts half) that makes it a right answer. */
+export const EXPLAINED_AT = 2 / 3;
 /** How long after the first contact a right answer counts as delayed retrieval. */
 export const DELAY_HOURS = 20;
 
@@ -122,9 +128,16 @@ export function observations(events: readonly ProgressEvent[], graph: MasteryGra
         push(graph.problems[e.data.problem], { item: `problem:${e.data.problem}`, correct: e.data.passed, at: e.at, source: 'problem' });
         break;
       }
+      case 'explanation.scored':
+        if (e.data.total > 0) {
+          const score = (e.data.covered + e.data.partly / 2) / e.data.total;
+          push(graph.lessons[e.data.lesson], { item: `explain:${e.data.lesson}:${e.data.prompt}`, correct: score >= EXPLAINED_AT, at: e.at, source: 'explanation' });
+        }
+        break;
       case 'review.rated': {
         const [kind, slug] = e.data.card.split(':');
-        const concepts = kind === 'quiz' ? graph.lessons[slug] : kind === 'problem' ? graph.problems[slug] : undefined;
+        // Quiz and mistake cards name their lesson second.
+        const concepts = kind === 'quiz' || kind === 'misconception' ? graph.lessons[slug] : kind === 'problem' ? graph.problems[slug] : undefined;
         // Again is a lapse; Hard, Good and Easy are recalled.
         push(concepts, { item: e.data.card, correct: e.data.rating >= 2, at: e.at, source: 'review' });
         break;
@@ -187,6 +200,11 @@ export function mastery(events: readonly ProgressEvent[], graph: MasteryGraph): 
     if (list) list.push(o);
     else byConcept.set(o.concept, [o]);
   }
+  const open = new Map<string, number>();
+  for (const m of mistakes(events).values()) {
+    const concept = graph.lessons[m.lesson];
+    if (concept && m.status !== 'cleared') open.set(concept, (open.get(concept) ?? 0) + 1);
+  }
   const out = new Map<string, ConceptMastery>();
   for (const c of graph.concepts) {
     const obs = byConcept.get(c.id) ?? [];
@@ -198,10 +216,10 @@ export function mastery(events: readonly ProgressEvent[], graph: MasteryGraph): 
     const items = new Set(obs.map((o) => o.item)).size;
     let status: MasteryStatus;
     if (obs.length === 0) status = tested.get(c.id) === true ? 'placed' : start >= PLACED.implied ? 'assumed' : 'new';
-    else if (p >= MASTERED_AT && items >= 2 && delayed) status = 'mastered';
+    else if (p >= MASTERED_AT && items >= 2 && delayed && !open.get(c.id)) status = 'mastered';
     else if (p >= PRACTISED_AT) status = 'practised';
     else status = 'learning';
-    out.set(c.id, { id: c.id, status, p, observations: obs.length, correct: obs.filter((o) => o.correct).length, items, first, last: obs.at(-1)?.at, delayed });
+    out.set(c.id, { id: c.id, status, p, observations: obs.length, correct: obs.filter((o) => o.correct).length, items, first, last: obs.at(-1)?.at, delayed, mistakes: open.get(c.id) ?? 0 });
   }
   // Something built on a concept being known is evidence for the concept: fill in what has no evidence of its own.
   const { ancestors } = relatives(graph);

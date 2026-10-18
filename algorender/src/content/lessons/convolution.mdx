@@ -76,11 +76,57 @@ Try these in the visualiser below, using the buttons or your own input:
 
 <Explore slug="convolution" settings={{ preset: 'stride-2' }} input />
 
-<Misconception title="Pooling just throws information away">
+<Misconception
+  id="pooling-only-loses"
+  title="Pooling just throws information away"
+  probes={[
+    {
+      q: 'Why do convolutional networks max-pool their feature maps?',
+      choices: ['It gains nothing: it only throws detail away to save memory', 'To keep the strongest response per block, so later layers tolerate small shifts and work on smaller maps', 'To average out strong responses', 'To make the map larger'],
+      answer: 1,
+      trap: 0,
+      why: 'Losing the exact position inside each block is the point: the next layer sees the same strong response even if the input shifts a little.',
+    },
+    {
+      q: 'An edge moves one pixel but stays inside the same 2 × 2 pooling block. What happens after max-pooling?',
+      choices: ['The edge is lost: pooling throws it away', 'The pooled value halves', 'The pooled value is unchanged, so the next layer sees the same thing', 'The pooled map grows by one'],
+      answer: 2,
+      trap: 0,
+      why: 'The block’s largest response is still the edge’s, wherever in the block it sits. That is the shift tolerance pooling buys.',
+    },
+  ]}
+>
 
 It does throw away *where exactly* a feature was inside each block, and that is the point: a network that only needs to
 know "there is an edge around here" becomes tolerant to small shifts of the input, and every later layer works on a
 smaller map. What survives is the strongest response, not an average that a weak neighbour could dilute.
+
+</Misconception>
+
+<Misconception
+  id="responds-to-brightness"
+  title="A bright patch makes a big response"
+  probes={[
+    {
+      q: 'The kernel [−1 0 1; −2 0 2; −1 0 1] sits over a patch where every pixel is 0.9 (bright). What does it output?',
+      choices: ['8.1', '0', '0.9', '−0.9'],
+      answer: 1,
+      trap: 0,
+      why: 'Its weights add up to 0, so on any flat patch the left and right columns cancel: 0.9 × (−4) + 0.9 × 4 = 0.',
+    },
+    {
+      q: 'Which patch gives the vertical-edge kernel [−1 0 1; −2 0 2; −1 0 1] its largest output?',
+      choices: ['Every pixel 1 (white)', 'Every pixel 0 (black)', 'Left column 1, middle 0.5, right column 0', 'Left column 0, middle 0.5, right column 1'],
+      answer: 3,
+      trap: 0,
+      why: 'Dark on the left and bright on the right gives 0 × (−4) + 1 × 4 = 4. All white gives 0, and the reverse edge gives −4.',
+    },
+  ]}
+>
+
+A kernel responds to how well the patch matches its *pattern*, not to how bright the patch is. The edge kernels'
+weights add up to 0, so over a flat patch, white or black, the output is exactly 0; only a change in brightness across
+the window makes it large. Brightness alone only matters to kernels whose weights are all positive, like the blur.
 
 </Misconception>
 
@@ -101,6 +147,7 @@ smaller map. What survives is the strongest response, not an average that a weak
       choices: ['A large positive number', 'A large negative number', 'About 0', 'It depends on the stride'],
       answer: 2,
       why: 'Its positive and negative columns cover the same brightness and cancel. It responds to differences, not to brightness.',
+      traps: { 0: 'responds-to-brightness' },
     },
     {
       q: 'Why does a convolution layer need so few weights compared with a fully connected layer?',
@@ -119,7 +166,30 @@ smaller map. What survives is the strongest response, not an average that a weak
       answer: 2,
       why: 'Max-pooling keeps the largest value of each block. 0.875 would be average pooling.',
     },
+    {
+      q: 'What does max-pooling mainly buy a convolutional network?',
+      choices: ['Nothing but memory: the detail it drops is pure loss', 'Tolerance to small shifts, and smaller maps for the later layers', 'More weights to learn', 'Sharper edges in the feature map'],
+      answer: 1,
+      why: 'Keeping only the strongest response per block makes the next layer care that a feature is there, not exactly where, and quarters the map.',
+      traps: { 0: 'pooling-only-loses' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="what-a-layer-computes"
+  prompt="What does a convolution layer compute, and why does it need so few weights?"
+  rubric={[
+    'A small kernel slides over the image, and each output is the dot product of the patch under it with the kernel.',
+    'The output is large where the patch looks like the kernel’s pattern; an edge kernel responds to changes, not brightness.',
+    'The same kernel weights are reused at every position, so there are few weights and a pattern is found wherever it is.',
+    'ReLU keeps the positive responses, and max-pooling keeps the strongest in each block, shrinking the map.',
+  ]}
+  example="A convolution slides a small grid of weights, the kernel, across the image. At each position it multiplies the pixels under the window by the kernel's weights and adds them up, so the output is large wherever the patch looks like the kernel's pattern. An edge kernel's weights cancel out, so it ignores flat areas and lights up where brightness changes. The same nine weights are used at every position, which is why the layer needs so few parameters and finds an edge the same way anywhere in the image. ReLU then keeps the positive responses, and max-pooling keeps the strongest in each block, giving a smaller map that tolerates small shifts."
 />
 
 </Section>

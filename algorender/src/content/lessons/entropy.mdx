@@ -55,10 +55,56 @@ Drag the tops of the bars. The other bars rescale so each distribution still add
 
 <Explore slug="entropy" settings={{ preset: 'ruled-out' }} input />
 
-<Misconception title="KL divergence is a distance">
+<Misconception
+  id="kl-symmetric"
+  title="KL divergence is a distance"
+  probes={[
+    {
+      q: 'P = (½, ½) and Q = (1, 0). Which is true?',
+      choices: ['Both KL(P‖Q) and KL(Q‖P) are 1 bit', 'KL(P‖Q) is infinite, but KL(Q‖P) is 1 bit', 'Both are infinite', 'KL(Q‖P) is infinite, but KL(P‖Q) is 1 bit'],
+      answer: 1,
+      trap: 0,
+      why: 'Q rules out an outcome that happens half the time under P, so KL(P‖Q) is infinite. The other way round, Q’s only outcome has probability ½ under P: 1 × log₂(1/½) = 1 bit.',
+    },
+    {
+      q: 'Which statement about KL divergence is right?',
+      choices: ['KL(P‖Q) = KL(Q‖P), like a distance', 'KL can be negative when Q is better than P', 'KL(P‖Q) is never negative, and it can differ from KL(Q‖P)'],
+      answer: 2,
+      trap: 0,
+      why: 'Gibbs’ inequality makes KL at least 0, with 0 only when the distributions match. But it is not symmetric, so it is not a distance in the usual sense.',
+    },
+  ]}
+>
 
 It measures how different two distributions are, but it isn't symmetric: $KL(P\|Q)$ and $KL(Q\|P)$ are usually
 different, and one can be infinite while the other is finite. Which way round you use it changes what a model learns.
+
+</Misconception>
+
+<Misconception
+  id="surprise-not-log"
+  title="An outcome’s surprise is 1/p"
+  probes={[
+    {
+      q: 'Two fair coins both land heads, which has probability ¼. How many bits of surprise is that?',
+      choices: ['4', '2', '¼', '1'],
+      answer: 1,
+      trap: 0,
+      why: 'log₂(1/¼) = log₂ 4 = 2 bits: one bit for each coin. Surprise adds up over independent events, which is why it is a logarithm.',
+    },
+    {
+      q: 'An outcome has probability 1/8. How many bits of surprise is it?',
+      choices: ['1/8', '8', '3', '0.375'],
+      answer: 2,
+      trap: 1,
+      why: 'log₂(8) = 3 bits. It takes three yes/no questions to pick one of eight equally likely outcomes.',
+    },
+  ]}
+>
+
+Rarer outcomes are more surprising, but surprise is $\log_2(1/p)$, not $1/p$. Two independent coin flips are 1 bit each,
+so both together must be 2 bits. Their probability is ¼, and $\log_2 4 = 2$, while $1/p$ would give 4, not the 1 + 1
+the two flips are worth. The logarithm is what makes the surprise of independent events add up.
 
 </Misconception>
 
@@ -73,6 +119,7 @@ different, and one can be infinite while the other is finite. Which way round yo
       choices: ['1/16', '4', '16', '0.25'],
       answer: 1,
       why: 'log₂(16) = 4 bits.',
+      traps: { 2: 'surprise-not-log' },
     },
     {
       q: 'Which distribution over 4 outcomes has the highest entropy?',
@@ -85,6 +132,7 @@ different, and one can be infinite while the other is finite. Which way round yo
       choices: ['0.25 bits', '2 bits', '4 bits', '0.75 bits'],
       answer: 1,
       why: 'With a one-hot P, the cross-entropy is the surprise of the true class: log₂(1/0.25) = 2 bits.',
+      traps: { 2: 'surprise-not-log' },
     },
     {
       q: 'When is KL(P‖Q) zero?',
@@ -92,7 +140,30 @@ different, and one can be infinite while the other is finite. Which way round yo
       answer: 1,
       why: 'Gibbs’ inequality: the cross-entropy equals the entropy only when the two distributions match.',
     },
+    {
+      q: 'KL(P‖Q) is 0.5 bits. What can you say about KL(Q‖P)?',
+      choices: ['It is 0.5 bits too', 'It can be different, even infinite', 'It is −0.5 bits', 'It is 0'],
+      answer: 1,
+      why: 'KL divergence is not symmetric: swapping P and Q changes which outcomes are weighted and which probabilities are compared, so the two directions usually differ.',
+      traps: { 0: 'kl-symmetric' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-cross-entropy"
+  prompt="What does entropy measure, and why does training a model to minimise cross-entropy pull its beliefs towards the truth?"
+  rubric={[
+    'An outcome with probability p carries log₂(1/p) bits of surprise: the rarer it is, the more you learn.',
+    'Entropy is the average surprise, weighted by how often each outcome actually happens.',
+    'Cross-entropy is the average surprise when outcomes follow P but you expect Q; it equals H(P) plus KL(P‖Q).',
+    'H(P) doesn’t depend on the model, so minimising cross-entropy minimises KL, which is zero only when Q = P.',
+  ]}
+  example="Surprise measures how much an outcome tells you: log₂(1/p) bits, so a fair coin flip is 1 bit and a 1-in-8 event is 3. Entropy averages that surprise over how often each outcome really happens. If a model expects the wrong probabilities Q, its average surprise on real data is the cross-entropy, which is the true entropy plus the KL divergence, the extra bits paid for believing Q. The entropy of the data is fixed, so the only way to lower the cross-entropy is to shrink the KL divergence, and that reaches zero only when the model’s beliefs match the data."
 />
 
 </Section>

@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import { ReviewQueue, type CardFace } from '@/components/review/ReviewQueue';
 import { lessons } from '@/content/lessons';
+import { lessonMisconceptions } from '@/content/lessons/assessment';
 import { lessonQuizzes } from '@/content/lessons/quizzes';
 import { loadProblems } from '@/problems/load';
 import { PATTERNS } from '@/problems/patterns';
 import { Markdown } from '@/problems/ui/Markdown';
-import { problemCard, quizCard } from '@/progress/review';
+import { misconceptionCard, problemCard, quizCard } from '@/progress/review';
 
 export const metadata: Metadata = {
   title: 'Daily review | Algorender',
@@ -33,9 +34,20 @@ function faces(): CardFace[] {
   }));
   const titles = new Map(lessons.map((l) => [l.slug, l.title]));
   const quizzes: CardFace[] = lessonQuizzes().flatMap(({ lesson, quiz, questions }) =>
-    questions.map((q, i) => ({ id: quizCard(lesson, quiz, i), kind: 'quiz' as const, lesson, lessonTitle: titles.get(lesson) ?? lesson, ...q })),
+    questions.map(({ q, choices, answer, why }, i) => ({ id: quizCard(lesson, quiz, i), kind: 'quiz' as const, lesson, lessonTitle: titles.get(lesson) ?? lesson, q, choices, answer, why })),
   );
-  return [...problems, ...quizzes];
+  const mistakes: CardFace[] = lessonMisconceptions()
+    .filter((m) => m.probes.length > 0)
+    .map((m) => ({
+      id: misconceptionCard(m.lesson, m.id),
+      kind: 'misconception',
+      lesson: m.lesson,
+      lessonTitle: titles.get(m.lesson) ?? m.lesson,
+      title: m.title,
+      correction: <Markdown text={m.correction} className="text-sm" />,
+      probes: m.probes.map(({ q, choices, answer, why }) => ({ q, choices, answer, why })),
+    }));
+  return [...problems, ...quizzes, ...mistakes];
 }
 
 export default function ReviewPage() {
@@ -46,8 +58,8 @@ export default function ReviewPage() {
         <div className="mb-1 text-xs font-semibold tracking-wider text-accent-ink uppercase">Review</div>
         <h1 className="text-3xl font-bold text-ink">Daily review</h1>
         <p className="mt-2 mb-6 text-ink-soft">
-          Problems you solve and quiz questions you answer come back here, just before you’d forget them. A few minutes
-          a day keeps them for good. It works offline, too.
+          Problems you solve and quiz questions you answer come back here, just before you’d forget them, and so do common
+          mistakes you make, until you’ve cleared them. A few minutes a day keeps them for good. It works offline, too.
         </p>
         <ReviewQueue faces={faces()} />
       </main>

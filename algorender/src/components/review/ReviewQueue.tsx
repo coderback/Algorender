@@ -22,12 +22,25 @@ export type CardFace =
       approach: ReactNode;
       complexity: string;
     }
-  | { id: string; kind: 'quiz'; lesson: string; lessonTitle: string; q: string; choices: string[]; answer: number; why: string };
+  | { id: string; kind: 'quiz'; lesson: string; lessonTitle: string; q: string; choices: string[]; answer: number; why: string }
+  | {
+      id: string;
+      kind: 'misconception';
+      lesson: string;
+      lessonTitle: string;
+      /** The mistake's name: shown only after answering, so it doesn't give the question away. */
+      title: string;
+      /** The lesson's correction, rendered. */
+      correction: ReactNode;
+      /** Questions that test for the mistake, asked in turn. */
+      probes: { q: string; choices: string[]; answer: number; why: string }[];
+    };
 
 /**
  * Today's review: one due card at a time. A problem card asks the learner to
  * recall the pattern and key idea, then rate how well they did; a quiz card
- * asks its question again and is rated from the answer. Every rating is an
+ * asks its question again and is rated from the answer, and so does a card
+ * for a common mistake, which asks the next of the questions that test for it. Every rating is an
  * event, so the queue syncs and works offline.
  */
 export function ReviewQueue({ faces }: { faces: CardFace[] }) {
@@ -68,9 +81,11 @@ function Card({ face, card, now, onRate }: { face: CardFace; card: ReviewCard; n
   const [revealed, setRevealed] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
   const days = intervals(card.card, now);
-  const right = face.kind === 'quiz' && picked === face.answer;
-  // A wrong quiz answer can only be rated Again.
-  const grades = useMemo<Grade[]>(() => (face.kind === 'quiz' && picked !== null && !right ? [1] : face.kind === 'quiz' ? [2, 3, 4] : [1, 2, 3, 4]), [face.kind, picked, right]);
+  // What a multiple-choice card asks: a quiz card its question, a mistake card its next probe.
+  const question = face.kind === 'quiz' ? face : face.kind === 'misconception' ? face.probes[card.reviews % face.probes.length] : null;
+  const right = !!question && picked === question.answer;
+  // A wrong answer can only be rated Again.
+  const grades = useMemo<Grade[]>(() => (question && picked !== null && !right ? [1] : question ? [2, 3, 4] : [1, 2, 3, 4]), [question, picked, right]);
   const showing = face.kind === 'problem' ? revealed : picked !== null;
 
   // Keyboard: Space shows the answer, 1–4 rate.
@@ -124,20 +139,23 @@ function Card({ face, card, now, onRate }: { face: CardFace; card: ReviewCard; n
             </button>
           )}
         </>
-      ) : (
+      ) : question ? (
         <>
           <header>
-            <p className="text-xs font-semibold tracking-wider text-accent-ink uppercase">From {face.lessonTitle}</p>
+            <p className="text-xs font-semibold tracking-wider text-accent-ink uppercase">
+              From {face.lessonTitle}
+              {face.kind === 'misconception' && ' · a mistake you made before'}
+            </p>
             <h2 id={`card-${face.id}`} className="mt-1 text-lg font-semibold text-ink">
-              {face.q}
+              {question.q}
             </h2>
           </header>
           <div role="group" aria-label="Choices" className="grid gap-2 sm:grid-cols-2">
-            {face.choices.map((c, i) => {
+            {question.choices.map((c, i) => {
               const style =
                 picked === null
                   ? 'border-line-strong hover:border-accent-line hover:bg-accent-soft'
-                  : i === face.answer
+                  : i === question.answer
                     ? 'border-good-line bg-good-soft text-good-ink'
                     : i === picked
                       ? 'border-bad-line bg-bad-soft text-bad-ink'
@@ -152,8 +170,8 @@ function Card({ face, card, now, onRate }: { face: CardFace; card: ReviewCard; n
                   className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm ${style}`}
                 >
                   {c}
-                  {picked !== null && i === face.answer && <FiCheckCircle aria-label="the right answer" />}
-                  {picked === i && i !== face.answer && <FiXCircle aria-label="your answer" />}
+                  {picked !== null && i === question.answer && <FiCheckCircle aria-label="the right answer" />}
+                  {picked === i && i !== question.answer && <FiXCircle aria-label="your answer" />}
                 </button>
               );
             })}
@@ -161,15 +179,24 @@ function Card({ face, card, now, onRate }: { face: CardFace; card: ReviewCard; n
           {picked !== null && (
             <p className="text-sm text-ink-soft" aria-live="polite">
               <span className={`font-semibold ${right ? 'text-good-ink' : 'text-bad-ink'}`}>{right ? 'Right. ' : 'Not quite. '}</span>
-              {face.why}
+              {question.why}
             </p>
           )}
+          {picked !== null && face.kind === 'misconception' && (
+            <div className="rounded-lg border-l-4 border-warn-line bg-warn-soft px-4 py-3 text-sm text-ink">
+              <p className="font-semibold text-warn-ink">The mistake this checks: {face.title}</p>
+              {face.correction}
+              <Link href={`/learn/${face.lesson}`} className="mt-1 inline-flex items-center gap-1 text-accent-ink hover:underline">
+                Back to the lesson <FiArrowRight aria-hidden />
+              </Link>
+            </div>
+          )}
         </>
-      )}
+      ) : null}
 
       {showing && (
         <div className="border-t border-line-soft pt-4">
-          <p className="mb-2 text-sm text-ink-soft">{face.kind === 'quiz' && !right ? 'It comes back tomorrow.' : 'How well did you remember it?'}</p>
+          <p className="mb-2 text-sm text-ink-soft">{question && !right ? 'It comes back tomorrow.' : 'How well did you remember it?'}</p>
           <div role="group" aria-label="Rate your recall" className="flex flex-wrap gap-2">
             {grades.map((g) => (
               <button
@@ -181,7 +208,7 @@ function Card({ face, card, now, onRate }: { face: CardFace; card: ReviewCard; n
                   g === 1 ? 'border-bad-line text-bad-ink hover:bg-bad-soft' : g === 3 ? 'border-accent bg-accent text-white hover:bg-accent-strong' : 'border-line text-ink hover:bg-sunken'
                 }`}
               >
-                {face.kind === 'quiz' && !right ? 'Next' : GRADE_LABEL[g]}
+                {question && !right ? 'Next' : GRADE_LABEL[g]}
                 <span className={`ml-1.5 text-xs font-normal ${g === 3 ? 'text-white' : 'text-ink-muted'}`}>{daysText(days[g])}</span>
               </button>
             ))}
@@ -201,7 +228,8 @@ function NoCards() {
       <h2 className="text-lg font-semibold text-ink">No cards yet</h2>
       <p className="text-ink-soft">
         Cards arrive as you learn: every practice problem you solve, and every quiz question you answer in a lesson, comes
-        back here a few days later, then less and less often as it sticks.
+        back here a few days later, then less and less often as it sticks. A common mistake you make comes back until you’ve
+        cleared it.
       </p>
       <div className="flex flex-wrap gap-3">
         <Link href="/practice" className="inline-flex items-center gap-1 text-accent-ink hover:underline">

@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { createContext, useContext, type ReactNode } from 'react';
-import { FiArrowRight, FiAward, FiCalendar, FiCompass, FiTrendingUp } from 'react-icons/fi';
-import { useMastery, useProgressSnapshot } from '@/progress/hooks';
+import { FiAlertTriangle, FiArrowRight, FiAward, FiCalendar, FiCompass, FiTrendingUp } from 'react-icons/fi';
+import { mistakeAnchor } from '@/components/lesson/anchors';
+import { useMastery, useMistakes, useProgressSnapshot } from '@/progress/hooks';
 import { isReady, nextSteps, type ConceptMastery, type MasteryConcept, type MasteryGraph } from '@/progress/mastery';
+import { CLEAR_AFTER } from '@/progress/misconceptions';
 import { currentPlan } from '@/progress/plan';
 
 // Mastery on the concept map: a status on every concept card and the next
@@ -30,7 +32,11 @@ function chipFor(m: ConceptMastery | undefined, ready: boolean): Chip | null {
     case 'mastered':
       return { label: 'Mastered', className: 'bg-good-soft text-good-ink', title: 'Right answers from different questions, including one on a later day.' };
     case 'practised':
-      return { label: 'Practised', className: 'bg-accent-soft text-accent-ink', title: 'Likely known. Answer it again on another day to master it.' };
+      return {
+        label: 'Practised',
+        className: 'bg-accent-soft text-accent-ink',
+        title: m.mistakes ? 'Likely known, but a common mistake you made here isn’t cleared yet: clear it in your review to master it.' : 'Likely known. Answer it again on another day to master it.',
+      };
     case 'learning':
       return { label: 'Learning', className: 'bg-warn-soft text-warn-ink', title: 'Started, not yet solid.' };
     case 'placed':
@@ -65,6 +71,41 @@ export function ConceptStatus({ id }: { id: string }) {
 /** Where a concept is learned: its lesson, else its first visualiser, else its card. */
 export function conceptHref(c: MasteryConcept): string {
   return c.lesson ? `/learn/${c.lesson}` : c.visualisers[0] ? `/visualisers/${c.visualisers[0]}` : `/learn#${c.id}`;
+}
+
+/**
+ * Common mistakes the learner has made and not yet cleared, each linked to
+ * the lesson's correction. `titles` names each mistake card (built on the server).
+ */
+export function MistakesToClear({ titles }: { titles: Record<string, { title: string; lessonTitle: string }> }) {
+  const { ready } = useProgressSnapshot();
+  const all = useMistakes();
+  if (!ready) return null;
+  const open = [...all.entries()].filter(([card, m]) => m.status !== 'cleared' && titles[card]);
+  if (open.length === 0) return null;
+  return (
+    <section aria-labelledby="mistakes" className="mb-10 rounded-2xl border border-warn-line bg-warn-soft p-5">
+      <h2 id="mistakes" className="flex items-center gap-2 text-lg font-semibold text-ink">
+        <FiAlertTriangle aria-hidden className="text-warn-ink" /> Mistakes to clear
+      </h2>
+      <p className="mt-1 mb-3 text-sm text-ink-soft">
+        Common mistakes you’ve made. Each comes back in your <Link href="/review" className="text-accent-ink underline underline-offset-2">daily review</Link> until
+        you’ve answered it right {CLEAR_AFTER} times in a row; until then, its concept can’t be mastered.
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {open.map(([card, m]) => (
+          <li key={card}>
+            <Link href={`/learn/${m.lesson}#${mistakeAnchor(m.id)}`} className="flex h-full flex-col rounded-xl border border-warn-line bg-surface p-3 hover:border-accent-line">
+              <span className="font-medium text-ink">{titles[card].title}</span>
+              <span className="text-xs text-ink-muted">
+                {titles[card].lessonTitle} · {m.status === 'clearing' ? `right ${m.right} of ${CLEAR_AFTER} times so far` : 'not answered right since'}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 /** The top of the concept map: what to learn next, or an invitation to the placement check. */

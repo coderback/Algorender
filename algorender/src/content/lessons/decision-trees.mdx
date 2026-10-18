@@ -79,11 +79,57 @@ each stump changes the model gently; the full rate fixes big errors fast, then s
 
 <Explore slug="gradient-boosting" settings={{ preset: 'slow' }} input />
 
-<Misconception title="100% training accuracy means a great model">
+<Misconception
+  id="perfect-training-fit"
+  title="100% training accuracy means a great model"
+  probes={[
+    {
+      q: 'Tree A is 100% right on its training points and 71% on a validation set. Tree B is 90% and 86%. Which should you use?',
+      choices: ['Tree A: it is perfect on the training data', 'Tree B: it does better on points it hasn’t seen', 'Either: only training accuracy counts', 'Neither: a good tree is 100% on both'],
+      answer: 1,
+      trap: 0,
+      why: 'A model is for new points. Tree A memorised its training data; Tree B’s 86% on unseen points is the honest score.',
+    },
+    {
+      q: 'You keep splitting a tree until every leaf is pure (no two points have the same features but different labels). What does its training accuracy tell you?',
+      choices: ['It is below 50%, so the tree failed', 'It depends on the learning rate', 'It is 100%, so it will be about as good on new data', 'It is 100%, which says nothing about new points'],
+      answer: 3,
+      trap: 2,
+      why: 'A tree grown to pure leaves is always 100% right on its own points, even on pure noise. Only data it hasn’t seen tells you how well it generalises.',
+    },
+  ]}
+>
 
 A tree deep enough to give every point its own leaf is always 100% right on the points it was grown on, and that says
 nothing about new points. Judge a model on data it hasn't seen (a validation set), and limit depth, leaf size or the
 number of boosting rounds to stop it memorising.
+
+</Misconception>
+
+<Misconception
+  id="boosting-averages"
+  title="Boosting averages many independent trees"
+  probes={[
+    {
+      q: 'After round 1, the model F predicts 5 for a point whose y is 8. What does the round-2 stump try to predict for that point?',
+      choices: ['8', '3', '5', '13'],
+      answer: 1,
+      trap: 0,
+      why: 'Each stump is fitted to the residual y − F(x) = 8 − 5 = 3, what the model still gets wrong, not to y itself.',
+    },
+    {
+      q: 'How does gradient boosting combine its stumps?',
+      choices: ['It averages stumps trained independently on random samples of the data', 'It keeps the single best stump', 'It adds them up, each scaled by η and fitted to what the earlier ones got wrong', 'It retrains one stump again and again on y'],
+      answer: 2,
+      trap: 0,
+      why: 'Averaging independent trees is bagging (random forests). Boosting builds its trees in sequence, each correcting the ones before, and adds them.',
+    },
+  ]}
+>
+
+Averaging trees that were each grown on their own sample is *bagging*, the idea behind random forests. Boosting is
+different: each tree is fitted to the residuals the earlier trees left, so the trees depend on each other, and they are
+added up (each scaled by $\eta$), not averaged.
 
 </Misconception>
 
@@ -110,6 +156,7 @@ number of boosting rounds to stop it memorising.
       choices: ['The original y values', 'The residuals y − F(x) of the model so far', 'A random sample of the points', 'The previous stump'],
       answer: 1,
       why: 'Each stump models what the current ensemble still gets wrong, then a shrunk copy is added.',
+      traps: { 0: 'boosting-averages', 2: 'boosting-averages' },
     },
     {
       q: 'Why multiply each stump by a learning rate η below 1?',
@@ -117,7 +164,30 @@ number of boosting rounds to stop it memorising.
       answer: 1,
       why: 'Small steps need more rounds, but each correction is gentle, so the model overfits later.',
     },
+    {
+      q: 'A depth-12 tree is 100% right on its training points. What does that tell you about new points?',
+      choices: ['It will be close to 100% on them too', 'Little: check it on a validation set it hasn’t seen', 'That it is underfitting', 'That boosting can’t improve on it'],
+      answer: 1,
+      why: 'A deep enough tree can memorise any training set. Only data it hasn’t seen shows whether it learned the pattern or the points.',
+      traps: { 0: 'perfect-training-fit' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="splits-and-boosting"
+  prompt="How does a decision tree choose its splits, and how does gradient boosting turn many weak trees into a strong model?"
+  rubric={[
+    'For a region, the tree tries every threshold on each feature and keeps the split whose halves have the lowest weighted Gini impurity.',
+    'It splits greedily, one region at a time, and each leaf predicts its majority class.',
+    'A deep tree memorises its training points, so depth is limited and the model is judged on data it hasn’t seen.',
+    'Boosting fits each new small tree to the residuals of the model so far and adds a copy scaled by a learning rate below 1.',
+  ]}
+  example="A decision tree looks at one region at a time and tries every threshold on every feature, keeping the yes/no question whose two halves are purest, measured by Gini impurity weighted by their sizes. It repeats this greedily inside each half until it hits its depth limit, and each leaf predicts its majority class. Grow it too deep and it memorises the training points, so you limit the depth and check it on data it hasn't seen. Gradient boosting starts from a flat guess, then each round fits a small tree to the residuals, what the model still gets wrong, and adds a shrunk copy of it. Many gentle corrections add up to a strong model."
 />
 
 </Section>

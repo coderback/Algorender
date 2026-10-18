@@ -49,6 +49,9 @@ export function Placement({ graph, questions }: { graph: MasteryGraph; questions
     const q = current.question;
     const correct = picked === q.answer;
     record('placement.answered', { concept: q.concept, lesson: q.lesson, quiz: q.quiz, question: q.question, correct });
+    // A wrong answer that comes from a common mistake starts that mistake in the review queue.
+    const trap = picked === 'unsure' ? undefined : q.traps?.[picked];
+    if (trap) record('misconception.picked', { lesson: q.lesson, misconception: trap, from: 'placement' });
     setAnswers((a) => [...a, { concept: q.concept, correct }]);
     setCurrent({ ...current, picked: picked === 'unsure' ? -1 : picked });
   };

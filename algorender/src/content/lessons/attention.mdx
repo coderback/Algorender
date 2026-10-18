@@ -70,11 +70,62 @@ Drag the query arrow q, or type a query into the box:
 
 <Explore slug="attention" settings={{ preset: 'pronoun' }} input />
 
-<Misconception title="Attention knows which word an adjective describes">
+<Misconception
+  id="knows-grammar"
+  title="Attention knows which word an adjective describes"
+  probes={[
+    {
+      q: 'In a trained model, one attention head links each adjective to its own noun. Where does that skill come from?',
+      choices: [
+        'Attention has grammar rules built in',
+        'Training shaped how queries and keys are made, with position information, so the right pairs score high',
+        'Softmax looks each word up in a dictionary',
+        'Each value stores which word it describes',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The mechanism only scores how well a query matches each key. Any grammar a head shows was learned: training tunes the projections that make queries and keys, and position information lets it tell nearby words from far ones.',
+    },
+    {
+      q: 'Two words have exactly the same key vector. One is right before the query, the other ten words earlier. With no position information, how do their weights compare?',
+      choices: ['The far one gets more', 'The far one is masked out', 'They get exactly the same weight', 'The nearby one gets more'],
+      answer: 2,
+      trap: 3,
+      why: 'The score is q · k / √d and nothing else, so equal keys get equal weights. To prefer a nearby word, the vectors themselves must carry position information.',
+    },
+  ]}
+>
 
 A dot product only sees what a key offers. In "a small dog chased the red ball", the query of "ball" looks for
 adjectives, so "small" gets a quarter of its attention even though it describes the dog. Real models fix this with
 position information added to every token and with many heads, each looking for something different.
+
+</Misconception>
+
+<Misconception
+  id="picks-one"
+  title="Attention copies the single best-matching value"
+  probes={[
+    {
+      q: 'One query’s scores against three keys are 2, 1 and 0. What does the output hold?',
+      choices: ['An equal blend of the three values', 'A blend of all three values, mostly the first', 'Only the value with score 2', 'The plain sum of the three values'],
+      answer: 1,
+      trap: 2,
+      why: 'Softmax of 2, 1 and 0 gives weights of about 0.67, 0.24 and 0.09, so the output is a blend weighted towards the first value, but every value contributes.',
+    },
+    {
+      q: 'When does the output come close to being just one value?',
+      choices: ['When all the scores are equal', 'When the query is (0, 0)', 'Always: softmax keeps only the top score', 'When one score is far above all the others'],
+      answer: 3,
+      trap: 2,
+      why: 'Softmax gives every token some weight. Only when one score towers over the rest does its weight approach 1; equal scores, or a zero query, give a plain average.',
+    },
+  ]}
+>
+
+Attention is a *soft* lookup: the output is a weighted average of every value, not a copy of the winner's. A token
+whose key matches a little worse still gets a share. The output is close to a single value only when one score is far
+above the rest, which is what happens when q is long.
 
 </Misconception>
 
@@ -113,7 +164,37 @@ position information added to every token and with many heads, each looking for 
       answer: 0,
       why: 'The 100 earlier rows are already cached and never change; only the newest token needs its key and value.',
     },
+    {
+      q: 'The query of “it” matches the key of “cat” a little better than the key of “mat”. What does the output contain?',
+      choices: ['Only the value of “cat”', 'A blend with a little more of “cat” than of “mat”', 'Only the value of “mat”', 'Nothing until the scores are divided by √d'],
+      answer: 1,
+      why: 'Softmax gives every key a share, larger for better matches. A small difference in scores gives a small difference in weights, not a single winner.',
+      traps: { 0: 'picks-one' },
+    },
+    {
+      q: 'In “a small dog chased the red ball”, the query of “ball” looks for adjectives. Which word can get a sizeable share of its attention by mistake?',
+      choices: ['None: attention knows “small” describes the dog', '“small”, because its key looks like an adjective too', '“chased”, because verbs come first', '“a”, because it is the first word'],
+      answer: 1,
+      why: 'The dot product only compares the query with each key, and “small” offers an adjective-like key. Telling which noun it describes needs position information and other heads.',
+      traps: { 0: 'knows-grammar' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="soft-lookup"
+  prompt="How does attention let a word like “it” borrow meaning from other words, and why is it called a soft lookup?"
+  rubric={[
+    'Each token has a query (what it looks for), a key (what it offers) and a value (what it hands over).',
+    'The query is compared with every key by a dot product, scaled by √d, to give a score.',
+    'Softmax turns the scores into weights between 0 and 1 that add up to 1.',
+    'The output is a weighted blend of every value rather than one copied value, which is what makes it soft and trainable.',
+  ]}
+  example="Every token makes three vectors: a query for what it is looking for, a key for what it offers, and a value for what it hands over. The query of “it” is compared with the key of every token by a dot product, divided by √d. Softmax turns those scores into weights that are all positive and add up to 1, so “cat” gets a big weight if its key matches. The output is the weighted sum of all the values. Unlike a dictionary, which returns one exact match, it blends everything by how well it matches, so small changes to the vectors change the output smoothly and the whole thing can be learned by gradient descent."
 />
 
 </Section>
