@@ -137,4 +137,32 @@ export const judgeRun = pgTable(
   (t) => [index('judge_run_user_created_idx').on(t.userId, t.createdAt)],
 );
 
-export const schema = { user, session, account, verification, rateLimit, progressEvent, judgeRun };
+/**
+ * Every AI tutor turn: who asked about what, at which hint level, and what
+ * the model calls cost. Daily turn limits, the hint ladder (one level at a
+ * time per item) and the global daily spend cap all count these rows.
+ */
+export const tutorTurn = pgTable(
+  'tutor_turn',
+  {
+    id: uuid('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** What the help was about, e.g. 'problem:two-sum' or 'exercise:bubble-sort'. */
+    item: text('item').notNull(),
+    /** 'hint' (the ladder), 'review' (find the bug, don't fix it) or 'ask' (a follow-up question). */
+    action: text('action').notNull(),
+    /** The hint level answered at: 1 concept, 2 where to look, 3 pseudo-code, 4 a partial fix. */
+    level: integer('level').notNull(),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    costUsd: real('cost_usd').notNull().default(0),
+    /** The reply gave too much away and was replaced. */
+    leakBlocked: boolean('leak_blocked').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('tutor_turn_user_created_idx').on(t.userId, t.createdAt), index('tutor_turn_created_idx').on(t.createdAt)],
+);
+
+export const schema = { user, session, account, verification, rateLimit, progressEvent, judgeRun, tutorTurn };

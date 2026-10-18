@@ -6,6 +6,7 @@ import { exercises, getExercise } from '@/content/exercises';
 import { getVisualiserBySlug } from '@/data/visualisers';
 import { Hints } from '@/workspace/Hints';
 import { InlineText } from '@/workspace/InlineText';
+import { tutorConfig } from '@/server/tutor/config';
 import { Workspace } from '@/workspace/Workspace';
 
 export const dynamicParams = false;
@@ -55,7 +56,7 @@ export default async function ExercisePage({ params }: Props) {
           <Hints hints={exercise.hints} />
         </aside>
       </div>
-      <Workspace slug={exercise.slug} />
+      <Workspace slug={exercise.slug} tutor={tutorConfig() !== null} />
     </main>
   );
 }

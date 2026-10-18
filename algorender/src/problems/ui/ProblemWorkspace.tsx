@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { FiArrowRight, FiCheck, FiClock, FiEye, FiLoader, FiPlay, FiRotateCcw, FiSend, FiServer, FiX } from 'react-icons/fi';
+import { TutorPanel, type TutorResults } from '@/components/tutor/TutorPanel';
 import type { LegendEntry } from '@/engine/module';
 import { CodeEditor } from '@/workspace/editor/CodeEditor';
 import { authClient } from '@/lib/auth-client';
@@ -45,10 +46,21 @@ const codeSlot = (slug: string) => `problem:${slug}`;
  * both. Storage-backed state only exists in the browser, so the interactive
  * part mounts after hydration.
  */
-export function ProblemWorkspace({ spec, statement, next }: { spec: ProblemSpec; statement: ReactNode; next?: { slug: string; title: string } }) {
+export function ProblemWorkspace({
+  spec,
+  statement,
+  next,
+  tutor = false,
+}: {
+  spec: ProblemSpec;
+  statement: ReactNode;
+  next?: { slug: string; title: string };
+  /** The AI tutor is switched on (its server settings exist). */
+  tutor?: boolean;
+}) {
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   return hydrated ? (
-    <Solver spec={spec} statement={statement} next={next} />
+    <Solver spec={spec} statement={statement} next={next} tutor={tutor} />
   ) : (
     <Columns statement={statement}>
       <div data-workspace="loading" className="rounded-xl border border-line bg-surface p-4">
@@ -67,7 +79,9 @@ function Columns({ statement, children }: { statement: ReactNode; children: Reac
   );
 }
 
-function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: ReactNode; next?: { slug: string; title: string } }) {
+function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement: ReactNode; next?: { slug: string; title: string }; tutor: boolean }) {
+  /** The line the tutor last pointed at. */
+  const [pointLine, setPointLine] = useState<number | null>(null);
   const [language, setLanguage] = useState<ProblemLanguage>(() => loadProblemLanguage() ?? 'python');
   const [codes, setCodes] = useState(
     () => Object.fromEntries(PROBLEM_LANGUAGE_IDS.map((l) => [l, loadCode(codeSlot(spec.slug), l) ?? stub(spec, l)])) as Record<ProblemLanguage, string>,
@@ -246,6 +260,7 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
           label={`Your ${PROBLEM_LANGUAGES[language].label} code`}
           runLine={watching && watching.code === code ? frameLine : null}
           errorLine={errorLine}
+          pointLine={pointLine}
           onRun={() => void judge('run')}
           minLines={14}
         />
@@ -278,6 +293,15 @@ function Solver({ spec, statement, next }: { spec: ProblemSpec; statement: React
             onWatch={(test, memory) => void watch(test, memory)}
             busy={busy}
             next={next}
+          />
+        )}
+        {tutor && (
+          <TutorPanel
+            item={{ kind: 'problem', slug: spec.slug }}
+            language={language}
+            code={code}
+            results={judged && !stale ? tutorResults(judged) : undefined}
+            onPoint={setPointLine}
           />
         )}
       </Columns>
@@ -364,6 +388,33 @@ function unrunnable(result: RunResult): boolean {
 
 function firstFailure(j: Judged): Checked | undefined {
   return j.checked.find((c) => c.verdict.status !== 'pass');
+}
+
+const clip = (s: string) => (s.length > 1400 ? `${s.slice(0, 1400)}…` : s);
+
+/** A run as the tutor sees it: how many tests pass, and the first failure in the learner's language. */
+function tutorResults(j: Judged): TutorResults {
+  const total = j.checked.length + j.skipped;
+  if (j.fatal) return { passed: 0, total, fatal: clip(j.fatal.message) };
+  const f = firstFailure(j);
+  const passed = j.checked.filter((c) => c.verdict.status === 'pass').length;
+  if (!f) return { passed, total };
+  const input = f.test.input
+    ? Object.entries(f.test.input)
+        .map(([name, v]) => `${name} = ${formatValue(v, j.language)}`)
+        .join(', ')
+    : JSON.stringify(f.test.calls ?? []);
+  return {
+    passed,
+    total,
+    failing: {
+      label: f.test.label,
+      input: clip(input),
+      expected: clip(formatValue(f.test.expected, j.language)),
+      got: clip(f.verdict.got !== undefined ? formatValue(f.verdict.got, j.language) : f.verdict.message),
+      ...(f.verdict.status !== 'fail' && { error: clip(f.verdict.message) }),
+    },
+  };
 }
 
 const GROUP_LABEL: Record<JudgeCase['group'], string> = { example: 'Examples', test: 'Tests', random: 'Random tests' };

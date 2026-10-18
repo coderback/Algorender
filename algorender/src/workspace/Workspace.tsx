@@ -15,7 +15,8 @@ import { ParsonsStage, type Arrangement } from './stages/ParsonsStage';
 import { record, useExerciseProgress, useProgressSnapshot } from '@/progress/hooks';
 import type { ExerciseProgress } from '@/progress/projections';
 import { loadCode, loadLanguage, saveCode, saveLanguage } from './storage';
-import { allPass, useExerciseRun } from './useExerciseRun';
+import { allPass, useExerciseRun, type Outcome } from './useExerciseRun';
+import { TutorPanel, type TutorResults } from '@/components/tutor/TutorPanel';
 
 export type Stage = 'parsons' | 'fill' | 'write' | 'bug';
 
@@ -45,11 +46,14 @@ export function Workspace({
   slug,
   stages,
   variant = 'page',
+  tutor = false,
 }: {
   slug: string;
   /** Which stages to offer (lessons can embed just one); defaults to the exercise's ladder. */
   stages?: Stage[];
   variant?: 'page' | 'lesson';
+  /** The AI tutor is switched on: offer it beside the editor (on the exercise's own page). */
+  tutor?: boolean;
 }) {
   const exercise = getExercise(slug)!;
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
@@ -62,7 +66,15 @@ export function Workspace({
       </div>
     );
   }
-  return <Ladder exercise={exercise} stages={stages ?? stagesFor(exercise)} variant={variant} />;
+  return <Ladder exercise={exercise} stages={stages ?? stagesFor(exercise)} variant={variant} tutor={tutor && variant === 'page'} />;
+}
+
+/** A run as the tutor sees it: how many tests pass, and the first failure's own explanation. */
+function tutorResults(outcome: Outcome): TutorResults {
+  if (!outcome.verdicts) return { passed: 0, total: 0, fatal: outcome.result.error?.message ?? 'The tests could not run.' };
+  const passed = outcome.verdicts.filter((v) => v.verdict.pass).length;
+  const f = outcome.verdicts.find((v) => !v.verdict.pass);
+  return { passed, total: outcome.verdicts.length, ...(f && { failing: { label: f.name, input: '', expected: '', got: f.verdict.message.slice(0, 1400) } }) };
 }
 
 function passedStage(progress: ExerciseProgress, stage: Stage, levels: number): boolean {
@@ -70,7 +82,9 @@ function passedStage(progress: ExerciseProgress, stage: Stage, levels: number): 
   return progress[stage] === true;
 }
 
-function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Stage[]; variant: 'page' | 'lesson' }) {
+function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stages: Stage[]; variant: 'page' | 'lesson'; tutor: boolean }) {
+  /** The line the tutor last pointed at. */
+  const [pointLine, setPointLine] = useState<number | null>(null);
   const [language, setLanguage] = useState<Language>(() => loadLanguage() ?? 'python');
   const [example, setExample] = useState(exercise.examples[0].id);
   // 'lines' plays the example line by line on the memory view instead of the algorithm's own view.
@@ -303,9 +317,19 @@ function Ladder({ exercise, stages, variant }: { exercise: Exercise; stages: Sta
             label={`Your ${LANGUAGES[language].label} code`}
             runLine={stale ? null : frameLine}
             errorLine={stale ? null : (outcome?.result.error?.line ?? null)}
+            pointLine={pointLine}
             onRun={() => void onRun()}
           />
           <p className="text-xs text-ink-muted">Ctrl/⌘ + Enter runs your code. Tab indents; press Esc, then Tab, to leave the editor.</p>
+          {tutor && (
+            <TutorPanel
+              item={{ kind: 'exercise', slug: exercise.slug }}
+              language={language}
+              code={codes[language]}
+              results={outcome && !stale ? tutorResults(outcome) : undefined}
+              onPoint={setPointLine}
+            />
+          )}
         </>
       )}
       {s === 'bug' && exercise.bug && outcome && allPass(outcome) && !stale && (

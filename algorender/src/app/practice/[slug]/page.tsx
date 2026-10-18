@@ -11,6 +11,7 @@ import type { Problem } from '@/problems/schema';
 import { InlineMarkdown, Markdown } from '@/problems/ui/Markdown';
 import { DIFFICULTY_STYLE } from '@/problems/ui/difficulty';
 import { ProblemWorkspace } from '@/problems/ui/ProblemWorkspace';
+import { tutorConfig } from '@/server/tutor/config';
 import { Hints } from '@/workspace/Hints';
 
 export const dynamicParams = false;
@@ -41,7 +42,12 @@ export default async function ProblemPage({ params }: Props) {
       <Link href="/practice" className="mb-4 inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline">
         <FiArrowLeft aria-hidden /> All problems
       </Link>
-      <ProblemWorkspace spec={spec} statement={<Statement problem={problem} cases={spec.cases} />} next={next && { slug: next.slug, title: next.title }} />
+      <ProblemWorkspace
+        spec={spec}
+        statement={<Statement problem={problem} cases={spec.cases} />}
+        next={next && { slug: next.slug, title: next.title }}
+        tutor={tutorConfig() !== null}
+      />
     </main>
   );
 }
