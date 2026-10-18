@@ -41,8 +41,8 @@ export function InputPanel<I>({
 
   return (
     <div className="@container rounded-xl border border-line-soft bg-surface p-4 shadow-xs">
-      {/* Lays out by the panel's own width, so it also fits inside a lesson's narrower column. */}
-      <div className="flex flex-col gap-4 @4xl:flex-row @4xl:items-end @4xl:gap-6">
+      {/* Lays out by the panel's own width, so it also fits inside a lesson's narrower column. It wraps, so many examples push the custom input onto its own line instead of squeezing it. */}
+      <div className="flex flex-col gap-4 @4xl:flex-row @4xl:flex-wrap @4xl:items-end @4xl:gap-6">
       <fieldset className="min-w-0">
         <legend className="mb-1.5 text-xs font-medium text-ink-muted">Input</legend>
         <div className="flex flex-wrap gap-1.5">
@@ -97,7 +97,7 @@ export function InputPanel<I>({
       )}
 
       {spec.custom && (
-        <form onSubmit={apply} className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <form onSubmit={apply} className="flex min-w-0 flex-1 flex-col gap-1.5 @4xl:min-w-80">
           <label htmlFor="custom-input" className="text-xs font-medium text-ink-muted">
             {spec.custom.label}
           </label>

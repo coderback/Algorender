@@ -4,12 +4,12 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { dataStructures, algorithms, mathTopics } from '@/data/visualisers';
+import { dataStructures, algorithms, mathTopics, systemsTopics } from '@/data/visualisers';
 
 function Home() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
-  const initialTab = tab === 'algorithms' || tab === 'math' ? tab : 'data-structures';
+  const initialTab = tab === 'algorithms' || tab === 'math' || tab === 'systems' ? tab : 'data-structures';
   const [activeTab, setActiveTab] = useState(initialTab);
 
 
@@ -38,7 +38,7 @@ function Home() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex justify-center mb-8">
-            <TabsList className="grid w-full max-w-3xl grid-cols-3 h-14">
+            <TabsList className="grid h-auto w-full max-w-4xl grid-cols-2 sm:h-14 sm:grid-cols-4">
               <TabsTrigger 
                 value="data-structures"
                 className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
@@ -74,11 +74,24 @@ function Home() {
                   Math &amp; ML
                 </span>
               </TabsTrigger>
+              <TabsTrigger
+                value="systems"
+                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <rect x="3" y="4" width="18" height="6" rx="1.5" strokeWidth={2} />
+                    <rect x="3" y="14" width="18" height="6" rx="1.5" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeWidth={2} d="M7 7h.01M7 17h.01" />
+                  </svg>
+                  Systems
+                </span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Each tab owns its panel, so the tab's aria-controls points at a real element. */}
-          {[['data-structures', dataStructures], ['algorithms', algorithms], ['math', mathTopics]].map(([tab, items]) => (
+          {[['data-structures', dataStructures], ['algorithms', algorithms], ['math', mathTopics], ['systems', systemsTopics]].map(([tab, items]) => (
             <TabsContent key={tab} value={tab} className="mt-0 space-y-8">
               {[...new Set(items.map(item => item.category))].map(category => (
                 <div key={category} className="space-y-4">

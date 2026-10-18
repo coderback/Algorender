@@ -163,14 +163,15 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
 
 function OperationsPanel({ ds, model, onRun }: { ds: AnyStructure; model: Model; onRun: (spec: Spec, call: OpCall) => void }) {
   return (
-    <section className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs" aria-label="Operations">
-      <h2 className="mb-3 text-sm font-semibold text-ink">Operations</h2>
+    // A labelled group, not a landmark or a heading: a lesson can hold several explorers (see CLAUDE.md's accessibility conventions).
+    <div role="group" className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs" aria-label="Operations">
+      <p className="mb-3 text-sm font-semibold text-ink">Operations</p>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {ds.operations.map((spec) => (
           <OperationForm key={spec.id} spec={spec} model={model} onRun={onRun} />
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 

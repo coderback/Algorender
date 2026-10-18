@@ -1013,9 +1013,21 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Checks:** unit and property tests for each game's logic and for XP, levels and badges; e2e for each game (a full perfect round, a wrong move and its reveal, a won comparison budget, each break-it challenge) and axe on every Play page.
     - **Left for later:** be-the-algorithm on graphs and trees (pick the node Dijkstra settles next), invariant puzzles, debug-it, and the ML challenges.
 - **6b: Systems I:** CPU scheduling, paging and page replacement, LRU/LFU, consistent hashing, the token bucket, queueing latency, with lessons.
+  - **Status (2026-10-19): 6b is built** (`revamp/phase-6b`).
+    - **The Systems track opens:** a `systems` visualiser type with its own home-page tab and search group, and a Systems area in the placement check and next steps. Concepts: CPU scheduling, caching, consistent hashing, queueing and tail latency, rate limiting (Raft stays planned for 6c).
+    - **Models in `src/systems/`,** pure and steppable for the 6d canvas: `scheduling.ts`, `cache.ts` (O(1) LRU and LFU), `paging.ts`, `ring.ts`, `queueing.ts` (an M/M/c discrete-event simulation checked against Erlang C and Little's law), `token-bucket.ts`.
+    - **Six visualisers:** CPU scheduling on a Gantt chart (FCFS, SJF, SRTF, round robin, priority), page replacement (FIFO, LRU, OPT, Clock, Bélády's anomaly), an LRU/LFU cache, consistent hashing on a ring with virtual nodes against mod N, queueing with p50/p99 against utilisation, and a token-bucket rate limiter.
+    - **Four lessons** (cpu-scheduling, caching, consistent-hashing, queueing) with common mistakes, probes and explain-it-back, fact-checked independently.
+    - **Fixes found on the way:** a structure explorer's Operations panel was a landmark with a heading, so a lesson embedding two explorers failed axe; it is a labelled group now. The input panel squeezed the custom input when a module has many examples; it wraps now.
+    - **Checks:** model tests against reference implementations and closed forms, the usual module trace tests, content tests; e2e on every visualiser, the lessons and axe on the new pages.
 - **6c: Systems II:** Raft, Lamport and vector clocks, LSM compaction, B+trees, race-condition interleavings, deadlock.
-- **6d: Social play** (opt-in): weekly streaks, leagues, async duels and solution histograms. It needs the owner's decisions on ranking and moderation first.
-- **6e: Extras:** mock interviews, classroom mode, community visualisations, i18n, and the rest of the PWA.
+- **6d: System design** (added 2026-10-18, owner): composing the 6b/6c building blocks into designs.
+  - **A design canvas:** wire clients, a load balancer, app servers, a cache, a database with replicas or shards, and a queue; run simulated traffic and watch p50/p99 latency, throughput, hit rate, saturation, cost, and what happens on a node failure or a traffic spike. The components are the 6b/6c simulation models, so a cache really evicts and a queue really builds latency.
+  - **Case studies with targets** (e.g. "10k requests a second under 200 ms p99 within this budget"): a URL shortener, a rate-limited API, a news feed (fan-out on write vs on read), chat, a key-value store.
+  - **Lessons:** back-of-the-envelope estimation (with drills) and the core trade-offs (consistency vs availability, caching strategies, sharding keys, sync vs async), in the usual lesson format.
+  - **So 6b and 6c build for it:** each simulator keeps its model as a pure, steppable simulation in `src/systems/`, separate from its visualiser module, so the canvas can reuse it as a component.
+- **6e: Social play** (opt-in): weekly streaks, leagues, async duels and solution histograms. It needs the owner's decisions on ranking and moderation first.
+- **6f: Extras:** mock interviews (including system design interviews grounded in the 6d case studies), classroom mode, community visualisations, i18n, and the rest of the PWA.
 
 ---
 

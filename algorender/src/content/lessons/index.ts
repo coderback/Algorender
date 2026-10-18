@@ -188,6 +188,34 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'Noise a shape away into a blob, then watch a trained denoiser turn fresh noise back into it, one small step at a time.',
     minutes: 15,
   },
+  {
+    slug: 'cpu-scheduling',
+    title: 'CPU scheduling: who runs next?',
+    concept: 'cpu-scheduling',
+    summary: 'One CPU, many processes: first come first served, shortest job first, round robin and priorities, and the waiting each one causes.',
+    minutes: 15,
+  },
+  {
+    slug: 'caching',
+    title: 'Caching: LRU, LFU and page replacement',
+    concept: 'caching',
+    summary: 'Why hit rate decides speed, how an LRU cache evicts in O(1), and what FIFO, LRU, Clock and OPT do with pages of memory.',
+    minutes: 20,
+  },
+  {
+    slug: 'consistent-hashing',
+    title: 'Consistent hashing',
+    concept: 'consistent-hashing',
+    summary: 'Spread a cache over servers so that adding or removing one moves only about 1/N of the keys, with a hash ring and virtual nodes.',
+    minutes: 15,
+  },
+  {
+    slug: 'queueing',
+    title: 'Queueing and tail latency',
+    concept: 'queueing',
+    summary: 'Why a busy server is slow long before it is full, why p99 matters more than the average, and how a token bucket keeps traffic in check.',
+    minutes: 20,
+  },
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

@@ -1,0 +1,192 @@
+<Section step="hook" title="Add one cache server, lose most of your cache">
+
+A site keeps hot data in a cache spread over three servers. The simplest way to pick a server for a key is
+`hash(key) mod 3`: quick, even, and every client gets the same answer without asking anyone.
+
+Then traffic grows and a fourth server joins. Now it's `hash(key) mod 4`, and a key stays on the same server only if
+its hash leaves the same remainder for 3 and 4. That's about 1 key in 4. The other three quarters suddenly look up the
+wrong server, miss, and all hit the database at once, just when the site was already busy.
+
+Consistent hashing fixes this: when a server joins or leaves, only about $1/N$ of the keys move, and everything else
+keeps its home.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="the ring">Every possible hash value, from 0 to $2^{32} - 1$, bent round into a circle: 0 at the top, values growing clockwise, and the largest one sitting just before 0 again.</Term>
+  <Term name="server node">A server placed on the ring at the hash of its name. Its colour marks it and the arc it owns.</Term>
+  <Term name="the owner rule">A key belongs to the first server node clockwise from where the key hashes, wrapping round past the top.</Term>
+  <Term name="virtual nodes">Several places on the ring for each server (A#0, A#1, …), so each server owns many small arcs instead of one big one.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Keys find their server by walking clockwise">
+
+Twelve fruit names are stored on three servers, each with a single node. Look up a key, then add server D and watch
+which keys change colour.
+
+<Explore slug="consistent-hashing" settings={{ start: 'vnodes-1' }} caption="One node per server: each server owns the arc that ends at its node." />
+
+Notice the load readout too. With one node each, the arcs are whatever lengths the hash happens to give: here C owns
+60% of the ring and stores 9 of the 12 keys.
+
+<KeyIdea>
+
+**A key's owner changes only when a node appears or disappears between the key and its old owner.** A joining node
+takes the arc just before it; a leaving node hands its arc to the next node clockwise. Every other key keeps its server,
+so a change moves about $1/N$ of the keys, where `mod N` moves most of them.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: say where it lands">
+
+Add a few keys of your own, look some up, then add or remove a server. Before each step plays, say which server a key
+lands on, or how many keys a change moves.
+
+<PredictChallenge slug="consistent-hashing" settings={{ start: 'vnodes-3' }} goal={3} />
+
+</Section>
+
+<Section step="do" title="Try it">
+
+Start from one node per server:
+
+- **Add server D.** Only 2 of the 12 keys move, all to D. The readout says `mod N` would have moved 8.
+- **Remove server C.** All 9 of its keys land on B, the next node clockwise, which now holds 10 of 12.
+- **Start over with ten virtual nodes each and remove a server.** Its keys scatter over the others instead of piling onto one neighbour.
+
+<Explore slug="consistent-hashing" settings={{ start: 'vnodes-10' }} caption="Ten virtual nodes per server: many small arcs, so each server's share of the ring evens out." />
+
+<Misconception
+  id="balanced-by-itself"
+  title="A hash ring spreads load evenly on its own"
+  probes={[
+    {
+      q: 'Three servers each have a single node on the ring. What share of the keys does each one get?',
+      choices: ['About a third each, guaranteed', 'Exactly the same number of keys each', 'Whatever share of the ring its arc happens to cover, which can be very uneven', 'All of them go to the first server'],
+      answer: 2,
+      trap: 0,
+      why: 'Each server owns the arc ending at its node, and three random points cut a circle into very unequal pieces. One server can easily own more than half the ring.',
+    },
+    {
+      q: 'Load on a consistent-hashing ring is lopsided: one server has three times the keys of another. What is the usual fix?',
+      choices: ['Hash every key twice', 'Nothing: a hash ring already spreads keys evenly', 'Give each server many virtual nodes', 'Go back to hash mod N'],
+      answer: 2,
+      trap: 1,
+      why: 'With many nodes per server, each owns many small arcs, and their total evens out. Real systems use from tens to hundreds of virtual nodes per server.',
+    },
+  ]}
+>
+
+With one node per server, the arcs are as uneven as the hash makes them: in the first example C owns 60% of the ring
+and 9 of the 12 keys. **Virtual nodes** fix it: each server gets many places on the ring, so its share is the sum of
+many small arcs, which averages out. They help when a server leaves too, because its many small arcs go to many
+different neighbours instead of dumping everything on one.
+
+</Misconception>
+
+<Misconception
+  id="every-server-moves"
+  title="Adding a server reshuffles keys on every server"
+  probes={[
+    {
+      q: 'One node per server. Server D joins, and going clockwise the nodes are now A, D, B. Which keys move?',
+      choices: ['Some keys from every server', 'All of the keys on A', 'The keys between A and D, which used to belong to B', 'None: D only gets new keys'],
+      answer: 2,
+      trap: 0,
+      why: 'Before D joined, B owned everything from A up to B. D takes over the part from A up to D, so only those keys move, from B to D. Every other key keeps its server.',
+    },
+    {
+      q: '1,000 keys sit on 4 servers with many virtual nodes each. A fifth server joins. About how many keys move?',
+      choices: ['About 50', 'About 800', 'About 1,000', 'About 200'],
+      answer: 3,
+      trap: 1,
+      why: 'The new server ends up owning about a fifth of the ring, and only keys in its arcs move: about 1,000 / 5 = 200. Hash mod N, going from 4 to 5, would move about 800.',
+    },
+  ]}
+>
+
+A new node only takes over the arc just before it, and those keys belonged to a single server: the next node clockwise.
+Everything else keeps its owner. With virtual nodes the new server takes small slices from several servers, but the total
+is still only about $1/N$ of the keys. It's `hash mod N` that reshuffles nearly everything.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Server nodes sit at 10%, 40% and 70% of the way round the ring. A key hashes to 50%. Which node owns it?',
+      choices: ['The node at 40%', 'The node at 70%', 'The node at 10%', 'Whichever node is nearest, on either side'],
+      answer: 1,
+      why: 'Ownership runs clockwise: the first node at or after 50% is the one at 70%, even though 40% is closer.',
+    },
+    {
+      q: 'A key hashes to 95% of the way round, and the last node is at 80%. Where does it go?',
+      choices: ['Nowhere: it is past the last node', 'To the node at 80%', 'To the first node after the top, wrapping round', 'To a random node'],
+      answer: 2,
+      why: 'The ring wraps: after the largest hash value comes 0 again, so the walk continues past the top to the first node.',
+    },
+    {
+      q: 'With one node per server, three servers end up holding 9, 2 and 1 of 12 keys. What is going on?',
+      choices: ['A bug: consistent hashing always balances the keys', 'Their arcs on the ring have very different lengths', 'The keys were placed with hash mod N', 'One server is faster than the others'],
+      answer: 1,
+      why: 'Each server owns the arc ending at its node, and one node each cuts the ring into very uneven arcs. Virtual nodes even it out.',
+      traps: { 0: 'balanced-by-itself' },
+    },
+    {
+      q: 'You go from 4 to 5 servers. With hash mod N about 80% of keys move. With consistent hashing and virtual nodes, about how many?',
+      choices: ['Also about 80%: it reshuffles everything too', 'About 20%, a fifth of them', 'None at all', 'About half'],
+      answer: 1,
+      why: 'Only keys in the arcs the new server takes over move, and it takes about a fifth of the ring.',
+      traps: { 0: 'every-server-moves' },
+    },
+    {
+      q: 'Why do caches spread over servers use consistent hashing rather than hash mod N?',
+      choices: ['When a server joins or leaves, most keys keep their server, so most of the cache stays useful', 'Lookups are faster', 'It uses less memory', 'It needs no hash function'],
+      answer: 0,
+      why: 'A lookup is about as fast either way. The win is that a change of servers moves only about 1/N of the keys, instead of most of them missing at once.',
+    },
+    {
+      q: 'A store keeps 3 copies of every key. Where does consistent hashing put them?',
+      choices: ['On 3 random servers', 'All three on the owner', 'On the 3 least busy servers', 'On the owner and the next 2 different servers clockwise'],
+      answer: 3,
+      why: 'Keep walking clockwise past the owner and take the next distinct servers. Every client can work out the same list, with no table to share.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-the-ring"
+  prompt="Why does consistent hashing move so few keys when a server joins or leaves, and what are virtual nodes for?"
+  rubric={[
+    'Keys and servers are hashed onto the same ring, and each key belongs to the first server node clockwise from it.',
+    'A joining node takes only the arc just before it, and a leaving node hands its arc to the next node, so other keys keep their server.',
+    'So only about 1/N of the keys move, while hash mod N moves most of them.',
+    'Virtual nodes give each server many small arcs, which evens out the load and spreads a leaving server’s keys over many others.',
+  ]}
+  example="Servers and keys are both hashed onto one ring, and a key lives on the first server node clockwise from it. When a server joins, its node only takes the arc just before it, so the only keys that move are those, from the one neighbour that owned them; when a server leaves, its arc goes to the next node. Every other key keeps its server, so about 1/N of the keys move, where hash mod N moves most of them. With one node each the arcs are uneven, so each server gets many virtual nodes: lots of small arcs that even out the load and scatter a leaving server's keys."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Hash keys and servers onto **one ring**; a key belongs to the **first server node clockwise**, wrapping round.
+- A server joining or leaving only changes the arcs beside its nodes, so about **$1/N$ of the keys move**. With `hash mod N`, most of them do.
+- One node per server gives **lopsided arcs**; **virtual nodes** even out the load and spread a leaving server's keys.
+- To keep copies, walk on past the owner to the **next distinct servers**. Memcached clients, Cassandra, Riak and CDNs all work this way.
+
+</Section>

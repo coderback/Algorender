@@ -1,0 +1,212 @@
+<Section step="hook" title="One millisecond instead of a hundred">
+
+A database answers in about 100 ms. A copy of the answer kept in memory comes back in about 1 ms. Keep the answers
+people ask for most in that fast copy, a **cache**, and most requests never reach the database at all.
+
+How much faster does it get? If 90% of requests hit the cache, the average is $0.9 \times 1 + 0.1 \times 100 \approx 11$ ms.
+At 99% it is about 2 ms. The misses dominate, so every point of **hit rate** counts.
+
+Caches work because programs and people have **locality**: what was used recently is likely to be used again soon. Your
+browser, a CDN, the CPU and the operating system's virtual memory all bet on it. The hard part is what to throw out
+when the cache is full.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="hit and miss">A hit finds the key in the cache; a miss doesn't, and pays for the trip to the slow store. **Hit rate** is hits ÷ lookups.</Term>
+  <Term name="eviction">Removing an entry to make room for a new one when the cache is full. The **policy** chooses which.</Term>
+  <Term name="LRU and LFU">Least recently used: evict what was used longest ago. Least frequently used: evict what was used fewest times.</Term>
+  <Term name="page and frame">Virtual memory caches fixed-size **pages** of a program in physical **frames**. A reference to a page that isn't in a frame is a **page fault**.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="An LRU cache in O(1)">
+
+This cache holds A, B and C, and A was just read. It keeps two things in step: a **hash map** from each key to its
+entry, and a **recency list** with the least recently used entry at the head. A hit moves the entry to the newest end;
+a full cache evicts the head.
+
+<Explore slug="lru-cache" settings={{ start: 'lru-warm' }} caption="Try get B, then put D 4. get B is a hit, so B moves to the newest end. put D finds the cache full and evicts the head of the list: C, used longest ago." />
+
+<KeyIdea>
+
+**The hash map finds an entry in O(1); the doubly linked list keeps it in recency order, so moving or evicting it is O(1)
+too.** Neither alone is enough: a map has no order, and finding a key in a list means walking it.
+
+</KeyIdea>
+
+The same choice appears in virtual memory, with pages and frames in place of keys and slots. Here a string of page
+references runs through 3 frames under LRU; each column shows memory after that reference.
+
+<Explore slug="page-replacement" settings={{ preset: 'lru' }} caption="LRU faults 9 times on these 13 references. The first three faults just fill the empty frames." />
+
+</Section>
+
+<Section step="predict" title="Your turn: be FIFO">
+
+FIFO replaces the page that was **loaded** longest ago, however often it has been used since. Before each step, say
+whether the page hits, and which page FIFO throws out.
+
+<PredictChallenge slug="page-replacement" settings={{ preset: 'fifo' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="When the bets go wrong">
+
+Every policy is a guess about the future. OPT, Bélády's optimal policy, cheats by looking ahead: it replaces the page
+needed again furthest in the future. No operating system can run it, but it shows the fewest faults possible, so it is
+the yardstick: on the string above OPT faults 7 times, against 9 for LRU and Clock and 10 for FIFO. **Clock** is what
+real systems use: one use bit per frame instead of LRU's timestamps, with a hand that sweeps the frames and spares any
+page used since it last passed.
+
+Now try giving FIFO more memory.
+
+<Explore slug="page-replacement" settings={{ preset: 'belady-3' }} input caption="FIFO on 1 2 3 4 1 2 5 1 2 3 4 5 with 3 frames: 9 faults. Switch to the 4-frame example and count again." />
+
+<Misconception
+  id="more-frames-fewer-faults"
+  title="More memory always means fewer page faults"
+  probes={[
+    {
+      q: 'FIFO faults 9 times on 1 2 3 4 1 2 5 1 2 3 4 5 with 3 frames. How many times with 4 frames?',
+      choices: ['10', '9', '8', '6'],
+      answer: 0,
+      trap: 2,
+      why: 'Ten. The extra frame changes which page is oldest at exactly the wrong moments. This is Bélády’s anomaly; LRU on the same string goes from 10 faults down to 8.',
+    },
+    {
+      q: 'Which of these policies can fault more often when you give it more frames?',
+      choices: ['LRU', 'OPT', 'None of them: more memory never hurts', 'FIFO'],
+      answer: 3,
+      trap: 2,
+      why: 'FIFO. LRU and OPT are stack algorithms: with one more frame they hold every page they held before, and more, so they never fault more often.',
+    },
+  ]}
+>
+
+Usually true, and always true for LRU and OPT: with one more frame they hold everything they held before. FIFO makes no
+such promise. On 1 2 3 4 1 2 5 1 2 3 4 5 it faults 9 times with 3 frames and 10 times with 4. That is **Bélády's
+anomaly**, and it is one reason FIFO isn't used on its own.
+
+</Misconception>
+
+Locality can also fail. A loop over one more page than fits is LRU's worst case, and so is a one-off scan through a
+cache full of popular keys.
+
+<Explore slug="page-replacement" settings={{ preset: 'loop-lru' }} caption="Pages 1 to 4 in a loop, 3 frames: LRU always evicts the page needed next and faults on all 12 references. OPT faults 6 times." />
+
+<Misconception
+  id="lru-always-best"
+  title="LRU is always the best policy"
+  probes={[
+    {
+      q: 'Pages 1 2 3 4 1 2 3 4 1 2 3 4 run through 3 frames under LRU. How many of the 12 references fault?',
+      choices: ['4', '6', '12', '9'],
+      answer: 2,
+      trap: 0,
+      why: 'All 12: each new page evicts the one used longest ago, which is always the page needed next. OPT faults 6 times on the same loop.',
+    },
+    {
+      q: 'A 3-slot LRU cache holds C and the hot keys A and B. A report then reads X, Y and Z once each. What is left?',
+      choices: ['A, B and Z', 'A, Y and Z', 'A, B and X', 'X, Y and Z'],
+      answer: 3,
+      trap: 0,
+      why: 'X, Y and Z: each one-off read is the newest, so LRU evicts the oldest entries, hot or not. An LFU cache would keep A and B, since X, Y and Z were each used once.',
+    },
+  ]}
+>
+
+LRU bets that the recent past predicts the near future, and usually wins. A loop just bigger than memory, or a scan that
+reads many keys once, breaks the bet: LRU then evicts exactly what is needed next, or flushes its hot keys for data
+nobody will read again. LFU keeps entries by how often they are used, which survives a scan, though it can cling to
+keys that were popular long ago.
+
+</Misconception>
+
+<Explore slug="lru-cache" settings={{ start: 'lfu-warm' }} input caption="An LFU cache: A was used 3 times, B twice, C once. Put a new key and see which goes." />
+
+Bigger isn't automatically better either. Give the loop a fourth frame and every policy faults just 4 times, once per
+page. A fifth or sixth frame adds nothing: once the **working set** (the pages in active use) fits, extra memory stops
+paying.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A cache answers in 1 ms and the database behind it in 100 ms. About how long does the average request take at a 90% hit rate?',
+      choices: ['About 1 ms', 'About 11 ms', 'About 50 ms', 'About 90 ms'],
+      answer: 1,
+      why: '0.9 × 1 + 0.1 × 100 = 10.9 ms: the 10% of misses cost ten times more than all the hits together. At 99% it is about 2 ms.',
+    },
+    {
+      q: 'Why does an LRU cache need a doubly linked list as well as a hash map?',
+      choices: [
+        'The map finds an entry in O(1); the list keeps recency order, so moving or evicting an entry is O(1) too',
+        'The list stores the values and the map only stores the keys',
+        'The list makes lookups faster than the map',
+        'So the entries can be kept sorted by key',
+      ],
+      answer: 0,
+      why: 'A map has no order and a list is slow to search. Each node sits in both: found through the map, moved or unlinked in the list with a few pointer changes.',
+    },
+    {
+      q: 'FIFO on 1 2 3 4 1 2 5 1 2 3 4 5 faults 10 times with 4 frames. With 3 frames it faults…',
+      choices: ['more: 12 times', 'fewer: 9 times', 'the same: 10 times', 'fewer: 6 times'],
+      answer: 1,
+      why: 'Nine times, fewer than with 4 frames: Bélády’s anomaly. FIFO is not a stack algorithm, so more frames can mean more faults.',
+      traps: { 0: 'more-frames-fewer-faults' },
+    },
+    {
+      q: 'Which policy gives the fewest page faults possible on any reference string?',
+      choices: ['LRU', 'OPT, which replaces the page next used furthest ahead', 'Clock', 'FIFO'],
+      answer: 1,
+      why: 'OPT is provably optimal, but it needs to know the future, so it serves as the yardstick. LRU can fault far more, as on a loop one page too big.',
+      traps: { 0: 'lru-always-best' },
+    },
+    {
+      q: 'A program loops over 5 pages again and again, with 4 frames under LRU. What helps most?',
+      choices: ['A 5th frame, so the whole loop fits', 'Switching to FIFO', 'A 6th and a 7th frame as well', 'A faster disk'],
+      answer: 0,
+      why: 'With 4 frames LRU faults on every reference; with 5, only the first 5 references fault. A 6th and 7th frame add nothing once the working set fits.',
+    },
+    {
+      q: 'What does the Clock policy keep for each frame, in place of LRU’s timestamps?',
+      choices: ['The time its page was loaded', 'One use bit, set on each use and cleared as the hand passes', 'A count of uses', 'Nothing: it picks a frame at random'],
+      answer: 1,
+      why: 'One bit per frame. A page whose bit is set gets a second chance: the hand clears the bit and moves on. Cheap hardware support, close to LRU in practice.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-caching-works"
+  prompt="Why does a cache with a high hit rate make a slow system fast, and how does an LRU cache choose what to evict in O(1)?"
+  rubric={[
+    'Most requests are served by the fast cache, so the average time is near the cache’s and the misses to the slow store dominate the rest.',
+    'Caching works because of locality: data used recently is likely to be used again soon.',
+    'When it is full, LRU evicts the entry used longest ago, betting that the recent past predicts the near future.',
+    'A hash map finds an entry in O(1), and a doubly linked list in recency order makes moving or evicting it O(1) too.',
+  ]}
+  example="A cache keeps recent answers in fast memory. Because of locality, the same data tends to be asked for again soon, so most requests hit the cache and only the misses pay for the slow trip to the database or disk; the average time ends up close to the cache's. When the cache is full, LRU throws out the entry used longest ago. It finds any entry through a hash map in O(1), and keeps the entries in a doubly linked list in recency order, so moving a used entry to the newest end or unlinking the oldest is also O(1)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A cache keeps hot data close. Hit rate is what matters: at 1 ms against 100 ms, 90% hits average about 11 ms and 99% about 2 ms.
+- LRU evicts the entry used longest ago, in O(1) with a hash map and a doubly linked list; LFU evicts the least used.
+- Page replacement is the same problem for memory pages: FIFO, LRU, Clock (one use bit) and OPT, the unreachable ideal that sees the future.
+- FIFO can fault more with more frames (Bélády's anomaly); LRU fails on loops and scans; past the working set, more memory stops helping.
+
+</Section>

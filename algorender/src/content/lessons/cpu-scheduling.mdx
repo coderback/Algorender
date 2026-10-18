@@ -1,0 +1,200 @@
+<Section step="hook" title="Hundreds of programs, a handful of cores">
+
+Your laptop is running hundreds of threads right now: the browser, a music player, background updates, this page. It has
+perhaps eight cores. Each core can run only one thread at a time, so something has to decide, many times a second, who
+gets it next. That something is the **scheduler**.
+
+The choice matters. Make a short job wait behind a long one and it feels sluggish. Hand out turns too eagerly and the core
+spends its time switching instead of working. Every policy here is a different answer to one question: *who should run
+now?*
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="process and burst">A job that needs the CPU. Its **burst** is how many units of CPU time it needs before it is done (or stops to wait for something else).</Term>
+  <Term name="ready queue">The processes that have arrived and are waiting for the CPU. The scheduler picks from here.</Term>
+  <Term name="preemption">Taking the CPU away from a running process before it finishes, because the rule says someone else should run.</Term>
+  <Term name="quantum">Round robin’s turn length: a process runs for at most this long, then goes to the back of the queue.</Term>
+  <Term name="waiting, turnaround, response">**Turnaround** is finish − arrival. **Waiting** is the part of that spent in the queue: turnaround − burst. **Response** is how long until it first runs.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch a convoy form">
+
+First come, first served is the obvious rule: run jobs in the order they arrive, each to the end. Watch what happens when
+the first job is a long one. On the Gantt chart, each row is a process: its pale bars are time spent waiting, its solid
+bars are time on the CPU.
+
+<Explore slug="cpu-scheduling" settings={{ preset: 'fcfs' }} caption="P1 needs 8 units and arrives first. P2, P3 and P4 need 6 units between them, yet each waits about 8. That queue behind one slow job is the convoy effect." />
+
+<KeyIdea>
+
+**Every policy does the same work; they differ in who waits.** The CPU never idles while a process is ready, so all of
+them finish everything at the same moment. What changes is the order, and with it each process’s waiting time. Running
+the short jobs first gives the lowest average wait, because a short job delays everyone behind it only a little.
+
+</KeyIdea>
+
+Now the same four jobs under **shortest remaining time first** (SRTF): whenever a job arrives with less work left than the
+running one, it takes over the CPU.
+
+<Explore slug="cpu-scheduling" settings={{ preset: 'srtf' }} caption="P2 arrives at t = 1 needing 2, while P1 still needs 7: P1 is preempted. The average wait drops from 5.75 under FCFS to 2." />
+
+</Section>
+
+<Section step="predict" title="Your turn: be the scheduler">
+
+The player stops at every decision and asks which process gets the CPU. Use the rule, SRTF: the least work left wins, and a
+tie never takes the CPU away from the process already running.
+
+<PredictChallenge slug="cpu-scheduling" settings={{ preset: 'srtf' }} goal={3} />
+
+</Section>
+
+<Section step="do" title="Take turns: round robin">
+
+Shortest-first is unfair to long jobs, and it needs to know the future. **Round robin** needs neither: processes take
+turns of at most one quantum, and a process whose turn is up goes to the back of the queue. Try the same three jobs with a
+quantum of 1 and of 4, and compare the context switches and when each job first runs.
+
+<Explore slug="cpu-scheduling" settings={{ preset: 'rr-1' }} caption="Quantum 1: every job starts within a tick or two, but the CPU switches 11 times." />
+
+<Explore slug="cpu-scheduling" settings={{ preset: 'rr-4' }} input caption="Quantum 4: far fewer switches, but P3 waits longer for its first turn. Type your own jobs, e.g. rr 2: 0-5, 0-3, 1-4, or try fcfs, sjf, srtf or priority." />
+
+A quantum longer than every burst means no job is ever cut short: round robin becomes FCFS. The art is a quantum long
+enough that switching is a small cost, short enough that nobody waits long for a turn.
+
+<Misconception
+  id="rr-always-better"
+  title="Round robin is always the fairest, best choice"
+  probes={[
+    {
+      q: 'Three jobs needing 4 units each arrive at time 0. Which gives the lower average turnaround: FCFS, or round robin with a quantum of 1?',
+      choices: ['They tie', 'Round robin', 'FCFS', 'It depends on the order they arrive in'],
+      answer: 2,
+      trap: 1,
+      why: 'FCFS finishes them at 4, 8 and 12 (average 8). Round robin interleaves them, so they finish at 10, 11 and 12 (average 11). Taking turns helps each job start sooner, not finish sooner.',
+    },
+    {
+      q: 'Each context switch costs 1 unit. Two jobs of 3 units arrive at 0. With round robin and a quantum of 1 (A, B, A, B, A, B), when does the last job finish?',
+      choices: ['At 6, the same as FCFS', 'At 7', 'At 9', 'At 11, four units after FCFS would'],
+      answer: 3,
+      trap: 0,
+      why: 'Five switches add 5 units to 6 units of work, so the last job ends at 11. FCFS switches once and is done at 3 + 1 + 3 = 7.',
+    },
+  ]}
+>
+
+Round robin shares the CPU in turns, which keeps **response** times short: nobody waits long to start. But its average
+**turnaround** can be the worst of all: with several similar jobs, they all finish near the end. And every turn costs a
+context switch, time spent saving one process and loading another instead of working. Fair to everyone is not the same as
+best for everyone.
+
+</Misconception>
+
+<Misconception
+  id="sjf-knows"
+  title="An operating system can simply run shortest job first"
+  probes={[
+    {
+      q: 'Why can’t an operating system just run SJF as it is?',
+      choices: ['It can: sort the ready queue by each burst', 'It doesn’t know how long a burst is until it has run', 'SJF only works with one process', 'SJF needs a second CPU'],
+      answer: 1,
+      trap: 0,
+      why: 'SJF and SRTF rank jobs by their burst lengths, and those aren’t known in advance. A real scheduler has to predict them from how the process behaved before.',
+    },
+    {
+      q: 'A scheduler predicts each job’s next burst as the average of its last two. A job’s last bursts were 2 and 4, and its next one will really be 10. What length does the scheduler work with?',
+      choices: ['10', '4', '3', '2'],
+      answer: 2,
+      trap: 0,
+      why: 'It predicts (2 + 4) / 2 = 3, so it may run this job ahead of one that is really shorter. Shortest-first in practice is only as good as its predictions.',
+    },
+  ]}
+>
+
+SJF and SRTF need to know how long each burst will be, and an operating system can’t see the future. Real schedulers
+**estimate** the next burst from the previous ones (often a weighted average that favours recent bursts), and an estimate
+can be wrong. Shortest-first is the ideal the estimates aim at, and the benchmark other policies are measured against.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Three jobs arrive at time 0 needing 8, 2 and 1 units, in that order. Under FCFS, what is the average waiting time?',
+      choices: ['6', '1.3', '3', '8'],
+      answer: 0,
+      why: 'They wait 0, 8 and 8 + 2 = 10 units: (0 + 8 + 10) / 3 = 6. The short jobs sit behind the long one.',
+    },
+    {
+      q: 'The same jobs (8, 2 and 1 units, all at time 0) under SJF: what is the average waiting time?',
+      choices: ['6', '4', '1.3', '0'],
+      answer: 2,
+      why: 'SJF runs 1, then 2, then 8, so they wait 0, 1 and 3 units: 4 / 3 ≈ 1.3. Same work, far less waiting.',
+    },
+    {
+      q: 'Under SRTF, P1 (needs 8) starts at 0. At t = 1, P2 arrives needing 2. What happens?',
+      choices: ['P1 finishes first', 'P2 preempts P1 and runs', 'Both share the CPU', 'P2 waits for P1’s quantum to end'],
+      answer: 1,
+      why: 'P1 has 7 left and P2 needs only 2, less than 7, so SRTF takes the CPU from P1 and gives it to P2.',
+    },
+    {
+      q: 'Four jobs of 3 units each arrive together. Which policy gives the lowest average turnaround?',
+      choices: ['Round robin, quantum 1', 'FCFS', 'Round robin, quantum 2', 'They all tie'],
+      answer: 1,
+      why: 'FCFS finishes them at 3, 6, 9 and 12 (average 7.5). Either round robin finishes them at 9, 10, 11 and 12 (average 10.5).',
+      traps: { 0: 'rr-always-better', 2: 'rr-always-better' },
+    },
+    {
+      q: 'An operating system wants SJF’s short waiting times. What does it actually do?',
+      choices: ['Sort the ready queue by each job’s true burst', 'Predict each burst from the job’s past bursts', 'Run every job to the end in arrival order', 'Give every job the same quantum'],
+      answer: 1,
+      why: 'True burst lengths aren’t known in advance, so schedulers estimate the next burst from earlier ones and rank by the estimate.',
+      traps: { 0: 'sjf-knows' },
+    },
+    {
+      q: 'Which policy can leave a process waiting for ever?',
+      choices: ['FCFS', 'Round robin', 'Priority, with a steady stream of urgent jobs', 'None of them'],
+      answer: 2,
+      why: 'If more urgent jobs keep arriving, a low-priority one never gets the CPU: starvation. Real schedulers raise a job’s priority the longer it waits (ageing).',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="pick-a-policy"
+  prompt="How does a CPU scheduler decide who runs next, and why does no single policy win at everything?"
+  rubric={[
+    'Whenever the CPU frees up, or a better candidate arrives, the scheduler picks a ready process by its rule: arrival order, shortest job, priority or turns.',
+    'Running short jobs first gives the lowest average waiting, but burst lengths are unknown and must be predicted.',
+    'Round robin keeps every job responsive by taking turns, at the cost of context switches and often worse turnaround.',
+    'A long job first causes a convoy, and strict priorities can starve unimportant jobs.',
+  ]}
+  example="The scheduler keeps a queue of ready processes and, whenever the CPU frees up or a better candidate arrives, picks one by its rule. Running the shortest jobs first gives the lowest average waiting time, because a short job holds up the others only briefly, but the scheduler has to guess burst lengths from past behaviour. Round robin gives everyone a turn, so nothing waits long to start, but it pays for context switches and jobs finish later on average. First come, first served is simple but lets one long job hold up a convoy of short ones, and strict priorities can starve the least urgent jobs. Each policy trades one goal against another."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A scheduler picks which ready process runs, whenever the CPU frees up or (if it preempts) a better candidate arrives.
+- **Turnaround** = finish − arrival, **waiting** = turnaround − burst, **response** = first run − arrival.
+- **FCFS** is simple but forms convoys behind long jobs. **SJF/SRTF** minimise average waiting but need predicted burst
+  lengths. **Round robin** keeps response times short at the cost of context switches; with a huge quantum it becomes
+  FCFS. **Priority** can starve low priorities unless waiting jobs age upwards.
+- Heaps meet schedulers here: SRTF and priority scheduling keep the ready queue in a **priority queue** keyed by remaining
+  time or priority, so picking the next process costs $O(\log n)$ instead of a scan.
+
+</Section>

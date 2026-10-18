@@ -679,18 +679,61 @@ const mathEntries = [
   }
 ];
 
+// Systems simulators (scheduling, caching, distributed systems) have no single
+// running time either; their models live in src/systems/.
+const systemsEntries = [
+  {
+    name: 'CPU Scheduling',
+    description: 'Watch FCFS, SJF, SRTF, round robin and priority share one CPU on a Gantt chart: who waits, for how long, and what each switch costs.',
+    slug: 'cpu-scheduling',
+    category: 'Operating Systems'
+  },
+  {
+    name: 'LRU and LFU Caches',
+    description: 'Get and put keys in a fixed-size cache and watch the hash map and the recency (or use-count) list stay in step, evicting in O(1) when it is full.',
+    slug: 'lru-cache',
+    category: 'Caching'
+  },
+  {
+    name: 'Page Replacement',
+    description: 'Run a string of page references through a few frames of memory under FIFO, LRU, Clock and the optimal OPT, and count the faults, including Bélády’s anomaly.',
+    slug: 'page-replacement',
+    category: 'Operating Systems'
+  },
+  {
+    name: 'Consistent Hashing',
+    description: 'Spread keys over servers on a hash ring: each key belongs to the first server clockwise, so adding or removing a server moves only about 1/N of the keys, and virtual nodes even out the load.',
+    slug: 'consistent-hashing',
+    category: 'Distributed Systems'
+  },
+  {
+    name: 'Queueing and Tail Latency',
+    description: 'Watch random requests queue in front of servers, see why latency explodes as load nears 100%, and why p99 matters more than the average.',
+    slug: 'queueing',
+    category: 'Performance'
+  },
+  {
+    name: 'Token Bucket Rate Limiter',
+    description: 'A bucket of tokens that refills at a steady rate: bursts up to its capacity get through, but the long-run rate is capped.',
+    slug: 'token-bucket',
+    category: 'Performance'
+  }
+];
+
 const withMeta = (entries, type) =>
   entries.map(entry => ({ ...entry, type, path: `/visualisers/${entry.slug}` }));
 
 export const visualisers = [
   ...withMeta(dataStructureEntries, 'data-structure'),
   ...withMeta(algorithmEntries, 'algorithm'),
-  ...withMeta(mathEntries, 'math')
+  ...withMeta(mathEntries, 'math'),
+  ...withMeta(systemsEntries, 'systems')
 ];
 
 export const dataStructures = visualisers.filter(v => v.type === 'data-structure' && !v.hidden);
 export const algorithms = visualisers.filter(v => v.type === 'algorithm' && !v.hidden);
 export const mathTopics = visualisers.filter(v => v.type === 'math' && !v.hidden);
+export const systemsTopics = visualisers.filter(v => v.type === 'systems' && !v.hidden);
 
 export function getVisualiserByPath(pathname) {
   const path = (pathname || '').replace(/\/+$/, '');

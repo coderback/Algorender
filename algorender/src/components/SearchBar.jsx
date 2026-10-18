@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function SearchBar({ dataStructures, algorithms, mathTopics }) {
+export default function SearchBar({ dataStructures, algorithms, mathTopics, systemsTopics }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const router = useRouter();
@@ -11,7 +11,8 @@ export default function SearchBar({ dataStructures, algorithms, mathTopics }) {
   const allItems = [
     ...(dataStructures || []).map(item => ({ ...item, type: 'Data Structure' })),
     ...(algorithms || []).map(item => ({ ...item, type: 'Algorithm' })),
-    ...(mathTopics || []).map(item => ({ ...item, type: 'Math & ML' }))
+    ...(mathTopics || []).map(item => ({ ...item, type: 'Math & ML' })),
+    ...(systemsTopics || []).map(item => ({ ...item, type: 'Systems' }))
   ];
 
   const filteredItems = allItems.filter(item =>

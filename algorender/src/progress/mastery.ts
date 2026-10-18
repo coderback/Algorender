@@ -238,10 +238,11 @@ export const AREAS = [
   { id: 'dsa', label: 'Data structures and algorithms' },
   { id: 'math', label: 'Math for CS and ML' },
   { id: 'ml', label: 'Machine learning' },
+  { id: 'systems', label: 'Systems' },
 ] as const;
 export type AreaId = (typeof AREAS)[number]['id'];
 
-export const areaOf = (track: string): AreaId => (track === 'math' ? 'math' : track === 'ml' ? 'ml' : 'dsa');
+export const areaOf = (track: string): AreaId => (track === 'math' ? 'math' : track === 'ml' ? 'ml' : track === 'systems' ? 'systems' : 'dsa');
 
 export type NextStep = { concept: MasteryConcept; reason: 'continue' | 'ready' };
 
