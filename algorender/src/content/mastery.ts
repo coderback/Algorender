@@ -1,7 +1,9 @@
 import { loadProblems } from '@/problems/load';
 import { PATTERNS } from '@/problems/patterns';
+import { getVisualiserBySlug } from '@/data/visualisers';
 import type { MasteryGraph } from '@/progress/mastery';
 import type { PlacementQuestion } from '@/progress/placement';
+import { effort } from '@/progress/plan';
 import { depths, loadConcepts } from './concepts';
 import { exercises } from './exercises';
 import { lessons } from './lessons';
@@ -36,6 +38,44 @@ export function masteryGraph(): MasteryGraph {
     ),
   };
   return cache;
+}
+
+/** What a concept offers a study plan: where to learn it, what to practise, and roughly how long it takes. */
+export type ConceptCatalogEntry = {
+  minutes: number;
+  lesson?: { slug: string; title: string; minutes: number };
+  visualisers: { slug: string; name: string }[];
+  problems: { slug: string; title: string; difficulty: 'easy' | 'medium' | 'hard' }[];
+  exercises: { slug: string; title: string }[];
+  /** Other pages that teach it (the concept's `links` in concepts.yaml). */
+  links: { href: string; label: string }[];
+};
+
+const DIFFICULTY = { easy: 0, medium: 1, hard: 2 } as const;
+
+/** Every concept's catalog entry, by id. */
+export function planCatalog(): Record<string, ConceptCatalogEntry> {
+  const graph = masteryGraph();
+  const problems = loadProblems();
+  const linksOf = new Map(loadConcepts().concepts.map((c) => [c.id, c.links]));
+  const out: Record<string, ConceptCatalogEntry> = {};
+  for (const c of graph.concepts) {
+    const lesson = c.lesson ? lessons.find((l) => l.slug === c.lesson) : undefined;
+    const mine = problems
+      .filter((p) => graph.problems[p.slug]?.includes(c.id))
+      .sort((a, b) => DIFFICULTY[a.difficulty] - DIFFICULTY[b.difficulty] || a.title.localeCompare(b.title))
+      .map((p) => ({ slug: p.slug, title: p.title, difficulty: p.difficulty }));
+    const ex = exercises.filter((e) => graph.exercises[e.slug]?.includes(c.id)).map((e) => ({ slug: e.slug, title: e.title }));
+    out[c.id] = {
+      minutes: effort({ lessonMinutes: lesson?.minutes, visualisers: c.visualisers.length, problems: mine.length, exercises: ex.length }),
+      ...(lesson && { lesson: { slug: lesson.slug, title: lesson.title, minutes: lesson.minutes } }),
+      visualisers: c.visualisers.map((slug) => ({ slug, name: getVisualiserBySlug(slug)?.name ?? slug })),
+      problems: mine,
+      exercises: ex,
+      links: linksOf.get(c.id) ?? [],
+    };
+  }
+  return out;
 }
 
 /** Every question the placement check can ask, by concept: the quiz questions of the concept's lesson. */

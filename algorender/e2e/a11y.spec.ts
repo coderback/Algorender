@@ -12,6 +12,7 @@ const pages = [
   '/?tab=algorithms',
   '/learn',
   '/learn/placement',
+  '/plan',
   ...lessons.map((l) => `/learn/${l.slug}`),
   '/compare',
   '/code',

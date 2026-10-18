@@ -42,6 +42,22 @@ export const EVENT_DATA = {
    * (src/progress/mastery.ts) and, unlike `quiz.answered`, makes no review card.
    */
   'placement.answered': z.object({ concept: slug, lesson: slug, quiz: slug, question: z.number().int().min(0).max(99), correct: z.boolean() }),
+  /**
+   * The learner says they know a concept (or takes that back). Counts like a
+   * right placement answer: some concepts (Big-O, B-trees) have no questions
+   * or problems, and a study plan must be able to move past them.
+   */
+  'concept.marked': z.object({ concept: slug, known: z.boolean() }),
+  /**
+   * A study plan set (src/progress/plan.ts): a goal from src/content/goals.ts,
+   * hours a week and an optional target date. The latest wins; a null goal
+   * clears the plan.
+   */
+  'plan.set': z.object({
+    goal: slug.nullable(),
+    hours: z.number().int().min(1).max(40),
+    target: z.iso.date().optional(),
+  }),
 } as const;
 
 export type EventKind = keyof typeof EVENT_DATA;

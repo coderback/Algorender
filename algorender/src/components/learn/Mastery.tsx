@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { createContext, useContext, type ReactNode } from 'react';
-import { FiArrowRight, FiAward, FiCompass, FiTrendingUp } from 'react-icons/fi';
+import { FiArrowRight, FiAward, FiCalendar, FiCompass, FiTrendingUp } from 'react-icons/fi';
 import { useMastery, useProgressSnapshot } from '@/progress/hooks';
 import { isReady, nextSteps, type ConceptMastery, type MasteryConcept, type MasteryGraph } from '@/progress/mastery';
+import { currentPlan } from '@/progress/plan';
 
 // Mastery on the concept map: a status on every concept card and the next
 // steps at the top, from the learner's own events. Everything waits for the
@@ -33,12 +34,23 @@ function chipFor(m: ConceptMastery | undefined, ready: boolean): Chip | null {
     case 'learning':
       return { label: 'Learning', className: 'bg-warn-soft text-warn-ink', title: 'Started, not yet solid.' };
     case 'placed':
-      return { label: 'Placed out', className: 'bg-sunken text-ink-soft', title: 'You showed this in the placement check.' };
+      return { label: 'Placed out', className: 'bg-sunken text-ink-soft', title: 'You showed this in the placement check, or marked it as known.' };
     case 'assumed':
       return { label: 'Assumed known', className: 'bg-sunken text-ink-soft', title: 'You know something built on it, so it is taken as known.' };
     default:
       return ready ? { label: 'Ready to start', className: 'border border-accent-line text-accent-ink', title: 'Everything it builds on is known.' } : null;
   }
+}
+
+/** A mastery status as a small labelled chip (nothing for a new concept that isn't ready). */
+export function StatusChip({ mastery, ready }: { mastery: ConceptMastery | undefined; ready: boolean }) {
+  const chip = chipFor(mastery, ready);
+  if (!chip) return null;
+  return (
+    <span title={chip.title} data-status={mastery?.status} className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${chip.className}`}>
+      {chip.label}
+    </span>
+  );
 }
 
 /** A concept's mastery status, for its card on the concept map. */
@@ -47,13 +59,7 @@ export function ConceptStatus({ id }: { id: string }) {
   const { ready } = useProgressSnapshot();
   const m = useMastery(graph);
   if (!ready) return null;
-  const chip = chipFor(m.get(id), isReady(id, m, graph));
-  if (!chip) return null;
-  return (
-    <span title={chip.title} data-status={m.get(id)?.status} className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${chip.className}`}>
-      {chip.label}
-    </span>
-  );
+  return <StatusChip mastery={m.get(id)} ready={isReady(id, m, graph)} />;
 }
 
 /** Where a concept is learned: its lesson, else its first visualiser, else its card. */
@@ -124,6 +130,9 @@ export function NextSteps() {
           }
         >
           <FiTrendingUp aria-hidden /> {fresh ? 'Take the placement check' : 'Retake the placement check'}
+        </Link>
+        <Link href="/plan" className="inline-flex items-center gap-1.5 text-accent-ink underline-offset-2 hover:underline">
+          <FiCalendar aria-hidden /> {currentPlan(events) ? 'Open your study plan' : 'Make a study plan'}
         </Link>
         {!fresh && <span className="text-ink-muted">Mastery needs right answers from different questions, again on a later day.</span>}
       </div>
