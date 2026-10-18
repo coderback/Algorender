@@ -731,10 +731,11 @@ function TokensView({ part }: { part: TokensPart }) {
               key={t.id}
               layout="position"
               initial={false}
-              className={`inline-flex min-w-6 flex-col items-center rounded-md border px-1.5 py-0.5 leading-tight transition-colors ${
+              // Colours switch instantly: fading text and background together passes through unreadable blends.
+              className={`inline-flex min-w-6 flex-col items-center rounded-md border px-1.5 py-0.5 leading-tight ${
                 mark ? `${mark.bg} border-transparent ${t.mark === 'compare' ? 'text-white' : 'text-on-mark'}` : 'border-line bg-surface text-ink'
               }`}
-              style={{ boxShadow: t.tone && !mark ? `inset 0 -3px 0 ${TONES[t.tone]}` : undefined, transitionDuration: 'var(--tween, 300ms)' }}
+              style={{ boxShadow: t.tone && !mark ? `inset 0 -3px 0 ${TONES[t.tone]}` : undefined }}
             >
               <span className="font-mono text-sm whitespace-pre">{t.text.replace(/ /g, '·').replace(/\n/g, '↵')}</span>
               {t.sub !== undefined && <span className={`font-mono text-[10px] ${mark ? '' : 'text-ink-muted'}`}>{t.sub}</span>}
