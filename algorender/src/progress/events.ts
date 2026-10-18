@@ -36,6 +36,12 @@ export const EVENT_DATA = {
   }),
   /** A review card rated: 1 again, 2 hard, 3 good, 4 easy (FSRS's ratings). */
   'review.rated': z.object({ card: z.string().regex(CARD_ID), rating: z.number().int().min(1).max(4) }),
+  /**
+   * A placement-check question answered: a lesson quiz question asked to see
+   * whether the learner already knows `concept`. It sets where mastery starts
+   * (src/progress/mastery.ts) and, unlike `quiz.answered`, makes no review card.
+   */
+  'placement.answered': z.object({ concept: slug, lesson: slug, quiz: slug, question: z.number().int().min(0).max(99), correct: z.boolean() }),
 } as const;
 
 export type EventKind = keyof typeof EVENT_DATA;

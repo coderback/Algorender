@@ -942,6 +942,21 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 - **Tutor:** grounded, with a hint ladder, trace tools, a leak check and budgets.
 - **Assessment:** explain-it-back; misconception-targeted quizzes.
 
+**Decisions (2026-10-18):**
+- **Mastery is a projection of the event log, not a table.** BKT runs over the same events on every device, like FSRS review, so it works offline and merges by union. The `mastery` table in §6.7 isn't needed.
+- **Placement uses the lesson quiz questions** and the prerequisite graph, so it grows with the lessons. It records its own event kind, so a placement miss never becomes a review card.
+
+**Split into four steps, each on its own stacked branch:**
+- **5a: mastery and the knowledge map** (`revamp/phase-5a`).
+  - **Status (2026-10-18): 5a is done.**
+    - **Mastery:** BKT per concept from quiz answers, prediction challenges, exercises, problem submissions and reviews. "Mastered" needs delayed, varied retrieval; anything less is "practised" or "learning". Known concepts make their untouched prerequisites "assumed".
+    - **Knowledge map:** every concept card on `/learn` shows its status or "Ready to start". A next-steps panel lists started concepts, then the fringe across the three areas, with mastery counts.
+    - **Placement check:** `/learn/placement`, up to 12 adaptive questions that split the unsettled part of the graph. "Not sure" beats guessing, a beginner is let off after three misses in an area, and the results list what was placed out and where to start, including the math an ML goal needs.
+    - **Checks:** unit tests for tracing, every event's evidence, statuses and the fringe. A property test runs 200 simulated learners whose knowledge respects the graph and checks the check never settles a concept wrongly. E2e covers the placement flow and a lesson answer showing up on the map, with axe on each state.
+- **5b: study plans:** a goal plus weekly hours produce a schedule over the graph that re-plans from performance.
+- **5c: the AI tutor:** grounded in the reference solution and the live trace, with a hint ladder enforced in the UI, trace tools, a leak check, budgets and a kill switch.
+- **5d: assessment:** explain-it-back with rubric scoring, and misconception-targeted quizzes.
+
 ### Phase 6 — Play, systems, community
 
 **Work:**
