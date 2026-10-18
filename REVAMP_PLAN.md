@@ -953,7 +953,18 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Knowledge map:** every concept card on `/learn` shows its status or "Ready to start". A next-steps panel lists started concepts, then the fringe across the three areas, with mastery counts.
     - **Placement check:** `/learn/placement`, up to 12 adaptive questions that split the unsettled part of the graph. "Not sure" beats guessing, a beginner is let off after three misses in an area, and the results list what was placed out and where to start, including the math an ML goal needs.
     - **Checks:** unit tests for tracing, every event's evidence, statuses and the fringe. A property test runs 200 simulated learners whose knowledge respects the graph and checks the check never settles a concept wrongly. E2e covers the placement flow and a lesson answer showing up on the map, with axe on each state.
-- **5b: study plans:** a goal plus weekly hours produce a schedule over the graph that re-plans from performance.
+- **5b: study plans** (`revamp/phase-5b`): a goal plus weekly hours produce a schedule over the graph that re-plans from performance.
+  - **Status (2026-10-18): 5b is done.**
+    - **Plans are a projection, too.** A `plan.set` event holds the goal, hours a week and an optional target date, and the schedule is recomputed from the events, so it re-plans itself. The `course_plans` tables in §6.7 aren't needed.
+    - **Goals:** coding interviews, DS&A foundations, ML foundations, and deep learning with LLMs. Each lists its target concepts in teaching order, and prerequisites arrive just before they're needed.
+    - **Schedule:** concepts are packed into weeks at the chosen hours, with 15% kept for reviews. Each concept's time estimate counts its lesson, visualisers, two problems, an exercise and a later review. For a fresh learner, interviews comes to 38 h and ML foundations to 9 h.
+    - **On track:** the plan says whether you're on track against the schedule as set, and how many hours a week a target date needs, or that no pace can meet it.
+    - **`/plan`:** shows the goal with progress and a projected finish, an "up next" card (lesson or visualisers, the easiest unsolved problems, an exercise, and reviews due), and the weeks ahead.
+    - **Mark as known:** a "concept.marked" event lets the learner move past concepts with nothing to answer (Big-O, B-trees). It counts like a right placement answer.
+    - **Navigation:** the header gains "Plan", and the concept map links to the plan.
+    - **Checks:**
+      - Unit and property tests: prerequisite order for every goal; packing within the hours, in order and unsplit; dropping known concepts; re-planning from the current week; the behind count against the original schedule; and the hours a target date needs.
+      - E2e: make a plan, mark a concept known, see the next one, then stop the plan, with axe on each state.
 - **5c: the AI tutor:** grounded in the reference solution and the live trace, with a hint ladder enforced in the UI, trace tools, a leak check, budgets and a kill switch.
 - **5d: assessment:** explain-it-back with rubric scoring, and misconception-targeted quizzes.
 

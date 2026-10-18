@@ -49,7 +49,7 @@ export type Observation = { concept: string; item: string; correct: boolean; at:
  * - `learning`: some evidence, not yet likely known.
  * - `practised`: likely known, but not yet retrieved on a later day from varied items.
  * - `mastered`: likely known, from varied items, retrieved again after a delay.
- * - `placed`: shown in the placement check, with no practice since.
+ * - `placed`: shown in the placement check (or marked as known), with no practice since.
  * - `assumed`: no evidence of its own, but something built on it is known.
  */
 export type MasteryStatus = 'new' | 'learning' | 'practised' | 'mastered' | 'placed' | 'assumed';
@@ -159,10 +159,17 @@ export function settled(graph: MasteryGraph, answers: readonly PlacementAnswer[]
   return { known, unknown };
 }
 
-/** Where tracing starts for each concept, from the placement answers, and which concepts were asked directly. */
+/**
+ * Where tracing starts for each concept, from the placement answers and the
+ * concepts the learner marked as known (a self-check counts like a right
+ * answer; unmarking counts like a miss), and which concepts were settled directly.
+ */
 export function placementPriors(events: readonly ProgressEvent[], graph: MasteryGraph): { prior: Map<string, number>; tested: Map<string, boolean> } {
   const answers: PlacementAnswer[] = [];
-  for (const e of events) if (e.kind === 'placement.answered') answers.push({ concept: e.data.concept, correct: e.data.correct });
+  for (const e of events) {
+    if (e.kind === 'placement.answered') answers.push({ concept: e.data.concept, correct: e.data.correct });
+    else if (e.kind === 'concept.marked') answers.push({ concept: e.data.concept, correct: e.data.known });
+  }
   const tested = new Map(answers.map((a) => [a.concept, a.correct]));
   const { known, unknown } = settled(graph, answers);
   const prior = new Map<string, number>();
