@@ -41,7 +41,6 @@ tracks:
   - id: systems
     title: Systems
     summary: How operating systems, databases and distributed systems really work.
-    planned: true
 
 concepts:
   # ── Foundations ──────────────────────────────────────────────
@@ -448,21 +447,37 @@ concepts:
   - id: cpu-scheduling
     title: CPU scheduling
     track: systems
-    summary: First come first served, shortest job first, round robin, on a Gantt chart.
+    summary: First come first served, shortest job first, round robin and priorities, on a Gantt chart.
     prereqs: [stacks-queues, heaps]
-    planned: true
+    visualisers: [cpu-scheduling]
+    lesson: cpu-scheduling
   - id: caching
     title: Caching and LRU
     track: systems
-    summary: Keeping hot data close with a hash map and a linked list.
+    summary: Keeping hot data close with a hash map and a linked list, and choosing what to evict.
     prereqs: [hash-tables, linked-lists]
-    planned: true
+    visualisers: [lru-cache, page-replacement]
+    lesson: caching
   - id: consistent-hashing
     title: Consistent hashing
     track: systems
     summary: Spreading keys over servers so adding one moves few keys.
     prereqs: [hash-tables]
-    planned: true
+    visualisers: [consistent-hashing]
+    lesson: consistent-hashing
+  - id: queueing
+    title: Queueing and tail latency
+    track: systems
+    summary: Why latency explodes as load nears 100%, Little's law, and p99 versus the average.
+    prereqs: [probability, stacks-queues]
+    visualisers: [queueing]
+    lesson: queueing
+  - id: rate-limiting
+    title: Rate limiting
+    track: systems
+    summary: A token bucket lets bursts through but caps the long-run rate.
+    prereqs: [queueing]
+    visualisers: [token-bucket]
   - id: consensus
     title: Consensus with Raft
     track: systems

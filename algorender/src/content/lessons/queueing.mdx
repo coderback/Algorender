@@ -1,0 +1,233 @@
+<Section step="hook" title="Why a server at 90% feels slow">
+
+A server takes 100 ms to handle a request and is busy 90% of the time. It still has 10% to spare, so requests should take
+about 100 ms, maybe a little more. In fact they take about **a second** on average, and the unluckiest 1 in 100 more than
+four and a half seconds.
+
+The reason is that requests don't arrive politely one after another. They arrive at random, so sometimes several land at
+once and have to wait in line, and a busy server has little slack to work the line down. This lesson shows how a line
+forms, why it explodes as the load nears 100%, why the slowest requests matter more than the average, and how a rate
+limiter keeps a service out of that danger zone. It is the first tool of capacity planning, and of system design.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="arrival rate λ">How many requests arrive per second, on average. They come at random moments (a Poisson process), so they bunch up.</Term>
+  <Term name="service rate μ">How many requests one server finishes per second, on average. Its mean service time is 1/μ: μ = 10 means 100 ms.</Term>
+  <Term name="load ρ">The share of the servers' capacity the arrivals use: ρ = λ / (c·μ) for c servers. At 1 or more the line grows forever.</Term>
+  <Term name="latency">Waiting in line plus being served. It is what a user feels.</Term>
+  <Term name="p50 and p99">Percentiles of latency: half the requests are faster than p50, and 1 in 100 is slower than p99, the "tail".</Term>
+  <Term name="token bucket">A rate limiter: a bucket of tokens that refills at a steady rate. Each request spends one, and an empty bucket turns requests away.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch a line form">
+
+One server, 100 ms per request on average, 8 requests a second: a load of 80%. Step through and watch the line in the top
+row. Each bar below is one request: the lower part is time spent waiting, the upper part time being served.
+
+<Explore slug="queueing" settings={{ preset: 'busy', n: '16', seed: '4' }} caption="One server at 80% load. The line comes and goes in bursts, and the requests that arrive during a burst wait far longer than they are served." />
+
+<KeyIdea>
+
+**Waiting grows like $1/(1-\rho)$.** For one server with random traffic the mean latency is $\frac{1}{\mu - \lambda}$, which is
+the service time divided by the spare capacity $1-\rho$. At 50% load that is 2 times the service time, at 80% it is 5
+times, at 90% 10 times and at 95% 20 times. Halving the spare capacity doubles the latency, so it explodes near 100%.
+
+</KeyIdea>
+
+A handy check on any of these numbers is **Little's law**: the average number of requests in the system equals the
+arrival rate times the average latency, $L = \lambda W$. At 8 requests a second and 500 ms each, 4 requests are inside on
+average. It holds for any queue, random or not.
+
+</Section>
+
+<Section step="predict" title="Your turn: will it wait?">
+
+The player stops before some arrivals and asks whether the request will have to wait, then asks what more traffic would
+do to the slowest requests. Look at the top row: is every server busy?
+
+<PredictChallenge slug="queueing" settings={{ preset: 'busy', n: '16', seed: '7' }} goal={4} />
+
+</Section>
+
+<Section step="do" title="Try it: load, tails and more servers">
+
+Try the light load and the nearly full one, and compare p99 with the mean in the summary. Then try two servers sharing
+one line at the same 80% load: with a shared line, a server never sits idle while someone waits, so the mean drops from
+500 ms (two separate lines) to about 280 ms, and p99 roughly halves.
+
+<Explore slug="queueing" settings={{ preset: 'pair', n: '20', seed: '2' }} input caption="Two servers sharing one line at 80%. Change λ, μ or c in the input box to explore." />
+
+<Misconception
+  id="spare-capacity"
+  title="A server at 90% load still has 10% to spare, so latency is fine"
+  probes={[
+    {
+      q: 'A server takes 100 ms per request on average and is 90% busy with random traffic. About how long does a request take on average, waiting included?',
+      choices: ['110 ms', '190 ms', '1 s', '10 s'],
+      answer: 2,
+      trap: 0,
+      why: 'Mean latency is the service time divided by the spare capacity: 100 ms / (1 − 0.9) = 1 s. Requests spend nine times as long waiting as being served.',
+    },
+    {
+      q: 'Traffic grows until a server goes from 50% to 90% busy. Its average latency grows about how much?',
+      choices: ['It stays the same until 100%', '1.8 times, like the traffic', '5 times', '100 times'],
+      answer: 2,
+      trap: 1,
+      why: 'Latency is service time / (1 − ρ): 1/0.5 = 2 service times at 50%, 1/0.1 = 10 at 90%. That is 5 times, though traffic grew only 1.8 times.',
+    },
+  ]}
+>
+
+Utilisation and latency are not proportional. Random arrivals bunch up, and a busy server has little slack to work a line
+down, so the wait grows like $1/(1-\rho)$: at 90% load a request waits about nine times its service time. Plan capacity so
+the load stays well below 100%, often 60–70% for anything latency matters for.
+
+</Misconception>
+
+<Misconception
+  id="average-is-enough"
+  title="The average latency tells you what users feel"
+  probes={[
+    {
+      q: 'One server at 80% load serves requests in 100 ms on average, and its mean latency is 500 ms. Roughly what is its p99?',
+      choices: ['500 ms', '600 ms', 'about 2.3 s', 'about 50 s'],
+      answer: 2,
+      trap: 0,
+      why: 'For one server with random traffic, latency follows an exponential distribution, so p99 = ln(100) ≈ 4.6 times the mean: about 2.3 s.',
+    },
+    {
+      q: 'A page makes 50 backend calls in parallel and waits for all of them. Each call is slower than its p99 one time in 100. How often is the page slow?',
+      choices: ['About 1% of the time', 'About 40% of the time', 'Half of the time', 'Never, if the average call is fast'],
+      answer: 1,
+      trap: 0,
+      why: 'The page is fast only if all 50 calls are: 0.99⁵⁰ ≈ 0.6. So about 40% of page loads hit at least one slow call. Fan-out turns rare tails into common ones.',
+    },
+  ]}
+>
+
+A queue's latency has a long tail: most requests are quick, a few wait a long time. The average hides them, yet they are
+real users, and a page that waits for many calls is only as fast as its slowest one. That is why latency targets are set on
+p99 (or p99.9), not on the mean.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Protect it with a rate limit">
+
+A service can only stay out of the danger zone if traffic can't push it there. A **token bucket** in front of it holds up
+to a fixed number of tokens and refills at a steady rate. Each request spends a token; a request that finds the bucket
+empty is turned away straight away instead of joining a line that would take seconds. The capacity decides how big a burst
+gets through at once, and the refill rate caps the long run: in any $t$ seconds, at most capacity $+$ rate $\times t$ requests.
+
+<Explore slug="token-bucket" settings={{ preset: 'bursty', n: '4', seed: '1' }} input caption="A bucket of 4 tokens refilling at 2 a second, hit by bursts of 7. Each burst's first four get through." />
+
+<Misconception
+  id="average-rate-enough"
+  title="Limiting traffic to the average rate stops bursts and queues"
+  probes={[
+    {
+      q: 'A token bucket with capacity 10 that refills 2 tokens a second protects a service that handles 2 requests a second. After a quiet minute, 10 requests arrive at once. What happens?',
+      choices: ['All 10 pass at once and queue at the service', 'Only 2 pass and 8 are rejected', 'They pass one every half second', 'All 10 are rejected'],
+      answer: 0,
+      trap: 2,
+      why: 'After a quiet minute the bucket is full, so all 10 requests get a token at once. A token bucket passes bursts up to its capacity; it doesn’t space them out.',
+    },
+    {
+      q: 'A full token bucket holds 4 tokens and refills 2 a second. At most how many requests can it let through in any 10 seconds?',
+      choices: ['4', '20', '24', 'As many as arrive'],
+      answer: 2,
+      trap: 1,
+      why: 'Its 4 tokens at once, plus 2 a second for 10 seconds: 4 + 20 = 24. The rate caps the long run; the capacity is a burst allowance on top.',
+    },
+  ]}
+>
+
+A token bucket caps the long-run rate but lets bursts of up to its capacity straight through, and random traffic below the
+limit still queues at the service behind it. Set the rate comfortably below what the service can sustain, and the capacity
+to the burst it can absorb without its line exploding.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'One server takes 100 ms per request on average and gets random traffic at 8 requests a second. What is its load ρ?',
+      choices: ['8%', '80%', '125%', '800%'],
+      answer: 1,
+      why: 'It can finish μ = 10 requests a second, and 8 arrive: ρ = λ / μ = 8 / 10 = 80%.',
+    },
+    {
+      q: 'Same server: what is its mean latency, waiting included?',
+      choices: ['100 ms', '180 ms', '500 ms', '800 ms'],
+      answer: 2,
+      why: 'For one server, mean latency is 1 / (μ − λ) = 1 / (10 − 8) = 0.5 s: five times the service time, because requests wait in line.',
+      traps: { 0: 'spare-capacity' },
+    },
+    {
+      q: 'A service handles 200 requests a second with a mean latency of 50 ms. On average, how many requests are inside it at once?',
+      choices: ['4', '10', '250', '4,000'],
+      answer: 1,
+      why: 'Little’s law: L = λ × W = 200 × 0.05 = 10 requests in the system on average.',
+    },
+    {
+      q: 'Your dashboard shows a mean latency of 120 ms, well under the 200 ms target. What should you check before celebrating?',
+      choices: ['Nothing: the mean is under the target', 'The p99: the slowest 1 in 100 may be far over 200 ms', 'The median, which is always higher than the mean', 'Whether the load is under 50%'],
+      answer: 1,
+      why: 'Queue latencies have long tails: p99 is often several times the mean. Targets are set on percentiles because the slow requests are real users.',
+      traps: { 0: 'average-is-enough' },
+    },
+    {
+      q: 'Two servers each 80% busy: one line each, or both sharing one line. Which gives lower latency?',
+      choices: ['One line each: nobody waits for the other server', 'One shared line: a free server never sits next to a waiting request', 'They are the same: the load is the same'],
+      answer: 1,
+      why: 'With separate lines one server can sit idle while the other has a queue. Sharing one line, the mean drops from 500 ms to about 280 ms in the visualiser.',
+    },
+    {
+      q: 'A full token bucket has capacity 5 and refills 1 token a second. 8 requests arrive at the same instant. How many get through?',
+      choices: ['1', '5', '6', '8'],
+      answer: 1,
+      why: 'Each request spends a token and there are 5. The other 3 find the bucket empty and are rejected; no time passes for a refill.',
+      traps: { 0: 'average-rate-enough' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-queues-explode"
+  prompt="Why does a server's latency shoot up as its load approaches 100%, and why do engineers watch p99 rather than the average?"
+  rubric={[
+    'Requests arrive at random and bunch up, so a line forms even though the server has spare capacity on average.',
+    'The wait grows like 1/(1 − ρ): halving the spare capacity about doubles it, so latency explodes near 100%.',
+    'The slowest requests, the p99 tail, take several times the mean, and those are real users (and fan-out makes them common).',
+    'So capacity is planned to keep the load well under 100%, with servers sharing one line or a rate limit in front.',
+  ]}
+  example="Requests don't arrive evenly: they come at random, so sometimes several arrive together and must wait in line, even when the server is idle much of the time. How fast that line drains depends on the spare capacity, 1 − ρ, so the wait grows like 1/(1 − ρ): at 90% load a request waits about nine times its service time, and every halving of the headroom doubles it. The average hides the worst of it, because latency has a long tail: p99 can be four or five times the mean, and a page that waits for many calls hits that tail often. So we keep load well below 100%, share one line between servers, and put a rate limiter in front to stop traffic pushing the service over the cliff."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Load is $\rho = \lambda / (c\mu)$. Random arrivals bunch up, so a line forms well before $\rho = 1$.
+- For one server, mean latency is $1/(\mu - \lambda)$: the service time divided by the spare capacity. It explodes near 100%.
+- Latency has a long tail. Set targets on p99, not the mean, especially when one page waits for many calls.
+- Little's law, $L = \lambda W$, links the number inside, the arrival rate and the latency, for any queue.
+- One shared line beats a line per server.
+- A token bucket caps the long-run rate at its refill rate and lets bursts of up to its capacity through: keep the rate well
+  under what the service can sustain.
+
+</Section>

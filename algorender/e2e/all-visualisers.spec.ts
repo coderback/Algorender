@@ -34,7 +34,7 @@ test('a data-structure operation animates, is recorded in the URL, and can be un
 
   await expect(page).toHaveURL(/ops=push%3A42|ops=push:42/);
   await page.keyboard.press('End');
-  await expect(page.getByRole('region', { name: 'Operations' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Operations' })).toBeVisible();
   await expect(page.getByText('Push 42', { exact: true })).toBeVisible(); // history chip
 
   await page.getByRole('button', { name: 'Undo' }).click();

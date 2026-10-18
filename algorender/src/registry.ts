@@ -17,11 +17,13 @@ import { reinforcementLearning } from '@/algorithms/rl';
 import { searching } from '@/algorithms/searching';
 import { sorting } from '@/algorithms/sorting';
 import { stringAlgorithms } from '@/algorithms/strings';
+import { systems } from '@/algorithms/systems';
 import type { AnyVisualiser } from '@/engine/module';
 import { graphStructures } from '@/structures/graphs';
 import { hashStructures } from '@/structures/hashing';
 import { linearStructures } from '@/structures/linear';
 import { setStructures } from '@/structures/sets';
+import { systemStructures } from '@/structures/systems';
 import { treeStructures } from '@/structures/trees';
 
 /**
@@ -51,6 +53,8 @@ for (const m of [
   ...deepLearning,
   ...languageModels,
   ...reinforcementLearning,
+  ...systems,
+  ...systemStructures,
   ...generative,
   ...linearStructures,
   ...treeStructures,

@@ -141,6 +141,7 @@ const BACK = {
   'data-structure': { tab: 'data-structures', label: 'All data structures' },
   algorithm: { tab: 'algorithms', label: 'All algorithms' },
   math: { tab: 'math', label: 'All math and ML' },
+  systems: { tab: 'systems', label: 'All systems' },
 } as const;
 
 function Chip({ label, value }: { label: string; value: string }) {
