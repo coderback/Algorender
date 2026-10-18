@@ -4,6 +4,7 @@ import { LayoutGroup, motion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { MARKS, NEUTRAL } from '@/viz/marks';
 import { RANGE_TONES } from './marks';
+import { useArraySelect, type ArraySelect } from './select';
 import type { ArrayState, Counter, ItemId, Lane, Mark } from './types';
 
 /** Widest a slot gets, so short arrays don't turn into slabs. */
@@ -17,6 +18,7 @@ type Scale = { maxValue: number; digits: number; labelSize: string | null; barHe
  * layoutId, so a swap physically moves both bars and a move between lanes
  * (into a merge buffer, up to a "key" slot) flies the bar across. `compact`
  * (side-by-side races) drops value labels and counters and shortens the bars.
+ * Inside an ArraySelectContext (a game), each bar is a button the learner can pick.
  */
 export function ArrayView({ state, compact = false }: { state: ArrayState; compact?: boolean }) {
   const groupId = useId();
@@ -63,6 +65,7 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
     if (p.lane === lane.id) pointerLabels.set(p.index, [...(pointerLabels.get(p.index) ?? []), p.label]);
   }
   const description = lane.slots.map((id) => (id == null ? 'empty' : state.values[id])).join(', ');
+  const select = useArraySelect();
 
   return (
     <div role="group" aria-label={lane.label}>
@@ -71,7 +74,7 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
         {lane.label}: {description}
       </p>
 
-      <div className="relative" aria-hidden>
+      <div className="relative" aria-hidden={select ? undefined : true}>
         <div className="pointer-events-none absolute inset-0 grid gap-1" style={grid}>
           {ranges.map((r, k) => (
             <div
@@ -86,7 +89,16 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
             id == null ? (
               <Hole key={`hole-${index}`} />
             ) : (
-              <Item key={id} id={id} value={state.values[id]} mark={state.marks[id]} scale={scale} digitPlace={state.digitPlace} />
+              <Item
+                key={id}
+                id={id}
+                index={index}
+                value={state.values[id]}
+                mark={state.marks[id]}
+                scale={scale}
+                digitPlace={state.digitPlace}
+                select={select}
+              />
             ),
           )}
         </div>
@@ -125,19 +137,55 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
 
 function Item({
   id,
+  index,
   value,
   mark,
   scale,
   digitPlace,
+  select,
 }: {
   id: ItemId;
+  index: number;
   value: number;
   mark: Mark | undefined;
   scale: Scale;
   digitPlace: number | null;
+  select: ArraySelect | null;
 }) {
   const meta = mark ? MARKS[mark] : null;
   const height = Math.max(4, (value / scale.maxValue) * 100);
+  if (select) {
+    const picked = select.selected.has(id);
+    const hinted = select.hint.has(id);
+    const outline = picked
+      ? 'outline-3 outline-solid outline-accent-strong'
+      : hinted
+        ? 'outline-2 outline-dashed outline-warn-ink'
+        : 'outline-none hover:bg-accent-soft';
+    return (
+      <motion.button
+        layout
+        layoutId={id}
+        type="button"
+        aria-pressed={picked}
+        aria-label={`${value}, position ${index + 1}${hinted ? ', the algorithm’s pick' : ''}`}
+        disabled={select.disabled}
+        onClick={() => select.toggle(id)}
+        className={`flex h-full min-w-0 flex-col items-center rounded-md outline-offset-2 focus-visible:ring-2 focus-visible:ring-accent-strong disabled:cursor-default ${outline}`}
+      >
+        <span className={`h-4 shrink-0 text-[11px] leading-4 font-bold ${picked ? 'text-accent-ink' : (meta?.text ?? '')}`}>
+          {picked ? '✓' : (meta?.glyph ?? '')}
+        </span>
+        <span className="relative block w-full min-h-0 flex-1">
+          <span
+            className={`absolute inset-x-0 bottom-0 block rounded-t-md ring-1 ring-black/10 ring-inset transition-colors ${meta ? meta.bg : NEUTRAL.bg}`}
+            style={{ height: `${height}%`, transitionDuration: 'var(--tween, 300ms)' }}
+          />
+        </span>
+        {scale.labelSize && <ValueLabel value={value} size={scale.labelSize} digits={scale.digits} digitPlace={digitPlace} />}
+      </motion.button>
+    );
+  }
   return (
     <motion.div layout layoutId={id} className="flex h-full min-w-0 flex-col items-center" title={String(value)}>
       <span className={`h-4 shrink-0 text-[11px] leading-4 font-bold ${meta?.text ?? ''}`}>

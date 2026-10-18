@@ -64,6 +64,21 @@ export const EVENT_DATA = {
    */
   'explanation.scored': z.object({ lesson: slug, prompt: slug, covered: count, partly: count, total: count, by: z.enum(['self', 'model']) }),
   /**
+   * A round of a Play game finished (src/play/). `item` is what was played
+   * (a visualiser slug, a challenge id), and `score`/`max`/`won` mean, per game:
+   * - be-the-algorithm: moves made right first time, of all moves; won when all were.
+   * - comparison-budget: comparisons used, against the lower bound ⌈log₂ n!⌉; won
+   *   when the order is right within merge sort's worst case.
+   * - break-it: what the input achieved, against the target; won when it reached it.
+   */
+  'game.played': z.object({
+    game: z.enum(['be-the-algorithm', 'comparison-budget', 'break-it']),
+    item: slug,
+    score: count,
+    max: count,
+    won: z.boolean(),
+  }),
+  /**
    * A study plan set (src/progress/plan.ts): a goal from src/content/goals.ts,
    * hours a week and an optional target date. The latest wins; a null goal
    * clears the plan.
