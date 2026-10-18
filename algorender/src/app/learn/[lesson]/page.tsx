@@ -6,6 +6,7 @@ import { LessonComplete } from '@/components/lesson/Completion';
 import { LessonProvider } from '@/components/lesson/LessonContext';
 import { getConcept, loadConcepts, unlockedBy } from '@/content/concepts';
 import { getLesson, lessons } from '@/content/lessons';
+import { lessonMisconceptions } from '@/content/lessons/assessment';
 
 export const dynamicParams = false;
 
@@ -64,7 +65,7 @@ export default async function LessonPage({ params }: Props) {
         </div>
       </header>
 
-      <LessonProvider slug={slug}>
+      <LessonProvider slug={slug} mistakes={Object.fromEntries(lessonMisconceptions().filter((m) => m.lesson === slug).map((m) => [m.id, m.title]))}>
         <article className="space-y-10">
           <Body />
         </article>

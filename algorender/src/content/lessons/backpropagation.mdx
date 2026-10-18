@@ -61,11 +61,57 @@ Finally, the loop that makes it automatic: sort the graph so every value comes a
 
 <CodeExercise exercise="topological-backward" />
 
-<Misconception title="A value's gradient is set once">
+<Misconception
+  id="gradient-set-once"
+  title="A value's gradient is set once"
+  probes={[
+    {
+      q: 'c = a + a with a = 3, and the gradient arriving at c is 1. What is the gradient of a?',
+      choices: ['1', '2', '3', '6'],
+      answer: 1,
+      trap: 0,
+      why: 'a is used twice, and each use sends back 1 × 1. The two add up to 2, just as d(2a)/da = 2.',
+    },
+    {
+      q: 'b = a × a with a = 4, and ∂L/∂b = 1. What is ∂L/∂a?',
+      choices: ['16', '4', '8', '1'],
+      answer: 2,
+      trap: 1,
+      why: 'Each use of a sends back the other factor, 4. Both uses add up to 8, which matches d(a²)/da = 2a = 8.',
+    },
+  ]}
+>
 
 When a value is used in two places, its gradient is the **sum** of what both uses send back. Code that writes
 `grad = …` instead of `grad += …` silently drops one path. Try the "a used twice" example above to see the two
 contributions arrive one after the other.
+
+</Misconception>
+
+<Misconception
+  id="gradient-passes-unchanged"
+  title="The gradient passes back unchanged through every box"
+  probes={[
+    {
+      q: 'y = 5 × x and the gradient arriving at y is 2. What is the gradient of x?',
+      choices: ['2', '10', '5', '7'],
+      answer: 1,
+      trap: 0,
+      why: 'The local derivative of 5 × x with respect to x is 5, so x gets 5 × 2 = 10.',
+    },
+    {
+      q: 'h = tanh(n) with h = 0.6, and ∂L/∂h = 2. What is ∂L/∂n?',
+      choices: ['2', '1.2', '0.64', '1.28'],
+      answer: 3,
+      trap: 0,
+      why: 'tanh’s local derivative is 1 − h² = 1 − 0.36 = 0.64, and 0.64 × 2 = 1.28.',
+    },
+  ]}
+>
+
+Only an addition hands the gradient on unchanged, because its local derivative is 1. Every other box scales it: a
+product by the other factor, tanh by $1 - \tanh^2$. Forget the local derivative and every gradient below that box is
+wrong, usually by a lot.
 
 </Misconception>
 
@@ -80,6 +126,7 @@ contributions arrive one after the other.
       choices: ['−2', '6', '−6', '4'],
       answer: 1,
       why: 'The local derivative of a product with respect to a is b = −3; × −2 gives 6.',
+      traps: { 0: 'gradient-passes-unchanged' },
     },
     {
       q: 'What does an addition node do to the gradient flowing back through it?',
@@ -104,7 +151,30 @@ contributions arrive one after the other.
       answer: 1,
       why: 'Every use of a value must have sent its contribution before that value pushes its own gradient further back.',
     },
+    {
+      q: 'a feeds two boxes. The gradient it gets back through the first is 3 and through the second is 5. What is the gradient of a?',
+      choices: ['5, the last one to arrive', '8', '3, the first one to arrive', '15'],
+      answer: 1,
+      why: 'A value used in several places adds up what every use sends back: 3 + 5 = 8.',
+      traps: { 0: 'gradient-set-once', 2: 'gradient-set-once' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="one-backward-pass"
+  prompt="How does backpropagation find the gradient of every input in one pass, and why does it walk the graph in reverse order?"
+  rubric={[
+    'A forward pass computes every box’s value first, then the output’s own gradient starts at 1.',
+    'An input’s gradient is its local derivative times the gradient of the output it feeds: the chain rule.',
+    'A value used in several places adds up the gradients sent back by each use.',
+    'Boxes are visited in reverse topological order, so each gradient is complete before it is passed further back.',
+  ]}
+  example="First a forward pass computes every box's value, left to right. Then the output's gradient is set to 1 and gradients flow backwards. Each box knows its own local derivative, like 1 for an addition, the other factor for a product, or 1 − tanh² for tanh, and the chain rule says an input's gradient is that local derivative times the gradient arriving at the box's output. If a value feeds several boxes, the contributions from each are added. Visiting the boxes in reverse topological order makes sure every contribution has arrived before a value passes its gradient on, so one sweep gives every gradient."
 />
 
 </Section>

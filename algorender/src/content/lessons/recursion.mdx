@@ -29,9 +29,55 @@ A recursive call doesn't overwrite the caller's variables: it gets a fresh frame
 
 </KeyIdea>
 
-<Misconception title="The function starts over and forgets where it was">
+<Misconception
+  id="starts-over"
+  title="The function starts over and forgets where it was"
+  probes={[
+    {
+      q: 'factorial(4) calls factorial(3). While factorial(3) runs, what has happened to factorial(4)’s n?',
+      choices: ['It became 3: the new call overwrote it', 'It is still 4, in factorial(4)’s own paused frame', 'It is lost, and factorial(4) restarts from its first line'],
+      answer: 1,
+      trap: 0,
+      why: 'Every call gets a fresh frame with its own n. factorial(4) waits, with n = 4 intact, until factorial(3) hands back 6, then returns 4 × 6 = 24.',
+    },
+    {
+      q: 'countdown(n) stops when n is 0; otherwise it calls countdown(n − 1) and then prints n. What does countdown(3) print?',
+      choices: ['3 2 1', 'Nothing: each call starts over, so none of them reaches its print', '1 2 3'],
+      answer: 2,
+      trap: 1,
+      why: 'countdown(0) returns first; then countdown(1) carries on where it paused and prints 1, then countdown(2) prints 2, then countdown(3) prints 3. Each call resumes after the call it made.',
+    },
+  ]}
+>
 
 Calling `factorial(3)` from inside `factorial(4)` doesn't restart or replace `factorial(4)`. Both are running at once; `factorial(4)` is paused halfway through its last line, waiting for a number to multiply by 4.
+
+</Misconception>
+
+<Misconception
+  id="base-case-enough"
+  title="Having a base case is enough to make it stop"
+  probes={[
+    {
+      q: 'f(n) returns 1 when n is 0, and otherwise returns n × f(n − 2). What happens when you call f(5)?',
+      choices: ['It returns 15', 'It never reaches n = 0, and the stack overflows', 'It returns 0'],
+      answer: 1,
+      trap: 0,
+      why: 'f(5) calls f(3), f(1), f(−1), f(−3)… The calls jump straight over 0, so the base case never runs and the stack grows until the language gives up.',
+    },
+    {
+      q: 'g(n) returns 0 when n is 0, and otherwise returns 1 + g(n). What does g(3) do?',
+      choices: ['Returns 1', 'Returns 3', 'Calls g(3) again and again until the stack overflows'],
+      answer: 2,
+      trap: 1,
+      why: 'The recursive call passes the same n, so it never gets closer to 0. Every recursive call must move towards a base case.',
+    },
+  ]}
+>
+
+A base case only stops the recursion if every call actually **reaches** it. Each recursive call has to work on a
+smaller input that moves towards the base case: `factorial(n - 1)` heads for 1, but a call that skips past the base case
+(stepping by 2 from an odd number down to 0) or doesn't shrink the input at all runs until the stack overflows.
 
 </Misconception>
 
@@ -75,6 +121,7 @@ When a function calls itself more than once, as Fibonacci does, the stack goes u
       choices: ['2', '5', '6', '120'],
       answer: 2,
       why: 'factorial(5), (4), (3), (2) and (1) are all running at once, one frame each, plus the global frame underneath: six.',
+      traps: { 0: 'starts-over' },
     },
     {
       q: 'In what order do the calls made by factorial(4) return?',
@@ -82,7 +129,30 @@ When a function calls itself more than once, as Fibonacci does, the stack goes u
       answer: 1,
       why: 'The last call made is the first to finish: factorial(1) returns 1, then factorial(2) can return 2, factorial(3) 6, and factorial(4) 24.',
     },
+    {
+      q: 'half(n) returns 0 when n is 1, and otherwise returns 1 + half(n − 2). What does half(4) do?',
+      choices: ['Returns 2', 'Recurses until the stack overflows: the calls jump over n = 1', 'Returns 0 straight away'],
+      answer: 1,
+      why: 'half(4) calls half(2), half(0), half(−2)… An even n never lands on 1, so the base case never runs. A base case helps only if every call reaches it.',
+      traps: { 0: 'base-case-enough' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-it-works"
+  prompt="How does a recursive function like factorial work out its answer, and how does each call keep track of its own n?"
+  rubric={[
+    'A base case answers the smallest input directly, so the calls stop.',
+    'The recursive case calls the function on a smaller input and uses that answer to build its own.',
+    'Each call gets its own frame on the call stack, with its own variables, so the caller’s n is untouched.',
+    'The calls return in reverse order: the deepest call finishes first and hands its answer back to the call that made it.',
+  ]}
+  example="factorial(4) doesn't know its answer, so it asks factorial(3), which asks factorial(2), down to factorial(1), the base case, which answers 1 without calling again. Every call gets its own frame on the call stack holding its own n, so while factorial(3) runs, factorial(4) is paused with n = 4 safe. Then the stack unwinds, newest first: factorial(1) returns 1, factorial(2) returns 2 × 1, factorial(3) returns 3 × 2 and factorial(4) returns 4 × 6 = 24."
 />
 
 </Section>

@@ -37,7 +37,7 @@ export function quizzesIn(lesson: string, source: string): LessonQuiz[] {
 }
 
 /** A literal expression's value: arrays, objects, strings, numbers, booleans, null. */
-function literal(node: ES.Node, lesson: string): unknown {
+export function literal(node: ES.Node, lesson: string): unknown {
   switch (node.type) {
     case 'ArrayExpression':
       return node.elements.map((e) => (e ? literal(e, lesson) : null));

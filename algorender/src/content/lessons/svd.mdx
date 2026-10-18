@@ -67,11 +67,57 @@ Switch between the pictures and watch the bar chart of singular values:
 
 <Explore slug="svd" settings={{ preset: 'noise' }} input />
 
-<Misconception title="SVD compression keeps the most important pixels">
+<Misconception
+  id="keeps-pixels"
+  title="SVD compression keeps the most important pixels"
+  probes={[
+    {
+      q: 'You compress a photo by keeping its first 5 SVD pieces. What does the result look like?',
+      choices: ['Sharp in the important places and blank elsewhere', 'Blurry everywhere, with the big shapes in place', 'Exactly the original'],
+      answer: 1,
+      trap: 0,
+      why: 'Every piece is a pattern over the whole picture, so dropping pieces loses fine detail everywhere at once, not whole regions.',
+    },
+    {
+      q: 'You add the next SVD piece to an approximation. Which pixels change?',
+      choices: ['None: it only rescales σ', 'Only the few pixels that piece stores', 'Typically every pixel, a little'],
+      answer: 2,
+      trap: 1,
+      why: 'A piece σ·u·vᵀ has a value at every pixel (the product of a column entry and a row entry), so adding it nudges the whole picture.',
+    },
+  ]}
+>
 
 It keeps no pixels at all. Each piece is a pattern spread over the whole picture, and every pixel changes a little as
 each piece is added. What it keeps is the most important *patterns*, which is why a compressed picture looks blurry
 everywhere rather than missing some spots.
+
+</Misconception>
+
+<Misconception
+  id="rank-is-size"
+  title="A bigger or busier picture always has a higher rank"
+  probes={[
+    {
+      q: 'A 100 × 100 checkerboard of 1-pixel black and white squares. What is its rank?',
+      choices: ['100', '2', '1', '50'],
+      answer: 1,
+      trap: 0,
+      why: 'Every row is one of two patterns, the second being all ones minus the first. Two independent row patterns: rank 2, whatever the size.',
+    },
+    {
+      q: 'Picture A is 24 × 24 with three horizontal stripes of different grays. Picture B is 24 × 24 random noise. Which has the higher rank?',
+      choices: ['A, because it has more distinct regions', 'B: every row of A is a multiple of one all-ones row, but noise shares no row pattern', 'Neither: both are 24 × 24, so both have rank 24'],
+      answer: 1,
+      trap: 2,
+      why: 'Each row of A is one gray all the way across, a multiple of (1, 1, …, 1), so A has rank 1. Noise has rank 24, the most a 24 × 24 picture can have.',
+    },
+  ]}
+>
+
+Rank counts independent *row patterns*, not pixels, regions or edges. A checkerboard of any size is rank 2, a single
+stripe of any width is rank 1, and a small patch of random noise can have the highest rank its size allows. Size only
+sets the upper limit.
 
 </Misconception>
 
@@ -92,6 +138,7 @@ everywhere rather than missing some spots.
       choices: ['1', '2', '24', 'It depends on how wide the stripe is'],
       answer: 0,
       why: 'Every row is either all ones or all zeros, so every row is a multiple of the same row pattern: one piece is enough.',
+      traps: { 2: 'rank-is-size', 3: 'rank-is-size' },
     },
     {
       q: 'You keep the first k pieces. What is the squared error ‖A − Aₖ‖²?',
@@ -105,7 +152,30 @@ everywhere rather than missing some spots.
       answer: 1,
       why: 'Compression works when σ’s fall quickly. Noise spreads its energy evenly over every piece.',
     },
+    {
+      q: 'A 24 × 24 picture is stored as its first 3 SVD pieces. What exactly is stored?',
+      choices: ['The 147 most important pixels', 'Three column patterns, three row patterns and three σ’s: 147 numbers', 'Every eighth row of the picture', 'The brightest pixel of each row'],
+      answer: 1,
+      why: 'Each piece is a column pattern u (24 numbers), a row pattern v (24) and a σ: 49 numbers, so three pieces are 147. No pixel is stored as such.',
+      traps: { 0: 'keeps-pixels' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="best-pieces"
+  prompt="How does the SVD compress a picture, and why does keeping the pieces with the largest singular values work so well?"
+  rubric={[
+    'The SVD writes the picture as a sum of rank-1 pieces σ·u·vᵀ, each a pattern over the whole picture.',
+    'One piece costs only m + n + 1 numbers instead of m × n.',
+    'The pieces are sorted by σ, and the first k make the best possible picture of rank k.',
+    'The squared error left is the sum of the dropped σ²’s, which is small when the σ’s fall fast.',
+  ]}
+  example="The SVD splits a picture into a sum of rank-1 pieces, each a column pattern times a row pattern, scaled by a singular value σ. Each piece is cheap to store: m + n + 1 numbers instead of m × n. The pieces come sorted by σ, and keeping the first k gives the closest picture any k pieces could make; the squared error left over is exactly the sum of the squares of the σ’s you dropped. Real pictures have σ’s that fall quickly, so a few pieces carry almost everything."
 />
 
 </Section>

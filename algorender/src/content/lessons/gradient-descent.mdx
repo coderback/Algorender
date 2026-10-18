@@ -69,10 +69,55 @@ Pick an example and drag the start point. Things to try:
 
 <Explore slug="gradient-descent" settings={{ preset: 'too-big' }} input />
 
-<Misconception title="A bigger step size always gets there faster">
+<Misconception
+  id="bigger-step-faster"
+  title="A bigger step size always gets there faster"
+  probes={[
+    {
+      q: 'On f(x) = x², one step of gradient descent sends x to (1 − 2η)·x. Starting at x = 1 with η = 1.5, where are you after one step?',
+      choices: ['x = 0.5', 'x = 0, the bottom: the bigger the step, the sooner you land', 'x = −2, further from the bottom than before'],
+      answer: 2,
+      trap: 1,
+      why: '1 − 2 × 1.5 = −2, so x jumps to −2: past the bottom and further away. Every step from here doubles the distance again.',
+    },
+    {
+      q: 'On f = x² + y², which step size reaches the bottom in the fewest steps?',
+      choices: ['η = 0.5', 'η = 0.9', 'η = 1.2, the biggest', 'η = 0.1'],
+      answer: 0,
+      trap: 2,
+      why: 'The distance is multiplied by 1 − 2η each step: 0 for η = 0.5 (one step), −0.8 for 0.9 (zigzags in), 0.8 for 0.1 (crawls) and −1.4 for 1.2, which grows without end.',
+    },
+  ]}
+>
 
 Only up to a point. On $f = x^2 + y^2$ a step multiplies the distance to the bottom by $1 - 2\eta$: $\eta = 0.5$
 lands in one step, $\eta = 0.9$ zigzags, and anything above $1$ makes the distance *grow* every step.
+
+</Misconception>
+
+<Misconception
+  id="step-along-gradient"
+  title="The gradient points downhill"
+  probes={[
+    {
+      q: 'f(x, y) = x² + y² at the point (1, 2), where ∇f = (2, 4). Where does one step of gradient descent with η = 0.1 go?',
+      choices: ['To (1.2, 2.4)', 'To (0.8, 1.6)', 'To (0.2, 0.4)'],
+      answer: 1,
+      trap: 0,
+      why: 'x − η∇f = (1 − 0.2, 2 − 0.4) = (0.8, 1.6), closer to the bottom at (0, 0). Adding the gradient would climb to (1.2, 2.4).',
+    },
+    {
+      q: 'At some point ∇f = (0, −5). Moving which way makes f fall fastest?',
+      choices: ['In the −y direction, the way the gradient points', 'In the +x direction', 'In the +y direction'],
+      answer: 2,
+      trap: 0,
+      why: 'The gradient points uphill, so the steepest way down is −∇f = (0, 5): the +y direction.',
+    },
+  ]}
+>
+
+The gradient points the way $f$ *rises* fastest. Gradient descent steps against it, along $-\nabla f$; stepping along
+the gradient is gradient *ascent*, and climbs the hill.
 
 </Misconception>
 
@@ -104,12 +149,14 @@ networks, does both.
       choices: ['Towards (3, −4)', 'Towards (−3, 4)', 'Towards (4, 3)', 'It depends only on η'],
       answer: 1,
       why: 'The gradient points uphill; descent steps against it, along −∇f = (−3, 4), scaled by η.',
+      traps: { 0: 'step-along-gradient' },
     },
     {
       q: 'f went up after a step of gradient descent. What is the likeliest fix?',
       choices: ['Take more steps', 'Make η smaller', 'Make η bigger', 'Start at the minimum'],
       answer: 1,
       why: 'For a small enough step every step goes downhill; f rising means the step overshot.',
+      traps: { 2: 'bigger-step-faster' },
     },
     {
       q: 'Why does momentum help in a long, narrow valley?',
@@ -123,6 +170,22 @@ networks, does both.
       why: 'The velocity is a running sum of gradients: alternating components cancel, consistent ones accumulate.',
     },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="walk-downhill"
+  prompt="How does gradient descent find a low point of a function, and why does the step size matter so much?"
+  rubric={[
+    'The gradient is the vector of slopes, and it points the way the function rises fastest.',
+    'Each step moves against the gradient, scaled by the step size: x ← x − η∇f(x).',
+    'Repeating it stops where the slope is close to zero: a local minimum, not always the lowest one.',
+    'Too small a step crawls; too big a step overshoots and can make things worse every step.',
+  ]}
+  example="At each point, gradient descent measures the gradient, the slope in every direction stacked into a vector, which points uphill. It then takes a step the other way, of size η times the gradient, and repeats. When the ground is flat, the gradient is near zero and the steps stop, at a local minimum that may not be the lowest one. The step size decides how it goes: tiny steps are safe but slow, while steps that are too big overshoot the bottom and can grow further away every time."
 />
 
 </Section>

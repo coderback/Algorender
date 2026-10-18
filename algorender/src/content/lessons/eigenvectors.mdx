@@ -53,10 +53,55 @@ Try the examples below, then drag î and ĵ at the end of a run to see the eigen
 
 <Explore slug="eigenvectors" settings={{ preset: 'shear' }} input />
 
-<Misconception title="Every matrix has two eigenvectors">
+<Misconception
+  id="always-two"
+  title="Every matrix has two eigenvectors"
+  probes={[
+    {
+      q: 'How many eigen lines does the shear [[1, 1], [0, 1]] have?',
+      choices: ['Two, like every 2×2 matrix', 'One: the x-axis', 'None'],
+      answer: 1,
+      trap: 0,
+      why: 'The shear leaves î where it is (λ = 1), but pushes every other direction sideways, so the x-axis is its only eigen line.',
+    },
+    {
+      q: 'A rotation by 60°: how many real eigenvectors does it have?',
+      choices: ['Two, at right angles', 'One, along the x-axis', 'None: every direction turns by 60°'],
+      answer: 2,
+      trap: 0,
+      why: 'An eigenvector must stay on its own line, and a 60° turn moves every line through the origin. Its eigenvalues are complex numbers.',
+    },
+  ]}
+>
 
 Only some do. A rotation turns every direction, so none survives; a shear has just one eigen line. What is always true:
 the eigenvalues (counting complex ones) multiply to $\det A$ and add up to $a + d$, the trace.
+
+</Misconception>
+
+<Misconception
+  id="unchanged"
+  title="An eigenvector is a vector the matrix leaves unchanged"
+  probes={[
+    {
+      q: 'A = [[2, 0], [0, 5]] and v = (1, 0). Is v an eigenvector?',
+      choices: ['No: A changes it to (2, 0)', 'Yes, with λ = 2: it stays on its own line', 'Yes, with λ = 5', 'No: only (0, 0) is left unchanged'],
+      answer: 1,
+      trap: 0,
+      why: 'A·v = (2, 0) = 2·v. The length changes, but the direction stays on v’s line, which is all an eigenvector needs.',
+    },
+    {
+      q: 'Av = 3v. What can you say about A·v?',
+      choices: ['It is at right angles to v', 'It is v itself, unchanged', 'It lies on v’s line and is three times as long'],
+      answer: 2,
+      trap: 1,
+      why: 'λ = 3 is the stretch along v’s line. Leaving v unchanged is the special case λ = 1.',
+    },
+  ]}
+>
+
+Only the eigenvector's *line* survives. Its length is multiplied by $\lambda$, and a negative $\lambda$ flips it to point
+the other way along the same line. A vector that comes back exactly as it was is the special case $\lambda = 1$.
 
 </Misconception>
 
@@ -77,6 +122,7 @@ the eigenvalues (counting complex ones) multiply to $\det A$ and add up to $a + 
       choices: ['Shrinks it to half', 'Doubles it and reverses its direction', 'Rotates it by 90°', 'Nothing'],
       answer: 1,
       why: 'λ = −2: twice as long, pointing the opposite way along the same line.',
+      traps: { 3: 'unchanged' },
     },
     {
       q: 'Why does a 90° rotation have no real eigenvectors?',
@@ -90,7 +136,30 @@ the eigenvalues (counting complex ones) multiply to $\det A$ and add up to $a + 
       answer: 1,
       why: 'The determinant is the product of the eigenvalues: 3 × 1/2 = 1.5.',
     },
+    {
+      q: 'Which of these 2×2 matrices has two different eigen lines?',
+      choices: ['[[1, 1], [0, 1]], a shear', '[[0, −1], [1, 0]], a quarter turn', '[[2, 1], [1, 2]]', 'All of them: every 2×2 matrix has two'],
+      answer: 2,
+      why: 'The symmetric [[2, 1], [1, 2]] has two at right angles: (1, 1) with λ = 3 and (1, −1) with λ = 1. The shear has one eigen line and the quarter turn none.',
+      traps: { 3: 'always-two' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="eigen-lines"
+  prompt="What makes a vector an eigenvector, and why do eigenvectors explain what happens when you apply a matrix over and over?"
+  rubric={[
+    'An eigenvector stays on its own line: A·v = λv.',
+    'λ is the stretch along that line; a negative λ flips the arrow to point the other way.',
+    'When there are two eigen lines, any vector splits into eigenvector parts, and the matrix scales each part by its own λ.',
+    'Applying the matrix again multiplies each part by its λ again, so the part with the largest |λ| takes over.',
+  ]}
+  example="Most vectors get knocked off their line by a matrix, but an eigenvector stays on its own line: A·v = λv, where λ says how much it is stretched, and a negative λ flips it round. If you write a vector as a mix of eigenvectors, the matrix just scales each part by its own λ. Apply the matrix ten times and each part is scaled by λ ten times, so the part with the biggest |λ| grows fastest and soon dominates. That is why eigenvectors predict the long-run behaviour."
 />
 
 </Section>

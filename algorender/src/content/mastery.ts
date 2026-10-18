@@ -85,7 +85,9 @@ export function placementQuestions(): Record<string, PlacementQuestion[]> {
   for (const { lesson, quiz, questions } of lessonQuizzes()) {
     const concept = conceptOf.get(lesson);
     if (!concept) continue;
-    questions.forEach((q, question) => (out[concept] ??= []).push({ concept, lesson, quiz, question, q: q.q, choices: q.choices, answer: q.answer, why: q.why }));
+    questions.forEach((q, question) =>
+      (out[concept] ??= []).push({ concept, lesson, quiz, question, q: q.q, choices: q.choices, answer: q.answer, why: q.why, ...(q.traps && { traps: q.traps }) }),
+    );
   }
   return out;
 }

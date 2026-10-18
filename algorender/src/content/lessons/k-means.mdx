@@ -59,11 +59,57 @@ the other examples:
 
 <Explore slug="k-means" settings={{ preset: 'blobs' }} input />
 
-<Misconception title="k-means finds the clusters that are really in the data">
+<Misconception
+  id="finds-real-clusters"
+  title="k-means finds the clusters that are really in the data"
+  probes={[
+    {
+      q: 'You run k-means with k = 4 on points scattered uniformly at random, with no groups at all. What does it return?',
+      choices: ['It reports that the data has no real clusters', 'One cluster holding every point', 'Four clusters with neat territories', 'An error'],
+      answer: 2,
+      trap: 0,
+      why: 'k-means always returns exactly k clusters. It has no way to say the groups aren’t real: it just splits the points into k territories.',
+    },
+    {
+      q: 'What do you get if you set k equal to the number of points?',
+      choices: ['Inertia 0, with every point its own cluster: not a useful answer', 'The true clustering, since no clustering has lower inertia', 'One big cluster, since every centroid lands on the mean', 'The same clusters as k = 2'],
+      answer: 0,
+      trap: 1,
+      why: 'Each point sits on its own centroid, so the inertia is 0. Lower inertia always comes with more clusters, which is why choosing k is your job, not the inertia’s.',
+    },
+  ]}
+>
 
 It always returns exactly $k$ clusters, whether or not the data has them, and it prefers round clusters of similar
 size because it only measures squared distance to a centre. Choosing $k$ is your job: one common check is to plot the
 final inertia for several values of $k$ and look for the "elbow" where adding clusters stops helping much.
+
+</Misconception>
+
+<Misconception
+  id="converged-is-best"
+  title="When k-means stops, it has found the best clustering"
+  probes={[
+    {
+      q: 'Run A stopped at inertia 30. Run B, on the same points from a different start, stopped at 12. Was run A broken?',
+      choices: ['Yes: a correct k-means always reaches the same answer', 'No: both stopped at local optima, and B’s is better', 'Yes: a finished run has inertia 0', 'No: higher inertia means better clusters'],
+      answer: 1,
+      trap: 0,
+      why: 'Stopping only means no assign or update step can improve things from there. Different starts can stop at different local optima, so keep the lowest.',
+    },
+    {
+      q: 'Why does k-means++ pick starting centroids that are spread out?',
+      choices: ['It makes each step faster', 'It makes the clusters the same size', 'No real reason: from any start, k-means ends at the best clustering', 'Bunched starts can leave k-means stuck in a poor local optimum'],
+      answer: 3,
+      trap: 2,
+      why: 'Where k-means ends depends on where it starts. Two centroids starting in one blob can end up sharing it for good, as in the Bad start example.',
+    },
+  ]}
+>
+
+k-means stops when no point changes cluster, which only means no single step can improve the clustering from there.
+Another start can stop somewhere much better, as the Bad start example shows: same points, higher inertia. So "it
+converged" never means "it found the best answer". Run it from several starts and keep the lowest inertia.
 
 </Misconception>
 
@@ -97,7 +143,37 @@ final inertia for several values of $k$ and look for the "elbow" where adding cl
       answer: 1,
       why: 'Both are local optima; the lower inertia is the tighter clustering, and more starts make a bad one less likely.',
     },
+    {
+      q: 'The data has 3 natural groups and you run k-means with k = 5. What happens?',
+      choices: ['It returns 3 clusters: the groups really in the data', 'It returns 5 clusters, splitting some of the groups', 'It raises an error', 'It merges clusters until inertia stops falling'],
+      answer: 1,
+      why: 'k-means always returns k clusters, so some groups get split. It can’t tell how many groups are really there; that choice is yours.',
+      traps: { 0: 'finds-real-clusters' },
+    },
+    {
+      q: 'A k-means run has stopped: no point changes cluster any more. What do you know?',
+      choices: ['It has the lowest inertia possible for this k', 'No single step improves it, but another start might end lower', 'It has found the true clusters', 'Running it longer would still improve it'],
+      answer: 1,
+      why: 'Stopping means a local optimum: neither step can improve it from here. A different start can end at a lower inertia.',
+      traps: { 0: 'converged-is-best' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-it-works"
+  prompt="How does k-means find clusters, why does it always stop, and why might it stop at a poor answer?"
+  rubric={[
+    'It repeats two steps: assign each point to its nearest centroid, then move each centroid to the mean of its points.',
+    'Each step can only lower the inertia, the total squared distance from points to their centroids, or keep it the same.',
+    'Inertia can’t keep falling forever, so the run must stop.',
+    'Where it stops is a local optimum that depends on the start, so run it from several starts or use k-means++.',
+  ]}
+  example="k-means keeps k centroids and repeats two steps: every point joins its nearest centroid, then every centroid moves to the mean of the points that joined it. Joining the nearest centroid can only shorten a point's distance, and the mean is the spot with the smallest total squared distance to its points, so neither step can raise the inertia. Since there are only finitely many ways to assign the points and the inertia never rises, it must eventually stop. But it stops at a local optimum that depends on where the centroids started, so you run it from several starts, or spread the starts out with k-means++, and keep the lowest inertia."
 />
 
 </Section>

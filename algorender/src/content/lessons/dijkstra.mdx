@@ -53,10 +53,56 @@ through C would cost 5 − 4 = 1. The visualiser finishes, then checks the true 
 
 <Explore slug="dijkstra" settings={{ preset: 'negative' }} caption="One negative edge is enough to make settling too early wrong." />
 
-<Misconception title="Dijkstra handles any weighted graph">
+<Misconception
+  id="negative-edges-ok"
+  title="Dijkstra handles any weighted graph"
+  probes={[
+    {
+      q: 'Edges S → A (2), S → B (5) and B → A (−4). Dijkstra settles A before B. What distance does it give A, and what is the true shortest?',
+      choices: ['2, but the true shortest is 1, through B', '1, the true shortest', '2, and 2 is the true shortest'],
+      answer: 0,
+      trap: 1,
+      why: 'A is the closest unsettled node at 2, so it is settled at 2. Only later, settling B at 5, does the route 5 − 4 = 1 appear, and a settled node is never revisited.',
+    },
+    {
+      q: 'Some edges are negative, but there is no negative cycle. Which algorithm finds the shortest distances?',
+      choices: ['Breadth-first search', 'Dijkstra, as long as the heap accepts negative keys', 'Bellman–Ford'],
+      answer: 2,
+      trap: 1,
+      why: 'The heap isn’t the problem: Dijkstra’s proof that a settled distance is final needs non-negative edges. Bellman–Ford relaxes every edge V − 1 times and needs no such assumption.',
+    },
+  ]}
+>
 
 It needs every edge to be non-negative. With negative edges use **Bellman–Ford**, which relaxes every edge V − 1 times and
 can even detect a negative cycle, where no shortest path exists at all.
+
+</Misconception>
+
+<Misconception
+  id="lightest-edge"
+  title="Follow the lightest edge from the node you just settled"
+  probes={[
+    {
+      q: 'Settled so far: S (0) and B (1). Tentative: A = 4, C = 11, D = 9. B’s lightest edge leads to D. Which node is settled next?',
+      choices: ['D, along B’s lightest edge', 'C', 'A, with the smallest tentative distance'],
+      answer: 2,
+      trap: 0,
+      why: 'Dijkstra settles the unsettled node closest to the start, wherever it hangs. A is 4 away, closer than D at 9, even though A was reached from S, not from B.',
+    },
+    {
+      q: 'Why does Dijkstra compare every unsettled node, not just the neighbours of the node it just settled?',
+      choices: ['It doesn’t: following the cheapest edge from the newest node is enough', 'The closest unsettled node may hang off a node settled earlier', 'Every node has to be visited twice'],
+      answer: 1,
+      trap: 0,
+      why: 'What matters is the total distance from the start. The node with the smallest total can be a neighbour of any settled node, so the heap holds all of them.',
+    },
+  ]}
+>
+
+Dijkstra doesn't walk from node to node. It picks the unsettled node with the smallest **total distance from the start**,
+which may hang off any node settled earlier. Always taking the cheapest edge out of the newest node is a greedy walk: a
+short edge at the end of a long route can still be further away than a node you passed earlier.
 
 </Misconception>
 
@@ -71,6 +117,7 @@ can even detect a negative cycle, where no shortest path exists at all.
       choices: ['The node discovered first', 'The unsettled node with the smallest tentative distance', 'The neighbour with the lightest edge', 'Any unsettled node'],
       answer: 1,
       why: 'Settling in order of distance is what makes each settled distance final.',
+      traps: { 2: 'lightest-edge' },
     },
     {
       q: 'dist[C] = 7 and an edge B → C has weight 2, with dist[B] = 4. What does relaxing the edge do?',
@@ -95,7 +142,30 @@ can even detect a negative cycle, where no shortest path exists at all.
       answer: 1,
       why: 'Each edge can push one heap entry, and each heap operation costs O(log V).',
     },
+    {
+      q: 'A graph has one edge of weight −3 and no negative cycle. Does Dijkstra always find the shortest distances?',
+      choices: ['Yes: without a negative cycle it is fine', 'No: a node can be settled before a cheaper route through the negative edge is found', 'Yes, but more slowly'],
+      answer: 1,
+      why: 'Even one negative edge breaks the argument that a settled distance can’t improve. No negative cycle is what Bellman–Ford needs, not Dijkstra.',
+      traps: { 0: 'negative-edges-ok' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-settling-works"
+  prompt="How does Dijkstra’s algorithm choose which node to settle next, and why is that node’s distance final?"
+  rubric={[
+    'It keeps a tentative distance for every node: 0 for the start, ∞ for the rest at first.',
+    'It always settles the unsettled node with the smallest tentative distance, found with a min-heap.',
+    'Settling a node relaxes its edges: a neighbour’s distance drops if the route through the settled node is shorter.',
+    'Any other route to that node leaves the settled region through a node at least as far away, and non-negative edges can’t shorten it, so its distance is final.',
+  ]}
+  example="Every node starts with a tentative distance: 0 for the start and infinity for the rest. Each round, the min-heap hands back the unsettled node closest to the start, and that node is settled. Then each of its edges is relaxed: if going through it gives a neighbour a shorter distance, the neighbour's distance and predecessor are updated. A settled distance can't improve, because any other route has to leave the settled nodes through some node that is already at least as far, and with no negative edges the rest of that route only adds length."
 />
 
 </Section>

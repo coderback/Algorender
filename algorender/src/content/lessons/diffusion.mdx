@@ -72,7 +72,73 @@ Try it with the controls below:
 
 <Explore slug="diffusion" settings={{ preset: 'ring', n: 80 }} input />
 
-<Misconception title="The network memorises the training images and pastes them back">
+<Misconception
+  id="one-jump"
+  title="One jump to the predicted clean point is enough"
+  probes={[
+    {
+      q: 'At the first reverse step every point is almost pure noise. Where is the denoiser’s guess of the clean point for most of them?',
+      choices: [
+        'Exactly on the shape, where the point will end up',
+        'Far outside the shape',
+        'Near a blurry average of the shape, close to its middle',
+        'Back at the point itself',
+      ],
+      answer: 2,
+      trap: 0,
+      why: 'A point that is mostly noise could have come from almost anywhere on the shape, so the best single guess is an average of all those places, near the middle.',
+    },
+    {
+      q: 'What would happen if generation jumped straight to the first guess of the clean point?',
+      choices: [
+        'Nothing different: the first guess is already right',
+        'The points would pile up in the same blurry middle region instead of on the shape',
+        'The points would spread out into noise again',
+        'The samples would be sharper, just faster',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Early guesses are averages, so jumping to them lands every point in roughly the same place. Small steps let each guess sharpen as the noise shrinks.',
+    },
+  ]}
+>
+
+The denoiser’s guess of the clean point is only good once most of the noise is gone. From heavy noise it is a blurry
+average near the middle of the shape, so the sampler moves a little towards it, adds a little fresh noise and asks
+again. That is why generating takes dozens of steps, not one.
+
+</Misconception>
+
+<Misconception
+  id="memorises"
+  title="The network memorises the training images and pastes them back"
+  probes={[
+    {
+      q: 'You generate twice from the same trained denoiser with two different seeds. What do you get?',
+      choices: [
+        'Two training points, picked at random',
+        'Pure noise, because the seed changes the network',
+        'The same point twice',
+        'Two different new samples that both lie on the shape',
+      ],
+      answer: 3,
+      trap: 0,
+      why: 'The seed only changes the starting noise. The network steers each start onto the shape, so each seed gives a new sample, not a stored training point.',
+    },
+    {
+      q: 'What does the trained denoiser actually keep?',
+      choices: [
+        'The training points, to look up the nearest one',
+        'Weights that say which way is less noisy from any point at any step',
+        'A list of the noise samples it saw in training',
+        'The final pictures, compressed',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'It is a function from (x_t, t) to predicted noise. Nothing in it is a list of data points; it has learned a direction towards the data from every place in the plane.',
+    },
+  ]}
+>
 
 The denoiser never stores data points; it learns which direction is "less noisy" from every place in the plane. Fresh
 noise therefore turns into fresh samples that look like the data. (Very large models can still reproduce a training
@@ -120,7 +186,47 @@ image that appeared many times, which is why duplicates are removed from trainin
       answer: 1,
       why: 'From heavy noise the best guess is a blurry average; small steps let the guess sharpen as the noise shrinks.',
     },
+    {
+      q: 'A diffusion model trained on a spiral generates 80 points. What are they?',
+      choices: [
+        'The training points, copied back',
+        'New points that the denoiser steered from fresh noise onto the shape',
+        'The noise samples from training, run backwards',
+        'The average of the training points, 80 times',
+      ],
+      answer: 1,
+      why: 'Each point starts as fresh noise and is moved step by step towards the data. Change the seed and you get different points on the same spiral.',
+      traps: { 0: 'memorises' },
+    },
+    {
+      q: 'The denoiser has made its first guess of the clean point from almost pure noise. What does the sampler do next?',
+      choices: [
+        'Jump straight to the guess: it is the answer',
+        'Move a little towards it, add a little fresh noise, and guess again',
+        'Throw the guess away and start again from new noise',
+        'Average the guess with the training points',
+      ],
+      answer: 1,
+      why: 'The first guess is a blurry average. Taking a small step and guessing again from a slightly cleaner point is what lets the samples land on the shape.',
+      traps: { 0: 'one-jump' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="noise-to-data"
+  prompt="How does a diffusion model turn pure noise into a new sample, and why does it need many steps?"
+  rubric={[
+    'The forward process adds Gaussian noise step by step until any shape becomes a standard normal blob.',
+    'A network is trained to predict the noise in a noisy point, given the point and the step t.',
+    'Generating starts from fresh noise and repeatedly removes a share of the predicted noise, adding a little fresh noise back.',
+    'Small steps are needed because the guess of the clean point is poor while the noise is large and sharpens as it fades.',
+  ]}
+  example="First the data is destroyed: the forward process adds a little Gaussian noise at each step until every shape is the same round blob of standard normal noise. A network is trained on that: given a noisy point and the step number, guess the noise that was added. To generate, start from fresh noise and run the steps backwards, each time removing part of the predicted noise and adding a little fresh noise back. It has to go slowly, because from heavy noise the guess of the clean point is just a blurry average near the middle; each small step makes the point a bit cleaner, so the next guess is better, until the point lands on the shape."
 />
 
 </Section>

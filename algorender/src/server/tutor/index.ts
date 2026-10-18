@@ -102,18 +102,36 @@ export function grounding(item: TutorRequest['item'], language: ProblemLanguage)
 const startOfDay = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 const LADDER_WINDOW_MS = 30 * 86_400_000;
 
-/** How many turns the learner has taken today, the day's spend across everyone, and the item's highest level so far. */
-async function usage(db: Database, userId: string, item: string, now: Date) {
+/**
+ * How many turns the learner has taken today and the day's spend across
+ * everyone. Every model call counts here: hints, reviews and scoring an
+ * explanation (explain.ts) share one budget.
+ */
+export async function dailyUsage(db: Database, userId: string, now: Date) {
   const day = startOfDay(now);
-  const [[mine], [all], [ladder]] = await Promise.all([
+  const [[mine], [all]] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(tutorTurn).where(and(eq(tutorTurn.userId, userId), gte(tutorTurn.createdAt, day))),
     db.select({ usd: sum(tutorTurn.costUsd) }).from(tutorTurn).where(gte(tutorTurn.createdAt, day)),
+  ]);
+  return { turns: Number(mine.n), spent: Number(all.usd ?? 0) };
+}
+
+/** Turns down a turn when the learner has used today's turns or the tutor has spent today's budget. */
+export function checkBudget(config: TutorConfig, { turns, spent }: { turns: number; spent: number }) {
+  if (turns >= config.turnsPerDay) throw new TutorError(`You’ve used today’s ${config.turnsPerDay} tutor turns. They come back tomorrow.`, 429);
+  if (spent >= config.dailyUsd) throw new TutorError('The tutor has reached its budget for today and will be back tomorrow.', 503);
+}
+
+/** Today's usage, and the item's highest level so far. */
+async function usage(db: Database, userId: string, item: string, now: Date) {
+  const [daily, [ladder]] = await Promise.all([
+    dailyUsage(db, userId, now),
     db
       .select({ level: max(tutorTurn.level), turns: sql<number>`count(*)::int` })
       .from(tutorTurn)
       .where(and(eq(tutorTurn.userId, userId), eq(tutorTurn.item, item), gte(tutorTurn.createdAt, new Date(now.getTime() - LADDER_WINDOW_MS)))),
   ]);
-  return { turns: Number(mine.n), spent: Number(all.usd ?? 0), top: Number(ladder.level ?? 0), itemTurns: Number(ladder.turns) };
+  return { ...daily, top: Number(ladder.level ?? 0), itemTurns: Number(ladder.turns) };
 }
 
 /** What the panel needs before the learner asks: turns left today, and how far up the ladder they are on an item. */
@@ -128,8 +146,7 @@ export async function tutor(db: Database, model: TutorModel, config: TutorConfig
   const item = grounding(request.item, request.language);
   const key = `${request.item.kind}:${request.item.slug}`;
   const { turns, spent, top, itemTurns } = await usage(db, userId, key, now);
-  if (turns >= config.turnsPerDay) throw new TutorError(`You’ve used today’s ${config.turnsPerDay} tutor turns. They come back tomorrow; the hints in the problem are always there.`, 429);
-  if (spent >= config.dailyUsd) throw new TutorError('The tutor has reached its budget for today and will be back tomorrow. The hints in the problem are always there.', 503);
+  checkBudget(config, { turns, spent });
 
   const failedRun = !!request.results && (!!request.results.fatal || request.results.passed < request.results.total);
   const unlocked = unlockedLevel(top, itemTurns, failedRun);

@@ -984,7 +984,17 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Budgets and kill switch:** turns and costs are recorded in a new `tutor_turn` table. They enforce the per-learner turns and the global daily spend cap. `TUTOR_ENABLED=off` switches the tutor off.
     - **Checks:** 14 service tests on in-memory Postgres with a scripted model, and an e2e test of the whole panel with a stand-in model, including axe.
     - **Left for later:** streaming replies, the `seekTrace`/`runTests` tools, a tutor on visualisers and lessons, and real price figures for the two deployments.
-- **5d: assessment:** explain-it-back with rubric scoring, and misconception-targeted quizzes.
+- **5d: assessment:** explain-it-back with rubric scoring, and misconception-targeted quizzes (`revamp/phase-5d`).
+  - **Decisions (2026-10-18):**
+    - **Mistakes live in the lessons.** Each `<Misconception>` gets an id and hidden probe questions, and quiz choices that embody a mistake point at it (`traps`), so the MDX stays the one source. A mistake is evidence the learner holds, not just a wrong answer.
+    - **Scoring reuses the tutor.** The fast model scores explanations on the tutor's settings and budgets (no new table: a `tutor_turn` with action `explain`). With the tutor off, or signed out, the learner scores themselves against the rubric and an example answer, so the feature works for everyone.
+    - **Mistakes gate mastery.** A concept can't be mastered while a mistake in its lesson is open.
+  - **Status (2026-10-18): 5d is built.**
+    - **Mistakes:** every lesson names two common mistakes (sorting-in-code included), each with two probes and at least one quiz question that traps it. Picking a trapped answer, in a lesson quiz or the placement check, names the mistake on the spot and links to its correction. It records a `misconception.picked` event.
+    - **Clearing them:** the mistake gets its own review card, due the next day, which asks its probes in turn and then shows the correction. Two right answers in a row clear it, and making it again reopens it. The mistake box in the lesson says where the learner stands, and `/learn` lists the mistakes still to clear.
+    - **Explain it back:** every lesson ends with a "Say it in your own words" step: a prompt, a rubric of 3–5 points and an example answer. Signed in with the tutor on, the model gives a verdict per point with a quote from the learner's text and one line of feedback, and flags a stated mistake. Replies are checked on the server: one verdict per point, quotes really in the text, only the lesson's mistake ids. The score is an `explanation.scored` event and counts toward mastery at two thirds of the rubric; the text never leaves the device except to be scored, and is never stored.
+    - **Checks:** content tests for every lesson's mistakes, probes, traps and prompts; unit tests for the mistake projection, its review card, the mastery gate and explanation evidence; service tests for scoring (checked replies, shared budgets, defusing, a reply that isn't JSON); e2e for a trapped answer through to its review card the next day, self-scoring, and model scoring with the stand-in model, with axe on each state.
+    - **Left for later:** "why" prompts at pivotal visualiser steps, recorded walkthroughs, and misconception-specific distractors generated from learner answers.
 
 ### Phase 6 — Play, systems, community
 

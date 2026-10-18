@@ -63,11 +63,58 @@ Pick the datasets one after another:
 The last two aren't a training problem: more steps won't help, because no straight line fits. Curved boundaries need
 new features, or hidden layers, which is where [neural networks](/learn/neural-networks) come in.
 
-<Misconception title="Logistic regression predicts a number, like linear regression">
+<Misconception
+  id="predicts-number"
+  title="Logistic regression predicts a number, like linear regression"
+  probes={[
+    {
+      q: 'What does logistic regression give you for a new point?',
+      choices: ['Only a yes or no, with no confidence', 'A predicted value on the scale of the labels, which can be any real number', 'A probability of class 1, and a class from which side of ½ it falls on'],
+      answer: 2,
+      trap: 1,
+      why: 'It is a classifier: the sigmoid turns the linear score into a probability between 0 and 1, and the predicted class is whichever side of ½ that probability is on.',
+    },
+    {
+      q: 'In logistic regression, which quantity is a linear function of the inputs?',
+      choices: ['The probability p', 'The log-odds ln(p / (1 − p))', 'The predicted class'],
+      answer: 1,
+      trap: 0,
+      why: 'The score z = w · x + b is the log-odds. The probability is σ(z), an S-shaped curve of the inputs, not a straight line.',
+    },
+  ]}
+>
 
 Despite the name, it is a classifier. The "regression" is on the score $z$, the log-odds $\ln\frac{p}{1-p}$, which is
 a linear function of the inputs; the output you use is a probability, and the prediction is whichever side of ½ it
 falls on.
+
+</Misconception>
+
+<Misconception
+  id="only-wrong-push"
+  title="Only misclassified points change the weights"
+  probes={[
+    {
+      q: 'A class-0 point gets p = 0.3: on the right side of ½, but not confidently. Does it push the weights during training?',
+      choices: ['No: it is already classified correctly', 'Yes, by its error p − label = 0.3', 'Yes, by 0.7'],
+      answer: 1,
+      trap: 0,
+      why: 'Every point pushes by its error p − label. For a class-0 point with p = 0.3 that is 0.3: training keeps pushing until it is confidently right.',
+    },
+    {
+      q: 'Three class-1 points get p = 0.95, 0.6 and 0.2. Which of them push the weights?',
+      choices: ['All three: the 0.2 hardest, the 0.95 least', 'Only the one with p = 0.2', 'None: their average is above ½'],
+      answer: 0,
+      trap: 1,
+      why: 'Their errors are −0.05, −0.4 and −0.8. Only the last is misclassified, but all three push, each in proportion to how far p is from the label.',
+    },
+  ]}
+>
+
+Unlike the perceptron, logistic regression learns from **every** point. Each one pushes the weights by its error
+$p - \text{label}$, so a point on the right side with $p = 0.6$ still pushes, just less than a wrong one. Only a point the
+model gets right with near certainty stops pushing, which is why the shading keeps sharpening after every point is on the
+correct side.
 
 </Misconception>
 
@@ -88,6 +135,7 @@ falls on.
       choices: ['The one with p = 0.9', 'The one with p = 0.1', 'Both the same', 'Neither: only wrong classes push'],
       answer: 1,
       why: 'The push is proportional to the error p − label: −0.1 for the first, −0.9 for the second.',
+      traps: { 3: 'only-wrong-push' },
     },
     {
       q: 'Before any training, all weights are 0. What is the loss?',
@@ -101,7 +149,30 @@ falls on.
       answer: 1,
       why: 'p depends on one linear score, so the boundary is a line; XOR needs a curved or broken boundary.',
     },
+    {
+      q: 'A spam filter built with logistic regression outputs 0.8 for an email. What does that 0.8 mean?',
+      choices: ['A predicted quantity, like a price, to compare with the true value', 'An 80% chance of spam, so it predicts spam', 'The email’s distance from the decision boundary', 'The model’s error on this email'],
+      answer: 1,
+      why: 'The output is σ(z), a probability of class 1. It is above ½, so the prediction is spam; the distance from the boundary is the score z, before the sigmoid.',
+      traps: { 0: 'predicts-number' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="line-to-probability"
+  prompt="How does logistic regression turn a straight line into a probability, and how does training move that line?"
+  rubric={[
+    'It computes a linear score z = w · x + b, positive on one side of a line and negative on the other.',
+    'The sigmoid squashes the score into a probability between 0 and 1, with p = ½ exactly on the line.',
+    'Training minimises cross-entropy: confident wrong answers cost a lot, confident right ones almost nothing.',
+    'Each point pushes the weights by its error p − label times its input, so badly predicted points push hardest.',
+  ]}
+  example="The model draws a line and scores each point by which side it is on and how far away: z = w · x + b. The sigmoid turns that score into a probability, ½ right on the line and closer to 0 or 1 further from it, so the boundary is always straight and the confidence grows with distance. Training lowers the cross-entropy, the average surprise of the true labels. Its gradient is simple: every point pushes the weights by its error p − label times its input, so a confidently wrong point pushes hard and a confidently right one barely at all, and the line swings until the pushes balance."
 />
 
 </Section>

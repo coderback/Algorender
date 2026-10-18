@@ -7,9 +7,10 @@ const nextConfig = {
   turbopack: { root: import.meta.dirname },
   // PGlite (the development database) loads its WebAssembly from its own
   // package folder, so it stays out of the bundle; the API routes need the
-  // migrations at run time.
+  // migrations at run time. Explain-it-back scoring reads the lesson prompts
+  // and common mistakes from the MDX at run time.
   serverExternalPackages: ['@electric-sql/pglite'],
-  outputFileTracingIncludes: { '/api/**/*': ['./drizzle/**/*'] },
+  outputFileTracingIncludes: { '/api/**/*': ['./drizzle/**/*'], '/api/explain': ['./src/content/lessons/*.mdx'] },
 };
 
 // Lessons are MDX (src/content/lessons). Plugins are named as strings so

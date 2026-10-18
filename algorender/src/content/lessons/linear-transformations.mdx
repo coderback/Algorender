@@ -58,10 +58,55 @@ Drag the tips of î and ĵ (or focus one and use the arrow keys) and watch the g
 
 <Explore slug="linear-transformations" settings={{ preset: 'shear', step: '8' }} input />
 
-<Misconception title="The rows tell you where î goes">
+<Misconception
+  id="rows-not-columns"
+  title="The rows tell you where î goes"
+  probes={[
+    {
+      q: 'A = [[1, 4], [2, 5]], written row by row. Where does ĵ = (0, 1) land?',
+      choices: ['(2, 5)', '(4, 5)', '(1, 4)', '(1, 2)'],
+      answer: 1,
+      trap: 0,
+      why: 'ĵ lands on the second column, which reads (4, 5) going down. (2, 5) is the second row.',
+    },
+    {
+      q: 'A matrix sends î to (0, 1) and ĵ to (−1, 0). How is it written, row by row?',
+      choices: ['[[0, 1], [−1, 0]]', '[[1, 0], [0, −1]]', '[[0, −1], [1, 0]]'],
+      answer: 2,
+      trap: 0,
+      why: 'Where î lands is the first column, (0, 1), and where ĵ lands is the second, (−1, 0). Read across, the rows are (0, −1) and (1, 0).',
+    },
+  ]}
+>
 
 It is tempting to read the first *row* $(a, b)$ as the image of î. It isn't: $A\hat{\imath} = (a, c)$, the first
 *column*. Rows are what you dot with $v$ when you compute by hand; columns are what the matrix does to space.
+
+</Misconception>
+
+<Misconception
+  id="negative-det-shrinks"
+  title="A negative determinant shrinks areas"
+  probes={[
+    {
+      q: 'det A = −1. What happens to the area of the unit square?',
+      choices: ['It shrinks, because the determinant is negative', 'It stays 1, but the plane is flipped over', 'It doubles'],
+      answer: 1,
+      trap: 0,
+      why: '|det A| = 1, so areas keep their size. The minus sign only says the plane has been turned over, like a mirror image.',
+    },
+    {
+      q: 'Which of these matrices shrinks areas?',
+      choices: ['One with det = −3, because it is negative', 'Both of them', 'One with det = 0.5'],
+      answer: 2,
+      trap: 0,
+      why: 'Areas scale by |det|: det = 0.5 halves them, while det = −3 triples them and flips the plane.',
+    },
+  ]}
+>
+
+The *size* of the determinant is the area scale; its *sign* only says whether the plane was flipped over. $\det A = -2$
+doubles every area and flips the plane; $\det A = 0.5$ halves areas without flipping. Only $|\det A| < 1$ shrinks.
 
 </Misconception>
 
@@ -76,6 +121,7 @@ It is tempting to read the first *row* $(a, b)$ as the image of î. It isn't: $A
       choices: ['(3, 0)', '(3, 1)', '(0, 2)', '(1, 2)'],
       answer: 1,
       why: 'î lands on the first column of A, which reads (3, 1) going down.',
+      traps: { 0: 'rows-not-columns' },
     },
     {
       q: 'A sends î to (2, 0) and ĵ to (1, 1). Where does v = (1, 2) land?',
@@ -88,6 +134,7 @@ It is tempting to read the first *row* $(a, b)$ as the image of î. It isn't: $A
       choices: ['Shrinks it to half', 'Doubles its area and flips the plane over', 'Squashes it flat', 'Rotates it by 180°'],
       answer: 1,
       why: '|det A| = 2 is the area scale, and the minus sign means orientation is reversed.',
+      traps: { 0: 'negative-det-shrinks' },
     },
     {
       q: 'Which matrix squashes the plane onto a line?',
@@ -96,6 +143,22 @@ It is tempting to read the first *row* $(a, b)$ as the image of î. It isn't: $A
       why: 'Its columns (1, 2) and (2, 4) point the same way, so det = 1·4 − 2·2 = 0.',
     },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="columns"
+  prompt="Why does knowing where î and ĵ land tell you where every vector goes, and what does the determinant add?"
+  rubric={[
+    'Every vector is x steps along î plus y steps along ĵ.',
+    'A linear map keeps that recipe: v lands on x times where î landed plus y times where ĵ landed.',
+    'The columns of the matrix are exactly where î and ĵ land.',
+    'The determinant is the factor areas are scaled by; a negative sign means the plane is flipped over.',
+  ]}
+  example="Any vector is a recipe: x steps along î, then y steps along ĵ. A linear map keeps grid lines straight, parallel and evenly spaced, so the recipe survives: the vector lands x steps along wherever î went plus y steps along wherever ĵ went. The matrix’s columns are those two landing spots, so two arrows decide where everything goes. The determinant says how much the unit square’s area is scaled, with a minus sign when the plane is turned over, and zero when it is squashed flat."
 />
 
 </Section>

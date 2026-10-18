@@ -77,11 +77,26 @@ export function azureModel(config: TutorConfig, fetchImpl: typeof fetch = fetch)
 /**
  * A stand-in that answers without a network: a canned hint per level that
  * says which level and model it answered at, pointing at line 1 from level
- * 2 up, and a leak check that flags a reply containing "LEAK".
+ * 2 up; a leak check that flags a reply containing "LEAK"; and an
+ * explanation scorer that says the first rubric point is covered, the second
+ * partly and the rest not, quoting the explanation's first three words, and
+ * flags the lesson's first common mistake when the explanation says "MISTAKE".
  */
 export function fakeModel(): TutorModel {
   return {
     async complete(request) {
+      if (request.schema?.name === 'explanation_score') {
+        const rubric = /<rubric>\n([\s\S]*?)\n<\/rubric>/.exec(request.instructions)?.[1].split('\n') ?? [];
+        const said = /<learner_explanation>\n([\s\S]*?)\n<\/learner_explanation>/.exec(request.messages.at(-1)?.content ?? '')?.[1] ?? '';
+        const quote = said.trim().split(/\s+/).slice(0, 3).join(' ');
+        const points = rubric.map((_, i) => ({
+          verdict: i === 0 ? 'yes' : i === 1 ? 'partly' : 'no',
+          evidence: i === 0 ? quote : '',
+          feedback: i === 0 ? '(fake scorer) You said this clearly.' : i === 1 ? '(fake scorer) You hint at this; say it outright.' : '(fake scorer) This is missing.',
+        }));
+        const mistake = said.includes('MISTAKE') ? (/id="([a-z0-9-]+)"/.exec(request.instructions)?.[1] ?? null) : null;
+        return { text: JSON.stringify({ points, feedback: '(fake scorer) Add the missing points.', mistake }), inputTokens: 900, outputTokens: 150 };
+      }
       if (request.schema?.name === 'leak_check') {
         const leaks = request.messages.some((m) => m.content.includes('LEAK'));
         return { text: JSON.stringify({ leaks, reason: leaks ? 'It contains the solution.' : '' }), inputTokens: 200, outputTokens: 10 };

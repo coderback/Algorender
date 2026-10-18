@@ -68,12 +68,58 @@ Type your own numbers into the box, or pick an example:
 
 <Explore slug="floating-point" settings={{ preset: 'sum' }} input />
 
-<Misconception title="If two floats print the same, == is safe">
+<Misconception
+  id="print-equal"
+  title="If two floats print the same, == is safe"
+  probes={[
+    {
+      q: 'a and b both print as 0.3, but a == b is False. How can that be?',
+      choices: ['It can’t: floats that print the same are equal', 'Printing rounds to a few digits, and they differ in a later bit', 'The == operator is broken for decimals'],
+      answer: 1,
+      trap: 0,
+      why: 'Printing shows a rounded version. Two floats one gap apart print identically at a few digits but are different numbers, so == says False.',
+    },
+    {
+      q: 'x = 0.1 + 0.2 in float64. Which test of whether x is 0.3 is safest?',
+      choices: ['x == 0.3, since x can be printed to show 0.3', 'round(x) == 0', 'abs(x − 0.3) <= 1e-9'],
+      answer: 2,
+      trap: 0,
+      why: 'x is 0.30000000000000004, one gap away from the float nearest 0.3, so x == 0.3 is False. A tolerance accepts that last-bit difference.',
+    },
+  ]}
+>
 
 Printing rounds to a handful of digits, so two different floats can print identically, and two calculations of the
 "same" value can differ in the last bit. Compare with a tolerance instead: $|a - b| \le \varepsilon \cdot
 \max(|a|, |b|)$, with $\varepsilon$ a little above the precision you need. NaN is the extreme case: it isn't even equal
 to itself.
+
+</Misconception>
+
+<Misconception
+  id="fixed-gap"
+  title="Floats are equally precise everywhere"
+  probes={[
+    {
+      q: 'Roughly how far apart are neighbouring float32s near 1 000 000?',
+      choices: ['About 1.2 × 10⁻⁷, the same as near 1', 'About 0.06', 'About 1000'],
+      answer: 1,
+      trap: 0,
+      why: '1 000 000 lies between 2¹⁹ and 2²⁰, so the gap is 2^(19 − 23) = 1/16 = 0.0625. The gap grows with the number.',
+    },
+    {
+      q: 'Which of these whole numbers can a float32 store exactly?',
+      choices: ['16 777 217', 'Every whole number below 10³⁰', '16 777 218', 'Neither 16 777 217 nor 16 777 218'],
+      answer: 2,
+      trap: 1,
+      why: 'Above 2²⁴ = 16 777 216 the gap is 2, so only even numbers are stored there: 16 777 218 is exact and 16 777 217 is rounded.',
+    },
+  ]}
+>
+
+The gap between neighbouring floats grows with the number: it is about $x \times 2^{-23}$ in float32. Near 1 that is
+about $10^{-7}$; above $2^{24}$ even whole numbers start to be skipped. Precision is *relative*, about 7 significant
+digits, not a fixed number of decimal places.
 
 </Misconception>
 
@@ -100,14 +146,33 @@ to itself.
       choices: ['2^−23', '1', '2', '2^24'],
       answer: 2,
       why: 'The power there is 2²⁴, and 24 bits of precision leave a gap of 2^(24 − 23) = 2.',
+      traps: { 0: 'fixed-gap', 1: 'fixed-gap' },
     },
     {
       q: 'What is the safest way to check whether a computed total equals 0.3?',
       choices: ['total == 0.3', 'abs(total − 0.3) is below a small tolerance', 'str(total) == "0.3"', 'round(total) == 0'],
       answer: 1,
       why: 'Rounding errors make exact equality fragile; a tolerance accepts values that differ only in the last bits.',
+      traps: { 0: 'print-equal', 2: 'print-equal' },
     },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-floats-work"
+  prompt="How does a float store a number like 0.1, and why do sums such as 0.1 + 0.2 come out slightly off?"
+  rubric={[
+    'A float stores a sign, a power of two and a fixed number of significant binary digits (24 in float32).',
+    '0.1 repeats forever in binary because 10 is not a power of two, so it is rounded to the nearest float.',
+    'Every operation rounds its result to the nearest float too, so small errors can build up or show.',
+    'The gap between floats grows with the number: the precision is relative, about 7 digits in float32.',
+    'So floats are compared with a tolerance, not with ==.',
+  ]}
+  example="A float is scientific notation in base 2: a sign, a power of two, and 24 significant bits in float32. A fraction ends in binary only if its denominator is a power of two, and 1/10 isn’t, so 0.1 repeats forever and gets rounded to the nearest float. Adding two rounded values and rounding the sum again leaves a tiny error, which is why 0.1 + 0.2 shows up as 0.30000000000000004 in float64. The gap between floats grows with the number, so precision is relative, and you should compare floats with a tolerance rather than ==."
 />
 
 </Section>

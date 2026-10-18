@@ -149,9 +149,9 @@ export const tutorTurn = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    /** What the help was about, e.g. 'problem:two-sum' or 'exercise:bubble-sort'. */
+    /** What the help was about, e.g. 'problem:two-sum', 'exercise:bubble-sort' or 'lesson:binary-search:why-sorted'. */
     item: text('item').notNull(),
-    /** 'hint' (the ladder), 'review' (find the bug, don't fix it) or 'ask' (a follow-up question). */
+    /** 'hint' (the ladder), 'review' (find the bug, don't fix it), 'ask' (a follow-up question) or 'explain' (scoring an explanation; level 0). */
     action: text('action').notNull(),
     /** The hint level answered at: 1 concept, 2 where to look, 3 pseudo-code, 4 a partial fix. */
     level: integer('level').notNull(),

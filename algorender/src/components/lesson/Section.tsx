@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import { FiAlertTriangle, FiCheckSquare, FiCode, FiEdit3, FiEye, FiFlag, FiHelpCircle, FiKey, FiList, FiPlay, FiSearch, FiTool } from 'react-icons/fi';
+import { mistakeAnchor } from './anchors';
+import { MistakeNote } from './MistakeNote';
+import { FiAlertTriangle, FiCheckSquare, FiCode, FiEdit3, FiEye, FiFlag, FiHelpCircle, FiKey, FiList, FiMessageSquare, FiPlay, FiSearch, FiTool } from 'react-icons/fi';
 
 // The learning loop every lesson follows (REVAMP_PLAN.md §3.1). Each stage has
 // a fixed label and icon, so learners always know what kind of step they're on.
@@ -15,6 +17,8 @@ export const STEPS = {
   modify: { label: 'Modify', icon: FiEdit3 },
   make: { label: 'Make', icon: FiCode },
   check: { label: 'Check yourself', icon: FiCheckSquare },
+  // Self-explanation (Bisra et al. 2018): say it in your own words, scored against a rubric.
+  explain: { label: 'Explain it back', icon: FiMessageSquare },
   recap: { label: 'Recap', icon: FiKey },
 } as const;
 
@@ -62,14 +66,19 @@ export function KeyIdea({ children }: { children: ReactNode }) {
   );
 }
 
-/** A common wrong belief, named and corrected. */
-export function Misconception({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * A common wrong belief, named and corrected. `probes` are questions that
+ * test for it later, in the review queue, once a quiz answer shows the
+ * learner holds it (src/content/lessons/assessment.ts); they aren't shown here.
+ */
+export function Misconception({ id, title, children }: { id: string; title: string; probes?: unknown; children: ReactNode }) {
   return (
-    <aside className="rounded-xl border-l-4 border-warn-line bg-warn-soft px-5 py-4 text-ink [&>p]:m-0">
+    <aside id={mistakeAnchor(id)} className="scroll-mt-24 rounded-xl border-l-4 border-warn-line bg-warn-soft px-5 py-4 text-ink [&>p]:m-0">
       <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-warn-ink">
         <FiAlertTriangle aria-hidden /> Common mistake: {title}
       </div>
       {children}
+      <MistakeNote id={id} />
     </aside>
   );
 }

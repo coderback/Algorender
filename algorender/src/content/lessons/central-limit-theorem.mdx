@@ -51,10 +51,55 @@ Use the slider to change $n$ and the buttons to change the population.
 
 <Explore slug="central-limit-theorem" settings={{ preset: 'uniform', n: '2' }} input />
 
-<Misconception title="Large samples make the data normal">
+<Misconception
+  id="data-becomes-normal"
+  title="Large samples make the data normal"
+  probes={[
+    {
+      q: 'You roll a fair die 6,000 times. What does a histogram of the 6,000 rolls look like?',
+      choices: ['Flat: about 1,000 of each face', 'A bell centred on 3.5', 'A single spike at 3.5'],
+      answer: 0,
+      trap: 1,
+      why: 'Each roll is still one draw from a flat population, so many rolls just trace out that flat shape more precisely. Only averages of rolls pile up into a bell.',
+    },
+    {
+      q: 'Waiting times at a clinic are right-skewed. You record 5,000 of them. What ends up close to normal?',
+      choices: ['The 5,000 waiting times themselves', 'Nothing: skewed data never gives a bell', 'The means of many samples of, say, 30 waits each'],
+      answer: 2,
+      trap: 0,
+      why: 'The individual waits stay skewed however many you record. It is the distribution of sample means that the central limit theorem makes roughly normal.',
+    },
+  ]}
+>
 
 The theorem is about the **averages**, not the individual values. A skewed population stays skewed however many values
 you collect; it is the distribution of their *mean* that becomes a bell.
+
+</Misconception>
+
+<Misconception
+  id="spread-over-n"
+  title="The spread of the means shrinks like 1/n"
+  probes={[
+    {
+      q: 'A population has σ = 20. What is the spread (standard error) of means of samples of size 100?',
+      choices: ['0.2', '2', '20', '10'],
+      answer: 1,
+      trap: 0,
+      why: 'σ/√n = 20/√100 = 20/10 = 2. Dividing by n instead of √n gives 0.2, ten times too small.',
+    },
+    {
+      q: 'Your poll’s margin of error is too big. To make it 3 times smaller, how many times more people must you ask?',
+      choices: ['9 times', '3 times', '√3 times', '6 times'],
+      answer: 0,
+      trap: 1,
+      why: 'The spread is σ/√n, so to divide it by 3 you must multiply √n by 3, which means multiplying n by 9.',
+    },
+  ]}
+>
+
+More data helps, but more slowly than you might hope. The spread of the means is $\sigma/\sqrt{n}$, not $\sigma/n$: to
+halve it you need **four** times as many samples, and a hundred times the data only makes the averages ten times tighter.
 
 </Misconception>
 
@@ -69,12 +114,14 @@ you collect; it is the distribution of their *mean* that becomes a bell.
       choices: ['12', '4', '1.33', '108'],
       answer: 1,
       why: 'σ/√n = 12/√9 = 4.',
+      traps: { 2: 'spread-over-n' },
     },
     {
       q: 'To halve the spread of the sample means, how should n change?',
       choices: ['Double it', 'Multiply it by 4', 'Halve it', 'Square it'],
       answer: 1,
       why: 'The spread is σ/√n, so it halves when √n doubles, that is when n is multiplied by 4.',
+      traps: { 0: 'spread-over-n' },
     },
     {
       q: 'With n = 1, what does the histogram of sample means look like?',
@@ -82,7 +129,30 @@ you collect; it is the distribution of their *mean* that becomes a bell.
       answer: 1,
       why: 'Each mean is just one draw, so the means are distributed exactly like the population.',
     },
+    {
+      q: 'You collect 10,000 incomes from a right-skewed income distribution. What does a histogram of those 10,000 incomes look like?',
+      choices: ['Right-skewed, like the population', 'A bell curve, by the central limit theorem', 'Flat', 'Left-skewed'],
+      answer: 0,
+      why: 'Collecting more values only traces the population’s own shape more precisely. The central limit theorem is about the means of samples, not the individual values.',
+      traps: { 1: 'data-becomes-normal' },
+    },
   ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="why-a-bell"
+  prompt="Why do the averages of samples from a lopsided population pile up into a bell, and how does their spread depend on the sample size?"
+  rubric={[
+    'The theorem is about the distribution of sample means, not of the individual values, which keep the population’s shape.',
+    'In an average, large and small draws partly cancel, so means land near μ more often than far from it.',
+    'For moderately large n the means are roughly normal and centred on μ, whatever the population looks like.',
+    'Their spread is σ/√n, so quadrupling the sample size halves it.',
+  ]}
+  example="Take many samples of n values and average each one. A single value can be far from the population mean, but in an average the big and small draws mostly cancel, so the averages bunch up around μ and thin out evenly on both sides. Once n is moderately large, that pile of averages looks like a normal curve whatever shape the population had; the individual values themselves stay as lopsided as ever. The averages spread out by σ/√n, so four times the sample size makes them twice as tight."
 />
 
 </Section>
