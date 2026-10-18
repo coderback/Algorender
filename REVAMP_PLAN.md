@@ -908,6 +908,32 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Lessons:** backpropagation (with the exercises), linear regression, and neural networks.
     - **Left for later:** lessons for logistic regression, k-means and trees, and a validation set to show overfitting directly.
 - **4d: deep learning, LLMs and RL** (`revamp/phase-4d`): CNN kernels and feature maps, attention, BPE, sampling, the KV cache, gridworld Q-learning, 2D diffusion, and the build-time pipeline for precomputed traces.
+  - **Status (2026-10-18): 4d is done.**
+    - **PlotView additions:** token rows (chips that glide when tokens merge or arrive), outlined boxes and per-pixel values on images, sized images, and an intensity heatmap for weight matrices.
+    - **Visualisers (7):**
+      - **Convolution:** a 3×3 kernel sliding over a picture, the feature map filling in, the output-size formula, stride, ReLU and max-pooling.
+      - **Attention:** 2D queries, keys and values drawn as arrows; scores, ÷√d, softmax, the weighted sum tip to tail, the full matrix, a causal mask, and a draggable query.
+      - **BPE:** pair counts, merges, re-tokenising the text, then encoding an unseen word by replaying the merges.
+      - **Sampling:** logits from a toy word model, temperature, top-k and top-p cuts, and a seeded draw on cumulative slices.
+      - **KV cache:** K and V growing a row per generated token, rows computed with and without a cache, and an illustrative memory calculation.
+      - **Q-learning:** ε-greedy tabular Q-learning on cliff, maze and near-or-far gridworlds, with every TD update narrated.
+      - **Diffusion:** a 2D cloud noised by the closed form, then fresh noise turned back into the shape by a trained denoiser.
+    - **Build-time pipeline:** `npm run models` trains models too slow for the browser, deterministically, in TypeScript (bundled with esbuild), and writes compact JSON to `src/ml/pretrained/`. A test fails on stale weights (config hash) and checks quality. The first model is the diffusion denoiser: 27 KB, about 50 s to train.
+    - **Checks:** property tests against references:
+      - convolution and pooling;
+      - softmax attention and masking, and cached attention equal to a full recompute at every step;
+      - BPE against a reference trainer, merges replayed on new text, and lossless joins;
+      - temperature, top-k and top-p, and the drawn token's interval;
+      - TD updates, and Q against value iteration's Q*;
+      - forward-process statistics, denoiser gradients against autograd, and reverse samples landing on the shape.
+    - **Lessons (10):**
+      - New for 4d: convolution, attention, how a language model writes, Q-learning and diffusion.
+      - The 4a–4c gaps: SVD, floating point, logistic regression, k-means, and decision trees with boosting.
+    - **Left for later:**
+      - a CNN trained on real images (the first model too big for TypeScript);
+      - multi-head attention and positional encodings;
+      - policy gradients;
+      - lazy-loading modules per page, so pretrained weights stop shipping with every visualiser.
 
 ### Phase 5 — Personalization and tutor
 

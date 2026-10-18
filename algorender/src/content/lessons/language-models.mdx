@@ -1,0 +1,140 @@
+<Section step="hook" title="One token at a time">
+
+A chatbot seems to write whole answers, but underneath it does one small thing over and over: look at the text so far,
+give every possible next token a probability, pick one, append it, and repeat. A long answer is a few hundred of these
+picks.
+
+This lesson takes that loop apart. First, what a token is: not a word or a letter, but a piece learned from data. Then
+how a probability for every token becomes one choice, and the knobs (temperature, top-k, top-p) that decide how bold the
+choice is. Last, the trick that keeps the loop fast.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="token">The unit a model reads and writes: a whole common word, a piece of a rarer one, or a single character. Each has a number in the vocabulary.</Term>
+  <Term name="byte-pair encoding (BPE)">A way to learn the vocabulary: start from characters and keep gluing together the pair of neighbours that occurs most often.</Term>
+  <Term name="logit">The raw score the model's last layer gives one token. Higher means likelier, but logits are not probabilities yet.</Term>
+  <Term name="softmax">Turns logits into probabilities: $p_i = e^{z_i / T} / \sum_j e^{z_j / T}$, all positive and summing to 1.</Term>
+  <Term name="temperature T">Divides the logits before the softmax. Below 1 sharpens the distribution, above 1 flattens it, and $T = 0$ means always take the top token.</Term>
+  <Term name="top-k and top-p">Cuts before drawing: keep only the $k$ likeliest tokens, or the fewest whose probabilities add up to $p$.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Learning a vocabulary">
+
+<Explore slug="bpe" settings={{ preset: 'suffixes', n: '8' }} caption="Each merge glues the most frequent neighbouring pair into one token. Shared endings such as “er” and “est” win early." />
+
+Every merge makes the text a little shorter, and the merges are kept in order. To tokenize new text, the tokenizer
+replays them: a word it never saw is still built from pieces it knows, so there is no such thing as an unknown word.
+
+<KeyIdea>
+
+**Tokens are learned, not designed.** Frequent words become one token and rare words split into familiar pieces. That
+is why models handle new words gracefully, and also why they can stumble on things like counting the letters in a word:
+they never see the letters, only the pieces.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="see" title="From probabilities to one word">
+
+The toy model below counts which word follows which in a short story and uses those counts as logits. A real model gets
+its logits from a transformer, but everything after that is exactly the same.
+
+<Explore slug="sampling" settings={{ preset: 'top-p', n: '6' }} caption="Softmax gives every word a probability, top-p cuts the unlikely tail, and a random number u picks a slice." />
+
+</Section>
+
+<Section step="predict" title="Your turn: be the decoder">
+
+At $T = 0$ there is no randomness at all. Predict each word before it appears, and watch what happens when a context
+comes round a second time.
+
+<PredictChallenge slug="sampling" settings={{ preset: 'greedy', n: '6' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Turn the knobs">
+
+Switch between the examples, or write your own settings in the input box (for example
+`temperature = 2, top-k = 0, top-p = 1, seed = 4, length = 8, prompt = the dog`):
+
+- **T = 0.7 against T = 1.5:** which one keeps to the story, and which one wanders?
+- **Top-k 3:** after a word the model is sure about, does keeping three words still make sense?
+- **Top-p 0.9:** count how many words survive after "the", then after "sat". Why does the number change?
+
+<Explore slug="sampling" settings={{ preset: 'hot', n: '8' }} input />
+
+<Misconception title="Temperature makes the model smarter or more creative">
+
+Temperature doesn't change what the model knows: the logits are the same. It only changes how the pick is made. A higher
+temperature lets less likely tokens through more often, which reads as creative for a while and then as nonsense,
+because those tokens really are less likely to fit.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="Why generation caches keys and values">
+
+Each new token needs attention over every token before it. Recomputing every earlier token's keys and values at each
+step would repeat almost all of the work, so models keep them in a **KV cache** and compute only the new token's row.
+
+<Explore slug="kv-cache" caption="Without a cache, each step redoes the work for the whole prefix; with one, each step adds a single row." />
+
+The cache turns the cost of each step from growing with the square of the text into growing with its length, at the
+price of memory: long conversations are expensive mostly because their caches are large.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'BPE has learned the merges (l, o) then (lo, w). How is the new word “lowly” split?',
+      choices: ['l | o | w | l | y', 'low | l | y', 'lo | w | ly', 'lowly'],
+      answer: 1,
+      why: 'Replaying the merges in order glues l + o into lo, then lo + w into low. Nothing has been learned for l + y, so those stay as characters.',
+    },
+    {
+      q: 'You lower the temperature from 1 to 0.5. What happens to the most likely token’s probability?',
+      choices: ['It goes up', 'It goes down', 'It stays the same', 'It becomes 0.5'],
+      answer: 0,
+      why: 'Dividing the logits by 0.5 doubles the gaps between them, so after the softmax the top token takes a bigger share.',
+    },
+    {
+      q: 'The model is very sure: one token has probability 0.95. How many tokens does top-p = 0.9 keep?',
+      choices: ['One', 'Nine', 'Ten percent of the vocabulary', 'All of them'],
+      answer: 0,
+      why: 'Top-p keeps the fewest tokens whose probabilities reach 0.9, and the first one alone already does. When the model is unsure, the same setting keeps many.',
+    },
+    {
+      q: 'Why does greedy decoding (T = 0) tend to repeat itself?',
+      choices: ['It runs out of tokens', 'The same context always gets the same next token', 'Its probabilities are all equal', 'It skips the softmax'],
+      answer: 1,
+      why: 'Without randomness, a context that comes up twice is continued the same way twice, and the text can loop.',
+    },
+    {
+      q: 'What does the KV cache save during generation?',
+      choices: ['The final text', 'Recomputing the keys and values of earlier tokens at every step', 'The softmax over the vocabulary', 'Training time'],
+      answer: 1,
+      why: 'Earlier tokens’ keys and values don’t change when a new token arrives, so they are computed once and kept.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Models read and write tokens: pieces learned by BPE, from whole common words down to single characters.
+- At each step the model gives every token a logit; softmax with temperature turns them into probabilities.
+- Top-k and top-p cut the unlikely tail, then a random number picks one token. T = 0 always takes the top one, and loops.
+- Keys and values of earlier tokens are cached, so each new token costs one row of work instead of the whole prefix.
+
+</Section>

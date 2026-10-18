@@ -1,0 +1,128 @@
+<Section step="hook" title="Who does “it” mean?">
+
+In "the cat ate because it was hungry", you know at once that *it* is the cat. A model reading the sentence has to work
+that out too: the word *it* means nothing on its own until it borrows meaning from another word.
+
+**Attention** is how a transformer does the borrowing. Every token asks a question, every token offers an answer, and
+each token blends in information from the tokens whose answers fit its question best. Every large language model is
+built from stacks of this one operation.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="query q">What a token is looking for. "it" looks for a noun.</Term>
+  <Term name="key k">What a token offers to others. "cat" advertises itself as a noun.</Term>
+  <Term name="value v">The information a token hands over to whoever attends to it.</Term>
+  <Term name="score">The dot product $q \cdot k$, divided by $\sqrt{d}$ (the number of dimensions): large when the query and key point the same way.</Term>
+  <Term name="softmax">Turns scores into weights between 0 and 1 that add up to 1: $w_j = e^{s_j} / \sum_i e^{s_i}$.</Term>
+  <Term name="mask">In a decoder like GPT, a token may not look at later tokens: their scores become $-\infty$, so their weights are exactly 0.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One query, step by step">
+
+<Explore slug="attention" settings={{ preset: 'pronoun' }} caption="The query of “it” is compared with every key. Softmax turns the scores into weights, and the output is the weighted blend of the values." />
+
+Here every vector has just two numbers, so you can see them as arrows; real models use 64 or 128 per head, and learn
+them from data instead of having them set by hand. The recipe is the same:
+
+$$
+\text{out} = \sum_j w_j\, v_j \quad\text{where}\quad w = \operatorname{softmax}\!\left(\frac{q \cdot k_j}{\sqrt{d}}\right).
+$$
+
+<KeyIdea>
+
+**Attention is a soft lookup.** A dictionary returns the one value whose key matches exactly. Attention returns a blend
+of *every* value, weighted by how well each key matches the query, so it can be trained by gradient descent.
+
+</KeyIdea>
+
+Doing this for every token at once gives a matrix of weights, one row per query: $\operatorname{softmax}(QK^\top/\sqrt{d})\,V$.
+With $n$ tokens that is $n^2$ scores, which is why long contexts are expensive.
+
+</Section>
+
+<Section step="predict" title="Your turn: which word wins?">
+
+<PredictChallenge slug="attention" settings={{ preset: 'adjective' }} goal={5} />
+
+</Section>
+
+<Section step="see" title="Generating text: never compute the same key twice">
+
+A decoder writes one token at a time, and each new token attends to everything before it. The keys and values of the
+earlier tokens don't change, so the model keeps them in a **KV cache** and computes only one new row per step.
+
+<Explore slug="kv-cache" settings={{ preset: 'robot', n: 6 }} caption="Without a cache, every step recomputes K and V for the whole context. With one, each step adds a single row." />
+
+</Section>
+
+<Section step="do" title="Steer the attention yourself">
+
+Drag the query arrow q, or type a query into the box:
+
+- **Make "it" attend to "ate".** Which direction does q have to point?
+- **Set q to (0, 0).** Every score is 0, so every token gets the same weight: the output is the plain average of the values.
+- **Make q long.** The scores spread apart and softmax picks one winner almost outright. That is why scores are divided by $\sqrt{d}$.
+
+<Explore slug="attention" settings={{ preset: 'pronoun' }} input />
+
+<Misconception title="Attention knows which word an adjective describes">
+
+A dot product only sees what a key offers. In "a small dog chased the red ball", the query of "ball" looks for
+adjectives, so "small" gets a quarter of its attention even though it describes the dog. Real models fix this with
+position information added to every token and with many heads, each looking for something different.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A query and a key point in opposite directions. What is their score?',
+      choices: ['Large and positive', 'Close to zero', 'Negative', 'Exactly 1'],
+      answer: 2,
+      why: 'The dot product is negative when two vectors are more than a right angle apart, so that key gets little weight after softmax.',
+    },
+    {
+      q: 'What do the attention weights of one query add up to?',
+      choices: ['0', '1', 'The number of tokens', 'It depends on the scores'],
+      answer: 1,
+      why: 'Softmax divides each exponential by their total, so the weights always add up to 1 and the output is a weighted average of the values.',
+    },
+    {
+      q: 'Why does a decoder like GPT mask later tokens?',
+      choices: [
+        'To save memory',
+        'Because when it generates, the later tokens don’t exist yet',
+        'To make the weights add up to 1',
+        'Because later tokens are less important',
+      ],
+      answer: 1,
+      why: 'The model writes left to right, so in training it must not peek at the answer: each position may only use itself and earlier tokens.',
+    },
+    {
+      q: 'A model has already processed 100 tokens and now takes in the 101st. With a KV cache, how many new rows of K does it compute?',
+      choices: ['1', '100', '101', '5,050'],
+      answer: 0,
+      why: 'The 100 earlier rows are already cached and never change; only the newest token needs its key and value.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Each token has a query (what it wants), a key (what it offers) and a value (what it hands over).
+- Scores are $q \cdot k / \sqrt{d}$; softmax turns them into weights that add up to 1; the output is $\sum_j w_j v_j$.
+- A mask hides later tokens from a decoder, so it can learn to predict the next token.
+- While generating, a KV cache keeps the keys and values of earlier tokens: one new row per step, at the cost of memory.
+
+</Section>

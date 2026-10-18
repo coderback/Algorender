@@ -1,0 +1,111 @@
+<Section step="hook" title="Groups nobody labelled">
+
+A shop has thousands of customers and no idea how they split into types. A photo has a million colours and you want a
+palette of eight. There are no labels to learn from, only points: you want the algorithm to find the groups itself.
+
+k-means is the classic answer, and it fits in two lines: give every point to its nearest centre, then move every centre
+to the middle of its points. Repeat.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="centroid">The centre of a cluster. k-means keeps $k$ of them, named C1, C2, …</Term>
+  <Term name="assign step">Every point joins its nearest centroid. The shading shows each centroid's territory.</Term>
+  <Term name="update step">Every centroid moves to the mean of the points that joined it.</Term>
+  <Term name="inertia">The sum of squared distances from each point to its centroid: how tight the clusters are. Lower is better.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Assign, move, repeat">
+
+<Explore slug="k-means" settings={{ preset: 'blobs' }} caption="The three centroids start bunched in the middle. Each round they move to the mean of their points, and points switch sides." />
+
+Both steps can only lower the inertia. Joining the *nearest* centroid can only shorten a point's distance, and the mean
+is exactly the spot with the smallest total squared distance to a group of points. A quantity that keeps falling and
+can't go below zero must settle, so k-means always stops, here after a few rounds.
+
+But stopping isn't the same as finding the best answer:
+
+<Explore slug="k-means" settings={{ preset: 'bad-start' }} caption="Two centroids start in the same blob. They end up sharing it, while the third stretches over the other two blobs." />
+
+<KeyIdea>
+
+**k-means always converges, but only to a local optimum.** Where it ends depends on where the centroids start. In
+practice it is run from several starts and the result with the lowest inertia is kept; k-means++ chooses starts that
+are spread out, which makes bad starts rare.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: two long bands">
+
+<PredictChallenge slug="k-means" settings={{ preset: 'elongated' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Drag the starts">
+
+Drag the centroids before the first step (or move them with the arrow keys) and watch the whole run change. Then try
+the other examples:
+
+- **Bad start:** compare its final inertia with Three blobs: same points, much worse answer.
+- **k too big:** four centroids for three blobs, so one blob is split in two.
+- **Pure noise:** no real clusters, yet k-means still returns neat territories.
+- **Uneven sizes:** the boundary sits halfway between the centroids, so a big, spread-out cluster loses points to a small one.
+
+<Explore slug="k-means" settings={{ preset: 'blobs' }} input />
+
+<Misconception title="k-means finds the clusters that are really in the data">
+
+It always returns exactly $k$ clusters, whether or not the data has them, and it prefers round clusters of similar
+size because it only measures squared distance to a centre. Choosing $k$ is your job: one common check is to plot the
+final inertia for several values of $k$ and look for the "elbow" where adding clusters stops helping much.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'In the assign step, which cluster does a point join?',
+      choices: ['The one with the fewest points', 'The one whose centroid is nearest', 'The one it was in at the start', 'A random one'],
+      answer: 1,
+      why: 'Each point goes to its nearest centroid, which can only shorten its distance.',
+    },
+    {
+      q: 'Why does the update step move a centroid to the mean of its points?',
+      choices: ['The mean is the point with the smallest total squared distance to them', 'It is the fastest thing to compute', 'It keeps the centroids apart', 'It makes the clusters the same size'],
+      answer: 0,
+      why: 'Of all points in the plane, the mean minimises the sum of squared distances to a group.',
+    },
+    {
+      q: 'Can the inertia go up from one step to the next?',
+      choices: ['Yes, when points switch clusters', 'Yes, when centroids move', 'No, both steps can only lower it or keep it the same', 'Only on the first step'],
+      answer: 2,
+      why: 'Assigning to the nearest centroid and moving to the mean each minimise inertia with the other part held fixed.',
+    },
+    {
+      q: 'Two runs from different starts finish with inertia 44.6 and 13.8. What should you do?',
+      choices: ['Average the two clusterings', 'Keep the run with inertia 13.8, and try more starts', 'Keep the run with 44.6: it is more spread out', 'Increase k'],
+      answer: 1,
+      why: 'Both are local optima; the lower inertia is the tighter clustering, and more starts make a bad one less likely.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- k-means alternates two steps: assign each point to its nearest centroid, move each centroid to its mean.
+- Inertia never rises, so it always stops, but possibly at a local optimum: use several starts or k-means++.
+- It always finds $k$ clusters and prefers round, similar-sized ones; choosing $k$ is up to you.
+
+</Section>

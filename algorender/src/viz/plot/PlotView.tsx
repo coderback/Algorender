@@ -23,6 +23,7 @@ import type {
   PointShape,
   ReadoutPart,
   Shape,
+  TokensPart,
   Vec,
   VectorShape,
 } from './types';
@@ -41,10 +42,14 @@ const ARROW_HEAD = 9;
 export function PlotView({ state }: { state: PlotState }) {
   const figures = state.parts.filter((p): p is PlanePart | ImagePart | NetworkPart => p.kind === 'plane' || p.kind === 'image' || p.kind === 'network');
   const rows = state.parts.filter((p): p is BitsPart => p.kind === 'bits');
+  const sequences = state.parts.filter((p): p is TokensPart => p.kind === 'tokens');
   const panels = state.parts.filter((p): p is MatrixPart | ReadoutPart => p.kind === 'matrix' || p.kind === 'readouts');
   return (
     <div className="flex flex-col gap-3">
       <p className="sr-only">{describe(state)}</p>
+      {sequences.map((p) => (
+        <TokensView key={p.id} part={p} />
+      ))}
       {figures.length > 0 && (
         <div className="flex flex-wrap items-end justify-center gap-x-6 gap-y-3">
           {figures.map((p) =>
@@ -311,19 +316,25 @@ function PathView({ s, g }: { s: PathShape; g: PlaneGeometry }) {
   );
 }
 
-/** A pale wash of coloured cells (decision regions); each cell's colour changes by CSS transition. */
+/**
+ * Coloured cells: a pale wash (decision regions), or for `intensity` a
+ * stronger tint that grows with the value; each cell's colour changes by CSS
+ * transition.
+ */
 function Heatmap({ s, g }: { s: HeatmapShape; g: PlaneGeometry }) {
   const [left, top] = g.px([s.x0, s.y1]);
   const [right, bottom] = g.px([s.x1, s.y0]);
   const cw = (right - left) / s.cols;
   const ch = (bottom - top) / s.rows;
+  const scale = s.scale;
   const colour = (v: number) => {
-    if (s.scale.kind === 'classes') return TONES[s.scale.tones[Math.round(v)] ?? s.scale.tones[0]];
+    if (scale.kind === 'classes') return TONES[scale.tones[Math.round(v)] ?? scale.tones[0]];
     const p = Math.round(100 * Math.min(1, Math.max(0, v)));
-    return `color-mix(in oklab, ${TONES[s.scale.high]} ${p}%, ${TONES[s.scale.low]})`;
+    if (scale.kind === 'intensity') return `color-mix(in oklab, ${TONES[scale.tone]} ${p}%, transparent)`;
+    return `color-mix(in oklab, ${TONES[scale.high]} ${p}%, ${TONES[scale.low]})`;
   };
   return (
-    <g opacity={0.28} shapeRendering="crispEdges">
+    <g opacity={scale.kind === 'intensity' ? 0.75 : 0.28} shapeRendering="crispEdges">
       {s.values.map((v, k) => (
         <rect
           key={k}
@@ -643,26 +654,96 @@ function pixelColour(v: number, scale: ImagePart['scale']): string {
   return `color-mix(in oklab, var(--color-mark-${v < 0 ? 'swap' : 'compare'}) ${p}%, #f2f2f2)`;
 }
 
+/** Text that stays readable on a pixel: light on dark grays and strong blues, ink elsewhere. */
+function pixelInk(v: number, scale: ImagePart['scale']): string {
+  const light = scale === 'gray' ? v < 0.5 : v > 0.55;
+  return light ? '#fff' : '#1a1a1a';
+}
+
 function ImageView({ part }: { part: ImagePart }) {
   const { width: w, height: h } = part;
+  const size = part.size ?? MAX_IMAGE_PX;
   // Pixel colours change between frames by CSS transition, so a picture sharpens smoothly as terms are added.
   return (
-    <figure className="m-0 min-w-0 basis-40" style={{ width: MAX_IMAGE_PX, maxWidth: '100%' }} aria-hidden>
-      <svg viewBox={`0 0 ${w} ${h}`} className="block h-auto w-full rounded-sm ring-1 ring-line" shapeRendering="crispEdges">
-        {part.pixels.map((v, k) => (
-          <rect
-            key={k}
-            x={k % w}
-            y={Math.floor(k / w)}
-            width={1.02}
-            height={1.02}
-            className="transition-[fill]"
-            style={{ fill: pixelColour(v, part.scale), transitionDuration: 'var(--tween, 300ms)' }}
-          />
-        ))}
+    <figure className={`m-0 min-w-0 ${part.size ? '' : 'basis-40'}`} style={{ width: size, maxWidth: '100%' }} aria-hidden>
+      <svg viewBox={`-0.1 -0.1 ${w + 0.2} ${h + 0.2}`} className="block h-auto w-full overflow-visible">
+        <g shapeRendering="crispEdges">
+          {part.pixels.map((v, k) => (
+            <rect
+              key={k}
+              x={k % w}
+              y={Math.floor(k / w)}
+              width={1.02}
+              height={1.02}
+              className="transition-[fill]"
+              style={{ fill: pixelColour(v, part.scale), transitionDuration: 'var(--tween, 300ms)' }}
+            />
+          ))}
+        </g>
+        <rect x={0} y={0} width={w} height={h} fill="none" className="stroke-line" strokeWidth={0.04} />
+        {part.values?.map((text, k) =>
+          text ? (
+            <text
+              key={`v${k}`}
+              x={(k % w) + 0.5}
+              y={Math.floor(k / w) + 0.5}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={Math.min(0.42, 1.6 / Math.max(3, text.length))}
+              className="font-mono"
+              style={{ fill: pixelInk(part.pixels[k] ?? 0, part.scale) }}
+            >
+              {text}
+            </text>
+          ) : null,
+        )}
+        {part.boxes?.map((b) => {
+          const st = stroke(b, 'stroke-ink');
+          return (
+            <motion.rect
+              key={b.id}
+              initial={false}
+              animate={{ x: b.x, y: b.y, width: b.w, height: b.h }}
+              fill="none"
+              strokeWidth={Math.max(0.12, w / 60)}
+              strokeLinejoin="round"
+              className={st.className}
+              style={st.style}
+            />
+          );
+        })}
       </svg>
       <figcaption className="mt-1 text-center text-xs text-ink-muted">{part.label}</figcaption>
     </figure>
+  );
+}
+
+/** A wrapping row of token chips; spaces show as · so a leading space (part of a GPT token) is visible. */
+function TokensView({ part }: { part: TokensPart }) {
+  return (
+    <div className="mx-auto w-full max-w-3xl" aria-hidden>
+      <div className="mb-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{part.label}</div>
+      <div className="flex flex-wrap gap-1">
+        {part.tokens.map((t) => {
+          const mark = t.mark ? MARKS[t.mark] : null;
+          return (
+            <motion.span
+              key={t.id}
+              layout="position"
+              initial={false}
+              // Colours switch instantly: fading text and background together passes through unreadable blends.
+              className={`inline-flex min-w-6 flex-col items-center rounded-md border px-1.5 py-0.5 leading-tight ${
+                mark ? `${mark.bg} border-transparent ${t.mark === 'compare' ? 'text-white' : 'text-on-mark'}` : 'border-line bg-surface text-ink'
+              }`}
+              style={{ boxShadow: t.tone && !mark ? `inset 0 -3px 0 ${TONES[t.tone]}` : undefined }}
+            >
+              <span className="font-mono text-sm whitespace-pre">{t.text.replace(/ /g, '·').replace(/\n/g, '↵')}</span>
+              {t.sub !== undefined && <span className={`font-mono text-[10px] ${mark ? '' : 'text-ink-muted'}`}>{t.sub}</span>}
+            </motion.span>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

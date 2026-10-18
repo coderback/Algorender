@@ -1,0 +1,122 @@
+<Section step="hook" title="Why 0.1 + 0.2 isn’t 0.3">
+
+Type `0.1 + 0.2` into Python or a browser console and you get `0.30000000000000004`. Nothing is broken: computers
+store real numbers in a fixed number of bits, so most decimals can only be stored approximately, and the tiny errors
+show up when you add them.
+
+Once you can read the bits, the surprises become predictable: which numbers are exact, how big the error can be, and why
+you should never compare two floats with `==`.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="sign bit">Bit 31: 0 for positive, 1 for negative.</Term>
+  <Term name="exponent">Bits 30–23, an integer $e$ from 0 to 255. The power of two is $e - 127$ (the bias makes negative powers possible).</Term>
+  <Term name="fraction">Bits 22–0: the binary digits after the point. A hidden 1 sits in front, so a float32 has 24 significant bits.</Term>
+  <Term name="gap (ulp)">The distance to the next float. Nothing in between can be stored, so a number is rounded to the nearest float.</Term>
+</Terms>
+
+A float32 is scientific notation in base 2:
+
+$$
+x = (-1)^s \times 1.f \times 2^{\,e - 127}
+$$
+
+</Section>
+
+<Section step="see" title="Take 0.1 apart">
+
+<Explore slug="floating-point" settings={{ preset: 'tenth' }} caption="Read the sign, then the exponent, then the fraction, and compare what is stored with what you asked for." />
+
+In binary, $0.1$ is $0.000110011001100\ldots$, repeating forever, just as $1/3$ is $0.333\ldots$ in decimal. A fraction
+has a finite binary form only if its denominator is a power of two, and $10 = 2 \times 5$ isn't. So the 23 fraction bits
+cut the pattern off, and the stored value is the nearest float: $0.100000001490116\ldots$
+
+Larger numbers have larger gaps. Above $2^{24}$ the gap is 2, so even a whole number can fall between floats:
+
+<Explore slug="floating-point" settings={{ preset: 'big-int' }} caption="16 777 217 = 2²⁴ + 1 has no float32 of its own: its neighbours are 16 777 216 and 16 777 218." />
+
+<KeyIdea>
+
+**Floats are spaced evenly in relative terms, not absolute ones.** The gap next to $x$ is about $2^{-23} \approx 1.2
+\times 10^{-7}$ times $x$: tiny near 0, enormous near $10^{30}$. That is why a float32 keeps about 7 significant decimal
+digits wherever the number sits, and a float64 (52 fraction bits) about 16.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: is 0.75 exact?">
+
+<PredictChallenge slug="floating-point" settings={{ input: '0.75' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Try the edges">
+
+Type your own numbers into the box, or pick an example:
+
+- **0.1 + 0.2:** the sum is done in float64 first, giving $0.30000000000000004$, and then rounded to float32. That
+  float64 error is far smaller than a float32 gap, so it lands on the very same float32 as $0.3$. In float64 the two
+  differ by one gap, which is the famous result. Whether two computed values compare equal depends on the precision and
+  the rounding, not on the maths.
+- **1e-40:** too small for a normal float. The exponent bits are all 0, the hidden 1 disappears, and precision fades
+  gradually (a *subnormal*).
+- **Infinity, NaN and −0:** special patterns with an all-ones or all-zeros exponent.
+
+<Explore slug="floating-point" settings={{ preset: 'sum' }} input />
+
+<Misconception title="If two floats print the same, == is safe">
+
+Printing rounds to a handful of digits, so two different floats can print identically, and two calculations of the
+"same" value can differ in the last bit. Compare with a tolerance instead: $|a - b| \le \varepsilon \cdot
+\max(|a|, |b|)$, with $\varepsilon$ a little above the precision you need. NaN is the extreme case: it isn't even equal
+to itself.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'The exponent bits of a float32 read 10000010 (130). What power of two does it multiply by?',
+      choices: ['2^130', '2^3', '2^−3', '2^127'],
+      answer: 1,
+      why: 'Subtract the bias: 130 − 127 = 3.',
+    },
+    {
+      q: 'Why can’t 0.1 be stored exactly in binary?',
+      choices: ['It is too small', 'Its binary expansion repeats forever, because 10 is not a power of two', 'Floats can’t store anything below 1 exactly', 'The sign bit gets in the way'],
+      answer: 1,
+      why: 'Only fractions whose denominator is a power of two end in binary; 1/10 repeats, so it must be rounded.',
+    },
+    {
+      q: 'How far apart are neighbouring float32s around 2²⁴ = 16 777 216 (just above it)?',
+      choices: ['2^−23', '1', '2', '2^24'],
+      answer: 2,
+      why: 'The power there is 2²⁴, and 24 bits of precision leave a gap of 2^(24 − 23) = 2.',
+    },
+    {
+      q: 'What is the safest way to check whether a computed total equals 0.3?',
+      choices: ['total == 0.3', 'abs(total − 0.3) is below a small tolerance', 'str(total) == "0.3"', 'round(total) == 0'],
+      answer: 1,
+      why: 'Rounding errors make exact equality fragile; a tolerance accepts values that differ only in the last bits.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A float32 is a sign, a power of two ($e - 127$) and 24 significant bits (one of them hidden).
+- Most decimals, like 0.1, repeat forever in binary and are rounded to the nearest float.
+- The gap between floats grows with the number: about 7 significant digits in float32, 16 in float64.
+- Never compare floats with `==`; use a tolerance. Subnormals, ±0, ∞ and NaN cover the edges.
+
+</Section>

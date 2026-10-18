@@ -1,0 +1,116 @@
+<Section step="hook" title="A line that says how sure it is">
+
+Is this email spam? Will this customer cancel? A yes/no answer isn't enough: you want to know *how likely*, so you can
+act differently at 51% and at 99%.
+
+Logistic regression draws a straight line through the data and turns "which side, and how far" into a probability. It
+is also a single neuron with a sigmoid, the building block that neural networks stack by the thousand.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="score">$z = w_1 x + w_2 y + b$: positive on one side of a line, negative on the other, larger further away.</Term>
+  <Term name="sigmoid">$\sigma(z) = \frac{1}{1 + e^{-z}}$ squashes any score into a probability between 0 and 1, with $\sigma(0) = \tfrac12$.</Term>
+  <Term name="decision boundary">Where $z = 0$, so $p = \tfrac12$: always a straight line.</Term>
+  <Term name="cross-entropy loss">The average of $-\ln p$ of the true class: small when the model is confidently right, huge when it is confidently wrong.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch the line swing into place">
+
+<Explore slug="logistic-regression" settings={{ preset: 'linear' }} caption="The shading is p(class 1) at every spot; the line is where p = ½. Each step moves the weights against the gradient of the loss." />
+
+At the start every weight is 0, so $p = \tfrac12$ everywhere and the loss is $\ln 2 \approx 0.693$: a coin flip. The
+gradient is remarkably simple:
+
+$$
+\nabla_{w} \text{loss} = \text{mean of } (p - \text{label}) \cdot x
+$$
+
+Each point pushes the weights by its own error $p - \text{label}$. A point the model already gets right with confidence
+barely pushes; a point on the wrong side pushes hard. As the classes separate, the weights grow and the shading sharpens
+from a gentle blur into a crisp edge.
+
+<KeyIdea>
+
+**Logistic regression is a straight line plus a confidence.** The boundary $p = \tfrac12$ is always the line $w \cdot x + b = 0$,
+and $p$ depends only on the distance from it. Training minimises cross-entropy, the loss from the
+[entropy lesson](/learn/entropy): the average surprise of the true labels under the model's probabilities.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: overlapping classes">
+
+<PredictChallenge slug="logistic-regression" settings={{ preset: 'overlap' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Make it fail">
+
+Pick the datasets one after another:
+
+- **Overlapping:** no line separates every point, so the model hedges with $p$ near ½ in the middle.
+- **XOR:** opposite corners share a class. The loss barely moves from $\ln 2$, and accuracy stays far from 100%.
+- **Circles:** one class surrounds the other; any straight line cuts through both.
+
+<Explore slug="logistic-regression" settings={{ preset: 'xor' }} input />
+
+The last two aren't a training problem: more steps won't help, because no straight line fits. Curved boundaries need
+new features, or hidden layers, which is where [neural networks](/learn/neural-networks) come in.
+
+<Misconception title="Logistic regression predicts a number, like linear regression">
+
+Despite the name, it is a classifier. The "regression" is on the score $z$, the log-odds $\ln\frac{p}{1-p}$, which is
+a linear function of the inputs; the output you use is a probability, and the prediction is whichever side of ½ it
+falls on.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A point sits exactly on the decision boundary. What probability does the model give it?',
+      choices: ['0', '½', '1', 'It depends on the weights'],
+      answer: 1,
+      why: 'On the boundary the score z is 0, and σ(0) = ½.',
+    },
+    {
+      q: 'Two class-1 points: the model gives one p = 0.9 and the other p = 0.1. Which pushes the weights harder?',
+      choices: ['The one with p = 0.9', 'The one with p = 0.1', 'Both the same', 'Neither: only wrong classes push'],
+      answer: 1,
+      why: 'The push is proportional to the error p − label: −0.1 for the first, −0.9 for the second.',
+    },
+    {
+      q: 'Before any training, all weights are 0. What is the loss?',
+      choices: ['0', 'ln 2 ≈ 0.693', '1', 'Infinite'],
+      answer: 1,
+      why: 'Every point gets p = ½, and −ln ½ = ln 2.',
+    },
+    {
+      q: 'Why can’t logistic regression learn XOR, however long it trains?',
+      choices: ['The step size is too small', 'Its boundary is always a straight line, and no line separates XOR', 'Cross-entropy can’t be minimised', 'It needs more points'],
+      answer: 1,
+      why: 'p depends on one linear score, so the boundary is a line; XOR needs a curved or broken boundary.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- $p = \sigma(w \cdot x + b)$: a linear score squashed into a probability.
+- The boundary $p = \tfrac12$ is always a straight line; confidence grows with distance from it.
+- The loss is cross-entropy; its gradient is the mean of (p − label) times the input.
+- Curved boundaries are out of reach without new features or hidden layers.
+
+</Section>
