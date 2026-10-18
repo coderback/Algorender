@@ -26,6 +26,7 @@ export default function Header() {
               <Link href="/plan" className={navLink}>Plan</Link>
               <Link href="/code" className={navLink}>Code</Link>
               <Link href="/practice" className={navLink}>Practice</Link>
+              <Link href="/play" className={navLink}>Play</Link>
               <Link href="/compare" className={navLink}>Compare sorts</Link>
               <AccountMenu linkClass={navLink} />
             </nav>
@@ -43,6 +44,7 @@ export default function Header() {
             <Link href="/plan" className={navLink}>Plan</Link>
             <Link href="/code" className={navLink}>Code</Link>
             <Link href="/practice" className={navLink}>Practice</Link>
+            <Link href="/play" className={navLink}>Play</Link>
             <Link href="/compare" className={navLink}>Compare sorts</Link>
             <AccountMenu linkClass={navLink} />
           </nav>

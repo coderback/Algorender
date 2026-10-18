@@ -9,6 +9,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import type { EventData, EventKind, ProgressEvent } from './events';
 import { mastery, type MasteryGraph } from './mastery';
 import { mistakes } from './misconceptions';
+import { badges, conceptLevels, xpLedger } from './play';
 import { exerciseProgress, lessonProgress, problemProgress } from './projections';
 import { reviewCards } from './review';
 import { progressStore, type Snapshot } from './store';
@@ -51,6 +52,13 @@ export function useReviewCards() {
 export function useMistakes() {
   const events = useEvents();
   return useMemo(() => mistakes(events), [events]);
+}
+
+/** XP, levels per concept and badges (src/progress/play.ts). */
+export function usePlay(graph: MasteryGraph) {
+  const events = useEvents();
+  const m = useMastery(graph);
+  return useMemo(() => ({ ledger: xpLedger(events), levels: conceptLevels(events, graph, m), badges: badges(events) }), [events, graph, m]);
 }
 
 /** Every concept's mastery (src/progress/mastery.ts). */

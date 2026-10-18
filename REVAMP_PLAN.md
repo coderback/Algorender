@@ -1003,6 +1003,20 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 - **Systems track:** the simulators.
 - **Extras:** mock interviews, classroom mode, community visualizations, i18n, PWA.
 
+**Split into steps, each on its own stacked branch (2026-10-18):**
+- **6a: Play I** (`revamp/phase-6a`): game modes on the engine that need no server: be the algorithm, comparison budget, break it. Plus the on-by-default layer of §7: mastery XP, levels per topic, informational badges and a daily challenge, all projections of the event log like mastery.
+  - **Status (2026-10-18): 6a is built.**
+    - **Be the algorithm:** you make the next swap of bubble, selection, quick or heap sort on a fresh random input, or say there are none left. Moves come from the real trace: every change of the array between frames must be one swap, which a property test checks for each supported sort. A wrong move outlines the swap the algorithm makes, with its narration, and play goes on from the true state. The array view gained opt-in selectable bars.
+    - **Comparison budget:** sort hidden cards two at a time against ⌈log₂ n!⌉ and merge sort's worst case. The order only counts if your comparisons prove it, and an "orders still possible" counter halves as you go, which is the lower-bound argument made visible.
+    - **Break it:** quicksort's worst case (run on the real module, 45 comparisons on 10 values), a greedy coin-change counterexample, and a hash flood.
+    - **XP and the rest:** a `game.played` event per round. XP only for evidence of learning, with replays of one item on one day paying a half, then a quarter, then nothing; a broken challenge pays once. Levels per concept (trace, predict, implement, analyse) and eight informational badges. The daily challenge is due reviews, one new concept and a game round. All on `/play`, linked from the header.
+    - **Checks:** unit and property tests for each game's logic and for XP, levels and badges; e2e for each game (a full perfect round, a wrong move and its reveal, a won comparison budget, each break-it challenge) and axe on every Play page.
+    - **Left for later:** be-the-algorithm on graphs and trees (pick the node Dijkstra settles next), invariant puzzles, debug-it, and the ML challenges.
+- **6b: Systems I:** CPU scheduling, paging and page replacement, LRU/LFU, consistent hashing, the token bucket, queueing latency, with lessons.
+- **6c: Systems II:** Raft, Lamport and vector clocks, LSM compaction, B+trees, race-condition interleavings, deadlock.
+- **6d: Social play** (opt-in): weekly streaks, leagues, async duels and solution histograms. It needs the owner's decisions on ranking and moderation first.
+- **6e: Extras:** mock interviews, classroom mode, community visualisations, i18n, and the rest of the PWA.
+
 ---
 
 ## 9. Success metrics
