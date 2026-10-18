@@ -1,5 +1,12 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { collectErrors } from './errors';
+
+/** The same axe rules as a11y.spec.ts, on whatever the page shows now. */
+async function expectAccessible(page: Page) {
+  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']).analyze();
+  expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+}
 
 const lessonPaths = ['binary-search', 'two-pointers', 'memoization', 'dijkstra'];
 
@@ -16,6 +23,38 @@ test('the concept map links lessons and visualisers', async ({ page }) => {
   await page.getByRole('link', { name: /Lesson/ }).first().click();
   await expect(page).toHaveURL(/\/learn\/[a-z-]+$/, { timeout: 30_000 }); // the first visit compiles the route in dev
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+});
+
+test('the placement check lets a beginner off early and says where to start', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/learn');
+  await expect(page.getByRole('heading', { name: 'Where to start' })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('link', { name: 'Take the placement check' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Placement check' })).toBeVisible({ timeout: 30_000 });
+  // Data structures and algorithms is picked by default; three misses there end the check.
+  await page.getByRole('button', { name: 'Start' }).click();
+  await expectAccessible(page);
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole('button', { name: 'Not sure' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+  }
+  await expect(page.getByRole('heading', { name: 'Done: 0 of 3 right' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Big-O and growth/ })).toBeVisible();
+
+  await page.getByRole('link', { name: 'See the concept map' }).click();
+  await expect(page.getByRole('heading', { name: 'Your next steps' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('link', { name: 'Retake the placement check' })).toBeVisible();
+  await expect(page.locator('#big-o [data-status="new"]')).toHaveText('Ready to start');
+  await expectAccessible(page);
+  expect(errors).toEqual([]);
+});
+
+test('answering a lesson question puts its concept in progress on the map', async ({ page }) => {
+  await openLesson(page, 'binary-search');
+  await page.getByRole('group', { name: 'Question 1' }).getByRole('button').first().click();
+  await page.goto('/learn');
+  await expect(page.locator('#binary-search [data-status="learning"]')).toHaveText('Learning', { timeout: 30_000 });
+  await expect(page.getByText('Pick up where you left off')).toBeVisible();
 });
 
 for (const slug of lessonPaths) {
