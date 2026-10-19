@@ -1048,6 +1048,16 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Progress:** a `design.checked` event. A pass is mastery evidence and earns XP, the implement level and the "Architect" badge.
 - **6e: Social play** (opt-in): weekly streaks, leagues, async duels and solution histograms. It needs the owner's decisions on ranking and moderation first.
 - **6f: Extras:** mock interviews (including system design interviews grounded in the 6d case studies), classroom mode, community visualisations, i18n, and the rest of the PWA.
+- **Shelved (2026-10-19, owner):** 6e, 6f, billing and launch hardening are on hold; no new work is planned. Phases 0 to 6d are built and live, and the AI tutor runs in production. Notes for picking them up again:
+  - **6e** needs the owner's decisions on identity (pseudonyms or names), how leagues group learners, moderation, and storing solutions for histograms. A low-risk default: opt-in, generated pseudonyms, small weekly leagues, invite-only duels, anonymous histograms.
+  - **6f:** mock interviews are the most valuable part (they reuse the tutor, the judge and the 6d case studies); classroom mode, community visualisations and i18n wait for demand.
+  - **Billing:** the business model (free visuals; paid practice, judge, tutor and plans) has no payments yet, so those features are free to signed-in learners.
+  - **Launch hardening:**
+    - an email provider for verification and password reset;
+    - `BETTER_AUTH_URL` in Vercel;
+    - the tutor's real prices (`TUTOR_PRICE_FAST`/`TUTOR_PRICE_STRONG`);
+    - a full e2e run;
+    - `sslmode=verify-full` in `DATABASE_URL` to quiet the pg warning.
 
 ---
 
