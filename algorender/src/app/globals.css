@@ -92,8 +92,21 @@
      4.5:1 on the run, error and hint line fills. */
   --color-syntax-name: #005f96;
 
-  /* The full-bleed page behind the daily review. */
+  /* The daily review: a full-bleed butter page with a white card stack on
+     it, translucent side panels, and its own progress bar. */
   --color-review-page: #f7eaae;
+  --color-review-card: #ffffff;
+  --color-review-panel: rgb(255 255 255 / 0.7);
+  --color-review-ghost: rgb(255 255 255 / 0.55);
+  --color-review-well: #f3f2ed;
+  --color-review-progress: #17161c;
+  --color-review-track: rgb(255 255 255 / 0.6);
+  --shadow-review: 0 30px 60px -36px rgb(61 47 4 / 0.45);
+  /* Today's grades in the review, one square each: Again, Hard, Good, Easy. */
+  --color-grade-again: #e4685a;
+  --color-grade-hard: #f0b45a;
+  --color-grade-good: #2fb383;
+  --color-grade-easy: #8b7df7;
 
   /* Feedback: right / careful / wrong. A soft fill with a dark title and a
      coloured icon (the ink). good is also a fill, with on-good text. */
@@ -138,6 +151,15 @@
   --color-track-teal-ink: #155e63;
   --color-track-teal-title: #0b3b3e;
   --color-chip-on-track: rgb(255 255 255 / 0.65);
+  /* Each track's mid-tone, for bars and dots on a neutral or pastel surface
+     (mastery by track). The same in both themes. */
+  --color-track-lilac-bar: #8b7df7;
+  --color-track-peach-bar: #f08a5d;
+  --color-track-mint-bar: #2fb383;
+  --color-track-sky-bar: #4d8fd6;
+  --color-track-butter-bar: #d4b021;
+  --color-track-rose-bar: #e0709a;
+  --color-track-teal-bar: #2fa5a8;
 
   /* Shape: every top-level card, inner tiles, wells and inputs, pills. */
   --radius-card: 32px;
@@ -275,6 +297,13 @@
       --color-syntax-name: #5aa9e6;
 
       --color-review-page: #18160e;
+      --color-review-card: #24221c;
+      --color-review-panel: #24221c;
+      --color-review-ghost: rgb(255 255 255 / 0.05);
+      --color-review-well: #2e2b24;
+      --color-review-progress: #f0d77a;
+      --color-review-track: rgb(255 255 255 / 0.08);
+      --shadow-review: 0 0 0 1px rgb(255 255 255 / 0.06);
 
       --color-good: #9be3c2;
       --color-good-strong: #c9f2df;

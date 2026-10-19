@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ReviewQueue, type CardFace } from '@/components/review/ReviewQueue';
+import { loadConcepts } from '@/content/concepts';
 import { lessons } from '@/content/lessons';
 import { lessonMisconceptions } from '@/content/lessons/assessment';
 import { lessonQuizzes } from '@/content/lessons/quizzes';
@@ -20,20 +21,30 @@ export const metadata: Metadata = {
  * cards the learner has, and when each is due, comes from their events.
  */
 function faces(): CardFace[] {
-  const problems: CardFace[] = loadProblems().map((p) => ({
-    id: problemCard(p.slug),
-    kind: 'problem',
-    slug: p.slug,
-    title: p.title,
-    summary: p.summary,
-    pattern: p.patterns.map((id) => PATTERNS[id].title).join(', '),
-    why: p.why,
-    approach: <Markdown text={p.approach} className="text-sm" />,
-    complexity: `Time ${p.complexity.time} · space ${p.complexity.space}`,
-  }));
+  const { concepts } = loadConcepts();
+  const concept = new Map(concepts.map((c) => [c.id, c]));
+  const lessonConcept = new Map(lessons.map((l) => [l.slug, concept.get(l.concept)]));
+  const problems: CardFace[] = loadProblems().map((p) => {
+    const main = PATTERNS[p.patterns[0]];
+    return {
+      id: problemCard(p.slug),
+      kind: 'problem',
+      slug: p.slug,
+      title: p.title,
+      summary: p.summary,
+      pattern: p.patterns.map((id) => PATTERNS[id].title).join(', '),
+      topic: main.title,
+      track: (main.concept && concept.get(main.concept)?.track) || 'patterns',
+      difficulty: p.difficulty,
+      why: p.why,
+      approach: <Markdown text={p.approach} className="text-[15px]" />,
+      complexity: `Time ${p.complexity.time} · space ${p.complexity.space}`,
+    };
+  });
   const titles = new Map(lessons.map((l) => [l.slug, l.title]));
+  const topicOf = (lesson: string) => ({ topic: lessonConcept.get(lesson)?.title ?? lesson, track: lessonConcept.get(lesson)?.track ?? 'foundations' });
   const quizzes: CardFace[] = lessonQuizzes().flatMap(({ lesson, quiz, questions }) =>
-    questions.map(({ q, choices, answer, why }, i) => ({ id: quizCard(lesson, quiz, i), kind: 'quiz' as const, lesson, lessonTitle: titles.get(lesson) ?? lesson, q, choices, answer, why })),
+    questions.map(({ q, choices, answer, why }, i) => ({ id: quizCard(lesson, quiz, i), kind: 'quiz' as const, lesson, lessonTitle: titles.get(lesson) ?? lesson, ...topicOf(lesson), q, choices, answer, why })),
   );
   const mistakes: CardFace[] = lessonMisconceptions()
     .filter((m) => m.probes.length > 0)
@@ -42,6 +53,7 @@ function faces(): CardFace[] {
       kind: 'misconception',
       lesson: m.lesson,
       lessonTitle: titles.get(m.lesson) ?? m.lesson,
+      ...topicOf(m.lesson),
       title: m.title,
       correction: <Markdown text={m.correction} className="text-sm" />,
       probes: m.probes.map(({ q, choices, answer, why }) => ({ q, choices, answer, why })),
@@ -50,15 +62,5 @@ function faces(): CardFace[] {
 }
 
 export default function ReviewPage() {
-  return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <div className="mb-1 text-xs font-semibold tracking-wider text-accent-ink uppercase">Review</div>
-      <h1 className="text-3xl font-bold text-ink">Daily review</h1>
-      <p className="mt-2 mb-6 text-ink-soft">
-        Problems you solve and quiz questions you answer come back here, just before you’d forget them, and so do common
-        mistakes you make, until you’ve cleared them. A few minutes a day keeps them for good. It works offline, too.
-      </p>
-      <ReviewQueue faces={faces()} />
-    </main>
-  );
+  return <ReviewQueue faces={faces()} />;
 }

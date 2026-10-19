@@ -1,6 +1,6 @@
 'use client';
 
-import { clsx } from 'clsx';
+import { cx } from './cx';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { FiX } from 'react-icons/fi';
 
@@ -27,7 +27,7 @@ export function BottomSheet({ open, onClose, title, children, className }: { ope
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className={clsx(
+      className={cx(
         'm-0 mt-auto max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-[28px] bg-surface p-0 text-ink backdrop:bg-feature/40 backdrop:backdrop-blur-[2px]',
         className,
       )}

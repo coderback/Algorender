@@ -1,6 +1,6 @@
 'use client';
 
-import { clsx } from 'clsx';
+import { cx } from './cx';
 import { useId, type ComponentProps, type ReactNode } from 'react';
 
 const CONTROL =
@@ -19,13 +19,13 @@ interface FieldProps {
 
 function Frame({ id, label, hint, error, className, children }: Omit<FieldProps, 'mono'> & { id: string; children: ReactNode }) {
   return (
-    <div className={clsx('flex flex-col gap-1.5', className)}>
+    <div className={cx('flex flex-col gap-1.5', className)}>
       <label htmlFor={id} className="text-[13px] font-semibold text-ink">
         {label}
       </label>
       {children}
       {(error || hint) && (
-        <p id={`${id}-hint`} className={clsx('text-xs', error ? 'text-bad-ink' : 'text-ink-muted')}>
+        <p id={`${id}-hint`} className={cx('text-xs', error ? 'text-bad-ink' : 'text-ink-muted')}>
           {error ?? hint}
         </p>
       )}
@@ -43,7 +43,7 @@ export function Field({ label, hint, error, mono, className, id, ...input }: Fie
         id={fid}
         aria-invalid={error ? true : undefined}
         aria-describedby={error || hint ? `${fid}-hint` : undefined}
-        className={clsx(CONTROL, mono && 'font-mono font-semibold')}
+        className={cx(CONTROL, mono && 'font-mono font-semibold')}
         {...input}
       />
     </Frame>
@@ -60,7 +60,7 @@ export function SelectField({ label, hint, error, mono, className, id, children,
         id={fid}
         aria-invalid={error ? true : undefined}
         aria-describedby={error || hint ? `${fid}-hint` : undefined}
-        className={clsx(CONTROL, 'cursor-pointer pr-10', mono && 'font-mono font-semibold')}
+        className={cx(CONTROL, 'cursor-pointer pr-10', mono && 'font-mono font-semibold')}
         {...select}
       >
         {children}

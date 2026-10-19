@@ -5,10 +5,10 @@ import { FiArrowRight, FiAward, FiCheckCircle, FiCircle, FiLoader, FiZap } from 
 import { useMinute } from '@/lib/now';
 import { GAMES } from '@/play/games';
 import { useMastery, usePlay, useProgressSnapshot, useReviewCards } from '@/progress/hooks';
-import { nextSteps, type MasteryGraph } from '@/progress/mastery';
-import { BADGES, didToday, LEVELS, xpTotals } from '@/progress/play';
-import { dueToday } from '@/progress/review';
+import type { MasteryGraph } from '@/progress/mastery';
+import { BADGES, LEVELS, xpTotals } from '@/progress/play';
 import { conceptHref } from '../learn/Mastery';
+import { dailyChallenge } from './challenge';
 
 /**
  * The Play hub: XP, today's challenge, the games, levels per concept and
@@ -83,20 +83,7 @@ function Today({
   now: Date;
 }) {
   const { total, today } = xpTotals(play.ledger, now);
-  const due = dueToday(cards, now).length;
-  const did = didToday(events, now);
-  const next = nextSteps(m, graph, { limit: 1 })[0]?.concept;
-  const learnedNew = !!next?.lesson && did.learned.has(next.lesson);
-  const items = [
-    {
-      done: due === 0,
-      text: due === 0 ? (did.reviewed ? 'Reviews done for today' : 'No reviews due today') : `Clear your ${due} due ${due === 1 ? 'review' : 'reviews'}`,
-      href: '/review',
-      cta: 'Review',
-    },
-    ...(next ? [{ done: learnedNew, text: `Something new: ${next.title}`, href: conceptHref(next), cta: 'Start' }] : []),
-    { done: did.played, text: 'A round of a game', href: '/play/be-the-algorithm', cta: 'Play' },
-  ];
+  const items = dailyChallenge({ events, cards, mastery: m, graph, now });
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
       <section aria-labelledby="xp" className="rounded-2xl border border-line-soft bg-surface p-5 shadow-xs">

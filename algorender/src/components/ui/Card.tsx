@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { clsx } from 'clsx';
+import { cx } from './cx';
 import type { ComponentProps, ElementType, ReactNode } from 'react';
 import { TRACK_CLASSES, trackColour, type TrackColour } from '@/data/tracks';
 
@@ -19,7 +19,7 @@ const pad = (dense?: boolean) => (dense ? 'p-5' : 'p-6');
 export function Card({ as = 'section', dense, className, children, ...rest }: CardProps & Omit<ComponentProps<'section'>, 'ref'>) {
   const Tag = as as ElementType;
   return (
-    <Tag className={clsx('flex flex-col gap-3.5 rounded-card bg-surface', pad(dense), className)} {...rest}>
+    <Tag className={cx('flex flex-col gap-3.5 rounded-card bg-surface', pad(dense), className)} {...rest}>
       {children}
     </Tag>
   );
@@ -37,7 +37,7 @@ function colourOf(track: string): TrackColour {
 /** The track's pastel classes: fill and body ink. Titles inside use trackTitle(). */
 export function trackSurface(track: string) {
   const c = TRACK_CLASSES[colourOf(track)];
-  return clsx(c.bg, c.ink);
+  return cx(c.bg, c.ink);
 }
 
 export function trackTitle(track: string) {
@@ -48,7 +48,7 @@ export function trackTitle(track: string) {
 export function TrackCard({ track, as = 'section', dense, className, children, ...rest }: TrackProps & Omit<ComponentProps<'section'>, 'ref'>) {
   const Tag = as as ElementType;
   return (
-    <Tag className={clsx('flex flex-col gap-3.5 rounded-card', trackSurface(track), pad(dense), className)} {...rest}>
+    <Tag className={cx('flex flex-col gap-3.5 rounded-card', trackSurface(track), pad(dense), className)} {...rest}>
       {children}
     </Tag>
   );
@@ -58,7 +58,7 @@ export function TrackCard({ track, as = 'section', dense, className, children, .
 export function TrackCardLink({ track, dense, className, children, ...rest }: Omit<TrackProps, 'as'> & ComponentProps<typeof Link>) {
   return (
     <Link
-      className={clsx(
+      className={cx(
         'flex flex-col gap-3.5 rounded-card transition-transform duration-150 ease-standard hover:-translate-y-0.5',
         trackSurface(track),
         pad(dense),
@@ -75,7 +75,7 @@ export function TrackCardLink({ track, dense, className, children, ...rest }: Om
 export function FeatureCard({ as = 'section', dense, className, children, ...rest }: CardProps & Omit<ComponentProps<'section'>, 'ref'>) {
   const Tag = as as ElementType;
   return (
-    <Tag className={clsx('flex flex-col gap-3.5 rounded-card bg-feature text-on-feature', pad(dense), className)} {...rest}>
+    <Tag className={cx('flex flex-col gap-3.5 rounded-card bg-feature text-on-feature', pad(dense), className)} {...rest}>
       {children}
     </Tag>
   );

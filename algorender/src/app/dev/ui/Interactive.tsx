@@ -20,7 +20,7 @@ export function InputsDemo() {
         <FiSearch aria-hidden className="size-[18px] shrink-0" />
         <span className="sr-only">Search</span>
         <input type="search" placeholder="Search visualisers, lessons, problems" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-ink-muted" />
-        <Kbd className="bg-surface">Ctrl K</Kbd>
+        <Kbd tone="surface">Ctrl K</Kbd>
       </label>
       <Segmented
         label="Mode"

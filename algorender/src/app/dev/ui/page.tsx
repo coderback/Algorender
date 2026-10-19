@@ -303,7 +303,7 @@ export default function DevUiPage() {
               <DifficultyChip level="easy" />
               <Chip tone="onFeature">Hashing</Chip>
             </div>
-            <Button kind="onTrack" block trailing={<FiArrowRight aria-hidden />}>Solve it</Button>
+            <Button kind="onFeature" block trailing={<FiArrowRight aria-hidden />}>Solve it</Button>
           </FeatureCard>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -37,6 +37,7 @@ test('focused pages have no rail and one way out', async ({ page }) => {
 
 test('the command palette finds a visualiser and opens it from the keyboard', async ({ page }) => {
   await page.goto('/learn');
+  await page.waitForLoadState('networkidle');
   const trigger = page.getByRole('button', { name: /Search visualisers, lessons, problems/ });
   await trigger.focus();
   await page.keyboard.press('Control+k');
@@ -71,6 +72,7 @@ test('the palette passes axe in both themes', async ({ page }) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     await page.goto('/');
+    await page.waitForLoadState('networkidle'); // the shortcut works once the page has hydrated
     await page.keyboard.press('Control+k');
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('combobox').fill('sort');

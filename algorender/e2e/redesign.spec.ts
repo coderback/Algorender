@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { seed } from './seed';
 
 // Screenshots of the redesigned routes at desktop and phone width in both
 // themes, for a side-by-side check against docs/redesign/renders. Shots land in
 // test-results/redesign/. No pixel diffs: the boards use sample data. Each
 // phase adds the routes it finishes.
-const ROUTES: { name: string; path: string }[] = [
+const ROUTES: { name: string; path: string; seeded?: boolean }[] = [
   { name: 'dev-ui', path: '/dev/ui' },
   // Phase 2: every page in its shell (hub, sub-page, detail, focused).
   { name: 'today', path: '/' },
@@ -32,6 +33,9 @@ const ROUTES: { name: string; path: string }[] = [
   { name: 'problem', path: '/practice/two-sum' },
   { name: 'review', path: '/review' },
   { name: 'embed', path: '/embed/bubble-sort' },
+  // Phase 3: Today and the review with a week of progress (the rows above show a new learner).
+  { name: 'today-seeded', path: '/', seeded: true },
+  { name: 'review-seeded', path: '/review', seeded: true },
 ];
 
 const VIEWPORTS = [
@@ -44,6 +48,10 @@ for (const theme of ['light', 'dark'] as const) {
     for (const route of ROUTES) {
       test(`${route.name} at ${vp.name} in ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
+        if (route.seeded) {
+          await page.goto('/explore');
+          await seed(page);
+        }
         const sep = route.path.includes('?') ? '&' : '?';
         const res = await page.goto(`${route.path}${sep}theme=${theme}`);
         expect(res?.status(), `${route.path} status`).toBe(200);

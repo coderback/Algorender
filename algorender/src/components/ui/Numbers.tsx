@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cx } from './cx';
 import type { ReactNode } from 'react';
 import { TRACK_CLASSES, type TrackColour } from '@/data/tracks';
 
@@ -10,8 +10,8 @@ import { TRACK_CLASSES, type TrackColour } from '@/data/tracks';
 export function CountTile({ value, label, track, className }: { value: ReactNode; label: ReactNode; track?: TrackColour; className?: string }) {
   const c = track && TRACK_CLASSES[track];
   return (
-    <div className={clsx('flex flex-col gap-1 rounded-well p-3', c ? clsx(c.bg, c.ink) : 'bg-sunken text-ink-muted', className)}>
-      <span className={clsx('font-display text-number-tile tabular-nums', c ? c.title : 'text-ink')}>{value}</span>
+    <div className={cx('flex flex-col gap-1 rounded-well p-3', c ? cx(c.bg, c.ink) : 'bg-sunken text-ink-muted', className)}>
+      <span className={cx('font-display text-number-tile tabular-nums', c ? c.title : 'text-ink')}>{value}</span>
       <span className="text-xs font-medium">{label}</span>
     </div>
   );
@@ -20,7 +20,7 @@ export function CountTile({ value, label, track, className }: { value: ReactNode
 /** A big number with an optional unit after it: "12 cards", "1,240 XP". */
 export function BigNumber({ value, unit, className }: { value: ReactNode; unit?: ReactNode; className?: string }) {
   return (
-    <p className={clsx('flex items-baseline gap-2', className)}>
+    <p className={cx('flex items-baseline gap-2', className)}>
       <span className="font-display text-number-big tabular-nums">{value}</span>
       {unit && <span className="text-[15px] font-semibold">{unit}</span>}
     </p>
@@ -37,9 +37,9 @@ export function ProgressBar({ value, max = 1, label, className, fill = 'bg-accen
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={value}
-      className={clsx('h-2 overflow-hidden rounded-full', track, className)}
+      className={cx('h-2 overflow-hidden rounded-full', track, className)}
     >
-      <div className={clsx('h-full rounded-full', fill)} style={{ width: `${share * 100}%` }} />
+      <div className={cx('h-full rounded-full', fill)} style={{ width: `${share * 100}%` }} />
     </div>
   );
 }

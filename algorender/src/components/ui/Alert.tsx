@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cx } from './cx';
 import type { ReactNode } from 'react';
 import { FiAlertTriangle, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
@@ -17,11 +17,11 @@ const STYLE: Record<AlertTone, { box: string; title: string; icon: string; Icon:
 export function Alert({ tone, title, children, icon, role = 'status', className }: { tone: AlertTone; title: ReactNode; children?: ReactNode; icon?: ReactNode; role?: 'status' | 'alert' | null; className?: string }) {
   const s = STYLE[tone];
   return (
-    <div role={role ?? undefined} className={clsx('flex items-start gap-2.5 rounded-well px-3.5 py-3', s.box, className)}>
-      <span className={clsx('mt-px shrink-0 [&_svg]:size-[18px]', s.icon)}>{icon ?? <s.Icon aria-hidden />}</span>
+    <div role={role ?? undefined} className={cx('flex items-start gap-2.5 rounded-well px-3.5 py-3', s.box, className)}>
+      <span className={cx('mt-px shrink-0 [&_svg]:size-[18px]', s.icon)}>{icon ?? <s.Icon aria-hidden />}</span>
       <div className="min-w-0">
-        <p className={clsx('text-sm font-semibold', s.title)}>{title}</p>
-        {children && <div className={clsx('mt-0.5 text-[13px] leading-snug', s.title)}>{children}</div>}
+        <p className={cx('text-sm font-semibold', s.title)}>{title}</p>
+        {children && <div className={cx('mt-0.5 text-[13px] leading-snug', s.title)}>{children}</div>}
       </div>
     </div>
   );

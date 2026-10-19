@@ -1,14 +1,15 @@
 import Link from 'next/link';
-import { clsx } from 'clsx';
+import { cx } from './cx';
 import type { ComponentProps, ReactNode } from 'react';
 
 /**
  * primary: the one main action on a screen (Resume, Start review, Submit).
  * accent: learning actions (Run, Play, Check). secondary: a second action.
  * soft: tertiary inside cards. ghost: a quiet link-like action. danger:
- * destructive. onTrack: a button sitting on a pastel track card.
+ * destructive. onTrack: a button sitting on a pastel track card. onFeature: a
+ * button on a dark feature card.
  */
-export type ButtonKind = 'primary' | 'accent' | 'secondary' | 'soft' | 'ghost' | 'danger' | 'onTrack';
+export type ButtonKind = 'primary' | 'accent' | 'secondary' | 'soft' | 'ghost' | 'danger' | 'onTrack' | 'onFeature';
 export type ButtonSize = 's' | 'm' | 'l';
 
 const KIND: Record<ButtonKind, string> = {
@@ -19,6 +20,7 @@ const KIND: Record<ButtonKind, string> = {
   ghost: 'bg-transparent text-accent-ink hover:bg-accent-soft',
   danger: 'bg-bad-soft text-bad-ink hover:ring-[1.5px] hover:ring-bad-line hover:ring-inset',
   onTrack: 'bg-surface text-ink hover:bg-subtle',
+  onFeature: 'bg-on-feature text-feature hover:bg-on-feature/90',
 };
 
 const SIZE: Record<ButtonSize, string> = {
@@ -34,7 +36,7 @@ const BASE =
 
 /** The classes for a button-shaped element, for the rare case that isn't a Button or ButtonLink. */
 export function buttonClass({ kind = 'primary', size = 'm', block = false }: { kind?: ButtonKind; size?: ButtonSize; block?: boolean } = {}) {
-  return clsx(BASE, KIND[kind], SIZE[size], block && 'w-full');
+  return cx(BASE, KIND[kind], SIZE[size], block && 'w-full');
 }
 
 interface Look {
@@ -50,7 +52,7 @@ interface Look {
 
 export function Button({ kind, size, block, icon, trailing, className, children, type = 'button', ...rest }: Look & ComponentProps<'button'>) {
   return (
-    <button type={type} className={clsx(buttonClass({ kind, size, block }), className)} {...rest}>
+    <button type={type} className={cx(buttonClass({ kind, size, block }), className)} {...rest}>
       {icon}
       {children}
       {trailing}
@@ -60,7 +62,7 @@ export function Button({ kind, size, block, icon, trailing, className, children,
 
 export function ButtonLink({ kind, size, block, icon, trailing, className, children, ...rest }: Look & ComponentProps<typeof Link>) {
   return (
-    <Link className={clsx(buttonClass({ kind, size, block }), className)} {...rest}>
+    <Link className={cx(buttonClass({ kind, size, block }), className)} {...rest}>
       {icon}
       {children}
       {trailing}
@@ -79,7 +81,7 @@ export function IconButton({
   ...rest
 }: { label: string; kind?: ButtonKind; size?: ButtonSize } & Omit<ComponentProps<'button'>, 'aria-label'>) {
   return (
-    <button type={type} aria-label={label} title={label} className={clsx(BASE, KIND[kind], ICON_SIZE[size], 'px-0', className)} {...rest}>
+    <button type={type} aria-label={label} title={label} className={cx(BASE, KIND[kind], ICON_SIZE[size], 'px-0', className)} {...rest}>
       {children}
     </button>
   );

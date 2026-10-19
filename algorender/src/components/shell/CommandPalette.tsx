@@ -349,8 +349,16 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                       <span className="block truncate text-[15px] font-semibold">{item.title}</span>
                       <span className="block truncate text-[13px] text-ink-muted">{item.subtitle}</span>
                     </span>
-                    {s && <StatusChip status={s} className="hidden sm:inline-flex" />}
-                    {item.kbd && <Kbd className={clsx('hidden sm:inline-flex', on && 'bg-surface')}>{item.kbd}</Kbd>}
+                    {s && (
+                      <span className="hidden sm:block">
+                        <StatusChip status={s} />
+                      </span>
+                    )}
+                    {item.kbd && (
+                      <span className="hidden sm:block">
+                        <Kbd tone={on ? 'surface' : 'well'}>{item.kbd}</Kbd>
+                      </span>
+                    )}
                     {on && <FiCornerDownLeft aria-hidden className="hidden size-4 shrink-0 text-ink-muted sm:block" />}
                   </div>
                 );

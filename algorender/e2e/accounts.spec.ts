@@ -173,7 +173,7 @@ test.describe('offline', () => {
     await context.setOffline(true);
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Daily review' })).toBeVisible();
-    await page.getByRole('button', { name: 'Show the answer' }).click();
+    await page.getByRole('button', { name: /Show answer/ }).click();
     await page.getByRole('button', { name: /^Good/ }).click();
     await expect(page.getByRole('heading', { name: /All done for today/ })).toBeVisible();
 
@@ -206,7 +206,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await solveTwoSum(page);
     await page.clock.setFixedTime(new Date(Date.now() + 3 * DAY));
     await page.goto('/review');
-    await page.getByRole('button', { name: 'Show the answer' }).click();
+    await page.getByRole('button', { name: /Show answer/ }).click();
     ({ violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze());
     expect(violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
   });

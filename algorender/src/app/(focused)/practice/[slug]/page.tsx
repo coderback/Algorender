@@ -1,3 +1,4 @@
+import { FocusBar } from '@/components/shell/PhoneHeader';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -38,17 +39,21 @@ export default async function ProblemPage({ params }: Props) {
   const next = after.find((p) => p.patterns[0] === problem.patterns[0]) ?? after[0];
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <Link href="/practice" className="mb-4 inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline">
-        <FiArrowLeft aria-hidden /> All problems
-      </Link>
-      <ProblemWorkspace
-        spec={spec}
-        statement={<Statement problem={problem} cases={spec.cases} />}
-        next={next && { slug: next.slug, title: next.title }}
-        tutor={tutorConfig() !== null}
-      />
-    </main>
+    <>
+      {/* TODO(redesign): this page gets its own focus header in its phase. */}
+      <FocusBar />
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <Link href="/practice" className="mb-4 inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline">
+          <FiArrowLeft aria-hidden /> All problems
+        </Link>
+        <ProblemWorkspace
+          spec={spec}
+          statement={<Statement problem={problem} cases={spec.cases} />}
+          next={next && { slug: next.slug, title: next.title }}
+          tutor={tutorConfig() !== null}
+        />
+      </main>
+    </>
   );
 }
 

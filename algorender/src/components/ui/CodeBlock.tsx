@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cx } from './cx';
 import type { ComponentProps, ReactNode } from 'react';
 
 /**
@@ -21,7 +21,7 @@ export function CodeBlock({
   className?: string;
 }) {
   return (
-    <pre aria-label={label} className={clsx('overflow-hidden rounded-well bg-code p-5 font-mono text-[13px] leading-relaxed text-code-ink', className)}>
+    <pre aria-label={label} className={cx('overflow-hidden rounded-well bg-code p-5 font-mono text-[13px] leading-relaxed text-code-ink', className)}>
       <code className="flex flex-col">
         {lines.map((line, i) => {
           const on = current === i + 1;
@@ -29,7 +29,7 @@ export function CodeBlock({
             <span
               key={i}
               aria-current={on ? 'step' : undefined}
-              className={clsx('flex gap-3 rounded-[10px] px-2', on && 'bg-code-highlight')}
+              className={cx('flex gap-3 rounded-[10px] px-2', on && 'bg-code-highlight')}
             >
               {numbers && (
                 <span aria-hidden className="w-3.5 shrink-0 text-right text-code-muted select-none">
@@ -45,10 +45,19 @@ export function CodeBlock({
   );
 }
 
+const KBD_TONE = {
+  /** On a card: a sunken key. */
+  well: 'bg-sunken text-ink-soft',
+  /** On a sunken row or the page: a raised key. */
+  surface: 'bg-surface text-ink-soft',
+  /** On a primary button. */
+  onPrimary: 'bg-on-primary/15 text-on-primary',
+} as const;
+
 /** A keyboard key: ⌘K, Space, 1–4. */
-export function Kbd({ className, children, ...rest }: ComponentProps<'kbd'>) {
+export function Kbd({ tone = 'well', className, children, ...rest }: { tone?: keyof typeof KBD_TONE } & ComponentProps<'kbd'>) {
   return (
-    <kbd className={clsx('inline-flex min-w-6 items-center justify-center rounded-lg bg-sunken px-2 py-0.5 font-mono text-xs font-medium text-ink-soft', className)} {...rest}>
+    <kbd className={cx('inline-flex min-w-6 items-center justify-center rounded-lg px-2 py-0.5 font-mono text-xs font-medium', KBD_TONE[tone], className)} {...rest}>
       {children}
     </kbd>
   );
