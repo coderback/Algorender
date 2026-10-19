@@ -83,7 +83,7 @@ export function Placement({ graph, questions }: { graph: MasteryGraph; questions
           type="button"
           disabled={areas.length === 0}
           onClick={start}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-50"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:opacity-50"
         >
           Start <FiArrowRight aria-hidden />
         </button>
@@ -148,7 +148,7 @@ export function Placement({ graph, questions }: { graph: MasteryGraph; questions
               type="button"
               autoFocus
               onClick={() => ask(answers)}
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong"
             >
               Next <FiArrowRight aria-hidden />
             </button>

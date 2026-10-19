@@ -87,7 +87,7 @@ export function Drill({ questions }: { questions: DrillQuestion[] }) {
         <button
           type="button"
           onClick={restart}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong"
         >
           <FiRefreshCw aria-hidden /> Another round
         </button>
@@ -162,7 +162,7 @@ export function Drill({ questions }: { questions: DrillQuestion[] }) {
                 setChosen(null);
               }}
               autoFocus
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong"
             >
               {index + 1 < round.length ? 'Next question' : 'See your score'} <FiArrowRight aria-hidden />
             </button>

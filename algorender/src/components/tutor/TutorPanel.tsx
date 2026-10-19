@@ -213,7 +213,7 @@ export function TutorPanel({
           type="button"
           disabled={busy || !status || outOfTurns || (first && explanation.trim().length < 5)}
           onClick={() => void send('hint')}
-          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:opacity-50"
         >
           {busy && <FiLoader aria-hidden className="animate-spin" />}
           {first ? 'Get a nudge' : unlocked > top ? `Next hint: ${LEVEL_NAMES[unlocked]}` : `Another hint: ${LEVEL_NAMES[unlocked]}`}

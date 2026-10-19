@@ -122,7 +122,7 @@ function PlanSetup({
         />
       </div>
       <div className="flex flex-wrap gap-3">
-        <button type="submit" className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-strong">
+        <button type="submit" className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-strong">
           {current ? 'Update the plan' : 'Make my plan'} <FiArrowRight aria-hidden />
         </button>
         {current && (

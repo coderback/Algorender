@@ -43,7 +43,7 @@ function ReviewLink({ linkClass }: { linkClass: string }) {
     <Link href="/review" className={`${linkClass} inline-flex items-center gap-1.5`} aria-label={due > 0 ? `Review: ${due} due today` : 'Review'}>
       Review
       {due > 0 && (
-        <span aria-hidden className="rounded-full bg-accent px-1.5 py-px text-xs font-semibold text-white">
+        <span aria-hidden className="rounded-full bg-accent px-1.5 py-px text-xs font-semibold text-on-accent">
           {due > 99 ? '99+' : due}
         </span>
       )}

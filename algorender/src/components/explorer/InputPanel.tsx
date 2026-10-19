@@ -54,7 +54,7 @@ export function InputPanel<I>({
               onClick={() => onChange({ kind: 'example', example: example.id, size, seed: keepSeed() })}
               className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                 activeExample === example.id
-                  ? 'border-accent bg-accent text-white'
+                  ? 'border-accent bg-accent text-on-accent'
                   : 'border-line text-ink-soft hover:border-accent-line hover:bg-accent-soft'
               }`}
             >

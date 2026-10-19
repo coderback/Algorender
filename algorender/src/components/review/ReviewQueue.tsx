@@ -133,7 +133,7 @@ function Card({ face, card, now, onRate }: { face: CardFace; card: ReviewCard; n
               onClick={() => setRevealed(true)}
               aria-keyshortcuts="Space"
               autoFocus
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong"
             >
               Show the answer
             </button>
@@ -205,11 +205,11 @@ function Card({ face, card, now, onRate }: { face: CardFace; card: ReviewCard; n
                 onClick={() => onRate(g)}
                 aria-keyshortcuts={String(g)}
                 className={`rounded-lg border px-3.5 py-2 text-sm font-medium ${
-                  g === 1 ? 'border-bad-line text-bad-ink hover:bg-bad-soft' : g === 3 ? 'border-accent bg-accent text-white hover:bg-accent-strong' : 'border-line text-ink hover:bg-sunken'
+                  g === 1 ? 'border-bad-line text-bad-ink hover:bg-bad-soft' : g === 3 ? 'border-accent bg-accent text-on-accent hover:bg-accent-strong' : 'border-line text-ink hover:bg-sunken'
                 }`}
               >
                 {question && !right ? 'Next' : GRADE_LABEL[g]}
-                <span className={`ml-1.5 text-xs font-normal ${g === 3 ? 'text-white' : 'text-ink-muted'}`}>{daysText(days[g])}</span>
+                <span className={`ml-1.5 text-xs font-normal ${g === 3 ? 'text-on-accent' : 'text-ink-muted'}`}>{daysText(days[g])}</span>
               </button>
             ))}
           </div>

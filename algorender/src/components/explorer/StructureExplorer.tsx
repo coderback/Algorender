@@ -251,7 +251,7 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
           type="submit"
           disabled={disabledReason != null}
           title={disabledReason ?? undefined}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-sm text-white hover:bg-accent-strong disabled:bg-line-strong"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-sm text-on-accent hover:bg-accent-strong disabled:bg-line-strong"
         >
           <FiPlay aria-hidden className="text-xs" /> {spec.label}
         </button>

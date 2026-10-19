@@ -105,7 +105,7 @@ function AttemptForm({
             aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
             className="min-w-0 flex-1 rounded-lg border border-line-strong bg-page px-3 py-2 font-mono text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
           />
-          <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
+          <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong">
             Try it
           </button>
         </div>

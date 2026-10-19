@@ -98,7 +98,7 @@ export function EstimationDrill({ kind = 'qps', seed = 1, drill: given, headingL
             className="w-full min-w-40 rounded-lg border border-line-strong bg-page px-3 py-2 font-mono text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
           />
         </label>
-        <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
+        <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong">
           Check
         </button>
         {!shown && (

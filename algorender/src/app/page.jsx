@@ -24,7 +24,7 @@ function Home() {
             Interactive visualizations of algorithms and data structures to help you understand how they work.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/learn" className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-strong">
+            <Link href="/learn" className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-strong">
               Start with the concept map and lessons
             </Link>
             <Link href="/practice" className="rounded-full border border-line-strong bg-surface px-5 py-2.5 text-sm font-medium text-ink hover:border-accent-line">
@@ -41,7 +41,7 @@ function Home() {
             <TabsList className="grid h-auto w-full max-w-4xl grid-cols-2 sm:h-14 sm:grid-cols-4">
               <TabsTrigger 
                 value="data-structures"
-                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
+                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-on-accent"
               >
                 <span className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +54,7 @@ function Home() {
               </TabsTrigger>
               <TabsTrigger 
                 value="algorithms"
-                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
+                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-on-accent"
               >
                 <span className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +65,7 @@ function Home() {
               </TabsTrigger>
               <TabsTrigger
                 value="math"
-                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
+                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-on-accent"
               >
                 <span className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -76,7 +76,7 @@ function Home() {
               </TabsTrigger>
               <TabsTrigger
                 value="systems"
-                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-white"
+                className="text-base font-medium data-[state=active]:bg-accent data-[state=active]:text-on-accent"
               >
                 <span className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

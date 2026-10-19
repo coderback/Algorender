@@ -172,7 +172,7 @@ function Explainer({ id, prompt, rubric, example }: Props) {
                 type="button"
                 onClick={score}
                 disabled={!enough || busy}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy && <FiLoader aria-hidden className="animate-spin" />} Score my explanation
               </button>
@@ -184,7 +184,7 @@ function Explainer({ id, prompt, rubric, example }: Props) {
               className={
                 canScore
                   ? 'text-sm text-accent-ink underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50'
-                  : 'rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50'
+                  : 'rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50'
               }
             >
               {canScore ? 'Check it myself instead' : 'Check it against the key points'}
@@ -244,7 +244,7 @@ function Explainer({ id, prompt, rubric, example }: Props) {
               type="button"
               onClick={saveSelf}
               disabled={self.some((v) => v === null)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
             >
               Save my score
             </button>

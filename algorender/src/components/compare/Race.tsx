@@ -73,7 +73,7 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             }
             setPlaying((p) => !p);
           }}
-          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong"
         >
           {playing ? <FiPause aria-hidden /> : done ? <FiRotateCcw aria-hidden /> : <FiPlay aria-hidden />}
           {playing ? 'Pause' : done ? 'Race again' : work > 0 ? 'Resume' : 'Start the race'}

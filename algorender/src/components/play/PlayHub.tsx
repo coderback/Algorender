@@ -158,7 +158,7 @@ function Levels({ graph, levels }: { graph: MasteryGraph; levels: Play['levels']
                     <span
                       key={l.id}
                       title={`${l.label}${reached.has(l.id) ? '' : `: ${l.hint}`}`}
-                      className={`grid size-6 place-items-center rounded-full text-[10px] font-bold ${reached.has(l.id) ? 'bg-accent text-white' : 'border border-line text-ink-muted'}`}
+                      className={`grid size-6 place-items-center rounded-full text-[10px] font-bold ${reached.has(l.id) ? 'bg-accent text-on-accent' : 'border border-line text-ink-muted'}`}
                     >
                       {l.label[0]}
                     </span>

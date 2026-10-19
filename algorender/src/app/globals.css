@@ -25,44 +25,159 @@
     var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-  /* Planes, back to front: the page, cards on it, faint fills, insets. */
-  --color-page: #f9fafb;
+  --font-display:
+    var(--font-bricolage), 'Avenir Next', ui-sans-serif, system-ui, sans-serif;
+
+  /* Planes, back to front: warm paper, cards on it, the visualiser stage, and
+     wells inside cards. There are no card shadows: depth is paper → surface →
+     well. */
+  --color-page: #f3f2ed;
   --color-surface: #ffffff;
-  --color-subtle: #f9fafb;
-  --color-sunken: #f3f4f6;
+  --color-subtle: #faf9f6;
+  --color-sunken: #f3f2ed;
 
   /* Hairlines, faint to firm. */
-  --color-line-soft: #f3f4f6;
-  --color-line: #e5e7eb;
-  --color-line-strong: #d1d5db;
+  --color-line-soft: #eeece6;
+  --color-line: #e4e2db;
+  --color-line-strong: #c9c6bd;
 
   /* Text, strongest to weakest. ink-faint is for decoration only (icons,
      dividers, disabled); it does not meet text contrast. */
-  --color-ink: #111827;
-  --color-ink-soft: #374151;
-  --color-ink-muted: #5f6774;
-  --color-ink-faint: #9ca3af;
+  --color-ink: #17161c;
+  --color-ink-soft: #3d3c45;
+  --color-ink-muted: #5c5a64;
+  --color-ink-faint: #8e8c98;
 
-  /* Actions and links. White text sits on accent and accent-strong. */
-  --color-accent: #2563eb;
-  --color-accent-strong: #1d4ed8;
-  --color-accent-ink: #1d4ed8;
-  --color-accent-soft: #eff6ff;
-  --color-accent-line: #93c5fd;
+  /* Violet is for run, play and progress. Text on it is on-accent: white in
+     light, dark in dark (the dark accent is a light violet). */
+  --color-accent: #5b47f5;
+  --color-accent-strong: #4433d6;
+  --color-accent-ink: #4433d6;
+  --color-accent-soft: #e5e0fd;
+  --color-accent-line: #cfcadf;
+  --color-on-accent: #ffffff;
 
-  /* Feedback: right / careful / wrong. Each has a fill (white text), an ink,
-     a soft background and a line. */
-  --color-good: #047857;
-  --color-good-strong: #065f46;
-  --color-good-ink: #047857;
-  --color-good-soft: #ecfdf5;
-  --color-good-line: #34d399;
-  --color-warn-ink: #a14a06;
-  --color-warn-soft: #fffbeb;
-  --color-warn-line: #fcd34d;
-  --color-bad-ink: #b91c1c;
-  --color-bad-soft: #fef2f2;
-  --color-bad-line: #fca5a5;
+  /* The main action on a screen: an ink pill in light, a paper pill in dark. */
+  --color-primary: #17161c;
+  --color-primary-hover: #2a2930;
+  --color-on-primary: #ffffff;
+
+  /* Dark feature cards: one emphasis per area (Problem for today, Key idea). */
+  --color-feature: #17161c;
+  --color-on-feature: #ffffff;
+  --color-feature-muted: #c9c7d1;
+
+  /* The left rail and the phone tab bar. */
+  --color-rail: #17161c;
+  --color-rail-ink: #c9c7d1;
+  --color-rail-active: #ffffff;
+  --color-on-rail-active: #17161c;
+  --color-rail-button: #2a2930;
+
+  /* The review-due bubble, and the XP zap. */
+  --color-badge: #ffb993;
+  --color-on-badge: #17161c;
+  --color-xp: #f08a5d;
+  --color-xp-line: #c25a2c;
+
+  /* Code panels (pseudo-code, editors' frames, snippets). */
+  --color-code: #17161c;
+  --color-code-ink: #e9e7f0;
+  --color-code-muted: #8e8c98;
+  --color-code-highlight: #2e2b45;
+
+  /* Function names in the code editor: compare's hue, deep enough to clear
+     4.5:1 on the run, error and hint line fills. */
+  --color-syntax-name: #005f96;
+
+  /* The full-bleed page behind the daily review. */
+  --color-review-page: #f7eaae;
+
+  /* Feedback: right / careful / wrong. A soft fill with a dark title and a
+     coloured icon (the ink). good is also a fill, with on-good text. */
+  --color-good: #17634a;
+  --color-good-strong: #0b3b2a;
+  --color-on-good: #ffffff;
+  --color-good-ink: #17634a;
+  --color-good-title: #0b3b2a;
+  --color-good-soft: #ddf3e9;
+  --color-good-line: #86d3b0;
+  --color-warn-ink: #8f4a05;
+  --color-warn-title: #4d3200;
+  --color-warn-soft: #fde7bf;
+  --color-warn-line: #dec567;
+  --color-bad-ink: #a3291d;
+  --color-bad-title: #6e1c14;
+  --color-bad-soft: #fbe1dd;
+  --color-bad-line: #e9a2b6;
+
+  /* Track pastels: one per area of the concept map (src/data/tracks.ts). Each
+     has a fill, an ink for body text on it and a title ink for display text.
+     chip-on-track is the translucent chip that sits on a track card. */
+  --color-track-lilac: #e5e0fd;
+  --color-track-lilac-ink: #3e2f92;
+  --color-track-lilac-title: #241a66;
+  --color-track-peach: #fcdfcc;
+  --color-track-peach-ink: #8a3b12;
+  --color-track-peach-title: #4a1e07;
+  --color-track-mint: #cfeedf;
+  --color-track-mint-ink: #17634a;
+  --color-track-mint-title: #0b3a2a;
+  --color-track-sky: #d5e7f8;
+  --color-track-sky-ink: #1c4f7f;
+  --color-track-sky-title: #0e2f4f;
+  --color-track-butter: #f7eaae;
+  --color-track-butter-ink: #6b5208;
+  --color-track-butter-title: #3d2f04;
+  --color-track-rose: #f8d7e0;
+  --color-track-rose-ink: #85284a;
+  --color-track-rose-title: #4f1229;
+  --color-track-teal: #cdebec;
+  --color-track-teal-ink: #155e63;
+  --color-track-teal-title: #0b3b3e;
+  --color-chip-on-track: rgb(255 255 255 / 0.65);
+
+  /* Shape: every top-level card, inner tiles, wells and inputs, pills. */
+  --radius-card: 32px;
+  --radius-tile: 24px;
+  --radius-well: 18px;
+  --radius-chip: 999px;
+
+  /* Type scale (font-display for the Bricolage roles). One page title per
+     page; section titles head blocks; card titles head cards; big numbers
+     count things (12 cards, 1,240 XP), tile numbers sit in count tiles. */
+  --text-title-page: clamp(34px, 4vw, 52px);
+  --text-title-page--line-height: 1;
+  --text-title-page--letter-spacing: -0.035em;
+  --text-title-page--font-weight: 700;
+  --text-title-section: 24px;
+  --text-title-section--line-height: 1.08;
+  --text-title-section--letter-spacing: -0.025em;
+  --text-title-section--font-weight: 700;
+  --text-title-card: 22px;
+  --text-title-card--line-height: 1.05;
+  --text-title-card--letter-spacing: -0.02em;
+  --text-title-card--font-weight: 700;
+  --text-number-big: 72px;
+  --text-number-big--line-height: 1;
+  --text-number-big--letter-spacing: -0.03em;
+  --text-number-big--font-weight: 700;
+  --text-number-tile: 32px;
+  --text-number-tile--line-height: 1;
+  --text-number-tile--letter-spacing: -0.03em;
+  --text-number-tile--font-weight: 700;
+  --text-eyebrow: 12px;
+  --text-eyebrow--line-height: 1.45;
+  --text-eyebrow--letter-spacing: 0.06em;
+  --text-eyebrow--font-weight: 700;
+
+  /* The standard transition for colour, background and transform. */
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* The active option of a segmented control: a raised chip on the sunken
+     track. The one shadow in the design sits under it. */
+  --color-segment: #ffffff;
+  --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.08);
 
   /* shadcn/ui names, kept for components/ui. */
   --color-background: var(--color-surface);
@@ -71,7 +186,7 @@
   --color-card-foreground: var(--color-ink);
   --color-muted: var(--color-sunken);
   --color-muted-foreground: var(--color-ink-muted);
-  --color-ring: #3b82f6;
+  --color-ring: var(--color-accent);
 
   /* Visualiser state colours: one meaning per colour across every view.
      Okabe–Ito hues, distinguishable with the common colour-vision deficiencies;
@@ -83,7 +198,7 @@
      on-mark text needs L ≥ ~0.6, and squeezing five hues into L 0.6–0.67 puts
      amber on top of orange (ΔE 9 normal, 3.5 deutan). Brightness is the lesser
      cost, and the glyphs carry the meaning either way. */
-  --color-bar: #9aa5b4;
+  --color-bar: #cfcadf;
   --color-mark-compare: #0072b2;
   --color-mark-swap: #d55e00;
   --color-mark-write: #cc79a7;
@@ -114,35 +229,94 @@
     @variant dark {
       color-scheme: dark;
 
-      --color-page: #0e1116;
-      --color-surface: #161b22;
-      --color-subtle: #1a2029;
-      --color-sunken: #1f2631;
+      --color-page: #121116;
+      --color-surface: #1c1b22;
+      --color-subtle: #15141a;
+      --color-sunken: #26252d;
 
-      --color-line-soft: #222a35;
-      --color-line: #2d3643;
-      --color-line-strong: #3d4755;
+      --color-line-soft: #26252d;
+      --color-line: #2e2d36;
+      --color-line-strong: #3a3942;
 
-      --color-ink: #e6edf3;
-      --color-ink-soft: #c4cdd8;
-      --color-ink-muted: #9aa6b4;
-      --color-ink-faint: #6b7686;
+      --color-ink: #f2f0ea;
+      --color-ink-soft: #d6d3dc;
+      --color-ink-muted: #a3a0ad;
+      --color-ink-faint: #7d7a88;
 
-      --color-accent-ink: #7cb4ff;
-      --color-accent-soft: #15243d;
-      --color-accent-line: #2c548a;
+      --color-accent: #a99bf9;
+      --color-accent-strong: #bdb2ff;
+      --color-accent-ink: #bdb2ff;
+      --color-accent-soft: #2a2546;
+      --color-accent-line: #4a4658;
+      --color-on-accent: #121116;
 
-      --color-good-ink: #4cd4a0;
-      --color-good-soft: #0f2a22;
-      --color-good-line: #1f8a66;
-      --color-warn-ink: #f0b45a;
-      --color-warn-soft: #2b2210;
-      --color-warn-line: #6b5216;
-      --color-bad-ink: #ff8f8f;
-      --color-bad-soft: #331617;
-      --color-bad-line: #7a2a2a;
+      --color-primary: #f2f0ea;
+      --color-primary-hover: #ffffff;
+      --color-on-primary: #121116;
 
-      --color-bar: #7d8896;
+      /* A dark feature card on a dark page has no border: it reads by being
+         darker than the page. */
+      --color-feature: #0a090d;
+      --color-on-feature: #f2f0ea;
+      --color-feature-muted: #a3a0ad;
+
+      --color-rail: #0a090d;
+      --color-rail-ink: #a3a0ad;
+      --color-rail-active: #bdb2ff;
+      --color-on-rail-active: #121116;
+      --color-rail-button: #1c1b22;
+
+      --color-code: #0a090d;
+      --color-code-highlight: #2a2546;
+
+      --color-syntax-name: #5aa9e6;
+
+      --color-review-page: #18160e;
+
+      --color-good: #9be3c2;
+      --color-good-strong: #c9f2df;
+      --color-on-good: #121116;
+      --color-good-ink: #9be3c2;
+      --color-good-title: #c9f2df;
+      --color-good-soft: #17332a;
+      --color-good-line: #2f7a5b;
+      --color-warn-ink: #f0d77a;
+      --color-warn-title: #f7e6a6;
+      --color-warn-soft: #352d12;
+      --color-warn-line: #7a6624;
+      --color-bad-ink: #f7b4a8;
+      --color-bad-title: #fcd2ca;
+      --color-bad-soft: #3d1e1b;
+      --color-bad-line: #7a3a4e;
+
+      --color-track-lilac: #2a2546;
+      --color-track-lilac-ink: #c9c0ff;
+      --color-track-lilac-title: #e6e1ff;
+      --color-track-peach: #3a2519;
+      --color-track-peach-ink: #ffc4a1;
+      --color-track-peach-title: #ffe2d1;
+      --color-track-mint: #17332a;
+      --color-track-mint-ink: #9be3c2;
+      --color-track-mint-title: #d2f5e5;
+      --color-track-sky: #182c40;
+      --color-track-sky-ink: #a6cdf2;
+      --color-track-sky-title: #dcebfa;
+      --color-track-butter: #352d12;
+      --color-track-butter-ink: #f0d77a;
+      --color-track-butter-title: #faedbf;
+      --color-track-rose: #3a1c27;
+      --color-track-rose-ink: #f5a9bf;
+      --color-track-rose-title: #fcdce5;
+      --color-track-teal: #15302f;
+      --color-track-teal-ink: #8fdcdd;
+      --color-track-teal-title: #d3f3f3;
+      /* Never translucent white over a dark pastel. */
+      --color-chip-on-track: rgb(0 0 0 / 0.28);
+
+      --color-segment: #3a3942;
+      --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.4);
+
+      --color-bar: #4a4658;
 
       --color-mark-compare-ink: #5aa9e6;
       --color-mark-swap-ink: #f08a4b;
@@ -179,6 +353,12 @@
   body {
     background: var(--color-page);
     color: var(--color-ink);
+  }
+
+  /* Every interactive element shows the same keyboard focus ring. */
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   /* Motion's animations already follow the OS setting (reducedMotion="user");

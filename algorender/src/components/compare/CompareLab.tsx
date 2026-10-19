@@ -106,7 +106,7 @@ export function CompareLab() {
                   aria-pressed={preset === p}
                   onClick={() => setPreset(p)}
                   className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                    preset === p ? 'border-accent bg-accent text-white' : 'border-line text-ink-soft hover:border-accent-line hover:bg-accent-soft'
+                    preset === p ? 'border-accent bg-accent text-on-accent' : 'border-line text-ink-soft hover:border-accent-line hover:bg-accent-soft'
                   }`}
                 >
                   {PRESET_LABELS[p]}

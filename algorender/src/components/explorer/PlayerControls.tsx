@@ -48,7 +48,7 @@ export function PlayerControls({ player, children, share = true }: { player: Tra
             disabled={last === 0 || blocked}
             aria-label={playing ? 'Pause (Space)' : atEnd ? 'Replay (Space)' : 'Play (Space)'}
             title={waiting ?? (playing ? 'Pause (Space)' : atEnd ? 'Replay (Space)' : 'Play (Space)')}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-lg text-white shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-lg text-on-accent shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40"
           >
             {playing ? <FiPause /> : atEnd ? <FiRotateCcw /> : <FiPlay className="translate-x-px" />}
           </button>

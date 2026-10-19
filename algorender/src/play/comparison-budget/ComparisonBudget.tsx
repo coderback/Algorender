@@ -168,7 +168,7 @@ function Round() {
               type="button"
               onClick={compareSelected}
               disabled={selected.length !== 2}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
             >
               {selected.length === 2 ? `Compare ${label(selected[0])} and ${label(selected[1])}` : 'Compare two cards'}
             </button>
@@ -200,7 +200,7 @@ function Round() {
             type="button"
             onClick={check}
             disabled={row.length !== n}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FiCheck aria-hidden /> Check my order
           </button>
@@ -328,7 +328,7 @@ function Summary({ result, n, used, remaining, onAgain }: { result: Verdict; n: 
       <button
         type="button"
         onClick={onAgain}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong"
       >
         <FiRefreshCw aria-hidden /> Play again
       </button>

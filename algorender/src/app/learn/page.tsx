@@ -106,7 +106,7 @@ function ConceptCard({ concept: c, titleOf }: { concept: Concept; titleOf: Map<s
         {lesson && (
           <Link
             href={`/learn/${lesson.slug}`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-medium text-white hover:bg-accent-strong"
+            className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-strong"
           >
             <FiBookOpen aria-hidden /> Lesson <FiClock aria-hidden className="ml-1" /> {lesson.minutes} min
           </Link>

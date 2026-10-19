@@ -53,7 +53,7 @@ const highlight = HighlightStyle.define([
   { tag: [t.comment, t.lineComment, t.blockComment], color: 'var(--color-ink-muted)', fontStyle: 'italic' },
   {
     tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.function(t.variableName))],
-    color: 'var(--color-mark-compare-ink)',
+    color: 'var(--color-syntax-name)',
   },
   { tag: [t.typeName, t.className], color: 'var(--color-mark-frontier-ink)' },
   { tag: t.invalid, color: 'var(--color-bad-ink)' },

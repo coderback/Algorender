@@ -281,7 +281,7 @@ function Canvas({
             onClick={go}
             disabled={problems.length > 0 || running}
             aria-describedby={problems.length > 0 ? `${prefix}-problems` : undefined}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 font-medium text-white hover:bg-accent-strong disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60"
           >
             <FiPlay aria-hidden /> {running ? 'Running…' : study ? 'Run the checks' : 'Run'}
           </button>

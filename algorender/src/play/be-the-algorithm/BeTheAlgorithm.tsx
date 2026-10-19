@@ -167,7 +167,7 @@ function RoundView({ slug, round, size, onNewRound, onSize }: { slug: SupportedS
                 type="button"
                 disabled={!pair}
                 onClick={() => pair && answer(pair)}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Swap these two
               </button>
@@ -196,7 +196,7 @@ function RoundView({ slug, round, size, onNewRound, onSize }: { slug: SupportedS
               setFeedback(null);
               advance(right);
             }}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong" autoFocus>
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong" autoFocus>
             Continue
           </button>
         )}
@@ -212,7 +212,7 @@ function RoundView({ slug, round, size, onNewRound, onSize }: { slug: SupportedS
                 : 'Every round has new values. Play again to make every move right first time.'}
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <button type="button" onClick={onNewRound} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
+              <button type="button" onClick={onNewRound} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong">
                 <FiRefreshCw aria-hidden /> New round
               </button>
               <Link href={`/visualisers/${slug}`} className="text-sm text-accent-ink underline-offset-2 hover:underline">

@@ -274,7 +274,7 @@ function RunButton({ onClick, disabled, busy, children }: { onClick: () => void;
       onClick={onClick}
       disabled={disabled}
       aria-busy={busy}
-      className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-60"
+      className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60"
     >
       {busy ? <FiLoader aria-hidden className="animate-spin" /> : <FiPlay aria-hidden />}
       {children}

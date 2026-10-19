@@ -143,7 +143,7 @@ function FrameBox({ frame, present }: { frame: StackFrame; present: Set<string> 
           {frame.fn}
         </span>
         {frame.active && (
-          <span className="shrink-0 rounded-full bg-accent px-1.5 py-px text-[10px] font-semibold tracking-wide text-white uppercase">current</span>
+          <span className="shrink-0 rounded-full bg-accent px-1.5 py-px text-[10px] font-semibold tracking-wide text-on-accent uppercase">current</span>
         )}
       </div>
       {frame.locals.length === 0 && !frame.returning ? (

@@ -29,6 +29,7 @@ const pages = [
   '/review',
   ...exercises.map((e) => `/code/${e.slug}`),
   '/embed/bubble-sort',
+  '/dev/ui',
   '/visualisers/bubble-sort?mode=predict',
   ...visualisers.filter((v: { hidden?: boolean }) => !v.hidden).map((v: { path: string }) => v.path),
 ];
@@ -65,7 +66,7 @@ test('the theme toggle cycles system → light → dark and is remembered', asyn
   await expect(html).toHaveAttribute('data-theme', 'light');
   await toggle.click();
   await expect(html).toHaveAttribute('data-theme', 'dark');
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(14, 17, 22)');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(18, 17, 22)');
   await page.reload();
   await expect(html).toHaveAttribute('data-theme', 'dark'); // applied before paint, from storage
   await page.getByRole('button', { name: /^Theme:/ }).click();

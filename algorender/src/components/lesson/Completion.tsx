@@ -12,7 +12,7 @@ export function LessonComplete({ slug }: { slug: string }) {
       aria-pressed={done}
       onClick={() => markComplete(slug, !done)}
       className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-colors ${
-        done ? 'bg-good text-white hover:bg-good-strong' : 'bg-accent text-white hover:bg-accent-strong'
+        done ? 'bg-good text-on-good hover:bg-good-strong' : 'bg-accent text-on-accent hover:bg-accent-strong'
       }`}
     >
       {done ? <FiCheckCircle aria-hidden /> : <FiCheck aria-hidden />}
