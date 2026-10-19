@@ -897,7 +897,9 @@ export function findings(design: Design, r: SimResult, options: RunOptions): str
     const where = db && top.s.perInstance.length > 1 ? ` (its busiest node is ${pct(top.peak)} busy)` : '';
     out.push(`${name(top.c)} is the bottleneck: ${pct(top.s.utilisation)} busy${where}, so requests queue there; ${advice[top.c.kind]}.`);
   } else if (top) {
-    out.push(`Nothing is saturated: the busiest part is ${name(top.c)} at ${pct(top.peak)}, so there is headroom for more traffic.`);
+    // Say the tier's average, as the diagram does, and the busiest machine when it reads differently.
+    const busiest = top.s.perInstance.length > 1 && pct(top.peak) !== pct(top.s.utilisation) ? `, its busiest machine ${pct(top.peak)}` : '';
+    out.push(`Nothing is saturated: the busiest part is ${name(top.c)} at ${pct(top.s.utilisation)}${busiest}, so there is headroom for more traffic.`);
   }
   // An app waiting on a busy database shows as a busy app too: say so.
   const app = ranked.find((x) => x.c.kind === 'app');
