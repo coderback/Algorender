@@ -4,7 +4,35 @@ import { expect, test } from '@playwright/test';
 // themes, for a side-by-side check against docs/redesign/renders. Shots land in
 // test-results/redesign/. No pixel diffs: the boards use sample data. Each
 // phase adds the routes it finishes.
-const ROUTES: { name: string; path: string }[] = [{ name: 'dev-ui', path: '/dev/ui' }];
+const ROUTES: { name: string; path: string }[] = [
+  { name: 'dev-ui', path: '/dev/ui' },
+  // Phase 2: every page in its shell (hub, sub-page, detail, focused).
+  { name: 'today', path: '/' },
+  { name: 'explore', path: '/explore' },
+  { name: 'learn', path: '/learn' },
+  { name: 'placement', path: '/learn/placement' },
+  { name: 'plan', path: '/plan' },
+  { name: 'practice', path: '/practice' },
+  { name: 'drills', path: '/practice/drills' },
+  { name: 'code', path: '/code' },
+  { name: 'code-exercise', path: '/code/bubble-sort' },
+  { name: 'design', path: '/design' },
+  { name: 'design-case', path: '/design/url-shortener' },
+  { name: 'sandbox', path: '/design/sandbox' },
+  { name: 'estimate', path: '/design/estimate' },
+  { name: 'play', path: '/play' },
+  { name: 'be-the-algorithm', path: '/play/be-the-algorithm/bubble-sort' },
+  { name: 'budget', path: '/play/comparison-budget' },
+  { name: 'break-it', path: '/play/break-it' },
+  { name: 'account', path: '/account' },
+  { name: 'visualiser', path: '/visualisers/bubble-sort' },
+  { name: 'sysviz', path: '/visualisers/raft' },
+  { name: 'compare', path: '/compare' },
+  { name: 'lesson', path: '/learn/binary-search' },
+  { name: 'problem', path: '/practice/two-sum' },
+  { name: 'review', path: '/review' },
+  { name: 'embed', path: '/embed/bubble-sort' },
+];
 
 const VIEWPORTS = [
   { name: '1440', width: 1440, height: 900 },
@@ -20,6 +48,7 @@ for (const theme of ['light', 'dark'] as const) {
         const res = await page.goto(`${route.path}${sep}theme=${theme}`);
         expect(res?.status(), `${route.path} status`).toBe(200);
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+        await page.waitForLoadState('networkidle');
         await page.evaluate(() => document.fonts.ready);
         // No horizontal page scroll at any width.
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

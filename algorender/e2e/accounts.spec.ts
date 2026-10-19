@@ -122,8 +122,10 @@ test('a solved problem comes back for review a few days later', async ({ page })
   await expect(page.getByText('You have 1 card in all.')).toBeVisible();
 
   await page.clock.setFixedTime(new Date(Date.now() + 3 * DAY));
-  await page.goto('/review');
+  // The rail shows the due count; the review itself is a focused page without it.
+  await page.goto('/');
   await expect(page.getByRole('link', { name: 'Review: 1 due today' }).first()).toBeVisible();
+  await page.goto('/review');
   await expect(page.getByRole('heading', { name: 'Two Sum' })).toBeVisible();
   await page.keyboard.press('Space');
   await expect(page.getByText('Hashing', { exact: true })).toBeVisible();

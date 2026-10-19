@@ -11,6 +11,18 @@ const nextConfig = {
   // and common mistakes from the MDX at run time.
   serverExternalPackages: ['@electric-sql/pglite'],
   outputFileTracingIncludes: { '/api/**/*': ['./drizzle/**/*'], '/api/explain': ['./src/content/lessons/*.mdx'] },
+  // The catalogue moved from / to /explore; old ?tab= links land on its kind.
+  async redirects() {
+    return [
+      {
+        source: '/',
+        has: [{ type: 'query', key: 'tab', value: '(?<kind>data-structures|algorithms|math|systems)' }],
+        destination: '/explore?kind=:kind',
+        permanent: true,
+      },
+      { source: '/', has: [{ type: 'query', key: 'tab' }], destination: '/explore', permanent: true },
+    ];
+  },
 };
 
 // Lessons are MDX (src/content/lessons). Plugins are named as strings so

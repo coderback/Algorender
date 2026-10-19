@@ -95,7 +95,7 @@ export function GrowthChart({
       </ul>
 
       <div ref={boxRef} className="relative">
-        <svg width={width} height={HEIGHT} role="group" aria-label={`${metric} against input size n, for ${series.map((s) => s.name).join(', ')}`}>
+        <svg width={width} height={HEIGHT} className="block max-w-full" role="group" aria-label={`${metric} against input size n, for ${series.map((s) => s.name).join(', ')}`}>
           <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
             {ticks.map((t) => (
               <g key={t}>

@@ -9,7 +9,8 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
 
 const pages = [
   '/',
-  '/?tab=algorithms',
+  '/explore',
+  '/explore?kind=algorithms',
   '/learn',
   '/learn/placement',
   '/plan',

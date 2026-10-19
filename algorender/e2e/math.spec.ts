@@ -62,7 +62,7 @@ test('moving the query arrow re-scores every key', async ({ page }) => {
 });
 
 test('the home page lists math and ML topics', async ({ page }) => {
-  await page.goto('/?tab=math');
+  await page.goto('/explore?kind=math');
   await expect(page.getByRole('heading', { name: 'Linear Algebra' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Gradient Descent/ })).toBeVisible();
 });

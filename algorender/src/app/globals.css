@@ -73,6 +73,8 @@
   --color-rail-active: #ffffff;
   --color-on-rail-active: #17161c;
   --color-rail-button: #2a2930;
+  /* The logo sits on a light tile on the dark rail, in both themes. */
+  --color-logo-tile: #ffffff;
 
   /* The review-due bubble, and the XP zap. */
   --color-badge: #ffb993;
@@ -265,6 +267,7 @@
       --color-rail-active: #bdb2ff;
       --color-on-rail-active: #121116;
       --color-rail-button: #1c1b22;
+      --color-logo-tile: #f2f0ea;
 
       --color-code: #0a090d;
       --color-code-highlight: #2a2546;
@@ -341,13 +344,10 @@
     border-color: var(--color-line, currentcolor);
   }
 
-  /* Keep anchors and keyboard focus clear of the sticky header (WCAG 2.4.11).
-     The header wraps to two or three rows below lg, up to ~142px. */
+  /* Nothing sticks to the top of the page (the rail is beside it, the phone
+     tab bar below), so anchors only need a little air above them. */
   html {
-    scroll-padding-top: 9.5rem;
-    @variant lg {
-      scroll-padding-top: 6rem;
-    }
+    scroll-padding-top: 1.5rem;
   }
 
   body {
