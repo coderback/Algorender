@@ -44,7 +44,7 @@ export const VALUE_MAX_LENGTH = 2;
 const SERVERS = 'servers';
 const LOG = 'log';
 const NET = 'messages';
-const [ROLE, TERM, VOTE, COMMIT, TIMER, SIDE] = [0, 1, 2, 3, 4, 5];
+const [TERM, VOTE, VOTES, COMMIT, TIMER, SIDE] = [0, 1, 2, 3, 4, 5];
 
 /** How far a run goes. */
 export const UNTIL = {
@@ -164,17 +164,17 @@ function render(c: Model, prev: Model | null, h: Highlight): Frame<GridState> {
     id: SERVERS,
     label: 'Servers',
     corner: 'Server',
-    rows: c.servers.map((s) => ({ id: s.id, label: s.id })),
-    cols: [{ label: 'Role' }, { label: 'Term' }, { label: 'Vote' }, { label: 'Commit' }, { label: 'Timer' }, { label: 'Side' }],
+    // Table cells are small squares, so the role sits under the server's name.
+    rows: c.servers.map((s) => ({ id: s.id, label: s.id, sub: !s.up ? 'down' : s.role })),
+    cols: [{ label: 'Term' }, { label: 'Vote', sub: 'for' }, { label: 'Got', sub: 'votes' }, { label: 'Cmt', sub: 'index' }, { label: 'Timer', sub: 'ms' }, { label: 'Side' }],
     group: 'raft',
   });
   c.servers.forEach((s, row) => {
-    const role = !s.up ? 'Down' : s.role === 'leader' ? 'Leader' : s.role === 'candidate' ? `Candidate, ${plural(s.votes.length, 'vote')}` : 'Follower';
-    t.set([SERVERS, row, ROLE], role);
     t.set([SERVERS, row, TERM], s.term);
     t.set([SERVERS, row, VOTE], s.votedFor ?? '–');
+    t.set([SERVERS, row, VOTES], s.up && s.role === 'candidate' ? s.votes.length : '');
     t.set([SERVERS, row, COMMIT], s.up ? s.commitIndex : '–');
-    t.set([SERVERS, row, TIMER], !s.up ? '–' : s.role === 'leader' ? `♥ in ${s.deadline - c.time} ms` : `in ${s.deadline - c.time} ms`);
+    t.set([SERVERS, row, TIMER], !s.up ? '–' : s.role === 'leader' ? `♥${s.deadline - c.time}` : s.deadline - c.time);
     t.set([SERVERS, row, SIDE], sideOf(c, s.id));
   });
 
@@ -205,7 +205,7 @@ function render(c: Model, prev: Model | null, h: Highlight): Frame<GridState> {
     });
     const was = prev?.servers[row];
     if (was && s.up && was.up) {
-      if (was.role !== s.role) add('write', [SERVERS, row, ROLE]);
+      if (was.role === 'candidate' && s.role === 'candidate' && was.votes.length !== s.votes.length) add('write', [SERVERS, row, VOTES]);
       if (was.term !== s.term) add('write', [SERVERS, row, TERM]);
       if (was.votedFor !== s.votedFor && s.votedFor) add('write', [SERVERS, row, VOTE]);
       if (was.commitIndex !== s.commitIndex) add('write', [SERVERS, row, COMMIT]);

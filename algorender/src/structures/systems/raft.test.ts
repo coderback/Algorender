@@ -92,7 +92,7 @@ describe('raft structure', () => {
           checkFrames(call.op, frames);
           // The last frame draws the model the operation returns.
           const last = frames[frames.length - 1].state;
-          expect(table(last, 'servers').cells[result.servers[0].id][1]).toBe(String(result.servers[0].term));
+          expect(table(last, 'servers').cells[result.servers[0].id][0]).toBe(String(result.servers[0].term));
           expect(list(last, 'messages').items.map((it) => it.id).sort()).toEqual(result.messages.map((x) => `m${x.id}`).sort());
           m = result;
         }

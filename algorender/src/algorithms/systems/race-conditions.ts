@@ -178,7 +178,7 @@ function* run(input: RaceInput): Generator<Frame<GridState>> {
   t.addTable({ id: MEMORY, label: 'Shared memory', corner: 'Variable', rows: vars.map((v) => ({ id: `v-${v}`, label: v })), cols: [{ label: 'Value' }] });
   vars.forEach((v, row) => t.set([MEMORY, row, 0], program.memory[v]));
   if (regNames.length > 0) {
-    t.addTable({ id: REGS, label: 'Each thread’s private registers', corner: 'Thread', rows: ids.map((id) => ({ id: `t-${id}`, label: id })), cols: regNames.map((r) => ({ label: r })) });
+    t.addTable({ id: REGS, label: 'Each thread’s private registers', corner: '', rows: ids.map((id) => ({ id: `t-${id}`, label: id })), cols: regNames.map((r) => ({ label: r })) });
   }
   if (lockNames.length > 0) {
     t.addList({ id: LOCKS, label: 'Locks', empty: '' });
