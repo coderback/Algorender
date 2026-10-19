@@ -45,6 +45,9 @@ export type TreeLayout = {
 /** 'forest': several small trees side by side. 'search': a compact search or recursion tree. */
 export type LayoutKind = 'tree' | 'forest' | 'search';
 
+/** Smallest gap between nodes when links run between them, room for an arrow. */
+const LINK_GAP = 26;
+
 /** Width of an edge label's pill. */
 export const labelWidth = (text: string, font: number) => [...text].length * font * 0.62 + 6;
 
@@ -161,7 +164,7 @@ function merge(out: Sub, sub: Sub, s: number, below: boolean) {
  * the same tree always looks the same and a changed tree animates in place.
  */
 export function layoutTree(
-  shape: Pick<TreeShape, 'root' | 'nodes'> & Partial<Pick<TreeShape, 'roots' | 'search'>>,
+  shape: Pick<TreeShape, 'root' | 'nodes'> & Partial<Pick<TreeShape, 'roots' | 'search' | 'links'>>,
   opts: { sideways?: boolean } = {},
 ): TreeLayout {
   const { nodes } = shape;
@@ -195,7 +198,8 @@ export function layoutTree(
   const sideways = opts.sideways === true;
   const base = metricsFor(depthOf.size, maxDepth, edgeLabels, kind, longest);
   // Sideways, siblings stack down a phone's long side: pack them a little closer.
-  const m = sideways && kind === 'search' ? { ...base, gap: 4 } : base;
+  // Linked siblings (a B+ tree's leaves) need room between them for the arrow.
+  const m = sideways && kind === 'search' ? { ...base, gap: 4 } : shape.links?.length ? { ...base, gap: Math.max(base.gap, LINK_GAP) } : base;
   if (roots.length === 0) return { boxes: {}, parent, minX: 0, maxX: 0, minY: 0, maxY: 0, metrics: m, sideways };
 
   const place = (id: NodeId): Sub => {

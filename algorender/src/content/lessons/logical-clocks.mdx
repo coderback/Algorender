@@ -1,0 +1,279 @@
+<Section step="hook" title="Which happened first?">
+
+Two servers log events. Server A writes `balance = 50` at 10:00:00.120, and server B writes `balance = 80` at
+10:00:00.115. Which write came last, and so wins?
+
+The timestamps say A's. But each timestamp comes from that machine's own clock, and clocks drift. Even with NTP
+keeping them in step, two machines can disagree by milliseconds across a data centre and by far more across the
+internet, and a clock can jump backwards when it is corrected. If B's clock runs 10 ms slow, B's write really came
+second. Physical time can't tell you.
+
+In 1978 Leslie Lamport pointed out that you often don't need the real time at all. What matters is **cause and
+effect**: could one event have influenced the other? That can be tracked with plain counters, called logical clocks.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="process">One machine or thread with its own sequence of events. Each gets a horizontal line on the diagram, with time running left to right.</Term>
+  <Term name="event">Something a process does: a local step, sending a message, or receiving one. Drawn as a dot, named by process and position (b2 is B's second event).</Term>
+  <Term name="happened before (→)">e → f if e comes before f on the same process, or e is the sending of a message that f receives, or there is a chain of these from e to f.</Term>
+  <Term name="concurrent">Neither e → f nor f → e: no chain of messages links them, so neither could have affected the other, whatever the wall clocks say.</Term>
+  <Term name="Lamport clock">One counter per process. Tick it before every event; a message carries the sender's count, and a receiver first jumps to the larger of its own count and the message's.</Term>
+  <Term name="vector clock">One counter for every process, kept by every process. It records how many events of each process are in an event's past.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Stamping events with Lamport clocks">
+
+Three processes, two messages: A tells B something, then B tells C. Step through and watch each event get its stamp.
+Local events and sends tick the clock by one. A receive first takes the larger of the local clock and the stamp the
+message carries, then ticks.
+
+<Explore slug="logical-clocks" settings={{ preset: 'chain' }} caption="b2 receives m1, stamped 2, while B's own clock reads 1: B jumps to max(1, 2) + 1 = 3. Then C, at 1, receives m2 stamped 4 and jumps to 5." />
+
+<KeyIdea>
+
+**If e happened before f, then L(e) < L(f).** Along a process, every event ticks the clock up. Across a message, the
+receiver jumps past the stamp it carries. So the counter grows along every chain of cause and effect: this is
+Lamport's **clock condition**.
+
+</KeyIdea>
+
+The rule only works in one direction. Lamport clocks never put an effect before its cause, but a smaller timestamp
+does not mean an event came first.
+
+<Explore slug="logical-clocks" settings={{ preset: 'misleads' }} caption="a1 gets 1 and c2 gets 4, yet no chain of messages links them: they are concurrent. a3 and c1 both get 3, and the total order breaks the tie by process name." />
+
+Sorting by (timestamp, process name) gives a **total order** that never contradicts →. Every process can work it
+out from the stamps alone, so they all agree on one order of events. Lamport used it to build mutual exclusion
+without a central lock server, and systems use it to agree on an order of writes. Between concurrent events, though,
+the order it picks is arbitrary.
+
+</Section>
+
+<Section step="predict" title="Your turn: stamp the receives">
+
+Before each receive, say what stamp it gets. At the end, say whether one event happened before another or the two are
+concurrent.
+
+<PredictChallenge slug="logical-clocks" settings={{ preset: 'misleads' }} goal={3} />
+
+<Misconception
+  id="receive-plus-one"
+  title="On a receive, add one to the message's stamp"
+  probes={[
+    {
+      q: 'B’s Lamport clock reads 7. It receives a message stamped 3. What stamp does the receive get?',
+      choices: ['4', '8', '3', '7'],
+      answer: 1,
+      trap: 0,
+      why: 'Take the larger of the local clock and the message’s stamp, then tick: max(7, 3) + 1 = 8. Using only the message gives 4, which is smaller than events B has already stamped.',
+    },
+    {
+      q: 'C’s Lamport clock reads 9. It receives a message stamped 6. What stamp does the receive get?',
+      choices: ['7', '9', '10', '16'],
+      answer: 2,
+      trap: 0,
+      why: 'max(9, 6) + 1 = 10. Adding one to the message’s stamp gives 7, smaller than events C has already stamped.',
+    },
+  ]}
+>
+
+A receive must come after two things: everything earlier on its own process, and the send. So it takes **the larger**
+of the local clock and the message's stamp, then ticks: $L \leftarrow \max(L, t_m) + 1$. Using only the message's
+stamp can put a receive before events its own process has already done; using only the local clock can put it before
+the send.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Vector clocks: spotting concurrency">
+
+A Lamport timestamp is one number, so it can't tell "happened before" from "concurrent": the pair (1, 4) above looks
+just like a real cause and effect. **Vector clocks** (Fidge and Mattern, independently, in 1988) fix this by keeping
+one counter per process:
+
+- **A local event or a send:** add one to your own entry. A message carries the sender's whole vector.
+- **A receive:** take the larger of each entry, yours or the message's, then add one to your own entry.
+
+Entry $i$ of an event's vector counts the events of process $i$ in its past, including itself if it is on process $i$.
+To compare, $V(e) < V(f)$ means every entry of $V(e)$ is $\le$ the matching entry of $V(f)$, and at least one is
+smaller. Then **e → f exactly when V(e) < V(f)**, and two events are concurrent exactly when neither vector is smaller.
+
+<Explore slug="logical-clocks" settings={{ preset: 'chain-vector' }} caption="b2 merges [0,1,0] with m1's [2,0,0] to [2,1,0], then ticks B's entry: [2,2,0]." />
+
+<Explore slug="logical-clocks" settings={{ preset: 'misleads-vector' }} input caption="a1 is [1,0,0] and c2 is [0,2,2]: each is bigger somewhere, so they are concurrent. Type your own, e.g. vector; A: send m1, local; B: local, recv m1; C: local." />
+
+The price is size: a vector has one entry per process, so it grows with the cluster. Amazon's Dynamo stored vector
+clocks with each value so that, after a network split, it could tell an update that replaced another from two
+concurrent updates that conflict and must both be kept. Riak's **version vectors** do the same job, with one entry
+per replica rather than per client.
+
+<Misconception
+  id="smaller-means-earlier"
+  title="A smaller Lamport time means the event happened first"
+  probes={[
+    {
+      q: 'L(e) = 3 and L(f) = 9. What do you know?',
+      choices: ['e happened before f', 'f did not happen before e, but they may be concurrent', 'e and f are concurrent', 'Nothing at all'],
+      answer: 1,
+      trap: 0,
+      why: 'If f → e then L(f) < L(e), which is false here, so f did not happen before e. But e may have happened before f, or the two may be concurrent: Lamport clocks can’t tell which.',
+    },
+    {
+      q: 'Which clock lets you tell from the stamps alone that two events are concurrent?',
+      choices: ['A Lamport clock: the event with the smaller stamp happened first', 'A Lamport clock, when the stamps are equal', 'A vector clock: neither vector is ≤ the other', 'Neither'],
+      answer: 2,
+      trap: 0,
+      why: 'Lamport stamps only promise e → f ⇒ L(e) < L(f), not the converse. Vector clocks characterise → exactly, so incomparable vectors mean concurrent.',
+    },
+  ]}
+>
+
+Lamport clocks promise only one direction: **if e → f then L(e) < L(f)**. The converse fails. In the second example,
+a1 is stamped 1 and c2 is stamped 4, but no chain of messages links them, so they are concurrent. A smaller stamp tells
+you only that the later-stamped event did not happen before the other. To know whether e → f, you need vector
+clocks, or to follow the messages.
+
+</Misconception>
+
+<Misconception
+  id="merge-without-tick"
+  title="On a receive, merging the vectors is enough"
+  probes={[
+    {
+      q: 'B’s vector is [0,1,0]. It receives a message carrying [2,0,0]. What is B’s vector after the receive?',
+      choices: ['[2,1,0]', '[2,2,0]', '[3,1,0]', '[2,1,1]'],
+      answer: 1,
+      trap: 0,
+      why: 'Merge to [2,1,0], then tick B’s own entry: [2,2,0]. Without the tick, the receive would carry the same vector as an earlier state, though it is a new event of B.',
+    },
+    {
+      q: 'C’s vector is [1,0,2]. It receives a message carrying [1,3,0]. What is C’s vector after the receive?',
+      choices: ['[1,3,3]', '[1,3,2]', '[2,3,3]', '[1,4,2]'],
+      answer: 0,
+      trap: 1,
+      why: 'Merge elementwise to [1,3,2], then add one to C’s own entry (the third): [1,3,3].',
+    },
+  ]}
+>
+
+A receive is an event of its own, so after taking the elementwise maximum, the process **ticks its own entry**. Skip
+the tick and the receive's vector equals the merge of two earlier events. Then the next receive can look identical to
+it, and the count of the process's own events is wrong.
+
+</Misconception>
+
+<Misconception
+  id="concurrent-same-instant"
+  title="Concurrent means at the same moment"
+  probes={[
+    {
+      q: 'Event x happens at 09:00 on server A. Event y happens at 17:00 on server B. No messages pass between A and B all day. How are x and y related?',
+      choices: ['x happened before y', 'They are concurrent', 'y happened before x', 'They can’t be compared: they are hours apart'],
+      answer: 1,
+      trap: 0,
+      why: 'Happened-before is about chains of messages, not wall-clock time. With no messages, nothing at A can affect B, so x and y are concurrent, eight hours apart.',
+    },
+    {
+      q: 'Two events have vectors [3,0] and [0,5]. What does that tell you?',
+      choices: ['They happened at the same time', 'The second happened before the first', 'Neither could have affected the other', 'The first happened before the second'],
+      answer: 2,
+      trap: 0,
+      why: 'Neither vector is ≤ the other, so the events are concurrent: no chain of messages links them. They may have happened at very different times.',
+    },
+  ]}
+>
+
+In distributed systems, **concurrent** means *causally unrelated*: no chain of messages runs between the two events,
+so neither could have affected the other. They may be hours apart on a wall clock. What makes them concurrent is
+that no information passed between them, not that they happened at the same moment.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A’s Lamport clock reads 9. A receives a message stamped 4. What stamp does the receive get?',
+      choices: ['5', '9', '10', '14'],
+      answer: 2,
+      why: 'max(9, 4) + 1 = 10. Adding one to the message’s stamp gives 5, which would put the receive before events A has already done.',
+      traps: { 0: 'receive-plus-one' },
+    },
+    {
+      q: 'Two events have Lamport stamps 2 and 5. Which is true?',
+      choices: ['The stamp-2 event happened before the stamp-5 event', 'The stamp-5 event did not happen before the stamp-2 event', 'They are concurrent', 'They happened 3 time units apart'],
+      answer: 1,
+      why: 'If the stamp-5 event happened before the other, its stamp would be smaller. Beyond that you can’t tell: the stamp-2 event may come before it, or they may be concurrent.',
+      traps: { 0: 'smaller-means-earlier' },
+    },
+    {
+      q: 'B’s vector is [1,2,0]. It receives a message carrying [3,0,1]. What is B’s vector after the receive?',
+      choices: ['[3,2,1]', '[4,2,1]', '[3,3,1]', '[4,3,1]'],
+      answer: 2,
+      why: 'Merge elementwise to [3,2,1], then tick B’s own entry, the second: [3,3,1].',
+      traps: { 0: 'merge-without-tick' },
+    },
+    {
+      q: 'Events e and f have vectors [2,1,0] and [1,3,0]. How are they related?',
+      choices: ['e happened before f', 'f happened before e', 'They are concurrent', 'They happened at the same instant'],
+      answer: 2,
+      why: 'e’s first entry is larger, f’s second entry is larger, so neither vector is ≤ the other: no chain links them.',
+      traps: { 3: 'concurrent-same-instant' },
+    },
+    {
+      q: 'Why can’t servers just order events by the time on their own clocks?',
+      choices: ['Clocks drift and are corrected, so two machines’ readings can disagree by more than the gap between events', 'Reading the clock is too slow', 'Clocks only count seconds', 'They can: NTP keeps clocks exactly in step'],
+      answer: 0,
+      why: 'NTP keeps clocks close, not equal: milliseconds apart in a data centre, more across the internet, and a correction can even move a clock backwards.',
+    },
+    {
+      q: 'What does sorting events by (Lamport stamp, process name) give you?',
+      choices: ['The real order in which the events happened', 'A list of the concurrent events', 'An order every process agrees on that never puts an effect before its cause', 'The vector clock of each event'],
+      answer: 2,
+      why: 'It is a total order consistent with happened-before, and every process computes the same one. Between concurrent events it is arbitrary.',
+    },
+    {
+      q: 'A cluster has 50 processes. How many numbers does each vector clock hold?',
+      choices: ['1', '50', '2', '2,500'],
+      answer: 1,
+      why: 'One entry per process. That size is the price of telling concurrent events apart, and why Lamport clocks are used when a total order is all you need.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="lamport-vs-vector"
+  prompt="How does a Lamport clock stamp events, what does a smaller stamp tell you, and what do vector clocks add?"
+  rubric={[
+    'Each process ticks its counter before every event, and a message carries the sender’s count.',
+    'A receive takes the larger of the local count and the message’s stamp, then ticks, so if e happened before f, L(e) < L(f).',
+    'The converse fails: a smaller Lamport stamp does not mean happened before, since concurrent events get arbitrary stamps.',
+    'Vector clocks keep one counter per process, merging elementwise on a receive, and e happened before f exactly when V(e) < V(f); incomparable vectors mean concurrent.',
+  ]}
+  example="A Lamport clock is a counter per process. Every event ticks it, a send puts the count on the message, and a receive jumps to the larger of its own count and the message's stamp, then ticks. So along any chain of cause and effect the stamps grow: if e happened before f, L(e) < L(f). But not the other way round: two concurrent events, with no messages between them, can get any stamps, so a smaller stamp proves nothing. Vector clocks keep a counter for every process and merge by taking the maximum of each entry. Then e happened before f exactly when e's vector is ≤ f's everywhere and smaller somewhere, and if neither is smaller the events are concurrent."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Machines' clocks drift, so wall-clock times can't order events across machines. **Happened-before** (→) is what counts: same-process order, send before receive, and chains of these.
+- **Lamport clocks:** tick before every event; on a receive, $L \leftarrow \max(L, t_m) + 1$. Then **e → f ⇒ L(e) < L(f)**, but **not the converse**.
+- Ties broken by process give a **total order** everyone agrees on, consistent with →. It is used for mutual exclusion and for ordering writes.
+- **Vector clocks:** one entry per process; tick your own entry, merge with an elementwise max on a receive (then tick). **e → f ⇔ V(e) < V(f)**, and incomparable vectors mean **concurrent**.
+- Concurrent means **causally unrelated**, not simultaneous. Vector clocks and version vectors (Dynamo, Riak) use this to spot conflicting writes, at the cost of one entry per process or replica.
+
+</Section>

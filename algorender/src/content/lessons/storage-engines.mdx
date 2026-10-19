@@ -1,0 +1,341 @@
+<Section step="hook" title="A billion rows, three page reads">
+
+A table with a billion rows lives on disk, and you ask for one of them by its key. A database finds it in a few
+milliseconds, and it can also take a million inserts a second without falling over. The part that makes both possible is
+the **storage engine**: the code that decides how rows are laid out on disk and how they are found again.
+
+Disks don't hand over single values. They read and write whole **pages**, typically 4 to 16 KB, and a page next to the
+one you just read is far cheaper than one somewhere else. On a spinning disk a random read waits several milliseconds for
+the head to move; SSDs narrow the gap, but they still work in pages, and both are fastest when they read or write in
+long sequential runs. So the question a storage engine answers is: how few pages can a lookup touch, and how few can a
+write?
+
+There are two classic answers. A **B+ tree** keeps the data sorted in place and finds any key in a handful of page reads.
+An **LSM tree** never updates in place: it collects writes in memory and writes them out in sorted batches, merging them
+later. This lesson builds both.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="page">The unit a disk reads and writes, a few kilobytes. A storage engine's cost is counted in pages read and written, not in comparisons.</Term>
+  <Term name="fan-out">How many children a tree node has. One page holds hundreds of keys, so a B+ tree node can have hundreds of children, and the tree stays only a few levels deep.</Term>
+  <Term name="separator">A key in a B+ tree's internal node that only steers searches: keys below it go left, keys from it upwards go right. It is a copy; the key itself lives in a leaf.</Term>
+  <Term name="memtable and SSTable">An LSM tree's sorted table of recent writes in memory, and the sorted, immutable files (sorted string tables) it is flushed to on disk.</Term>
+  <Term name="compaction">Merging SSTables into fewer, larger ones, keeping only each key's newest version, in the background.</Term>
+  <Term name="Bloom filter">A few bits per table, kept in memory, that answer "is this key in the table?" with "certainly not" or "maybe".</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A B+ tree: shallow, fat and linked">
+
+A binary search tree is the wrong shape for a disk. With a billion keys it is about 30 levels deep, and each level is a
+different page, so a lookup costs about 30 random reads. A B+ tree puts hundreds of keys in each node, one node per page.
+With about 1,000 children per page, three levels reach $1000 \times 1000 \times 1000$, a billion keys, and the top levels are
+small enough to stay in memory, so a lookup reads one or two pages from disk.
+
+This one has order 4 (at most 3 keys a node) so it fits on screen. The root holds only **separators**; every key, with
+its row, lives in a **leaf**, and the leaves are linked left to right.
+
+<Explore slug="b-plus-tree" settings={{ start: 'order-4' }} caption="Search 35: the root's separators send it between 30 and 50, and the leaf holds it. Two page reads, one per level. Then insert 36 and watch the full leaf split." />
+
+<KeyIdea>
+
+**A lookup reads one page per level, and a B+ tree has very few levels.** All keys live in the leaves, the internal
+nodes hold only separator copies to steer by, and the leaves are linked so that a range is one descent plus a walk along
+the chain.
+
+</KeyIdea>
+
+A B-tree, the B+ tree's parent, keeps each key exactly once, in whichever node it lands, internal or leaf. A B+ tree
+moves all the rows down to the leaves. Its internal pages then hold only short separators, so more fit in a page, the
+fan-out goes up and the tree gets shallower. That is why the indexes of PostgreSQL and MySQL's InnoDB are B+ trees.
+
+Range queries are where the leaf links pay off. To find every key from 20 to 60, the tree descends once to the leaf
+where 20 would be, then follows the links, never going back up.
+
+<Explore slug="b-plus-tree" settings={{ start: 'order-4' }} caption="Run a range scan from 20 to 60: one internal page on the way down, then three leaves along the chain, 7 keys in 4 page reads. The scan stops at the leaf whose last key, 70, is past the end." />
+
+</Section>
+
+<Section step="predict" title="Your turn: grow the tree">
+
+Before each step, say which child a key goes down to, whether its leaf overflows, and which key moves up when a node
+splits. Start with insert 36: its leaf is full, so watch what is **copied** up from a leaf and what is **moved** up from an
+internal node. Then try a few more inserts of your own.
+
+<PredictChallenge slug="b-plus-tree" settings={{ start: 'order-4' }} goal={4} />
+
+</Section>
+
+<Section step="do" title="Updating in place, and the other way">
+
+A B+ tree updates **in place**: an insert rewrites the leaf page it lands in, and sometimes splits it and rewrites the
+parent too. Changing a 100-byte row means rewriting a whole page, at a random place on the disk, and the database also
+writes the change to a log first so that a crash in the middle can be repaired. Reads are excellent; random writes are
+the price.
+
+Deleting shows how little the internal nodes matter to the data. Delete 30, which is also a separator in the root.
+
+<Explore slug="b-plus-tree" settings={{ start: 'order-4' }} caption="Delete 30: the key and its row leave the leaf, but the 30 in the root stays. It still divides the keys correctly, smaller to its left, 30 or more to its right." />
+
+<Misconception
+  id="separator-is-data"
+  title="A B+ tree's internal keys are the data"
+  probes={[
+    {
+      q: 'A B+ tree’s root holds the separator 30, and the leaf [30, 35, 40] holds 30’s row. You delete 30, and the leaf keeps enough keys. What happens to the 30 in the root?',
+      choices: [
+        'It must be removed at once, or a search could find the deleted key',
+        'It can stay: it still divides smaller keys from larger ones, and every search ends in a leaf',
+        'It turns into a tombstone',
+        'The root is rebuilt from the leaves',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'It can stay. A separator is a signpost, not a key: a search for 30 still goes down to the leaf, finds no 30 there, and reports it missing. Leaving it saves rewriting the root’s page.',
+    },
+    {
+      q: 'Key 50 is a separator in a B+ tree’s root. Where is the row for 50?',
+      choices: [
+        'In the root, next to the separator',
+        'In both the root and a leaf, so either can answer',
+        'Only in a leaf: the root’s 50 is a copy that steers searches',
+        'Nowhere: separators replace their rows',
+      ],
+      answer: 2,
+      trap: 0,
+      why: 'Only in the leaf. A leaf split copies the first key of the new right leaf up as a separator; the key and its row stay in the leaf. That is the difference from a B-tree.',
+    },
+  ]}
+>
+
+In a B-tree they are: each key and its row sit in exactly one node, internal or not. In a B+ tree, an internal key is a
+**separator**, a copy made when a leaf split, and it only steers searches. Every search ends in a leaf, so a separator
+whose key has been deleted does no harm: it still sends smaller keys left and larger ones right, and the tree leaves it
+alone rather than rewrite a page for nothing.
+
+</Misconception>
+
+Now the other answer. An **LSM tree** (log-structured merge tree) never rewrites a page. A write goes into the
+**memtable**, a sorted table in memory, and is appended to a log on disk so a crash can't lose it. That log is written
+sequentially, the cheapest write there is. When the memtable fills, it is written out in one sequential pass as an
+**SSTable**: sorted, and never changed again. Here the memtable holds 4 entries.
+
+<Explore slug="lsm-tree" settings={{ start: 'empty' }} caption="Put a dozen keys in any order. Every fourth put fills the memtable and flushes it as a new table in L0. When L0 holds three tables, they are merged into one sorted run in L1: compaction." />
+
+The catch is reads. A key may have been written many times, and its versions sit in different tables, newest at the
+top. A get searches from the top down, memtable first, then L0 newest first, then each level below, and stops at the
+first version it meets. Two things keep that cheap: tables below L0 never overlap within a level, so a key's range rules
+most tables out, and each table has a **Bloom filter** in memory.
+
+<Explore slug="lsm-tree" settings={{ start: 'levels' }} caption="Get 7: one table is skipped by its key range, a whole level holds nothing in range, and a Bloom filter rules out the last candidate, so the answer costs no disk reads. Then get 50: this time a Bloom filter says “maybe” and is wrong, one wasted read." />
+
+<Misconception
+  id="bloom-maybe-means-yes"
+  title="Mixing up which Bloom filter answer can be wrong"
+  probes={[
+    {
+      q: 'A table’s Bloom filter says “maybe” for key 50. What do you know?',
+      choices: [
+        '50 is in the table',
+        '50 is not in the table',
+        '50 might be in the table: read it to find out',
+        'The filter needs rebuilding',
+      ],
+      answer: 2,
+      trap: 0,
+      why: 'Only that it might be. Other keys can have set the same bits, so “maybe” is sometimes wrong: a false positive, which costs one wasted read.',
+    },
+    {
+      q: 'Key 12 is in table T3. Can T3’s Bloom filter say that 12 is certainly not there?',
+      choices: [
+        'Yes, now and then: Bloom filters make mistakes both ways',
+        'No: adding 12 set its bits, and bits are never cleared, so the filter always says “maybe” for 12',
+        'Only after the table has been compacted',
+        'Only if 12 was added last',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Never. Each key sets a few bits chosen by its hashes, and a table never changes after it is written, so a stored key always finds its bits set. Bloom filters have false positives, never false negatives.',
+    },
+  ]}
+>
+
+A Bloom filter is wrong in one direction only. Each key in the table sets a few bits, chosen by hashing it, so a key
+that is there always finds its bits set: "certainly not" is always true. But other keys set bits too, and an absent key
+can find all of its bits set by chance: "maybe" is sometimes false, and costs one wasted read. With about 10 bits per key
+the false positives stay near 1%, a small price for skipping almost every table that can't help.
+
+</Misconception>
+
+Deletes can't erase anything either, because the old versions sit in immutable tables. A delete writes a **tombstone**,
+a marker saying "this key is gone", which hides every older version below it. Here keys 10, 20 and 45 were deleted after
+their values had sunk to L2.
+
+<Explore slug="lsm-tree" settings={{ start: 'tombstones' }} caption="Get 20: the search stops at the tombstone in L0 and reports it missing, though the old value is still in L2. Now compact twice: the tombstone first moves down as it is, then a real merge reaches the bottom and throws away both the old values and their tombstones." />
+
+<Misconception
+  id="delete-removes-at-once"
+  title="A delete in an LSM tree removes the data at once"
+  probes={[
+    {
+      q: 'An LSM tree holds 20’s old value in an L2 table. Right after delete(20), how much disk space has the delete freed?',
+      choices: [
+        'The space of 20’s old value',
+        'None yet: it added a tombstone, which takes a little more',
+        'A whole table',
+        'All the space 20 has ever used',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'None: SSTables are never changed after they are written, so the delete adds a tombstone in the memtable. The space comes back only when compaction merges the tombstone down past the old value.',
+    },
+    {
+      q: 'When can 20’s old value and its tombstone finally be thrown away?',
+      choices: [
+        'As soon as delete(20) is called',
+        'When the memtable flushes',
+        'When compaction merges the tombstone down to where nothing older lies below it',
+        'Never: tombstones are kept for ever',
+      ],
+      answer: 2,
+      trap: 0,
+      why: 'At a merge with nothing older below. Until then the tombstone has a job, hiding the old value from every get; once both meet in a merge at the bottom, the newest version wins and it is “deleted”, so both go.',
+    },
+  ]}
+>
+
+Nothing on disk changes when you delete: the tables are immutable. The delete writes a tombstone, which takes space of
+its own, and every get that meets it stops there. The old value and the tombstone are only thrown away when compaction
+merges the tombstone down to the bottom, where nothing older can be hiding. Until then deleted data still uses disk
+space, which is part of an LSM tree's **space amplification**.
+
+</Misconception>
+
+Compaction is merge sort's merge: the inputs are already sorted, so one sequential pass writes the merged run. It is
+also where the LSM tree pays for its cheap writes. Each entry is rewritten again every time it sinks a level, so the
+bytes written to disk can be many times the bytes put: **write amplification**. A get may read several tables: **read
+amplification**. Old versions take room until merged away: **space amplification**. No engine minimises all three;
+choosing one is choosing which to pay.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A B+ tree is 3 levels deep. How many pages does looking up one key read?',
+      choices: ['3, one per level', '1, the leaf', 'About log₂ of the number of keys', 'Every leaf, until the key turns up'],
+      answer: 0,
+      why: 'One page per level, root to leaf. With hundreds of keys per page, 3 or 4 levels cover billions of keys, and the top levels usually stay cached in memory.',
+    },
+    {
+      q: 'Why is a B+ tree a better shape on disk than a balanced binary search tree?',
+      choices: [
+        'Each node fills a page with hundreds of keys, so the tree is a few levels deep and a lookup reads a few pages',
+        'It needs fewer comparisons per lookup',
+        'It never has to split a node',
+        'It keeps no keys in its internal nodes',
+      ],
+      answer: 0,
+      why: 'Pages are the cost. A binary tree over a billion keys is about 30 levels, so about 30 random page reads; a B+ tree with a fan-out of about 1,000 needs 3 levels. The comparisons inside a page are cheap by comparison.',
+    },
+    {
+      q: 'How does a B+ tree find every key from 20 to 60?',
+      choices: [
+        'It descends once to the leaf where 20 would be, then follows the links from leaf to leaf',
+        'It searches for each key from 20 to 60 separately',
+        'It reads every leaf and filters them',
+        'It descends from the root once for each leaf',
+      ],
+      answer: 0,
+      why: 'One descent, then a walk along the linked leaves until it passes 60. That is why B+ trees, not B-trees, are used for indexes: ranges come almost for free.',
+    },
+    {
+      q: 'You delete key 30 from a B+ tree. A copy of 30 is a separator in the parent, and the leaf still has enough keys. What must change in the parent?',
+      choices: ['Nothing: the separator can stay', 'The 30 must be removed', 'The 30 must be replaced by a tombstone', 'The parent must split'],
+      answer: 0,
+      why: 'Nothing. A separator only divides key ranges, and 30 still divides them correctly; searches end in the leaves, where 30 is gone.',
+      traps: { 1: 'separator-is-data' },
+    },
+    {
+      q: 'Where does an LSM tree put a new write first?',
+      choices: [
+        'In the memtable, a sorted table in memory, with a copy appended to a log on disk',
+        'In place, in the leaf page where the key belongs',
+        'In the bottom level, where the oldest data lives',
+        'In a new SSTable on its own',
+      ],
+      answer: 0,
+      why: 'In memory, plus a sequential append to the log so a crash loses nothing. Only when the memtable fills is it written out, sorted, as a new SSTable.',
+    },
+    {
+      q: 'A get reaches an SSTable whose key range covers the key, but the table’s Bloom filter says “certainly not”. What should the get do?',
+      choices: [
+        'Skip the table: the key is certainly not in it',
+        'Read the table anyway, since the filter could be wrong',
+        'Stop and report the key missing',
+        'Read the level below first, then this table',
+      ],
+      answer: 0,
+      why: 'Skip it. A Bloom filter never says “no” to a key it holds; its only mistakes are false “maybe”s. Stopping would be wrong too: an older version could still sit in a deeper table.',
+      traps: { 1: 'bloom-maybe-means-yes' },
+    },
+    {
+      q: 'You call delete(20) on an LSM tree. What does it write?',
+      choices: [
+        'A tombstone for 20, in the memtable',
+        'Nothing: it erases 20 from every table at once',
+        'A new copy of every table that holds 20',
+        'It sets 20’s Bloom filter bits to zero',
+      ],
+      answer: 0,
+      why: 'A tombstone. SSTables are immutable, so the delete is just another write; the old versions go only when compaction merges the tombstone down to the bottom.',
+      traps: { 1: 'delete-removes-at-once' },
+    },
+    {
+      q: 'Which workload suits an LSM tree better than a B+ tree?',
+      choices: [
+        'A heavy stream of inserts, such as events, metrics or logs',
+        'Mostly reads of existing keys and range scans, with few writes',
+        'Small tables that fit in memory',
+        'None: LSM trees are faster at everything',
+      ],
+      answer: 0,
+      why: 'Writes. An LSM tree turns them into sequential appends and merges, so it takes inserts far faster (RocksDB, Cassandra, LevelDB). For read-heavy work a B+ tree reads one path of pages and never pays for compaction.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="two-storage-engines"
+  prompt="How do a B+ tree and an LSM tree each store data on disk, and what does each one trade?"
+  rubric={[
+    'A B+ tree keeps all keys in sorted, linked leaves under a few levels of separators: a lookup reads one page per level, a range walks the leaves.',
+    'A B+ tree updates pages in place, so each write rewrites a page at a random place on disk.',
+    'An LSM tree buffers writes in a sorted memtable (logged for crashes), flushes them as immutable sorted tables and merges those later in compaction.',
+    'An LSM tree’s get may check several tables, newest first, with key ranges and Bloom filters skipping most of them.',
+    'The LSM tree trades cheap sequential writes for compaction rewriting data many times and old versions using space until merged away.',
+  ]}
+  example="A B+ tree keeps every key and row in sorted, linked leaves, with a few levels of separator pages above. Each page holds hundreds of keys, so a lookup reads one page per level, three or four in all, and a range scan descends once and walks along the leaves. But writes happen in place: each insert rewrites a page somewhere random on disk. An LSM tree never rewrites in place. It collects writes in a sorted memtable, logging them for safety, and flushes it as an immutable sorted file; compaction later merges the files level by level. Writes become cheap sequential I/O, but a read may check several tables from newest to oldest, which key ranges and Bloom filters keep cheap, and compaction rewrites data many times while old versions linger."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Disks work in pages; sequential I/O is cheap and random I/O is not. Storage engines are judged in pages read and written.
+- A B+ tree is shallow and fat: one page per level, all keys in linked leaves, separators as copies above. Great for reads and ranges; writes rewrite pages in place.
+- An LSM tree buffers writes in a memtable, flushes immutable SSTables and merges them in compaction. Reads go newest first, skipping tables by key range and Bloom filter.
+- Bloom filters say "certainly not" or "maybe": false positives, never false negatives. Deletes are tombstones, gone only when compaction reaches the bottom.
+- Write, read and space amplification can't all be low: B+ trees favour reads, LSM trees favour writes.
+
+</Section>

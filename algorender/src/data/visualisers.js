@@ -717,6 +717,42 @@ const systemsEntries = [
     description: 'A bucket of tokens that refills at a steady rate: bursts up to its capacity get through, but the long-run rate is capped.',
     slug: 'token-bucket',
     category: 'Performance'
+  },
+  {
+    name: 'Logical Clocks',
+    description: 'Stamp events on a space-time diagram with Lamport and vector clocks, and see why a smaller Lamport time doesn’t mean “happened before”, while vector clocks spot concurrent events exactly.',
+    slug: 'logical-clocks',
+    category: 'Distributed Systems'
+  },
+  {
+    name: 'Raft Consensus',
+    description: 'Elect a leader, replicate a log and commit by majority, then crash servers and split the network to see why Raft never loses a committed entry.',
+    slug: 'raft',
+    category: 'Distributed Systems'
+  },
+  {
+    name: 'B+ Tree',
+    description: 'The index inside databases: keys live in linked leaves, separator copies above steer each lookup to one page per level, and range scans walk along the leaves.',
+    slug: 'b-plus-tree',
+    category: 'Databases'
+  },
+  {
+    name: 'LSM Tree',
+    description: 'Write keys into a memtable, flush it to sorted tables on disk and watch compaction merge them down the levels; then follow a get from newest to oldest, skipping tables by key range and Bloom filter.',
+    slug: 'lsm-tree',
+    category: 'Databases'
+  },
+  {
+    name: 'Race Conditions',
+    description: 'Two threads run count++ one instruction at a time: watch an update get lost, then try every interleaving and see how often it happens, and how a lock or an atomic instruction fixes it.',
+    slug: 'race-conditions',
+    category: 'Concurrency'
+  },
+  {
+    name: 'Deadlock',
+    description: 'Processes take locks in turn: watch the resource-allocation graph grow, find the cycle that is a deadlock, and see how taking locks in one global order prevents it, with dining philosophers.',
+    slug: 'deadlock',
+    category: 'Concurrency'
   }
 ];
 

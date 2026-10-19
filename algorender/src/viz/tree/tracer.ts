@@ -1,7 +1,7 @@
 import type { Checkpoint, Frame, VarValue } from '@/engine/types';
 import { MARKS, type MarkKey } from '@/viz/marks';
 import { rootsOf } from './layout';
-import type { NodeId, TableRow, TreeNode, TreeShape, TreeState } from './types';
+import { linkId, type NodeId, type TableRow, type TreeNode, type TreeShape, type TreeState } from './types';
 
 /** How a structure module draws its (immutable) model as a tree. */
 export type TreeDrawing<M> = {
@@ -182,9 +182,12 @@ function highlights(
   const cellLabel = new Map<string, string>();
   for (const node of Object.values(shape.nodes)) for (const c of node.cells) cellLabel.set(c.id, c.label);
   for (const row of shape.table ?? []) for (const c of row.cells) cellLabel.set(c.id, `${row.label} ${c.label || '(empty)'}`);
+  const links = new Map((shape.links ?? []).map((l) => [linkId(l.from, l.to), l]));
   const labelOf = (id: string): string => {
     const cell = cellLabel.get(id);
     if (cell != null) return cell;
+    const link = links.get(id);
+    if (link) return `the link from ${labelOf(link.from)} to ${labelOf(link.to)}`;
     const node = shape.nodes[id];
     if (!node) return id;
     if (node.name) return node.name;

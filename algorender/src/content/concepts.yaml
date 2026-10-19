@@ -443,7 +443,7 @@ concepts:
     visualisers: [diffusion]
     lesson: diffusion
 
-  # ── Planned: systems ─────────────────────────────────────────
+  # ── Systems ──────────────────────────────────────────────────
   - id: cpu-scheduling
     title: CPU scheduling
     track: systems
@@ -478,9 +478,31 @@ concepts:
     summary: A token bucket lets bursts through but caps the long-run rate.
     prereqs: [queueing]
     visualisers: [token-bucket]
+  - id: concurrency
+    title: Race conditions, locks and deadlock
+    track: systems
+    summary: Why threads that share memory lose updates, how locks and atomic instructions stop it, and how locks taken in the wrong order deadlock.
+    prereqs: [cpu-scheduling]
+    visualisers: [race-conditions, deadlock]
+    lesson: concurrency
+  - id: storage-engines
+    title: Storage engines
+    track: systems
+    summary: How databases lay data out on disk, with B+ trees that update in place and LSM trees that append and merge.
+    prereqs: [b-trees, merge-sort]
+    visualisers: [b-plus-tree, lsm-tree]
+    lesson: storage-engines
+  - id: logical-clocks
+    title: Logical clocks
+    track: systems
+    summary: Ordering events without a shared clock, with Lamport timestamps and vector clocks.
+    prereqs: [graph-representations]
+    visualisers: [logical-clocks]
+    lesson: logical-clocks
   - id: consensus
     title: Consensus with Raft
     track: systems
-    summary: How a cluster agrees on a log even when machines fail.
-    prereqs: [graph-representations]
-    planned: true
+    summary: How a cluster agrees on a log even when machines fail, by electing a leader and committing by majority.
+    prereqs: [logical-clocks]
+    visualisers: [raft]
+    lesson: consensus

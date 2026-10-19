@@ -1,0 +1,374 @@
+<Section step="hook" title="Five copies, one truth">
+
+A bank keeps your balance on five servers, so that losing one machine loses nothing. Now two requests arrive at
+once: "withdraw 80" and "withdraw 50", with 100 in the account. If two servers each accept a different one first, the
+copies disagree, and when one of them crashes, which balance was the real one?
+
+Keeping copies is easy. Keeping them **in agreement** while machines crash, restart and lose touch with each other is
+the hard part, and it has a name: **consensus**. The usual trick is a **replicated state machine**. Every server holds
+the same log of commands and applies them in the same order, so they all compute the same state. Consensus is
+agreeing on that log, one entry at a time.
+
+**Raft** (Ongaro and Ousterhout, 2014) is the consensus algorithm behind etcd, Consul, CockroachDB and many others. It
+was designed to be understood: one leader takes all the writes, and a simple majority rule makes sure nothing it has
+promised is ever lost.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="leader, follower, candidate">The three roles. One leader takes client writes and sends them to the followers; a follower that stops hearing from a leader becomes a candidate and asks for votes.</Term>
+  <Term name="term">A numbered period with at most one leader. Every message carries the sender's term, and a server that sees a higher term moves up to it.</Term>
+  <Term name="election timeout">How long a follower waits without hearing from a leader before it starts an election. Each server picks its own at random, typically 150 to 300 ms.</Term>
+  <Term name="log entry">One command, stored with the term in which a leader received it. Shown here as term:value, so 2:x is x, written in term 2.</Term>
+  <Term name="majority">More than half of all the servers: 3 of 5, 2 of 3. Raft needs one to elect a leader and one to commit an entry.</Term>
+  <Term name="committed">Safe for ever: stored on a majority under the rules below, so every future leader will have it. Only then is it applied and answered.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Electing a leader">
+
+Raft divides time into **terms**, numbered 1, 2, 3, and so on. Each term starts with an election, and at most one
+leader can win it. Terms work like the Lamport clocks from the logical-clocks lesson: every request and reply carries
+the sender's term, and a server that sees a larger one adopts it. A leader that learns of a newer term knows it is out
+of date and steps down at once.
+
+A leader sends AppendEntries messages, empty ones as heartbeats, often enough that no follower's election timer runs
+out. When one does, that follower becomes a **candidate**: it starts a new term, votes for itself and sends RequestVote
+to every other server. A server grants at most **one vote per term**, so two candidates can never both reach a majority
+in the same term. Because each server draws its timeout at random, one usually times out well before the rest and wins
+before anyone else starts.
+
+<Explore slug="raft" settings={{ start: 'fresh-5' }} caption="Run until a new leader is elected. S3's timer runs out first, at 154 ms: it starts term 1, and the other four vote for it. S4's vote makes 3 of 5, a majority, and S3 sends heartbeats at once so that no one else starts an election." />
+
+<KeyIdea>
+
+**A majority is the whole trick.** A leader needs votes from a majority, and an entry is committed once a majority
+stores it. Any two majorities of the same cluster share at least one server, so every new leader's voters include
+someone who holds every committed entry, and the up-to-date check below makes sure the winner holds them too.
+
+</KeyIdea>
+
+That overlap is also why the cluster survives failures. With $2f + 1$ servers, any $f$ can crash and the other $f + 1$
+are still a majority, able to elect a leader and commit. Three servers survive one failure, five survive two.
+
+<Explore slug="raft" settings={{ start: 'steady' }} caption="S3 leads term 1, and a, b and c are committed. Crash S3, then run until a new leader is elected: S4 times out first, wins term 2 once two of S1, S2 and S5 vote for it, and its log still holds a, b and c. Then undo back to the start and crash two followers, S1 and S2, instead: a write to S3 still commits, since three of five are up. Crash S4 as well, and the next write never commits." />
+
+</Section>
+
+<Section step="predict" title="Your turn: call the election">
+
+Start a fresh five-server cluster and press **Next event** one event at a time. Before each one, say whose election
+timer runs out first, whether each server grants its vote, and which vote makes the candidate leader.
+
+<PredictChallenge slug="raft" settings={{ start: 'fresh-5' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Replicating the log, and who may win">
+
+Once elected, the leader takes every client write. It appends the command to its own log with its current term, then
+sends it to every follower in an AppendEntries message. Each message also names the entry just before the new ones, by
+**index and term**. A follower accepts only if its own log has that same entry there. That one check keeps the logs in
+step: if two logs hold an entry with the same index and term, they are identical up to that point.
+
+When the check fails, the follower refuses, and the leader backs up: it moves its **nextIndex** for that follower one
+entry earlier and tries again, until it finds the last entry they agree on. From there it sends everything the follower
+is missing, and the follower deletes any of its own entries that conflict.
+
+Votes have a second rule, and it is what keeps committed entries safe. A server refuses a candidate whose log is **less
+up to date** than its own: compare the terms of the last entries, and if those are equal, the longer log wins. A
+candidate missing a committed entry can't collect a majority, because a majority holds that entry.
+
+<Explore slug="raft" settings={{ start: 'lagging' }} caption="The leader has crashed, and S1 missed writes b and c while it was down. Press Next event: S1 times out first and asks for votes in term 2, and S2, S4 and S5 all refuse, since its log ends at index 1 and theirs at 3. Keep going: S5 and S4 both start term 3, S5 wins, and running until every log catches up shows S5 backing its nextIndex for S1 down from 4 to 2 before sending b and c." />
+
+<Misconception
+  id="vote-for-first-asker"
+  title="A server votes for whoever asks first"
+  probes={[
+    {
+      q: 'S2 hasn’t voted in term 5. Candidate S4 asks for its vote; S4’s last entry is from term 3 at index 8, and S2’s last entry is from term 4 at index 6. Does S2 vote for S4?',
+      choices: [
+        'Yes: it hasn’t voted in term 5 yet, so the first candidate to ask gets its vote',
+        'No: S4’s last entry has an older term, so S4’s log is less up to date than S2’s',
+        'Yes: S4’s log is longer',
+        'No: S2 always votes for itself',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'No. Logs are compared by the term of their last entry first, and only on a tie by length. S4’s last term, 3, is older than S2’s, 4, so S4 might be missing committed entries, and S2 refuses.',
+    },
+    {
+      q: 'Why does Raft let a server refuse a candidate even when it has no vote to give anyone else yet?',
+      choices: [
+        'It doesn’t: a server with a free vote must give it to the first candidate that asks',
+        'So that a candidate missing committed entries can never win, since a majority holds those entries and will refuse it',
+        'To make elections slower, so fewer happen',
+        'Because only the candidate with the lowest number may win',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The up-to-date check protects committed entries. Every committed entry is on a majority, every winner needs a majority’s votes, and the two majorities overlap, so someone in the overlap refuses any candidate that lacks it.',
+    },
+  ]}
+>
+
+A free vote is not enough: a server also checks the candidate's log. It compares the **terms** of the two logs' last
+entries, and only if they are equal does it compare their lengths. A candidate whose log is behind gets refused, even by
+a server that has voted for no one this term. That rule is why a new leader always holds every committed entry, and why
+Raft never has to copy entries from followers back to a leader.
+
+</Misconception>
+
+Now break the network. A **partition** splits the servers into groups that can't reach each other. Raft promises
+nothing to the side without a majority; it only promises that that side can't do damage.
+
+<Explore slug="raft" settings={{ start: 'split' }} caption="The old leader S3 and S1 are cut off from the other three, which have elected S2 for term 2. Write to S3: it can reach only one other server, so the entry never commits and the client waits. Write to S2: three of five store it, and it commits. Then heal the network and run until every log catches up: S3 sees term 2 and steps down, and S1 and S3 drop their uncommitted entries for S2’s." />
+
+<Misconception
+  id="two-leaders-is-broken"
+  title="Two leaders at once means Raft has failed"
+  probes={[
+    {
+      q: 'After a partition, S3 still thinks it leads term 1 while S2 leads term 2 on the side with a majority. What can S3 commit?',
+      choices: [
+        'Nothing: it can’t get any new entry onto a majority',
+        'Anything it writes, since it is still a leader',
+        'Half of what it writes',
+        'Whatever S2 hasn’t written yet',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Nothing. Committing needs a majority, and the majority is on S2’s side and has already moved on to term 2, so S3’s entries never commit. When the network heals, the first message from term 2 makes S3 step down.',
+    },
+    {
+      q: 'Two servers both believe they are leader. What do you know?',
+      choices: [
+        'The cluster is corrupt and needs repairing by hand',
+        'They lead different terms, and at most the one with the newer term can commit anything',
+        'They lead the same term, and will take turns',
+        'Both can commit, as long as clients write to only one of them',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'They lead different terms, since each term has at most one leader. The older one simply hasn’t heard about the newer term yet; it can’t commit, because the majority that elected the newer leader won’t accept its older term.',
+    },
+  ]}
+>
+
+It happens, briefly, and it is harmless. Each term has at most one leader, so two leaders always lead **different
+terms**. The older one is just out of date: the servers that elected the newer leader are a majority, and they reject
+anything from an older term, so the old leader can't commit a single entry. When it next hears from the new term, it
+steps down, and its uncommitted entries are overwritten where they conflict with the new leader's log.
+
+</Misconception>
+
+There is one more subtlety, and it is the one most explanations get wrong. A leader counts how many servers store each
+entry and marks it committed once a majority do, but only for entries from **its own current term**. An entry left by an
+earlier leader is not committed just because it reaches a majority. The paper's Figure 8 shows why. A leader of term 2
+gets an entry onto two of five servers and crashes. Another server is elected in term 3 and takes a different entry at
+that index, then crashes in turn. The first server comes back, wins term 4 and copies its term 2 entry onto a third
+server, a majority. If it counted that as committed and then crashed, the term 3 server could still win an election,
+because its last entry, from term 3, is newer than theirs, and it would overwrite the "committed" entry. So older
+entries commit only **indirectly**: once an entry from the leader's current term is on a majority, everything before it
+in the log is committed too. Real implementations append an empty no-op entry at the start of each term to get there
+quickly.
+
+<Misconception
+  id="majority-means-committed"
+  title="An entry stored on a majority is always committed"
+  probes={[
+    {
+      q: 'The leader of term 4 sees that an entry from term 2 is now on 3 of 5 servers. Can it mark that entry committed?',
+      choices: [
+        'Yes: a majority stores it',
+        'Not by counting: it commits once an entry from term 4 after it is on a majority',
+        'Only if the term 2 leader is still up',
+        'Never: entries from old terms are always deleted',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Not by counting copies. A server with a newer last term could still win an election and overwrite it. Once the leader’s own term 4 entry after it is on a majority, no such server can win, and both entries are committed.',
+    },
+    {
+      q: 'A leader of term 3 counts replicas to decide what is committed. Which entries does it count for?',
+      choices: [
+        'Every entry, from any term',
+        'Only entries from term 3; earlier entries commit along with them',
+        'Only entries from term 2',
+        'Only the first entry of each term',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Only its own term’s. Counting old-term entries can declare something committed that a later leader then overwrites (the paper’s Figure 8). Committing an entry from the current term commits every entry before it.',
+    },
+  ]}
+>
+
+Being on a majority is necessary, not sufficient. A leader commits by counting copies only for entries from its
+**current term**. An entry from an older term can sit on a majority and still be overwritten, because a server whose
+last entry has a newer term can win an election without it. It becomes safe only once an entry from the current term,
+later in the log, reaches a majority: then everything before it is committed too.
+
+</Misconception>
+
+Raft has limits worth knowing. It assumes servers crash or fall silent but never lie: a server that sends wrong
+messages on purpose, a **Byzantine** fault, needs heavier protocols. And when no majority can talk to each other, Raft
+stops taking writes rather than risk two answers. That is the consistency side of the CAP trade-off: during a partition
+it gives up availability on the minority side to stay correct.
+
+<Misconception
+  id="more-servers-more-tolerance"
+  title="Every server you add lets the cluster survive one more failure"
+  probes={[
+    {
+      q: 'How many servers can crash in a 4-server Raft cluster before it stops committing?',
+      choices: ['1', '2', '3', 'None'],
+      answer: 0,
+      trap: 1,
+      why: 'One. A majority of 4 is 3, so after 2 crashes only 2 are left, not a majority. Four servers survive no more failures than three, and every write must wait for one more of them.',
+    },
+    {
+      q: 'You grow a cluster from 5 servers to 6. What changes?',
+      choices: [
+        'It now survives 3 failures instead of 2',
+        'It still survives 2 failures, but each commit needs 4 servers instead of 3',
+        'Writes get faster, since there are more servers to share them',
+        'Nothing at all',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Still 2. A majority of 6 is 4, so 3 crashes leave 3, not a majority. The sixth server adds work to every write and no fault tolerance, which is why clusters have an odd size, usually 3 or 5.',
+    },
+  ]}
+>
+
+Fault tolerance follows the majority, not the head count. A cluster of $n$ servers needs $\lfloor n/2 \rfloor + 1$ to
+work, so it survives $\lfloor (n-1)/2 \rfloor$ failures: 3 servers survive 1, 4 still survive only 1, 5 survive 2. An even
+size adds a server that every write has to wait for, and no extra failure it can survive. More servers also never make
+writes faster: every write still needs a majority to store it.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A Raft cluster has 5 servers. How many can crash while it still elects leaders and commits writes?',
+      choices: ['2', '1', '3', '4'],
+      answer: 0,
+      why: 'Two. The other 3 are a majority of 5. With 2f + 1 servers, Raft survives f failures.',
+    },
+    {
+      q: 'A team runs Raft on 4 servers. How many failures can it survive?',
+      choices: ['1', '2', '3', '0'],
+      answer: 0,
+      why: 'One. A majority of 4 is 3, so losing 2 leaves too few. The fourth server adds no tolerance over three, and every write waits for one more machine.',
+      traps: { 1: 'more-servers-more-tolerance' },
+    },
+    {
+      q: 'Why does each server pick its election timeout at random?',
+      choices: [
+        'So that one server usually times out first and wins before others start, making split votes rare',
+        'So that the leader changes regularly and the load is shared',
+        'So that clocks don’t need to be synchronised',
+        'To hide the leader from attackers',
+      ],
+      answer: 0,
+      why: 'If every follower timed out together, they would all stand at once and split the vote. Random timeouts spread them out; when a split still happens, the candidates time out again and try a new term.',
+    },
+    {
+      q: 'S1 hasn’t voted in term 7. Candidate S3 asks for its vote; S3’s last entry is from term 5 at index 9, and S1’s last entry is from term 6 at index 4. What does S1 do?',
+      choices: [
+        'Refuses: S3’s last entry has an older term, so its log is less up to date',
+        'Grants it: S1 hasn’t voted in term 7 yet',
+        'Grants it: S3’s log is longer',
+        'Starts its own election instead',
+      ],
+      answer: 0,
+      why: 'Refuses. Logs are compared by their last entries’ terms first; only on a tie does length decide. S3 may be missing entries from term 6, so it must not lead.',
+      traps: { 1: 'vote-for-first-asker' },
+    },
+    {
+      q: 'A follower receives AppendEntries saying “the entry before these is index 6, term 3”, but its own entry at index 6 is from term 2. What happens?',
+      choices: [
+        'It refuses, and the leader retries from one entry earlier until their logs agree',
+        'It appends the new entries anyway',
+        'It deletes its whole log and starts again',
+        'It starts an election, since the leader is wrong',
+      ],
+      answer: 0,
+      why: 'It refuses, so the leader moves its nextIndex for that follower back and retries until it finds the last matching entry. Then it sends everything from there, and the follower drops whatever conflicts.',
+    },
+    {
+      q: 'After a network split, S3 thinks it leads term 1 and S2 leads term 2 on the side with three of five servers. What do you know?',
+      choices: [
+        'Only S2 can commit anything; S3 steps down as soon as it hears from term 2',
+        'Both may commit different entries, so the logs will need repairing by hand',
+        'They take turns committing',
+        'S3 wins, because it was leader first',
+      ],
+      answer: 0,
+      why: 'Committing needs a majority, and the majority follows term 2. S3’s writes wait for ever, and when it sees term 2 it becomes a follower and its uncommitted entries are overwritten where they conflict.',
+      traps: { 1: 'two-leaders-is-broken' },
+    },
+    {
+      q: 'A new leader of term 5 finds that an entry from term 3 is stored on a majority. Is that entry committed yet?',
+      choices: [
+        'Not by counting copies: it commits once an entry from term 5 after it reaches a majority',
+        'Yes: being on a majority is what committed means',
+        'No, and it never can be, since its term is over',
+        'Only if the leader of term 3 confirms it',
+      ],
+      answer: 0,
+      why: 'A leader commits by counting only entries from its current term. Older ones commit indirectly, along with the first current-term entry after them that reaches a majority (the paper’s Figure 8).',
+      traps: { 1: 'majority-means-committed' },
+    },
+    {
+      q: 'What does Raft do when no group of servers can reach a majority?',
+      choices: [
+        'It stops committing writes until a majority can talk again',
+        'Each group elects its own leader and keeps writing',
+        'The group with the old leader keeps writing',
+        'It commits writes on a single server and merges them later',
+      ],
+      answer: 0,
+      why: 'It waits. Without a majority nothing can be elected or committed, so Raft gives up availability to stay consistent: the consistency side of the CAP trade-off.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-raft-agrees"
+  prompt="How does Raft keep the servers’ logs in agreement while servers crash and the network splits, and why is a committed entry never lost?"
+  rubric={[
+    'One leader per term takes all writes and sends them to followers; higher terms win, and an out-of-date leader steps down.',
+    'A follower times out and runs for leader in a new term; servers grant one vote per term, and a majority wins.',
+    'Voters refuse candidates whose logs are less up to date, by last entry term, then length, so every leader holds all committed entries.',
+    'An entry commits once the leader of its own term has it on a majority; older entries commit along with a later one.',
+    'Any two majorities overlap, so with 2f + 1 servers it survives f failures, and a minority side can’t commit.',
+  ]}
+  example="Raft has one leader per term. It takes every write, appends it to its log and sends it to the followers, who accept only if their logs match the leader's just before the new entries. Once a majority store an entry from the leader's current term, it is committed, along with everything before it. If followers stop hearing from the leader, one times out and asks for votes in a new term. Each server votes once per term and refuses candidates whose logs are less up to date, so the winner holds every committed entry. Any two majorities share a server, so with five servers two can fail. A side without a majority can't elect or commit anything, and a stale leader steps down when it sees a newer term."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Consensus means agreeing on one log; replicated state machines apply it in the same order on every server.
+- Raft elects one leader per term with randomised timeouts and one vote per term; higher terms always win, so stale leaders step down.
+- The leader replicates its log with AppendEntries, which checks the previous entry's index and term; on a mismatch it backs up nextIndex until the logs agree.
+- Voters refuse candidates with less up-to-date logs, so every leader already holds every committed entry.
+- An entry commits once the leader has it on a majority and it is from the leader's own term; older entries commit along with it.
+- With $2f + 1$ servers Raft survives $f$ failures; a side without a majority stops rather than disagree.
+
+</Section>

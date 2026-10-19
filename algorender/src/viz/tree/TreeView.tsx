@@ -5,7 +5,7 @@ import { useId, type CSSProperties } from 'react';
 import { useWidth } from '@/viz/linear/useWidth';
 import { MARKS, type MarkKey } from '@/viz/marks';
 import { labelWidth, layoutTree, rootsOf, type Box, type Metrics, type TreeLayout } from './layout';
-import type { NodeId, TableRow, TreeNode, TreeState } from './types';
+import { linkId, type NodeId, type TableRow, type TreeNode, type TreeState } from './types';
 
 /** Room around the tree for glyphs above the root and the probe beside a node. */
 const PAD_X = 28;
@@ -156,6 +156,15 @@ export function TreeView({ state }: { state: TreeState }) {
     ];
   });
 
+  // Sibling links (a B+ tree's leaf chain): from the right side of one node to the left side of the next.
+  const links = (state.links ?? []).flatMap((l) => {
+    const a = at.get(l.from);
+    const b = at.get(l.to);
+    if (!a || !b || a.node.hidden || b.node.hidden) return [];
+    const id = linkId(l.from, l.to);
+    return [{ id, mark: state.marks[id], x1: a.x + a.box.right + 2, y1: a.y, x2: b.x - b.box.left - 2, y2: b.y }];
+  });
+
   const labels = edgeLabels(all, placed, layout, search);
 
   const cells = placed.flatMap((p) =>
@@ -192,6 +201,31 @@ export function TreeView({ state }: { state: TreeState }) {
               <Arrowhead id={`${uid}-up`} className="fill-ink-faint" />
               <Arrowhead id={`${uid}-up-hot`} className="fill-mark-done" />
             </defs>
+          )}
+          {links.length > 0 && (
+            <defs>
+              <Arrowhead id={`${uid}-link`} className="fill-ink-faint" />
+              <Arrowhead id={`${uid}-link-hot`} className="fill-mark-done" />
+            </defs>
+          )}
+          {links.length > 0 && (
+            <g>
+              <AnimatePresence initial={false}>
+                {links.map((l) => (
+                  <motion.line
+                    key={`k:${l.id}`}
+                    initial={{ opacity: 0, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2 }}
+                    animate={{ opacity: 1, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, strokeWidth: l.mark ? 3 : 1.5 }}
+                    exit={{ opacity: 0 }}
+                    transition={instant}
+                    strokeLinecap="round"
+                    markerEnd={`url(#${uid}-${l.mark ? 'link-hot' : 'link'})`}
+                    className={`transition-colors ${l.mark ? 'stroke-mark-done' : 'stroke-ink-faint'}`}
+                    style={TWEEN}
+                  />
+                ))}
+              </AnimatePresence>
+            </g>
           )}
           <g>
             <AnimatePresence initial={false}>
