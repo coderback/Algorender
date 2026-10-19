@@ -492,6 +492,20 @@ concepts:
     prereqs: [b-trees, merge-sort]
     visualisers: [b-plus-tree, lsm-tree]
     lesson: storage-engines
+  - id: estimation
+    title: Back-of-the-envelope estimation
+    track: systems
+    summary: Turning users and actions into requests a second, storage and bandwidth, to the nearest power of ten, before designing anything.
+    prereqs: [big-o]
+    links: [{ href: /design/estimate, label: Estimation drills }]
+    lesson: estimation
+  - id: system-design
+    title: System design
+    track: systems
+    summary: Composing load balancers, caches, databases and queues into a system that meets its targets for traffic, latency, cost and failures, and knowing what each choice trades away.
+    prereqs: [caching, consistent-hashing, queueing, estimation]
+    links: [{ href: /design, label: Design case studies }, { href: /design/sandbox, label: The design sandbox }]
+    lesson: system-design
   - id: logical-clocks
     title: Logical clocks
     track: systems

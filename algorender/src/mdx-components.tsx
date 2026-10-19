@@ -1,6 +1,8 @@
 import type { MDXComponents } from 'mdx/types';
 import Link from 'next/link';
 import type { ComponentProps } from 'react';
+import { DesignLab } from '@/components/design/DesignLab';
+import { EstimationDrill } from '@/components/design/EstimationDrill';
 import { CodeExercise, PredictCode, TraceCode } from '@/components/lesson/CodeWidgets';
 import { ExplainBack } from '@/components/lesson/ExplainBack';
 import { Explore, PredictChallenge } from '@/components/lesson/Explore';
@@ -40,6 +42,8 @@ const components: MDXComponents = {
   CodeExercise,
   PredictCode,
   TraceCode,
+  EstimationDrill,
+  DesignLab,
 };
 
 export function useMDXComponents(): MDXComponents {

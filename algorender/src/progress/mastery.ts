@@ -39,9 +39,11 @@ export type MasteryGraph = {
   exercises: Record<string, string[]>;
   /** Problem slug → the concepts its patterns belong to. */
   problems: Record<string, string[]>;
+  /** System-design case study slug → its concept. */
+  designs?: Record<string, string>;
 };
 
-export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review' | 'explanation';
+export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review' | 'explanation' | 'design';
 
 /** One piece of evidence: an item (a question, an exercise, a problem) answered right or wrong. */
 export type Observation = { concept: string; item: string; correct: boolean; at: string; source: Source };
@@ -126,6 +128,14 @@ export function observations(events: readonly ProgressEvent[], graph: MasteryGra
         if (seenSubmissions.has(key)) break;
         seenSubmissions.add(key);
         push(graph.problems[e.data.problem], { item: `problem:${e.data.problem}`, correct: e.data.passed, at: e.at, source: 'problem' });
+        break;
+      }
+      case 'design.checked': {
+        // Only a pass is evidence: trying designs that miss the targets is how a case is meant to be worked.
+        const key = `design:${e.data.study}:${e.at.slice(0, 10)}`;
+        if (!e.data.passed || seenSubmissions.has(key)) break;
+        seenSubmissions.add(key);
+        push(graph.designs?.[e.data.study], { item: `design:${e.data.study}`, correct: true, at: e.at, source: 'design' });
         break;
       }
       case 'explanation.scored':

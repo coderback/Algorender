@@ -1,0 +1,306 @@
+<Section step="hook" title="How many servers does it take?">
+
+A maps app has 200 million daily users. Before anyone draws boxes and arrows, someone has to ask: how many requests a
+second is that? A hundred? A million? The answer decides everything after it. A hundred fits on one machine, while a million needs a
+fleet, caches and careful sharding.
+
+You don't need a spreadsheet to answer. A few known facts, round numbers and a minute of arithmetic get you to the right
+**power of ten**, and that is all the first sketch of a design needs. This is back-of-the-envelope estimation (also called
+Fermi estimation, after the physicist who was famous for it). It is the first step of every system-design interview and of
+real capacity planning, and this lesson gives you the method, the numbers to remember and practice.
+
+</Section>
+
+<Section step="parts" title="The pieces you will use">
+
+<Terms>
+  <Term name="daily active users (DAU)">How many people use the product on a typical day. Most estimates start here.</Term>
+  <Term name="QPS">Queries (requests) per second. Traffic per day divided by the seconds in a day gives the average.</Term>
+  <Term name="peak factor">How much busier the busiest time is than the daily average: often 2 to 10 times, more during a launch or a big event.</Term>
+  <Term name="order of magnitude">The power of ten a number is closest to. 23,000 and 40,000 are both about 10^4; an estimate aims to get this right.</Term>
+  <Term name="headroom">Spare capacity on purpose: servers planned to run well below 100% at the peak, because latency explodes near full load.</Term>
+  <Term name="hot set">The small share of data that gets most of the traffic. Often about 20% of the keys get 80% of the reads, so a cache only needs the hot set.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="From users to requests a second">
+
+Start with what you know and multiply your way to what you need, keeping the units in sight:
+
+- **Requests a day** = daily users × requests each. 200 million users × 10 tiles = 2 × 10^9 requests a day.
+- **Requests a second** = requests a day ÷ seconds in a day. A day has 86,400 seconds; call it **10^5**. So 2 × 10^9 ÷ 10^5 = 2 × 10^4: about **20,000 requests a second**. (The exact figure, 23,100, is the same power of ten.)
+
+<KeyIdea>
+
+**Work in powers of ten.** Round every input to one digit times a power of ten, multiply the digits and add the exponents.
+The inputs are guesses anyway ("about 10 requests each"), so extra digits in the answer are false precision. An estimate within
+a factor of 2 is excellent, and within a factor of 10 it still points to the right design.
+
+</KeyIdea>
+
+Try one. Type your estimate in any form you like (`23000`, `23k`, `2e4`), then compare your working with the steps.
+
+<EstimationDrill kind="qps" seed={7} />
+
+<Misconception
+  id="day-seconds"
+  title="A day has about 10^4 seconds, or per day and per second get mixed up"
+  probes={[
+    {
+      q: '1 billion requests a day is about how many requests a second?',
+      choices: ['About 1,000', 'About 10,000', 'About 100,000', 'About 1 million'],
+      answer: 1,
+      trap: 2,
+      why: 'A day has 86,400 seconds, about 10^5. 10^9 ÷ 10^5 = 10^4, so about 10,000 a second (11,600 exactly). Dividing by 10^4 gives 100,000, ten times too many.',
+    },
+    {
+      q: 'About how many seconds are there in a day?',
+      choices: ['About 10^3', 'About 10^4', 'About 10^5', 'About 10^6'],
+      answer: 2,
+      trap: 1,
+      why: '24 × 60 × 60 = 86,400, which rounds to 10^5. Remembering 10^4 is a common slip that makes every per-second figure ten times too big.',
+    },
+  ]}
+>
+
+24 hours × 3,600 seconds is 86,400 seconds, so a day is about **10^5 seconds**. To get from a daily total to a rate, divide
+by 10^5: a million a day is about 10 a second, a billion a day about 10,000 a second. Write the unit next to every number
+("requests a day", "requests a second") so a daily total is never mistaken for a rate.
+
+</Misconception>
+
+<Misconception
+  id="precision-matters"
+  title="A good estimate needs exact arithmetic"
+  probes={[
+    {
+      q: 'You work out 11,574 requests a second; a colleague, using rounded numbers, gets 10,000. Which is more useful for sizing the system?',
+      choices: [
+        '11,574, because it is more precise',
+        'Either: they are the same power of ten, and the inputs were guesses anyway',
+        'Neither: you need measured traffic before you can estimate',
+        '10,000, because round numbers are always more accurate',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The inputs ("about 10 requests each") were guesses, so the extra digits carry no information. Both answers lead to the same design.',
+    },
+    {
+      q: 'Your inputs are "about 50 million daily users" and "roughly 20 actions each". How many significant figures does the answer deserve?',
+      choices: ['One or two', 'Five', 'As many as the calculator shows', 'None: the answer is meaningless'],
+      answer: 0,
+      trap: 2,
+      why: 'An answer is only as precise as its inputs. With one-digit guesses going in, one or two significant figures (a power of ten) is what comes out.',
+    },
+  ]}
+>
+
+An estimate is only as precise as its inputs, and those are rough: "about 50 million users", "maybe 20 actions each". Round
+early, keep one or two significant figures, and spend the time on the assumptions instead. A wrong assumption (forgetting
+replication, using the average instead of the peak) costs a factor of 3 or 10. Rounding 86,400 to 10^5 costs 15%.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Why not run servers at 100%?">
+
+Once you know the traffic, it is tempting to divide by what one server can do and stop there. But a server planned at 100%
+of its capacity has no slack to work a line down. Here one server is 95% busy: its service time is 100 ms, yet a request
+takes about **2 seconds** on average, 20 times as long. The player stops before arrivals and asks whether each one will wait.
+
+<PredictChallenge slug="queueing" settings={{ preset: 'full', n: '16', seed: '7' }} goal={4} />
+
+That is why capacity estimates divide by a **target** load, often 50–70% of what a server can do flat out, and then add a
+spare or two so the service survives a machine failing at the peak.
+
+</Section>
+
+<Section step="do" title="Peaks and servers">
+
+Traffic follows the clock: evenings, Monday mornings, a big match or a launch. Size the system for its **peak**. Find the
+average, multiply by a peak factor, then divide by what one server can do at its target load.
+
+<EstimationDrill kind="peak" seed={3} />
+
+<EstimationDrill kind="servers" seed={2} />
+
+<Misconception
+  id="average-is-capacity"
+  title="Provision for the average request rate"
+  probes={[
+    {
+      q: 'A service averages 2,000 requests a second over the day, and its evening peak is 5 times that. One server handles 500 a second comfortably. How many servers does it need, at least?',
+      choices: ['4', '20', '40', '100'],
+      answer: 1,
+      trap: 0,
+      why: 'The peak is 2,000 × 5 = 10,000 a second, and 10,000 ÷ 500 = 20 servers. Four servers handle the average, then fall over every evening.',
+    },
+    {
+      q: 'A system serves 864 million requests a day, and its busiest hour runs at 3 times the daily average. What rate must it handle?',
+      choices: ['About 10,000 a second', 'About 30,000 a second', 'About 36 million a second', 'About 864 million a second'],
+      answer: 1,
+      trap: 0,
+      why: '864 million ÷ 86,400 = 10,000 a second on average, and the busiest hour is 3 times that: 30,000 a second.',
+    },
+  ]}
+>
+
+The daily average hides the busy hours, and that is exactly when users notice a slow service. Find the average, multiply by a
+peak factor (2 to 10 is typical), then divide by what one server handles at a comfortable load, not flat out. Add spare
+servers so that losing one at the peak still leaves enough.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Storage and bandwidth">
+
+Storage is items × size × time, then × the number of copies kept. Bandwidth is requests a second × bytes per response.
+Remember the prefixes: 10^3 is kilo, 10^6 mega, 10^9 giga, 10^12 tera and 10^15 peta. And networks are sold in bits:
+multiply bytes by 8.
+
+<EstimationDrill kind="storage" seed={1} />
+
+<EstimationDrill kind="bandwidth" seed={3} />
+
+</Section>
+
+<Section step="do" title="Latency numbers, and the hot set">
+
+Every design is built on a few physical facts, which between them span about six powers of ten. They come from Jeff Dean's well-known list, and exact values vary with the hardware:
+
+- a main-memory reference takes about **100 ns**;
+- a random read from an SSD takes about **100 µs**, a thousand times slower;
+- a round trip within a data centre takes about **0.5 ms**;
+- a disk seek takes about **10 ms**;
+- a round trip from California to Europe and back takes about **150 ms**.
+
+The [estimation drills page](/design/estimate) has the full table.
+
+<EstimationDrill kind="latency" seed={2} />
+
+These gaps are why caches exist. Reads are skewed (often 80% of them go to 20% of the keys), so keeping the hot 20% in memory
+answers most reads in microseconds instead of milliseconds.
+
+<EstimationDrill kind="cache" seed={1} />
+
+<Misconception
+  id="memory-disk-close"
+  title="Memory, SSD and disk are only a few times apart"
+  probes={[
+    {
+      q: 'Roughly how many main-memory references (about 100 ns each) take as long as one disk seek (about 10 ms)?',
+      choices: ['About 10', 'About 1,000', 'About 100,000', 'About 10 million'],
+      answer: 2,
+      trap: 0,
+      why: '10 ms ÷ 100 ns = 10^-2 ÷ 10^-7 = 10^5. A disk seek costs a hundred thousand memory references.',
+    },
+    {
+      q: 'A request does 50 random reads, one after another. Roughly how long do they take from memory (about 100 ns each), and from a spinning disk (about 10 ms each)?',
+      choices: ['5 µs from memory, 500 ms from disk', '5 µs from memory, 15 µs from disk', '5 ms from memory, 10 ms from disk', 'About the same either way'],
+      answer: 0,
+      trap: 1,
+      why: '50 × 100 ns = 5 µs, but 50 × 10 ms = 500 ms: half a second, enough to blow any latency target. Where data lives decides how fast a request can be.',
+    },
+  ]}
+>
+
+A memory reference is about a thousand times faster than a random SSD read and a hundred thousand times faster than a disk
+seek, and a round trip across an ocean is slower still: these are powers of ten apart, not a few times. A design
+that needs several disk seeks or cross-ocean round trips per request can't answer in a few milliseconds, however many
+servers it has. Count the slow steps on the request's path first; that is where caches, indexes and data placement earn
+their keep.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: '100 million daily users each make 10 requests a day. Roughly how many requests a second is that, on average?',
+      choices: ['About 1,000', 'About 10,000', 'About 100,000', 'About 1 million'],
+      answer: 1,
+      why: '10^8 × 10 = 10^9 requests a day, and a day is about 10^5 seconds: 10^9 ÷ 10^5 = 10^4, about 10,000 a second (11,600 exactly).',
+      traps: { 2: 'day-seconds' },
+    },
+    {
+      q: 'A service averages 10,000 requests a second and peaks at 4 times that. Each server handles 1,000 a second at your target load. How many servers do you need, before any spares?',
+      choices: ['10', '40', '400', '4'],
+      answer: 1,
+      why: 'Size for the peak: 10,000 × 4 = 40,000 a second, and 40,000 ÷ 1,000 = 40 servers.',
+      traps: { 0: 'average-is-capacity' },
+    },
+    {
+      q: '10 million users each post one 1 MB photo a day. Roughly how much raw storage is a year of photos, before replication?',
+      choices: ['About 3.6 TB', 'About 365 TB', 'About 3.6 PB', 'About 3.6 EB'],
+      answer: 2,
+      why: '10^7 × 1 MB = 10 TB a day, and × 365 ≈ 3.65 PB a year. With three copies it is about 11 PB.',
+    },
+    {
+      q: 'Two engineers estimate peak traffic at 23,148 and 20,000 requests a second. What should the design document say?',
+      choices: ['23,148, the exact figure', 'About 2 × 10^4 a second', 'Exactly 21,574, the average of the two', 'Nothing until the service has launched'],
+      answer: 1,
+      why: 'Both are the same order of magnitude, and the inputs behind them were rough. Writing 2 × 10^4 says what is actually known.',
+      traps: { 0: 'precision-matters' },
+    },
+    {
+      q: 'Roughly how much slower is one disk seek (about 10 ms) than one main-memory reference (about 100 ns)?',
+      choices: ['About 10 times', 'About 100 times', 'About 100,000 times', 'About 10 billion times'],
+      answer: 2,
+      why: '10 ms ÷ 100 ns = 10^5. That gap is why hot data is kept in memory.',
+      traps: { 0: 'memory-disk-close' },
+    },
+    {
+      q: 'A service returns 5,000 responses a second of 200 KB each. About how much outgoing bandwidth does it need?',
+      choices: ['About 1 MB a second', 'About 1 GB a second (8 Gbit/s)', 'About 1 TB a second', 'About 200 KB a second'],
+      answer: 1,
+      why: '5,000 × 200 KB = 10^9 bytes a second: 1 GB/s, or 8 gigabits a second once you multiply by 8 bits a byte.',
+    },
+    {
+      q: 'Why plan servers for about 60–70% of their capacity at the peak, rather than 100%?',
+      choices: [
+        'Hardware is usually slower than its specification',
+        'Latency grows like 1/(1 − load) and explodes near 100%, and spare capacity covers a failed server',
+        'Cloud providers charge less below 70% load',
+        'It makes the estimate more precise',
+      ],
+      answer: 1,
+      why: 'Random arrivals queue up, and at 95% load a request takes about 20 times its service time. Headroom keeps latency low and survives a lost machine at the peak.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-to-estimate"
+  prompt="Explain how you would estimate how many servers a service needs, starting from its daily users, and why you round to powers of ten and plan for the peak with headroom."
+  rubric={[
+    'Requests a day are daily users times requests each; dividing by about 10^5 seconds a day gives requests a second.',
+    'Multiply the average by a peak factor, because the busiest hours set the capacity needed.',
+    'Divide the peak by what one server handles at a target load well below 100%, since latency explodes near full load, then add spares.',
+    'Round inputs to one digit and a power of ten: they are guesses, so getting the order of magnitude right is the goal.',
+  ]}
+  example="I start from daily users times requests each to get requests a day, then divide by about 10^5 seconds to get the average rate. Traffic isn't flat, so I multiply by a peak factor, maybe 3 to 5 times, because the busiest hour is what the system must survive. Then I divide that peak by what one server handles at a comfortable load, say 60% of its maximum, because a server near 100% builds long queues and latency explodes, and I add a spare or two for failures. Throughout I round to one digit and a power of ten: the inputs are rough guesses, so the right order of magnitude is all the answer can honestly claim, and it is enough to choose a design."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Requests a second = daily users × requests each ÷ 10^5 (a day is 86,400 seconds).
+- Size for the **peak**, not the average, and plan servers at 50–70% of their capacity, with spares.
+- Storage = items × size × time × copies; bandwidth = requests a second × bytes each (× 8 for bits).
+- Memory (~100 ns), SSD (~100 µs), a data-centre round trip (~0.5 ms), a disk seek (~10 ms) and an ocean crossing (~150 ms)
+  span about six powers of ten. Count the slow steps on a request's path.
+- Round to one digit and a power of ten. Within 2× is excellent; within 10× still picks the right design.
+- More practice: the [estimation drills](/design/estimate).
+
+</Section>

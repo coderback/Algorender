@@ -143,3 +143,24 @@ describe('the daily challenge', () => {
     expect(parseEvent({ ...e, data: { ...e.data, game: 'tetris' } })).toBeNull();
   });
 });
+
+describe('system-design case studies', () => {
+  const designGraph: MasteryGraph = { ...graph, concepts: [...graph.concepts, { id: 'system-design', title: 'System design', track: 'systems', prereqs: [], visualisers: [], planned: false, depth: 0 }], designs: { 'url-shortener': 'system-design' } };
+  const check = (passed: boolean, when: string) => ev('design.checked', { study: 'url-shortener', passed, throughput: 9000, p99: 80, errorRate: passed ? 0 : 0.2, cost: 1200 }, when);
+
+  it('pays once for meeting every target, levels the concept up to implement, and earns the architect badge', () => {
+    const events = [check(false, at(0)), check(true, at(0)), check(true, at(1))];
+    expect(total(events)).toBe(XP.designPassed);
+    const levels = conceptLevels(events, designGraph, mastery(events, designGraph));
+    expect(levels.get('system-design')?.has('implement')).toBe(true);
+    expect(levels.get('system-design')?.has('analyze')).toBe(false);
+    expect([...badges(events).keys()]).toEqual(['architect']);
+  });
+
+  it('counts only passes as mastery evidence, once a day, and accepts the event from a device', () => {
+    const events = [check(false, at(0)), check(false, at(0)), check(true, at(0)), check(true, at(0)), check(true, at(2))];
+    expect(mastery(events, designGraph).get('system-design')?.observations).toBe(2);
+    expect(parseEvent(events[2])).toEqual(events[2]);
+    expect(parseEvent({ ...events[2], data: { ...events[2].data, errorRate: 2 } })).toBeNull();
+  });
+});

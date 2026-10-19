@@ -238,6 +238,20 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'estimation',
+    title: 'Back-of-the-envelope estimation',
+    concept: 'estimation',
+    summary: 'From daily users to requests a second, storage a year and bandwidth, with the latency numbers every engineer should know, rounded to powers of ten.',
+    minutes: 20,
+  },
+  {
+    slug: 'system-design',
+    title: 'System design: the core trade-offs',
+    concept: 'system-design',
+    summary: 'Build a service up on the simulator: a cache and what it costs in staleness, replicas and lag, sharding keys, queues for slow writes, and what happens when a machine dies.',
+    minutes: 30,
+  },
+  {
     slug: 'consensus',
     title: 'Consensus with Raft',
     concept: 'consensus',

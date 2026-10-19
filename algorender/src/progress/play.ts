@@ -22,6 +22,8 @@ export const XP = {
     { days: 30, xp: 40 },
   ],
   problemSolved: 30,
+  /** Meeting every target of a system-design case study, once per case. */
+  designPassed: 40,
   exercise: { parsons: 5, fill: 10, write: 20, bug: 15 },
   explanation: 20,
   mistakeCleared: 25,
@@ -74,6 +76,9 @@ export function xpLedger(events: readonly ProgressEvent[]): XpEntry[] {
         break;
       case 'exercise.passed':
         if (once(`exercise:${e.data.exercise}:${e.data.stage}`)) award(e.at, XP.exercise[e.data.stage], 'An exercise stage passed');
+        break;
+      case 'design.checked':
+        if (e.data.passed && once(`design:${e.data.study}`)) award(e.at, XP.designPassed, 'A design met every target');
         break;
       case 'explanation.scored':
         if (e.data.total > 0 && (e.data.covered + e.data.partly / 2) / e.data.total >= EXPLAINED_AT && once(`explain:${e.data.lesson}:${e.data.prompt}`)) {
@@ -133,7 +138,7 @@ export function xpTotals(ledger: readonly XpEntry[], now: Date): { total: number
 export const LEVELS = [
   { id: 'trace', label: 'Trace', hint: 'Answer a question about it, or play a round of it.' },
   { id: 'predict', label: 'Predict', hint: 'Score 70% on a prediction challenge, win a round of Be the algorithm, or practise it to “practised”.' },
-  { id: 'implement', label: 'Implement', hint: 'Write it in an exercise, or solve a problem that uses it.' },
+  { id: 'implement', label: 'Implement', hint: 'Write it in an exercise, solve a problem that uses it, or meet a design case study’s targets.' },
   { id: 'analyze', label: 'Analyse', hint: 'Explain it back covering most of the key points, or master it.' },
 ] as const;
 
@@ -174,6 +179,9 @@ export function conceptLevels(events: readonly ProgressEvent[], graph: MasteryGr
       case 'problem.submitted':
         if (e.data.passed) add(graph.problems[e.data.problem], 'implement');
         break;
+      case 'design.checked':
+        if (e.data.passed) add(graph.designs?.[e.data.study], 'implement');
+        break;
       case 'explanation.scored':
         if (e.data.total > 0 && (e.data.covered + e.data.partly / 2) / e.data.total >= EXPLAINED_AT) add(graph.lessons[e.data.lesson], 'analyze');
         break;
@@ -199,6 +207,7 @@ export const BADGES = [
   { id: 'at-the-bound', title: 'At the bound', how: 'Sort in the Comparison budget with no more comparisons than ⌈log₂ n!⌉.' },
   { id: 'counterexample', title: 'Counterexample', how: 'Find an amount where greedy coin change goes wrong.' },
   { id: 'worst-case', title: 'Worst case', how: 'Build quicksort’s worst-case input.' },
+  { id: 'architect', title: 'Architect', how: 'Meet every target of a system-design case study.' },
 ] as const;
 
 export type BadgeId = (typeof BADGES)[number]['id'];
@@ -244,6 +253,9 @@ export function badges(events: readonly ProgressEvent[]): Map<BadgeId, string> {
       }
       case 'explanation.scored':
         if (e.data.total > 0 && e.data.covered === e.data.total) earn('explainer', e.at);
+        break;
+      case 'design.checked':
+        if (e.data.passed) earn('architect', e.at);
         break;
       case 'game.played':
         if (!e.data.won) break;

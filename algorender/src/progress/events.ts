@@ -79,6 +79,21 @@ export const EVENT_DATA = {
     won: z.boolean(),
   }),
   /**
+   * A system-design case study's checks run on the learner's design
+   * (src/content/designs, /design/<study>): whether every target was met, and
+   * the run's successful requests a second, p99 latency (ms, 0 when nothing
+   * succeeded), share of requests that failed, timed out or were rejected,
+   * and the design's cost in dollars a month.
+   */
+  'design.checked': z.object({
+    study: slug,
+    passed: z.boolean(),
+    throughput: z.number().int().min(0).max(10_000_000),
+    p99: z.number().int().min(0).max(10_000_000),
+    errorRate: z.number().min(0).max(1),
+    cost: z.number().int().min(0).max(100_000_000),
+  }),
+  /**
    * A study plan set (src/progress/plan.ts): a goal from src/content/goals.ts,
    * hours a week and an optional target date. The latest wins; a null goal
    * clears the plan.
