@@ -232,7 +232,7 @@ describe('the Azure client and settings', () => {
   it('is off without an endpoint and key, with the kill switch, or faked on Vercel', () => {
     expect(tutorConfig({})).toBeNull();
     const on = { AZURE_AI_ENDPOINT: 'https://res.openai.azure.com/openai/v1/', AZURE_AI_API_KEY: 'k' };
-    expect(tutorConfig(on)).toMatchObject({ provider: 'azure', endpoint: 'https://res.openai.azure.com/openai/v1', models: { fast: 'gpt-6.1-luna', strong: 'gpt-6.1-sol' }, turnsPerDay: 30, dailyUsd: 5 });
+    expect(tutorConfig(on)).toMatchObject({ provider: 'azure', endpoint: 'https://res.openai.azure.com/openai/v1', models: { fast: 'gpt-6-luna', strong: 'gpt-6.1-sol' }, turnsPerDay: 30, dailyUsd: 5 });
     expect(tutorConfig({ ...on, TUTOR_ENABLED: 'off' })).toBeNull();
     expect(tutorConfig({ TUTOR_PROVIDER: 'fake' })?.provider).toBe('fake');
     expect(tutorConfig({ TUTOR_PROVIDER: 'fake', VERCEL: '1' })).toBeNull();
