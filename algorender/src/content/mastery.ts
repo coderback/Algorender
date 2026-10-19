@@ -5,6 +5,7 @@ import type { MasteryGraph } from '@/progress/mastery';
 import type { PlacementQuestion } from '@/progress/placement';
 import { effort } from '@/progress/plan';
 import { depths, loadConcepts } from './concepts';
+import { caseStudies } from './designs';
 import { exercises } from './exercises';
 import { lessons } from './lessons';
 import { lessonQuizzes } from './lessons/quizzes';
@@ -36,6 +37,7 @@ export function masteryGraph(): MasteryGraph {
     problems: Object.fromEntries(
       loadProblems().map((p) => [p.slug, [...new Set(p.patterns.map((id) => PATTERNS[id].concept).filter((c): c is string => !!c))]]),
     ),
+    designs: Object.fromEntries(caseStudies.map((s) => [s.slug, s.concept])),
   };
   return cache;
 }

@@ -1031,6 +1031,21 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
   - **Case studies with targets** (e.g. "10k requests a second under 200 ms p99 within this budget"): a URL shortener, a rate-limited API, a news feed (fan-out on write vs on read), chat, a key-value store.
   - **Lessons:** back-of-the-envelope estimation (with drills) and the core trade-offs (consistency vs availability, caching strategies, sharding keys, sync vs async), in the usual lesson format.
   - **So 6b and 6c build for it:** each simulator keeps its model as a pure, steppable simulation in `src/systems/`, separate from its visualiser module, so the canvas can reuse it as a component.
+  - **Status (2026-10-19): 6d is built** (`revamp/phase-6d`).
+    - **The simulator** (`src/systems/design/`) is a seeded discrete-event simulation of a design, request by request. It reuses the real cache, hash ring and token bucket, and treats every server as a queue checked against Erlang C. It counts stale reads, per-instance load, cost and failures, and writes plain-language findings. 10,000 req/s for 10 s simulates in about half a second in the browser.
+    - **The canvas** (`/design/sandbox`, and every case page):
+      - Add, wire and configure components on an auto-laid-out diagram.
+      - Inject crashes, run, and read p50/p99 over time, the checks against targets, and per-component load.
+      - The sandbox keeps the design in the URL; cases save it locally.
+    - **Five case studies:** URL shortener (a cache), rate-limited API (shedding a spike), news feed (fan-out on write through a queue), chat (sharding) and key-value store (replication, lag and failover).
+      - Each has targets for throughput, p99, errors, cost, staleness or surviving a crash.
+      - Each start fails instructively, and each reference passes with honest margins.
+      - Settings that belong to the problem (fan-out, the least replica lag) are fixed by the case.
+    - **Lessons:**
+      - Estimation: seeded drills judged on a log scale, and a `/design/estimate` round.
+      - System-design trade-offs: six `DesignLab` presets, with every quoted number measured on the simulator.
+      - Concepts: estimation and system design.
+    - **Progress:** a `design.checked` event. A pass is mastery evidence and earns XP, the implement level and the "Architect" badge.
 - **6e: Social play** (opt-in): weekly streaks, leagues, async duels and solution histograms. It needs the owner's decisions on ranking and moderation first.
 - **6f: Extras:** mock interviews (including system design interviews grounded in the 6d case studies), classroom mode, community visualisations, i18n, and the rest of the PWA.
 

@@ -1,0 +1,373 @@
+<Section step="hook" title="Every fix buys something and costs something">
+
+A service that answers a thousand requests a second on two servers and one database is easy. Ten times the traffic is
+not, and every way of handling it trades something away. Add servers, and the load moves to the next part in line. Add a
+cache, and some reads come back out of date. Add database replicas, and they lag behind. Add a queue, and writes are
+acknowledged before they have happened. System design is choosing which of those costs your system can live with.
+
+This lesson builds those choices on a simulator. Every lab below runs real traffic through a design, request by request:
+the cache really evicts, the queue really fills up, and a crashed machine really drops what it was doing. Change one
+thing at a time, run it, and watch what moves.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="bottleneck">The part of a system that is busiest, close to 100% of its capacity. Requests queue in front of it, so it sets the latency and the most the whole system can do.</Term>
+  <Term name="utilisation">How much of the time a part is busy. Near 100%, waiting times explode, as the queueing lesson showed.</Term>
+  <Term name="cache-aside">The application reads from a cache first and, on a miss, from the database, then puts what it read into the cache. Writes must update or delete the cached copy, or it goes stale.</Term>
+  <Term name="replication lag">How far behind the primary a read replica is. A read from a replica can miss writes made in the last moments.</Term>
+  <Term name="shard">One partition of the data. Each shard holds a slice of the keys on its own machines, so writes spread across shards.</Term>
+  <Term name="backlog">Work waiting in a queue. If it keeps growing, the consumers can't keep up with what arrives.</Term>
+  <Term name="failover">Promoting a replica to take over when the primary dies, so writes can carry on.</Term>
+</Terms>
+
+Each lab is a canvas: select a component to change it, add new ones from the row of buttons, and press **Run**. The
+labs use the same seed, so the numbers in the captions are the ones you will see when you change exactly what they say.
+
+</Section>
+
+<Section step="see" title="Scaling out moves the bottleneck">
+
+Two app servers get 3,000 requests a second. Each request does a little work on an app server, then holds that server's
+worker while it waits for the database. Run it first: the app servers are 100% busy, and most requests time out.
+
+<DesignLab
+  preset="scale-out"
+  caption="Run it: about 315 requests a second get through and 90% fail, with the app servers at 100%. Select the app servers and raise the instances to 4, then 6, then 10, running each time. At 4 nothing fails but p99 is 846 ms; at 6 it is 359 ms and the database is 99% busy; at 10 it is 370 ms and the bill has gone from $410 to $970 a month."
+/>
+
+Adding app servers helps until they stop being the busiest part. From 6 instances on, the database is the bottleneck,
+and more app servers just add more requests waiting for it. The findings under the results name the bottleneck after
+every run: read them before changing anything.
+
+<KeyIdea>
+
+**Find the bottleneck first, then fix that.** A system is as fast as its busiest part. Scaling anything else costs money
+and changes nothing; scaling the bottleneck moves it somewhere else, and the question starts again.
+
+</KeyIdea>
+
+<Misconception
+  id="more-servers-always-help"
+  title="Adding app servers always helps"
+  probes={[
+    {
+      q: 'A service’s database is 99% busy and its app servers 60% busy. You double the app servers. What happens to p99 latency?',
+      choices: [
+        'It halves, since each server takes half as many requests',
+        'It barely changes: requests still queue at the database',
+        'It doubles, since there are twice as many servers',
+        'It drops to the database’s own service time',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The app servers weren’t the bottleneck. More of them send the same requests to the same saturated database, so the queue there, and the latency, stay where they were.',
+    },
+    {
+      q: 'Requests hold an app worker while they wait for the database. With 6 app servers the database is 99% busy. What do 4 more app servers buy?',
+      choices: ['Nothing but cost: the database still limits throughput and latency', 'Lower p99 latency in proportion', 'Higher throughput in proportion', 'Fewer database queries'],
+      answer: 0,
+      trap: 1,
+      why: 'In the lab, going from 6 to 10 instances moved p99 from 359 ms to 370 ms and raised the bill by $280 a month. The database decides.',
+    },
+  ]}
+>
+
+More servers help only where the bottleneck is. Once another part is near 100%, extra app servers add cost and send more
+requests to wait in the same queue. Read the utilisation of every part, find the busiest, and scale that: replicas or
+a cache for a read-bound database, shards for a write-bound one.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Predict, then run: a cache in front">
+
+The same 3,000 requests a second, now over 10,000 keys with a few hot ones, and 4 app servers. Without a cache, this is
+the design that ran at a p99 of 846 ms above. Now reads go to a cache first, holding up to 2,000 keys. Writes still go
+straight to the database.
+
+Before you run it, decide: how much of the database's work will the cache take away, and will every read still return
+the latest value?
+
+<DesignLab
+  preset="cache-aside"
+  caption="Run it: 75% of reads hit the cache, the database drops to 40% busy, and p99 falls to 35 ms. But look at stale reads: 54% of reads returned an old value. Now select the app servers and send their writes to the cache (it invalidates, then writes the database): stale reads drop to 0%, and the hit rate to 67%. Then set the cache to write-through: 75% hits, still 0% stale. Finally try capacities of 500 and 10,000 keys: 58% and 82% hits."
+/>
+
+The cache took most of the reads off the database, which is the point of a cache: a hot key read a hundred times costs
+one database query. But writes that skip the cache leave the old copy in it, and every read of a popular key that has
+since changed returns the old value. Sending writes through the cache fixes that. Invalidating deletes the copy, so the
+next read misses and refetches it; write-through updates the copy in place and keeps the hit.
+
+<Misconception
+  id="cache-is-consistent"
+  title="A cache keeps reads consistent by itself"
+  probes={[
+    {
+      q: 'An app reads through a cache (cache-aside) but writes straight to the database. A user changes their name. What can later reads return?',
+      choices: [
+        'Always the new name: the database has it',
+        'The old name, for as long as the cached copy stays in the cache',
+        'An error until the cache is restarted',
+        'The new name, after the next write to any key',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The read goes to the cache first and finds the old copy. Nothing told the cache the name changed, so it serves the old one until it is evicted or expires.',
+    },
+    {
+      q: 'Which change stops a cache-aside cache from serving values that have since been overwritten?',
+      choices: ['Making the cache bigger', 'Adding more cache nodes', 'Sending writes through the cache, so it deletes or updates its copy', 'Nothing: caches are always consistent'],
+      answer: 2,
+      trap: 3,
+      why: 'Only writes that reach the cache can fix its copies. A bigger cache keeps stale copies longer, if anything. Even then, a TTL is usually added as a backstop for races and missed invalidations.',
+    },
+  ]}
+>
+
+A cache is a second copy of the data, and copies drift. Unless every write updates or deletes the cached copy, the cache
+keeps serving the old value. Invalidation costs some hits, and even then concurrent reads and writes can race, which is
+why real systems add a time-to-live and accept a short window of staleness.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Replicas, shards, queues and failures">
+
+### Read replicas: load against freshness
+
+3,500 requests a second, 95% of them reads, on one database. Read replicas copy the primary's writes and serve reads, so
+the primary only takes writes. They copy asynchronously, a little behind: here 1 second behind.
+
+<DesignLab
+  preset="replicas"
+  caption="Run it: 38% of requests fail with the database 100% busy. Select the database and add one replica: no failures, but p99 is 434 ms with the replica 100% busy. Add a second: p99 36 ms, the primary 10% busy and each replica about half. Now look at stale reads: 31% of reads. Lower the replica lag to 100 ms (12% stale), then 10 ms (0.4%)."
+/>
+
+Replicas scale reads, not writes, and they trade freshness for it. A replica that is a second behind answers reads with
+a second-old view of the data, so a user who writes and then reads from a replica may not see their own write. The fix is
+not more replicas but choosing where each read goes: read your own recent writes from the primary, or wait for the
+replica to catch up. Synchronous replication removes the lag, at the cost of making every write wait for the replicas.
+
+<Misconception
+  id="replicas-are-current"
+  title="Read replicas are always up to date"
+  probes={[
+    {
+      q: 'A user saves a comment, the write goes to the primary, and the page reloads by reading from a replica 200 ms later. Replication lag is about 1 second. What does the user see?',
+      choices: [
+        'Their comment: it is saved',
+        'Possibly the page without their comment, until the replica catches up',
+        'An error',
+        'A duplicate comment',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The replica applies the write about a second later, so a read 200 ms after the write can miss it. Reading your own writes from the primary, or waiting for the replica, avoids it.',
+    },
+    {
+      q: 'A banking app reads balances from read replicas. A customer pays a bill, and the app then shows their balance. How do you make sure they see the payment?',
+      choices: [
+        'Nothing is needed: replicas mirror the primary',
+        'Read that customer’s balance from the primary for a while after they write',
+        'Add more replicas',
+        'Read from a random replica',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Replicas apply writes after a lag, so a read straight after the payment could show the old balance. Reading your own recent writes from the primary is the usual fix; more replicas lag just the same.',
+    },
+  ]}
+>
+
+Asynchronous replicas apply writes after the primary does, so for a moment they hold an older version. Most reads don't
+care; some must, like a user reading what they just wrote. Route those to the primary, or replicate synchronously and
+pay for it in write latency.
+
+</Misconception>
+
+### Sharding: spreading the writes
+
+2,500 requests a second, 80% of them writes. Replicas don't help, because every write goes to the primary. Sharding
+splits the keys over several primaries, each owning a slice found by consistent hashing.
+
+<DesignLab
+  preset="sharding"
+  caption="Run it: 77% fail with the database 100% busy. Select the database and set 2 shards: no failures, p99 52 ms, the shards 65% and 74% busy. Try 4 shards (31% to 43% each). Then select the clients and raise the key skew to 1.5, so a few keys get most of the traffic: with 4 shards their load becomes uneven, from 13% to 66%."
+/>
+
+Sharding is the way to scale writes, and it is hard to undo: the shard key decides which data lives together. A query
+that needs data from every shard has to ask every shard, and a hot key lives on one shard however many there are. With
+skewed traffic, the busiest shard, not the average, sets the limit.
+
+### Queues: answering before the work is done
+
+1,000 requests a second, half of them writes, and each write takes the database 40 ms. The app server waits for every
+write, so writes have a slow tail.
+
+<DesignLab
+  preset="queue-writes"
+  caption="Run it: p99 is 167 ms, set by the slow writes. Add a queue: it connects to the database by itself. Then select the app servers and send their writes to the queue, and run: p99 drops to 31 ms, but the queue’s 4 consumers can’t keep up. About 4,000 writes are still waiting at the end, each applied 4.4 s after it was acknowledged on average, and 4.3% of reads are stale. Raise the consumers to 24: no backlog, and writes applied 45 ms later."
+/>
+
+A queue lets the system answer at once and do the work later, smoothing bursts and decoupling the caller from slow work.
+But the work still has to be done. If the consumers handle less than the average arrival rate, the backlog grows without
+limit, and for every write in the queue, the rest of the system can't yet see it.
+
+<Misconception
+  id="async-means-done"
+  title="An acknowledged write has been done"
+  probes={[
+    {
+      q: 'Writes go through a queue, and the API answers “saved” as soon as a write is enqueued. The queue has a 4-second backlog. A client reads the key 1 second after “saved”. What does it get?',
+      choices: ['The new value: the write was saved', 'Probably the old value: the write is still waiting in the queue', 'An error: the write failed', 'The new value, from the queue'],
+      answer: 1,
+      trap: 0,
+      why: '“Saved” meant “stored in the queue”. The database gets the write when a consumer reaches it, about 4 seconds later, so a read from the database before that misses it.',
+    },
+    {
+      q: 'A queue in front of slow writes cut p99 latency from 167 ms to 31 ms. What happened to the work?',
+      choices: ['It got 5 times faster', 'It was skipped', 'It still takes as long, done later by the consumers, who must keep up with the arrival rate', 'The queue did it'],
+      answer: 2,
+      trap: 0,
+      why: 'Only the reply got faster. The database still spends 40 ms on each write, now on the consumers’ time; too few consumers, and the backlog grows.',
+    },
+  ]}
+>
+
+Asynchronous means the reply comes before the work. The work is promised, not done: until a consumer applies it, reads
+don't see it, and if consumers fall behind, the delay grows. Design for that window, and watch the backlog.
+
+</Misconception>
+
+### Failures: what a crash costs
+
+Machines die. This design has 3 app servers and a database with one replica, at 1,000 requests a second. In the run
+panel, you can crash a machine part-way through.
+
+<DesignLab
+  preset="failover"
+  caption="Under “Crash a machine”, pick Database primary at 4 s, press Add crash and run: reads carry on from the replica, but every write fails from then on, 5.8% of all requests. Now select the database, turn failover on (a replica takes over after 2 s) and run again: 2% fail. Crash Database replica 1 instead: 0.1%. Crash App servers #1: almost nothing, since the load balancer routes around it."
+/>
+
+Redundancy only helps if something switches to it. Stateless app servers are easy: the load balancer stops sending to
+the dead one. A database primary holds state, so promoting a replica takes time, and any writes it hadn't yet copied
+may be lost.
+
+There is a harder version of this choice. If the network splits the primary from some replicas, the replicas can either
+keep answering with what they have, which might be stale (choosing **availability**), or refuse until they hear from
+the primary (choosing **consistency**). That is the **CAP theorem**: during a network partition you get one or the other.
+Its everyday companion, **PACELC**, adds that even without a partition, replicas trade **latency** against
+**consistency**, which is exactly the replica lag you tuned above. Raft, from the consensus lesson, chooses consistency:
+a minority side refuses writes.
+
+One more piece: a **rate limiter** at the front turns away requests over a set rate at once, with an error the client can
+retry. During a spike, that protects everything behind it from collapsing, so the rest of the traffic still gets fast
+answers. Try one in the [sandbox](/design/sandbox).
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'The app servers are 60% busy and the database 99% busy. Which change is most likely to cut p99 latency?',
+      choices: ['Double the app servers', 'Put a cache in front of the database, or add read replicas if the load is mostly reads', 'Raise the client timeout', 'Use a load balancer policy of least connections'],
+      answer: 1,
+      why: 'The database is the bottleneck, so take load off it. More app servers would only send the same requests to it.',
+      traps: { 0: 'more-servers-always-help' },
+    },
+    {
+      q: 'An app reads through a cache but writes only to the database. What goes wrong?',
+      choices: ['Reads of keys written since they were cached return old values', 'Writes become slow', 'The hit rate falls to zero', 'Nothing: the database is the source of truth, so reads are correct'],
+      answer: 0,
+      why: 'The cache keeps the old copy, and reads go to the cache first. Writes have to delete or update the cached copy.',
+      traps: { 3: 'cache-is-consistent' },
+    },
+    {
+      q: 'What is the difference between invalidating and writing through on a write?',
+      choices: [
+        'Invalidating deletes the cached copy, so the next read misses; writing through updates the copy, so the next read hits',
+        'Invalidating is faster for reads',
+        'Writing through skips the database',
+        'There is none',
+      ],
+      answer: 0,
+      why: 'Both keep the cache from going stale. Invalidation is simpler and costs a miss; write-through keeps the hit but writes to the cache on every write, even for keys nobody reads.',
+    },
+    {
+      q: 'Read replicas lag 1 second behind the primary. A user writes, then immediately reads from a replica. What may they see?',
+      choices: ['Their write, since it was acknowledged', 'The value from before their write', 'An error', 'Both values'],
+      answer: 1,
+      why: 'The replica hasn’t applied the write yet. Route a user’s reads of their own recent writes to the primary, or wait for the replica.',
+      traps: { 0: 'replicas-are-current' },
+    },
+    {
+      q: 'A database is write-bound. What spreads the writes?',
+      choices: ['Read replicas', 'Sharding the keys over several primaries', 'A bigger cache', 'More app servers'],
+      answer: 1,
+      why: 'Replicas copy every write, so each one does all the writing too. Sharding gives each primary a slice of the keys and so a slice of the writes, as long as no single key is too hot.',
+    },
+    {
+      q: 'Writes go through a queue and the API replies as soon as a write is enqueued. Which is true?',
+      choices: [
+        'The write is visible to every read straight away',
+        'The reply is fast, but the write is applied later, and the backlog grows if consumers are slower than the arrival rate',
+        'The queue makes the database faster',
+        'Writes can no longer fail',
+      ],
+      answer: 1,
+      why: 'The queue moves the work, it doesn’t remove it. Until a consumer applies the write, reads don’t see it.',
+      traps: { 0: 'async-means-done' },
+    },
+    {
+      q: 'The primary crashes and there is no failover. What happens, with one read replica?',
+      choices: ['Everything stops', 'Reads carry on from the replica; writes fail until the primary is back', 'Writes go to the replica', 'Nothing: the replica takes over at once'],
+      answer: 1,
+      why: 'Only the primary takes writes. Without failover nobody promotes the replica, so writes fail; reads can still be served.',
+    },
+    {
+      q: 'In CAP terms, a replica cut off from its primary keeps answering reads with the data it has. What has it chosen?',
+      choices: ['Availability, at the risk of stale answers', 'Consistency', 'Partition tolerance instead of both', 'Lower latency'],
+      answer: 0,
+      why: 'During a partition, answering means possibly serving old data (available), and refusing means staying correct (consistent). It answered.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="design-trade-offs"
+  prompt="Pick three things you can add to a struggling service (more app servers, a cache, read replicas, shards, a queue) and say what each one buys and what it costs."
+  rubric={[
+    'More app servers help only while the app tier is the bottleneck; after that another part, like the database, limits the system.',
+    'A cache takes reads off the database, but cached copies go stale unless every write updates or deletes them.',
+    'Read replicas scale reads, not writes, and lag behind the primary, so a read can miss a recent write.',
+    'Sharding spreads writes over several primaries, but a hot key or a query across shards still hits limits.',
+    'A queue answers fast and does the work later: the work isn’t done yet, and consumers must keep up or the backlog grows.',
+  ]}
+  example="Every addition buys capacity in one place and costs something somewhere else. More app servers help until they stop being the busiest part; after that the database sets the latency and extra servers only add cost. A cache takes most reads off the database, but its copies go stale unless writes update or delete them. Read replicas take reads too, but they lag, so a user may not see their own write. A queue makes writes reply at once, but the work happens later, and if the consumers can't keep up, the backlog and the delay keep growing."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A system is as fast as its busiest part. Find the bottleneck, scale that, then look for the next one.
+- A cache takes load off the database, but its copies go stale unless writes invalidate or update them.
+- Read replicas scale reads and lag behind; sharding scales writes and makes hot keys and cross-shard queries harder.
+- A queue replies before the work is done. The consumers must keep up with the average rate, or the backlog grows.
+- Redundancy needs a switch-over: load balancers route around dead app servers, failover promotes a replica. In a partition, choose consistency or availability.
+
+Put it together in the [case studies](/design), each with traffic, targets and a budget, and practise the numbers that
+come first in the [estimation drills](/design/estimate).
+
+</Section>

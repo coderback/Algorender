@@ -135,6 +135,14 @@ class Engine<V> {
 
   /** A use: O(1). LRU moves the node to the newest end; LFU moves it to the next count's list. */
   private touch(node: Node<V>) {
+    if (this.policy === 'lru') {
+      // One list and the map entry stays put: just move the node to the newest end.
+      const l = this.lists.get(0)!;
+      l.unlink(node);
+      node.entry = { ...node.entry, uses: node.entry.uses + 1, lastUsed: this.time };
+      l.push(node);
+      return;
+    }
     const before = this.bucket(node);
     this.detach(node);
     node.entry = { ...node.entry, uses: node.entry.uses + 1, lastUsed: this.time };
@@ -179,6 +187,15 @@ class Engine<V> {
     return { evicted, updated: false };
   }
 
+  /** Drops a key without counting a use (a cache invalidation). */
+  remove(key: string): boolean {
+    const node = this.map.get(key);
+    if (!node) return false;
+    this.detach(node);
+    if (this.policy === 'lfu' && !this.lists.has(this.minUses)) this.minUses = this.lowestUses();
+    return true;
+  }
+
   /** Back to the plain state: entries in eviction order (lowest count first for LFU, oldest first within a list). */
   toState(): CacheState<V> {
     const entries: CacheEntry<V>[] = [];
@@ -216,6 +233,33 @@ export function cacheAccess<V>(s: CacheState<V>, key: string, load: (key: string
   const { hit } = e.get(key);
   const evicted = hit ? null : e.put(key, load(key)).evicted;
   return { state: e.toState(), hit, evicted };
+}
+
+/**
+ * A cache kept in its linked form for a long stream of calls, as a
+ * simulation drives it (the system-design canvas): O(1) per call, with no
+ * plain state rebuilt in between. `state()` reads the plain state back.
+ */
+export type LiveCache<V> = {
+  get(key: string): { hit: boolean; value: V | undefined };
+  put(key: string, value: V): { evicted: CacheEntry<V> | null; updated: boolean };
+  /** Drops a key (an invalidation); false when it wasn't cached. */
+  remove(key: string): boolean;
+  readonly size: number;
+  state(): CacheState<V>;
+};
+
+export function openCache<V>(s: CacheState<V>): LiveCache<V> {
+  const e = engine(s);
+  return {
+    get: (key) => e.get(key),
+    put: (key, value) => e.put(key, value),
+    remove: (key) => e.remove(key),
+    get size() {
+      return e.map.size;
+    },
+    state: () => e.toState(),
+  };
 }
 
 /** Read-through accesses for a whole stream of keys, O(1) each. `hits[i]` says whether request i hit. */
