@@ -968,7 +968,7 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
 - **5c: the AI tutor** (`revamp/phase-5c`): grounded in the reference solution and the live trace, with a hint ladder enforced in the UI, trace tools, a leak check, budgets and a kill switch.
   - **Decisions (2026-10-18, owner):**
     - **Provider:** Azure AI Foundry, not the Anthropic API directly, for access to more models.
-    - **Models:** `gpt-6.1-luna` for hints and the leak check, and `gpt-6.1-sol` for code review. Both are deployment names held in env vars.
+    - **Models:** `gpt-6-luna` for hints and the leak check, and `gpt-6.1-sol` for code review. Both are deployment names held in env vars.
     - **Access:** free for signed-in learners.
     - **Budgets:** 30 turns per learner a day, and a $5 a day cap across everyone.
   - **Status (2026-10-18): 5c is built, switched off until the Azure settings and the migration are in place.**

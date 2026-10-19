@@ -6,7 +6,7 @@
 //   AZURE_AI_ENDPOINT        the resource's OpenAI v1 base URL, e.g.
 //                            https://<resource>.openai.azure.com/openai/v1
 //   AZURE_AI_API_KEY         its key (sent as a bearer token)
-//   TUTOR_MODEL_FAST         deployment for hints and the leak check (gpt-6.1-luna)
+//   TUTOR_MODEL_FAST         deployment for hints and the leak check (gpt-6-luna)
 //   TUTOR_MODEL_STRONG       deployment for code review (gpt-6.1-sol)
 //   TUTOR_PRICE_FAST         "<input>,<output>" US dollars per million tokens
 //   TUTOR_PRICE_STRONG       likewise, for the strong model
@@ -50,7 +50,7 @@ export function tutorConfig(env: Record<string, string | undefined> = process.en
     provider: fake ? 'fake' : 'azure',
     endpoint,
     apiKey,
-    models: { fast: env.TUTOR_MODEL_FAST || 'gpt-6.1-luna', strong: env.TUTOR_MODEL_STRONG || 'gpt-6.1-sol' },
+    models: { fast: env.TUTOR_MODEL_FAST || 'gpt-6-luna', strong: env.TUTOR_MODEL_STRONG || 'gpt-6.1-sol' },
     prices: { fast: price(env.TUTOR_PRICE_FAST, { input: 1, output: 4 }), strong: price(env.TUTOR_PRICE_STRONG, { input: 5, output: 20 }) },
     turnsPerDay: number(env.TUTOR_TURNS_PER_DAY, 30),
     dailyUsd: number(env.TUTOR_DAILY_USD, 5),
