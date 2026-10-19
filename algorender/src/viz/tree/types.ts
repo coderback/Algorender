@@ -69,7 +69,18 @@ export type TreeShape = {
    * sideways, root on the left.
    */
   search?: boolean;
+  /**
+   * Arrows between nodes at the same depth, e.g. a B+ tree's leaf chain. Each
+   * is drawn from the right side of `from` to the left side of `to`, and can be
+   * marked by its id, `linkId(from, to)`.
+   */
+  links?: readonly TreeLink[];
 };
+
+export type TreeLink = { from: NodeId; to: NodeId };
+
+/** The id a link is marked by. */
+export const linkId = (from: NodeId, to: NodeId) => `${from}>${to}`;
 
 /** Everything the tree view draws for one frame. */
 export type TreeState = TreeShape & {

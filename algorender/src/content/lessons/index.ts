@@ -216,6 +216,34 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'Why a busy server is slow long before it is full, why p99 matters more than the average, and how a token bucket keeps traffic in check.',
     minutes: 20,
   },
+  {
+    slug: 'concurrency',
+    title: 'Race conditions, locks and deadlock',
+    concept: 'concurrency',
+    summary: 'How two threads running count++ lose an update, how locks and atomic instructions fix it, and how locks taken in different orders deadlock.',
+    minutes: 20,
+  },
+  {
+    slug: 'storage-engines',
+    title: 'Storage engines: B+ trees and LSM trees',
+    concept: 'storage-engines',
+    summary: 'The two ways databases keep data on disk: a B+ tree finds any key in a few page reads and scans ranges along its leaves; an LSM tree turns writes into appends and merges them later.',
+    minutes: 20,
+  },
+  {
+    slug: 'logical-clocks',
+    title: 'Logical clocks: ordering without a shared clock',
+    concept: 'logical-clocks',
+    summary: 'Lamport timestamps give every event a number that respects cause and effect; vector clocks also tell you when two events are concurrent.',
+    minutes: 15,
+  },
+  {
+    slug: 'consensus',
+    title: 'Consensus with Raft',
+    concept: 'consensus',
+    summary: 'How a cluster of servers agrees on one log while machines crash and the network splits: terms, elections, replication and the majority rule that keeps committed entries safe.',
+    minutes: 25,
+  },
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

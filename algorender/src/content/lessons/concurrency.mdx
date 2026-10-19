@@ -1,0 +1,326 @@
+<Section step="hook" title="Two threads, one counter">
+
+A web server counts page views with one line, `count++`, run by whichever thread handles the request. After a busy day
+the counter reads 9,970, yet the log shows 10,000 requests. No request failed and no line of code is wrong on its own.
+
+Thirty updates vanished because two threads ran `count++` **at the same time**, and the order their steps happened to
+interleave decided the result. That is a **race condition**. The cure is a lock, and locks bring a failure of their
+own: threads that wait for each other forever, a **deadlock**.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="thread">An independent line of execution. Threads of one program share its memory, and the scheduler can pause any of them between any two instructions.</Term>
+  <Term name="interleaving">One order in which the threads' instructions actually run. The scheduler picks it, so it can change from run to run.</Term>
+  <Term name="race condition">The result depends on the interleaving, and some interleavings give a result that running the threads one at a time never would.</Term>
+  <Term name="lock (mutex)">Only one thread can hold it. Code between `lock` and `unlock`, the **critical section**, never runs in two threads at once.</Term>
+  <Term name="atomic instruction">An instruction the hardware does as one step that nothing can split, such as fetch-and-add or compare-and-swap.</Term>
+  <Term name="deadlock">A set of threads each waiting for a lock that another of them holds, so none can ever move.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A lost update">
+
+`count++` looks like one step, but the machine does it in three: **load** `count` into a private register, **add** 1 to
+the register, **store** the register back. Here threads A and B each run `count++` once, starting from `count = 0`, and
+the scheduler runs them in the order A B A A B B.
+
+<Explore slug="race-conditions" settings={{ preset: 'lost-update' }} caption="Both threads load 0 before either stores, so both store 1 and one increment is lost. The last step tries all 20 interleavings: 18 of them end with count = 1." />
+
+<KeyIdea>
+
+**A thread can be paused between its load and its store. If another thread updates the variable in that gap, the first
+thread's store writes back a stale value and the other update is lost.** Each instruction is correct; the trouble is
+what can happen between them.
+
+</KeyIdea>
+
+<Misconception
+  id="count-is-one-step"
+  title="count++ is a single step"
+  probes={[
+    {
+      q: 'Two threads each run count++ once, with no lock, starting from count = 0. What can count end as?',
+      choices: ['Only 2', '1 or 2', '0, 1 or 2', 'Only 1'],
+      answer: 1,
+      trap: 0,
+      why: 'count++ is load, add, store. If both threads load 0 before either stores, both store 1. It never ends at 0, because every store writes at least 1.',
+    },
+    {
+      q: 'count is 5. Thread A loads it into its register and is paused. Thread B runs count++ to the end. Then A adds 1 and stores. What is count?',
+      choices: ['7', '6', '5', '8'],
+      answer: 1,
+      trap: 0,
+      why: 'Six. B stores 6, then A stores its own 5 + 1 = 6 over it. B’s increment is lost.',
+    },
+  ]}
+>
+
+In source code it is one line, but the machine loads the value, adds 1 and stores it back as separate steps, and a
+thread can be paused between any two of them. If another thread changes the variable in between, the store overwrites
+that change. Two unlocked `count++` can end at 1 instead of 2.
+
+</Misconception>
+
+Most of the interleavings go wrong here, so why do real programs usually seem to work? Because the threads rarely hit
+those three steps at the same moment: a scheduler lets a thread run thousands of instructions before switching, and on
+separate cores the two updates must overlap within a few nanoseconds.
+With three threads there are 1,680 interleavings: 1,404 end at 1, 270 at 2, and only the 6 that run one thread at a
+time reach 3.
+
+<Explore slug="race-conditions" settings={{ preset: 'three', seed: 1 }} caption="Three threads, a random interleaving. The tally at the end counts all 1,680." />
+
+<Misconception
+  id="tests-find-races"
+  title="If there is a race, testing will show it"
+  probes={[
+    {
+      q: 'A program with an unlocked count++ in two threads passes 10,000 test runs, always with the right total. What does that show?',
+      choices: [
+        'There is no race',
+        'The bad interleavings didn’t happen in those runs; the race is still there',
+        'The CPU made count++ atomic',
+        'The race only happens with three or more threads',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Tests only see the interleavings the scheduler happened to pick. The bad ones exist whenever a thread can be paused between its load and its store.',
+    },
+    {
+      q: 'Why can a race stay hidden in testing and then appear in production?',
+      choices: [
+        'The bad interleaving needs a thread switch at exactly the wrong instruction, which is rare but happens with more cores, load and runs',
+        'Production compilers add races that test builds don’t have',
+        'Races can only happen on servers',
+        'It can’t: if the tests pass, there is no race',
+      ],
+      answer: 0,
+      trap: 3,
+      why: 'Whether the race fires depends on timing. A rare interleaving that never came up in a thousand test runs can come up many times a day under real traffic.',
+    },
+  ]}
+>
+
+A test only sees the interleavings that happened while it ran. A real scheduler switches threads rarely, so the bad
+interleaving can be rare too: the code passes thousands of runs and then loses updates under production load, on more
+cores, at the worst moment. Races have to be prevented by design, with locks or atomic instructions, not tested away.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: two withdrawals">
+
+An account holds 100. Two threads each try to withdraw 80: load the balance, stop if it is under 80, otherwise
+subtract 80 with one **atomic** instruction. Only one withdrawal should succeed. Predict each step.
+
+<PredictChallenge slug="race-conditions" settings={{ preset: 'withdraw' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Fixing races, and the price of locks">
+
+Wrap `count++` in a lock and only the thread holding the lock can run the three steps. A thread that reaches `lock m`
+while another holds it has to wait.
+
+<Explore slug="race-conditions" settings={{ preset: 'mutex' }} caption="B reaches the lock while A holds it, so it waits. Every interleaving now ends at 2." />
+
+For a single number there is a cheaper fix: an **atomic** instruction such as fetch-and-add does the load, the add and
+the store as one step that nothing can split, so no lock is needed. **Compare-and-swap** is the general version: store
+the new value only if memory still holds the value you read, and otherwise read again and retry.
+
+<Explore slug="race-conditions" settings={{ preset: 'atomic' }} caption="One fetch-and-add per thread: count always ends at 2." />
+
+The withdrawals went wrong even though the subtraction was atomic.
+
+<Misconception
+  id="atomic-steps-are-enough"
+  title="If every step is atomic, the code is safe"
+  probes={[
+    {
+      q: 'The balance is 100. Two threads each check balance ≥ 80, then subtract 80 with an atomic instruction. With no lock, what can the balance end at?',
+      choices: ['Only 20', '20 or −60', 'Only −60', '20 or 100'],
+      answer: 1,
+      trap: 0,
+      why: 'If both checks run before either subtraction, both see 100 and both subtract: −60. Run one after the other, the second check fails: 20.',
+    },
+    {
+      q: 'Which change makes those two withdrawals safe?',
+      choices: ['Make the subtraction atomic', 'Hold one lock around both the check and the subtraction', 'Check the balance twice', 'Run the withdrawals on a faster CPU'],
+      answer: 1,
+      trap: 0,
+      why: 'The subtraction is already atomic. What must not be split is the check together with the act, so both go inside one critical section.',
+    },
+  ]}
+>
+
+Atomic steps stop a single update from being torn apart, but they don't stop another thread from running **between**
+two of your steps. In **check-then-act** code (check the balance, then withdraw) the check can be stale by the time
+you act. The check and the act have to be one critical section, under one lock.
+
+</Misconception>
+
+<Explore slug="race-conditions" settings={{ preset: 'locked-withdraw' }} input caption="The check and the subtraction inside one lock: B waits, then sees 20 and stops. Try your own schedule, e.g. withdraw x2; schedule: A B A B A B." />
+
+Locks have a cost. A waiting thread does no useful work, and a lock held across slow code makes the threads take turns,
+so adding threads stops helping. Programs therefore use several smaller locks, and that opens the door to a new
+failure. P1 takes R1 then R2; P2 takes R2 then R1.
+
+<Explore slug="deadlock" settings={{ preset: 'opposite' }} caption="P1 holds R1 and waits for R2; P2 holds R2 and waits for R1. The waits form a cycle, so neither can ever move." />
+
+<KeyIdea>
+
+**A deadlock is a cycle of waits: each thread holds a lock the next one needs.** With one holder per lock it needs all
+four of Coffman's conditions: mutual exclusion, hold and wait, no preemption, and circular wait. Break any one and
+deadlock is impossible. The usual fix breaks circular wait: **take locks in one global order**.
+
+</KeyIdea>
+
+With both processes taking R1 before R2, P2 may wait, but it waits for a lock whose holder needs nothing P2 holds, so
+the circle can't close.
+
+<Explore slug="deadlock" settings={{ preset: 'same-order' }} caption="Same schedule, one lock order: P2 waits for R1, but no cycle ever forms and both finish." />
+
+<Misconception
+  id="deadlock-is-one-threads-bug"
+  title="A deadlock means one of the threads has a bug"
+  probes={[
+    {
+      q: 'P1 takes R1 then R2; P2 takes R2 then R1. Each runs fine on its own. Can they deadlock when they run together?',
+      choices: ['No: each one is correct on its own', 'Yes: if each takes its first lock before either takes its second', 'Only if one forgets to release a lock', 'Only on a machine with one core'],
+      answer: 1,
+      trap: 0,
+      why: 'Each holds the lock the other needs next. Neither program is wrong alone; the two lock orders together make the cycle, and one core is enough for it.',
+    },
+    {
+      q: 'Five philosophers each pick up the fork on one side, then the other, in the same direction around the table. What makes deadlock impossible?',
+      choices: [
+        'Let them start in a random order',
+        'Have one philosopher pick up the lower-numbered fork first, so forks are taken in one global order',
+        'Make them eat faster',
+        'Nothing: a deadlock means one philosopher is buggy, so find which one',
+      ],
+      answer: 1,
+      trap: 3,
+      why: 'Every philosopher follows the same correct rule; the deadlock comes from all five holding one fork each. Changing one philosopher’s order breaks the circle.',
+    },
+  ]}
+>
+
+Every thread in a deadlock can be correct on its own. The deadlock lives in the combination: the order in which they
+take shared locks, and the timing that lets each grab its first lock before the others' second. You fix it across the
+threads, by agreeing one lock order (or taking all the locks at once), not by hunting for the faulty thread.
+
+</Misconception>
+
+Dijkstra's **dining philosophers** is the classic case: five philosophers round a table with a fork between each pair.
+Each picks up the fork on one side, then the other. If all five lift their first fork together, the waits close a
+circle.
+
+<Explore slug="deadlock" settings={{ preset: 'philosophers' }} input caption="All five hold one fork and wait for the next: a cycle through all ten nodes. Switch to “Philosophers, forks in order”, where P5 reaches for R1 before R5." />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Two threads each run count++ once on count = 0, with no lock. Which final values are possible?',
+      choices: ['2 only', '1 or 2', '0, 1 or 2', '1 only'],
+      answer: 1,
+      why: 'count++ is load, add, store. If both load 0 before either stores, both store 1. Every store writes at least 1, so 0 is impossible.',
+      traps: { 0: 'count-is-one-step' },
+    },
+    {
+      q: 'The two unlocked threads are run 1,000 times in a test, and count always ends at 2. What can you conclude?',
+      choices: [
+        'The code is correct',
+        'The bad interleavings exist but didn’t happen in those runs',
+        'The CPU runs count++ as one step',
+        'Races need more than two threads',
+      ],
+      answer: 1,
+      why: 'Passing runs only show the interleavings that happened. A thread can still be paused between its load and its store, so updates can still be lost.',
+      traps: { 0: 'tests-find-races' },
+    },
+    {
+      q: 'What does a mutex around count++ guarantee?',
+      choices: [
+        'Only one thread at a time runs the code between lock and unlock',
+        'The threads always run in the order A, then B',
+        'count++ runs faster',
+        'No thread ever has to wait',
+      ],
+      answer: 0,
+      why: 'Mutual exclusion: the load, add and store run without another thread getting in between. Which thread goes first still varies, and the other one waits.',
+    },
+    {
+      q: 'Two threads each check balance ≥ 80 on a balance of 100, then subtract 80 with an atomic instruction. What can the balance end at?',
+      choices: ['20 or −60', '20 only', '−60 only', '100 or 20'],
+      answer: 0,
+      why: 'Both checks can pass before either subtraction, giving −60; in order, the second check fails, giving 20. The check and the act must share one lock.',
+      traps: { 1: 'atomic-steps-are-enough' },
+    },
+    {
+      q: 'Which of these is not one of Coffman’s four conditions for deadlock?',
+      choices: ['Mutual exclusion', 'Hold and wait', 'Starvation', 'Circular wait'],
+      answer: 2,
+      why: 'The four are mutual exclusion, hold and wait, no preemption and circular wait. Starvation, a thread that never gets its turn, is a different problem.',
+    },
+    {
+      q: 'P1 takes R1 then R2; P2 takes R2 then R1; they deadlock. Where is the bug?',
+      choices: [
+        'In P1',
+        'In P2',
+        'In neither alone: the two lock orders together; agree one global order',
+        'In the lock implementation',
+      ],
+      answer: 2,
+      why: 'Each is fine on its own. The cycle comes from the opposite orders, so the fix is a rule for both: always take R1 before R2.',
+      traps: { 0: 'deadlock-is-one-threads-bug', 1: 'deadlock-is-one-threads-bug' },
+    },
+    {
+      q: 'Each lock has one holder. How can a system tell that some threads are deadlocked?',
+      choices: [
+        'A thread is waiting for a lock',
+        'Every lock is held',
+        'The wait-for graph (who waits for whom) has a cycle',
+        'A thread has run for too long',
+      ],
+      answer: 2,
+      why: 'Waiting alone is normal: it ends when the holder releases. A cycle of waits never ends, and finding one is a graph search in O(V + E).',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="races-and-deadlocks"
+  prompt="Why can two threads running count++ lose an update, how do locks or atomic instructions prevent it, and how can locks themselves cause a deadlock?"
+  rubric={[
+    'count++ is three steps (load, add, store), and a thread can be paused between them.',
+    'If another thread stores in that gap, the paused thread overwrites it with a stale value, so an update is lost.',
+    'A lock lets only one thread run the critical section at a time; an atomic instruction does the whole update as one step.',
+    'A deadlock is a cycle of threads, each holding a lock the next one needs, so none can move.',
+    'Taking locks in one global order prevents the cycle, so it prevents deadlock.',
+  ]}
+  example="count++ is really three instructions: load count into a register, add one, store it back. A thread can be paused between them, so two threads can both load 0 and both store 1, and one increment is lost. A lock around the three steps means only one thread at a time can be inside, and an atomic fetch-and-add does the whole update as one step. But locks can deadlock: if one thread holds R1 and waits for R2 while another holds R2 and waits for R1, neither can ever continue. Always taking locks in the same order makes that cycle impossible."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `count++` is load, add, store. Threads can be paused between steps, so unlocked updates get lost, and only some interleavings show it, which is why tests miss races.
+- A lock makes a critical section run in one thread at a time; atomic instructions (fetch-and-add, compare-and-swap) make a single update indivisible.
+- Check-then-act needs the check and the act in one critical section: atomic steps alone aren't enough.
+- Locks make threads wait. A cycle of waits is a deadlock; it needs all four Coffman conditions, and one global lock order rules it out.
+
+</Section>
