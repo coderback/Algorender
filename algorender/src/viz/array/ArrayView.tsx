@@ -2,7 +2,9 @@
 
 import { LayoutGroup, motion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
-import { MARKS, NEUTRAL } from '@/viz/marks';
+import { cx } from '@/components/ui/cx';
+import { MARKS, NEUTRAL, type MarkKey } from '@/viz/marks';
+import { Bracket, CAPTION, EMPTY_SLOT, PLAIN_CELL, Pointer } from '@/viz/parts';
 import { RANGE_TONES } from './marks';
 import { useArraySelect, type ArraySelect } from './select';
 import type { ArrayState, Counter, ItemId, Lane, Mark } from './types';
@@ -11,7 +13,7 @@ import type { ArrayState, Counter, ItemId, Lane, Mark } from './types';
 const SLOT_MAX_PX = 72;
 const COUNTER_MAX_PX = 52;
 
-type Scale = { maxValue: number; digits: number; labelSize: string | null; barHeight: string };
+type Scale = { maxValue: number; digits: number; labelSize: string | null; barHeight: string; radius: string; gap: string };
 
 /**
  * Renders array lanes as bars. Elements are keyed by identity and share a
@@ -19,6 +21,9 @@ type Scale = { maxValue: number; digits: number; labelSize: string | null; barHe
  * (into a merge buffer, up to a "key" slot) flies the bar across. `compact`
  * (side-by-side races) drops value labels and counters and shortens the bars.
  * Inside an ArraySelectContext (a game), each bar is a button the learner can pick.
+ * TODO(redesign): V1 draws searches and patterns as 40px cells (position
+ * matters, not size), with probe history and live readouts beside them; the
+ * state has no hint saying which a module wants, so every array draws bars.
  */
 export function ArrayView({ state, compact = false }: { state: ArrayState; compact?: boolean }) {
   const groupId = useId();
@@ -35,6 +40,9 @@ export function ArrayView({ state, compact = false }: { state: ArrayState; compa
       : state.lanes.length === 1
         ? 'h-48 sm:h-60'
         : 'h-24 sm:h-28',
+    // Round-topped bars (V1): 14px over 8px, tighter when there are many.
+    radius: columns <= 24 && !compact ? 'rounded-t-[14px] rounded-b-[8px]' : 'rounded-t-[5px] rounded-b-[3px]',
+    gap: columns <= 16 ? 'gap-1.5 sm:gap-2' : 'gap-1',
   };
 
   return (
@@ -60,6 +68,8 @@ export function ArrayView({ state, compact = false }: { state: ArrayState; compa
 function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArrayState; columns: number; scale: Scale }) {
   const grid: CSSProperties = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` };
   const ranges = state.ranges.filter((r) => r.lane === lane.id);
+  // Overlapping ranges (a window inside the best so far) each get their own row of brackets.
+  const rows = rangeRows(ranges);
   const pointerLabels = new Map<number, string[]>();
   for (const p of state.pointers) {
     if (p.lane === lane.id) pointerLabels.set(p.index, [...(pointerLabels.get(p.index) ?? []), p.label]);
@@ -69,25 +79,17 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
 
   return (
     <div role="group" aria-label={lane.label}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{lane.label}</div>
+      <div className={cx('mb-1.5', CAPTION)}>{lane.label}</div>
       <p className="sr-only">
         {lane.label}: {description}
       </p>
 
-      <div className="relative" aria-hidden={select ? undefined : true}>
-        <div className="pointer-events-none absolute inset-0 grid gap-1" style={grid}>
-          {ranges.map((r, k) => (
-            <div
-              key={k}
-              className={`rounded-md transition-colors ${RANGE_TONES[r.tone].tint}`}
-              style={{ gridColumn: `${r.from + 1} / ${r.to + 2}`, gridRow: 1 }}
-            />
-          ))}
-        </div>
-        <div className={`relative grid gap-1 ${scale.barHeight}`} style={grid}>
+      <div aria-hidden={select ? undefined : true}>
+        {/* A lane with nothing in it yet (a buffer, the key's slot) is just its row of empty slots. */}
+        <div className={cx('grid', scale.gap, lane.slots.some((id) => id != null) ? scale.barHeight : 'h-14')} style={grid}>
           {lane.slots.map((id, index) =>
             id == null ? (
-              <Hole key={`hole-${index}`} />
+              <Hole key={`hole-${index}`} radius={scale.radius} />
             ) : (
               <Item
                 key={id}
@@ -104,29 +106,27 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
         </div>
       </div>
 
-      <div className="mt-1 grid h-5 gap-1" style={grid} aria-hidden>
-        {[...pointerLabels].map(([index, labels]) => (
-          <motion.div
-            key={labels.join(',')}
-            layout="position"
-            layoutId={`${lane.id}-ptr-${labels.join(',')}`}
-            className="truncate text-center font-mono text-[11px] leading-5 font-semibold text-ink-soft"
-            style={{ gridColumn: index + 1, gridRow: 1 }}
-          >
-            ▲{labels.join(',')}
-          </motion.div>
-        ))}
-      </div>
-
-      {ranges.some((r) => r.label) && (
-        <div className="mt-0.5 grid gap-1" style={grid} aria-hidden>
-          {ranges.map((r, k) => (
-            <div
-              key={k}
-              className={`truncate border-t-2 pt-0.5 text-center text-[11px] ${RANGE_TONES[r.tone].bracket} ${RANGE_TONES[r.tone].text}`}
-              style={{ gridColumn: `${r.from + 1} / ${r.to + 2}`, gridRow: 1 }}
+      {pointerLabels.size > 0 && (
+        <div className={cx('mt-1.5 grid h-[18px]', scale.gap)} style={grid} aria-hidden>
+          {[...pointerLabels].map(([index, labels]) => (
+            <motion.div
+              key={labels.join(',')}
+              layout="position"
+              layoutId={`${lane.id}-ptr-${labels.join(',')}`}
+              className="flex min-w-0 justify-center"
+              style={{ gridColumn: index + 1, gridRow: 1 }}
             >
-              {r.label}
+              <Pointer className="max-w-full truncate">{labels.join(',')}</Pointer>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {ranges.length > 0 && (
+        <div className={cx('mt-1.5 grid', scale.gap)} style={grid} aria-hidden>
+          {ranges.map((r, k) => (
+            <div key={k} className="min-w-0" style={{ gridColumn: `${r.from + 1} / ${r.to + 2}`, gridRow: rows[k] }}>
+              <Bracket label={r.label} line={RANGE_TONES[r.tone].bracket} text={RANGE_TONES[r.tone].text} />
             </div>
           ))}
         </div>
@@ -154,6 +154,15 @@ function Item({
 }) {
   const meta = mark ? MARKS[mark] : null;
   const height = Math.max(4, (value / scale.maxValue) * 100);
+  // With a label inside, a bar is never shorter than its number.
+  const style: CSSProperties = { height: scale.labelSize ? `max(1.75rem, ${height}%)` : `${height}%`, transitionDuration: 'var(--tween, 300ms)' };
+  const bar = (
+    <span className="relative block w-full min-h-0 flex-1">
+      <span className={cx('absolute inset-x-0 bottom-0 flex items-end justify-center pb-1.5 transition-colors', scale.radius, meta ? meta.bg : NEUTRAL.bg, inkOn(mark))} style={style}>
+        {scale.labelSize && <ValueLabel value={value} size={scale.labelSize} digits={scale.digits} digitPlace={digitPlace} />}
+      </span>
+    </span>
+  );
   if (select) {
     const picked = select.selected.has(id);
     const hinted = select.hint.has(id);
@@ -171,66 +180,59 @@ function Item({
         aria-label={`${value}, position ${index + 1}${hinted ? ', the algorithm’s pick' : ''}`}
         disabled={select.disabled}
         onClick={() => select.toggle(id)}
-        className={`flex h-full min-w-0 flex-col items-center rounded-md outline-offset-2 focus-visible:ring-2 focus-visible:ring-accent-strong disabled:cursor-default ${outline}`}
+        className={cx('flex h-full min-w-0 flex-col items-center rounded-[10px] outline-offset-2 focus-visible:ring-2 focus-visible:ring-accent-strong disabled:cursor-default', outline)}
       >
-        <span className={`h-4 shrink-0 text-[11px] leading-4 font-bold ${picked ? 'text-accent-ink' : (meta?.text ?? '')}`}>
-          {picked ? '✓' : (meta?.glyph ?? '')}
-        </span>
-        <span className="relative block w-full min-h-0 flex-1">
-          <span
-            className={`absolute inset-x-0 bottom-0 block rounded-t-md ring-1 ring-black/10 ring-inset transition-colors ${meta ? meta.bg : NEUTRAL.bg}`}
-            style={{ height: `${height}%`, transitionDuration: 'var(--tween, 300ms)' }}
-          />
-        </span>
-        {scale.labelSize && <ValueLabel value={value} size={scale.labelSize} digits={scale.digits} digitPlace={digitPlace} />}
+        <span className={cx('h-4 shrink-0 text-[11px] leading-4 font-bold', picked ? 'text-accent-ink' : meta?.text)}>{picked ? '✓' : (meta?.glyph ?? '')}</span>
+        {bar}
       </motion.button>
     );
   }
   return (
     <motion.div layout layoutId={id} className="flex h-full min-w-0 flex-col items-center" title={String(value)}>
-      <span className={`h-4 shrink-0 text-[11px] leading-4 font-bold ${meta?.text ?? ''}`}>
-        {meta?.glyph ?? ''}
-      </span>
-      <div className="relative w-full min-h-0 flex-1">
-        <div
-          className={`absolute inset-x-0 bottom-0 rounded-t-md ring-1 ring-black/10 ring-inset transition-colors ${meta ? meta.bg : NEUTRAL.bg}`}
-          style={{ height: `${height}%`, transitionDuration: 'var(--tween, 300ms)' }}
-        />
-      </div>
-      {scale.labelSize && <ValueLabel value={value} size={scale.labelSize} digits={scale.digits} digitPlace={digitPlace} />}
+      <span className={cx('h-4 shrink-0 text-[11px] leading-4 font-bold', meta?.text)}>{meta?.glyph ?? ''}</span>
+      {bar}
     </motion.div>
   );
 }
 
-function Hole() {
+/** Grid rows for ranges: each goes in the first row where it overlaps nothing already there. */
+function rangeRows(ranges: readonly { from: number; to: number }[]): number[] {
+  const placed: { from: number; to: number }[][] = [];
+  return ranges.map((r) => {
+    let row = placed.findIndex((taken) => taken.every((t) => r.to < t.from || r.from > t.to));
+    if (row < 0) row = placed.push([]) - 1;
+    placed[row].push(r);
+    return row + 1;
+  });
+}
+
+/** Text on a bar: white on compare, dark on every other mark, ink on the neutral bar. */
+function inkOn(mark: MarkKey | undefined) {
+  return mark === 'compare' ? 'text-white' : mark ? 'text-on-mark' : 'text-ink';
+}
+
+function Hole({ radius }: { radius: string }) {
   return (
     <div className="flex h-full min-w-0 flex-col items-center">
       <span className="h-4 shrink-0" />
       <div className="flex w-full flex-1 items-end">
-        <div className="h-3 w-full rounded-sm border border-dashed border-line-strong" />
+        <div className={cx('h-10 w-full', EMPTY_SLOT, radius)} />
       </div>
-      <span className="h-5 shrink-0" />
     </div>
   );
 }
 
 function ValueLabel({ value, size, digits, digitPlace }: { value: number; size: string; digits: number; digitPlace: number | null }) {
-  const base = `h-5 shrink-0 font-mono leading-5 tabular-nums ${size}`;
-  if (digitPlace == null) return <span className={`${base} text-ink-soft`}>{value}</span>;
+  const base = `font-mono leading-none font-semibold tabular-nums ${size}`;
+  if (digitPlace == null) return <span className={base}>{value}</span>;
 
-  // Radix sort: pad with faint zeros and underline the digit for this pass.
-  const raw = String(value);
-  const padded = raw.padStart(digits, '0');
+  // Radix sort: pad with zeros and underline the digit for this pass.
+  const padded = String(value).padStart(digits, '0');
   const focus = digits - 1 - Math.round(Math.log10(digitPlace));
   return (
     <span className={base}>
       {[...padded].map((ch, k) => (
-        <span
-          key={k}
-          className={
-            k === focus ? 'font-bold text-mark-compare underline' : k < digits - raw.length ? 'text-ink-muted' : 'text-ink-muted'
-          }
-        >
+        <span key={k} className={k === focus ? 'font-extrabold underline underline-offset-2' : 'font-normal'}>
           {ch}
         </span>
       ))}
@@ -242,18 +244,21 @@ function CounterView({ counter }: { counter: Counter }) {
   const n = counter.values.length;
   return (
     <div role="group" aria-label={counter.label} className="mx-auto w-full" style={{ maxWidth: n * COUNTER_MAX_PX }}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{counter.label}</div>
-      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+      <div className={cx('mb-1.5', CAPTION)}>{counter.label}</div>
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
         {counter.values.map((v, i) => (
-          <div
-            key={i}
-            className={`flex min-w-0 flex-col items-center rounded-md border py-1 transition-colors ${
-              i === counter.highlight ? 'border-mark-compare bg-accent-soft ring-1 ring-mark-compare' : 'border-line bg-surface'
-            }`}
-            style={{ transitionDuration: 'var(--tween, 300ms)' }}
-          >
-            <span className="font-mono text-[10px] text-ink-muted">{counter.indexLabels[i]}</span>
-            <span className="font-mono text-sm font-semibold tabular-nums text-ink">{v}</span>
+          <div key={i} className="flex min-w-0 flex-col items-center gap-1">
+            <span
+              className={cx(
+                'flex h-10 w-full items-center justify-center rounded-[10px] font-mono text-sm font-semibold tabular-nums transition-colors',
+                // The count being changed is "just written".
+                i === counter.highlight ? `${MARKS.write.bg} text-on-mark` : PLAIN_CELL,
+              )}
+              style={{ transitionDuration: 'var(--tween, 300ms)' }}
+            >
+              {v}
+            </span>
+            <span className="font-mono text-[11px] text-ink-muted">{counter.indexLabels[i]}</span>
           </div>
         ))}
       </div>
