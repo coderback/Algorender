@@ -89,6 +89,16 @@ export type FactsPanel = {
 
 export type Panel = ChipsPanel | TablePanel | MatrixPanel | AdjacencyPanel | GroupsPanel | FactsPanel;
 
+/** A soft tint for a region; the track pastels, which read in both themes. */
+export type RegionTone = 'sky' | 'mint' | 'butter' | 'lilac' | 'peach' | 'rose' | 'teal';
+
+/**
+ * A group of nodes drawn as a soft region behind them (V4): a BFS level, a
+ * strongly connected component, Prim's tree so far. Keyed by id, so a region
+ * that grows keeps its place.
+ */
+export type Region = { id: string; label: string; members: readonly NodeId[]; tone: RegionTone };
+
 // ───────────────────────────── state ─────────────────────────────
 
 export type GraphState = {
@@ -107,4 +117,6 @@ export type GraphState = {
   /** An edge that pulses once in this frame (a relaxation). `seq` makes each pulse distinct. */
   pulse: { edge: EdgeId; seq: number } | null;
   panels: readonly Panel[];
+  /** Groups of nodes drawn as soft regions behind the graph. */
+  regions?: readonly Region[];
 };

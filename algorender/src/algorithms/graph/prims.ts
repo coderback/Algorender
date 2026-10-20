@@ -62,6 +62,7 @@ function* trace(g: GraphInput): Generator<GraphFrame> {
         ...(id === written && { cellMarks: { 1: 'write' as const } }),
       })),
     });
+    t.setRegions([{ id: 'tree', label: 'tree', members: [...inTree], tone: 'mint' }]);
     t.setPanel({
       kind: 'facts',
       id: 'mst',

@@ -3,7 +3,7 @@ import { askAhead, GraphTracer, type GraphFrame } from '@/viz/graph/tracer';
 import type { GraphState, NodeId } from '@/viz/graph/types';
 import { DAG_AT, DAG_EDGES, SCC_AT, SCC_EDGES, STRONG_AT, STRONG_EDGES } from './examples';
 import { adjacency, authored, choose, fixedExample, graphInput, nodeIds, randomGraph, type GraphInput, type GraphRules } from './model';
-import { EDGES, nodeChips, VISITED } from './shared';
+import { componentRegions, EDGES, nodeChips, VISITED } from './shared';
 
 export const sccRules: GraphRules = { direction: 'directed', weighted: false, start: false, name: 'Finding strongly connected components' };
 
@@ -42,6 +42,7 @@ function* trace(g: GraphInput): Generator<GraphFrame> {
       groups: sccs.map((members, i) => ({ id: `S${i + 1}`, label: `S${i + 1}`, members, mark: 'visited' as const })),
       empty: 'none yet',
     });
+    t.setRegions(componentRegions(sccs));
   };
 
   // ── pass 1: DFS on the graph, recording finish order ──

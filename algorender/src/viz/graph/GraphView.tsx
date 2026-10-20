@@ -6,7 +6,8 @@ import { MARKS } from '@/viz/marks';
 import { EDGE_ACTIVE, EDGE_IDLE, NODE_IDLE_SVG, NODE_RING } from '@/viz/parts';
 import { GraphPanels, svgOnMark } from './GraphPanels';
 import { edgeGeometry, NODE_R, placeLabels, type Geometry } from './layout';
-import type { GraphEdge, GraphNode, GraphState, Mark } from './types';
+import { hullPath, REGION_PAD, regionShape } from './regions';
+import type { GraphEdge, GraphNode, GraphState, Mark, Region, RegionTone } from './types';
 
 /** Space around the nodes for badges above and annotations below. */
 const PAD_X = NODE_R + 18;
@@ -23,8 +24,6 @@ const TWEEN: CSSProperties = { transitionDuration: 'var(--tween, 300ms)' };
  * width, plus the side panels the algorithm keeps in its state (queue, table,
  * matrix…). Marks change colour by CSS transition; a relaxed edge pulses once.
  */
-// TODO(redesign): V4 also draws BFS layers as bands, DFS discovery/finish stamps, SCCs as soft hulls and a
-// Drawing / List / Matrix switch for graph structures; none of these are in the state yet.
 export function GraphView({ state }: { state: GraphState }) {
   const groupId = useId();
   const byId = new Map(state.nodes.map((n) => [n.id, n]));
@@ -38,7 +37,9 @@ export function GraphView({ state }: { state: GraphState }) {
     minX -= grow;
     maxX += grow;
   }
-  const vb = { x: minX - PAD_X, y: minY - PAD_TOP, w: maxX - minX + 2 * PAD_X, h: maxY - minY + PAD_TOP + PAD_BOTTOM };
+  // A region's name sits under its lowest node's annotation, so leave room for it.
+  const padBottom = state.regions?.length ? PAD_BOTTOM + 16 : PAD_BOTTOM;
+  const vb = { x: minX - PAD_X, y: minY - PAD_TOP, w: maxX - minX + 2 * PAD_X, h: maxY - minY + PAD_TOP + padBottom };
 
   const edgeSet = new Set(state.edges.map((e) => `${e.from}>${e.to}`));
   const geometry = new Map(
@@ -74,6 +75,7 @@ export function GraphView({ state }: { state: GraphState }) {
               className="mx-auto block h-auto w-full overflow-visible"
               style={{ maxWidth: vb.w * MAX_SCALE, aspectRatio: `${vb.w} / ${vb.h}` }}
             >
+              {state.regions && <Regions regions={state.regions} nodes={state.nodes} />}
               <AnimatePresence initial={false}>
                 {state.edges.map((e) => {
                   const geo = geometry.get(e.id);
@@ -113,6 +115,51 @@ export function GraphView({ state }: { state: GraphState }) {
       </div>
       </div>
     </LayoutGroup>
+  );
+}
+
+const REGION_TONE: Record<RegionTone, { shape: string; label: string }> = {
+  sky: { shape: 'fill-track-sky stroke-track-sky', label: 'fill-track-sky-ink' },
+  mint: { shape: 'fill-track-mint stroke-track-mint', label: 'fill-track-mint-ink' },
+  butter: { shape: 'fill-track-butter stroke-track-butter', label: 'fill-track-butter-ink' },
+  lilac: { shape: 'fill-track-lilac stroke-track-lilac', label: 'fill-track-lilac-ink' },
+  peach: { shape: 'fill-track-peach stroke-track-peach', label: 'fill-track-peach-ink' },
+  rose: { shape: 'fill-track-rose stroke-track-rose', label: 'fill-track-rose-ink' },
+  teal: { shape: 'fill-track-teal stroke-track-teal', label: 'fill-track-teal-ink' },
+};
+
+/**
+ * Groups of nodes as soft regions behind everything else (V4): one rounded
+ * hull, or a halo per member when a hull would hold a node that isn't in the
+ * group. Each is named just under its lowest member.
+ */
+function Regions({ regions, nodes }: { regions: readonly Region[]; nodes: readonly GraphNode[] }) {
+  return (
+    <AnimatePresence initial={false}>
+      {regions.map((r) => {
+        const inside = new Set(r.members);
+        const shape = regionShape(
+          nodes.filter((n) => inside.has(n.id)),
+          nodes.filter((n) => !inside.has(n.id)),
+        );
+        if (!shape) return null;
+        const tone = REGION_TONE[r.tone];
+        return (
+          <motion.g key={r.id} data-region={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            {shape.kind === 'hull' && shape.points.length === 1 ? (
+              <circle cx={shape.points[0].x} cy={shape.points[0].y} r={REGION_PAD} className={tone.shape} />
+            ) : shape.kind === 'hull' ? (
+              <path d={hullPath(shape.points)} strokeWidth={REGION_PAD * 2} strokeLinejoin="round" strokeLinecap="round" className={tone.shape} />
+            ) : (
+              shape.points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={REGION_PAD} className={tone.shape} />)
+            )}
+            <text x={shape.label.x} y={shape.label.y} textAnchor={shape.label.anchor} fontSize={11} className={`font-mono font-semibold ${tone.label}`}>
+              {r.label}
+            </text>
+          </motion.g>
+        );
+      })}
+    </AnimatePresence>
   );
 }
 

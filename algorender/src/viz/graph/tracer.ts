@@ -1,5 +1,5 @@
 import type { Checkpoint, Frame, VarValue } from '@/engine/types';
-import type { EdgeId, Graph, GraphEdge, GraphNode, GraphState, Mark, NodeId, Panel } from './types';
+import type { EdgeId, Graph, GraphEdge, GraphNode, GraphState, Mark, NodeId, Panel, Region } from './types';
 
 /** Edge id: "A>B" for a directed edge, "A-B" for an undirected one (in the order given). */
 export function edgeKey(from: NodeId, to: NodeId, directed: boolean): EdgeId {
@@ -40,6 +40,7 @@ export class GraphTracer {
   private badges: Readonly<Record<NodeId, string>> = {};
   private annotationLabel: string | null = null;
   private panels: readonly Panel[] = [];
+  private regions: readonly Region[] = [];
   private pulses = 0;
 
   constructor(graph: Graph, trackedStats: readonly string[]) {
@@ -100,6 +101,11 @@ export class GraphTracer {
     this.panels = this.panels.filter((p) => p.id !== id);
   }
 
+  /** The groups drawn as soft regions behind the nodes (BFS levels, SCCs, a growing tree); empty ones are dropped. */
+  setRegions(regions: readonly Region[]) {
+    this.regions = regions.filter((r) => r.members.length > 0);
+  }
+
   // ── structural edits (data-structure operations, Kosaraju's reversal) ──
 
   addNode(node: GraphNode) {
@@ -152,6 +158,7 @@ export class GraphTracer {
         annotationLabel: this.annotationLabel,
         pulse,
         panels: this.panels,
+        ...(this.regions.length > 0 && { regions: this.regions }),
       },
       line: opts.line ?? null,
       note: opts.note,

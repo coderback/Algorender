@@ -3,7 +3,7 @@ import { askAhead, GraphTracer, type GraphFrame } from '@/viz/graph/tracer';
 import type { GraphState, NodeId } from '@/viz/graph/types';
 import { sccExamples, sccRules } from './kosaraju';
 import { adjacency, graphInput, nodeIds, type GraphInput } from './model';
-import { EDGES, nodeChips, VISITED } from './shared';
+import { componentRegions, EDGES, nodeChips, VISITED } from './shared';
 
 const pseudocode = [
   'for each node u with no index: visit(u)',
@@ -57,6 +57,7 @@ function* trace(g: GraphInput): Generator<GraphFrame> {
       groups: sccs.map((members, i) => ({ id: `S${i + 1}`, label: `S${i + 1}`, members, mark: 'visited' as const })),
       empty: 'none yet',
     });
+    t.setRegions(componentRegions(sccs));
     for (const id of ids) t.annotate(id, index.has(id) ? `${index.get(id)}/${low.get(id)}` : null);
   };
 
