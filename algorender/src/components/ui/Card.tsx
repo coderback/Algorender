@@ -3,7 +3,7 @@ import { cx } from './cx';
 import type { ComponentProps, ElementType, ReactNode } from 'react';
 import { TRACK_CLASSES, trackColour, type TrackColour } from '@/data/tracks';
 
-type CardTag = 'section' | 'div' | 'article' | 'li' | 'aside';
+type CardTag = 'section' | 'div' | 'article' | 'li' | 'aside' | 'header';
 
 interface CardProps {
   as?: CardTag;

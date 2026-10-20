@@ -17,10 +17,13 @@ async function openLesson(page: Page, slug: string) {
   await expect(page.locator('[data-hydrated="true"]').first()).toBeVisible();
 }
 
-test('the concept map links lessons and visualisers', async ({ page }) => {
+test('the path and the lessons list lead into lessons', async ({ page }) => {
   await page.goto('/learn');
-  await expect(page.getByRole('heading', { level: 1, name: 'The concept map' })).toBeVisible();
-  await page.getByRole('link', { name: /Lesson/ }).first().click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Learn' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Section' }).getByRole('link', { name: 'Path' })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('link', { name: /^Lessons/ }).click();
+  await expect(page).toHaveURL(/\/learn\?tab=lessons$/);
+  await page.getByRole('link', { name: /Binary search: halve it/ }).click();
   await expect(page).toHaveURL(/\/learn\/[a-z-]+$/, { timeout: 30_000 }); // the first visit compiles the route in dev
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
@@ -41,10 +44,10 @@ test('the placement check lets a beginner off early and says where to start', as
   await expect(page.getByRole('heading', { name: 'Done: 0 of 3 right' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Big-O and growth/ })).toBeVisible();
 
-  await page.getByRole('link', { name: 'See the concept map' }).click();
-  await expect(page.getByRole('heading', { name: 'Your next steps' })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('link', { name: 'See the path' }).click();
+  await expect(page.getByRole('heading', { name: 'Placement and plan' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('link', { name: 'Retake the placement check' })).toBeVisible();
-  await expect(page.locator('#big-o [data-status="new"]')).toHaveText('Ready to start');
+  await expect(page.locator('#big-o [data-status="ready"]')).toContainText('Ready');
   await expectAccessible(page);
   expect(errors).toEqual([]);
 });
@@ -53,8 +56,10 @@ test('answering a lesson question puts its concept in progress on the map', asyn
   await openLesson(page, 'binary-search');
   await page.getByRole('group', { name: 'Question 1' }).getByRole('button').first().click();
   await page.goto('/learn');
-  await expect(page.locator('#binary-search [data-status="learning"]')).toHaveText('Learning', { timeout: 30_000 });
-  await expect(page.getByText('Pick up where you left off')).toBeVisible();
+  await expect(page.locator('#binary-search [data-status="learning"]')).toContainText('Learning', { timeout: 30_000 });
+  // The lesson in progress is the one selected on the path.
+  await expect(page.getByRole('heading', { name: 'Binary search', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Resume lesson' })).toHaveAttribute('href', '/learn/binary-search');
 });
 
 for (const slug of lessonPaths) {
@@ -81,7 +86,7 @@ test('keyboard shortcuts only drive the visualiser being used', async ({ page })
 
 test('the prediction challenge counts answers towards its goal', async ({ page }) => {
   await openLesson(page, 'binary-search');
-  const challenge = page.locator('.space-y-3', { has: page.getByText(/Make 4 predictions/) }).first();
+  const challenge = page.locator('[data-challenge]').first();
   const forward = challenge.getByRole('button', { name: /Step forward|Answer the question first/ });
   const question = challenge.getByRole('group', { name: 'Predict the next step' });
   for (let answered = 0; answered < 4; ) {
@@ -106,8 +111,8 @@ test('a quiz scores answers and completion is remembered', async ({ page }) => {
   for (let i = 0; i < count; i++) await questions.nth(i).getByRole('button').first().click();
   await expect(page.getByText(new RegExp(`\\d of ${count} right`))).toBeVisible();
 
-  await page.getByRole('button', { name: 'Mark as complete' }).click();
-  await expect(page.getByRole('button', { name: 'Completed' })).toBeVisible();
-  await page.goto('/learn');
-  await expect(page.locator('#two-pointers').getByText('Done')).toBeVisible();
+  // Finishing marks it complete and moves on to the next lesson, when there is one.
+  await page.getByRole('button', { name: /^Finish/ }).click();
+  await page.goto('/learn?tab=lessons');
+  await expect(page.getByRole('link', { name: /Two pointers/ }).getByRole('img', { name: 'Done' })).toBeVisible({ timeout: 30_000 });
 });

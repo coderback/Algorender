@@ -35,6 +35,7 @@ function todayData(): TodayData {
               minutes: entry?.minutes ?? 20,
               ...(entry?.lesson && { lesson: entry.lesson }),
               visualisers: entry?.visualisers.length ?? 0,
+              links: c.links,
               problems: (entry?.problems ?? []).map((p) => ({ ...p, pattern: pattern.get(p.slug) ?? '' })),
             },
           ];

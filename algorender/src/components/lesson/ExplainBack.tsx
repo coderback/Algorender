@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useId, useState, useSyncExternalStore } from 'react';
-import { FiAlertTriangle, FiCheckCircle, FiCircle, FiEdit3, FiLoader, FiXCircle } from 'react-icons/fi';
+import { FiAlertTriangle, FiEdit3, FiLoader, FiZap } from 'react-icons/fi';
+import { Button } from '@/components/ui/Button';
+import { cx } from '@/components/ui/cx';
 import { useProgressSnapshot } from '@/progress/hooks';
 import { mistakeAnchor } from './anchors';
 import { useLessonSlug } from './LessonContext';
@@ -36,9 +38,9 @@ function saveDraft(key: string, text: string) {
 }
 
 const VERDICT = {
-  yes: { label: 'Covered', icon: FiCheckCircle, className: 'text-good-ink' },
-  partly: { label: 'Partly', icon: FiCircle, className: 'text-warn-ink' },
-  no: { label: 'Missing', icon: FiXCircle, className: 'text-bad-ink' },
+  yes: { label: 'Covered', chip: 'bg-good-soft text-good-ink' },
+  partly: { label: 'Partly', chip: 'bg-warn-soft text-warn-ink' },
+  no: { label: 'Missing', chip: 'bg-bad-soft text-bad-ink' },
 } as const;
 
 /**
@@ -56,8 +58,8 @@ export function ExplainBack(props: Props) {
   return hydrated ? (
     <Explainer {...props} />
   ) : (
-    <div className="not-prose rounded-xl border border-line bg-surface p-5">
-      <p className="font-medium text-ink">{props.prompt}</p>
+    <div className="not-prose rounded-[28px] bg-track-lilac p-4 sm:p-5">
+      <p className="rounded-tile bg-surface p-5 text-[15px] font-semibold text-ink">{props.prompt}</p>
     </div>
   );
 }
@@ -136,93 +138,104 @@ function Explainer({ id, prompt, rubric, example }: Props) {
   };
 
   return (
-    <div className="not-prose space-y-4 rounded-xl border border-line bg-surface p-5">
-      <div>
-        {phase === 'write' ? (
-          <label htmlFor={fieldId} className="block font-medium text-ink">
-            {prompt}
-          </label>
-        ) : (
-          <p className="font-medium text-ink">{prompt}</p>
-        )}
-        <p className="mt-1 text-sm text-ink-soft">
-          Explain it in your own words, as if to a friend who missed the lesson. No peeking: writing it from memory is what makes it stick.
+    <div className="not-prose flex flex-col gap-3 rounded-[28px] bg-track-lilac p-4 text-track-lilac-ink sm:p-5">
+      {canScore && phase === 'write' && (
+        <p className="self-end px-1 text-xs font-semibold">
+          Uses 1 of {status?.turnsLeft} tutor {status?.turnsLeft === 1 ? 'turn' : 'turns'} left today
         </p>
-        {last?.kind === 'explanation.scored' && phase === 'write' && (
-          <p className="mt-1 text-xs text-ink-muted">
-            Last time: {last.data.covered} of {last.data.total} points covered{last.data.partly ? `, ${last.data.partly} partly` : ''}.
-          </p>
+      )}
+      <div className="flex flex-col gap-4 rounded-tile bg-surface p-5 text-ink">
+        <div className="flex flex-col gap-1">
+          {phase === 'write' ? (
+            <label htmlFor={fieldId} className="text-[15px] font-semibold">
+              {prompt}
+            </label>
+          ) : (
+            <p className="text-[15px] font-semibold">{prompt}</p>
+          )}
+          <p className="text-[13px] text-ink-muted">Explain it in your own words, as if to a friend who missed the lesson. No peeking: writing it from memory is what makes it stick.</p>
+          {last?.kind === 'explanation.scored' && phase === 'write' && (
+            <p className="text-xs text-ink-muted">
+              Last time: {last.data.covered} of {last.data.total} points covered{last.data.partly ? `, ${last.data.partly} partly` : ''}.
+            </p>
+          )}
+        </div>
+
+        {phase === 'write' ? (
+          <>
+            <textarea
+              id={fieldId}
+              value={text}
+              onChange={(e) => edit(e.target.value)}
+              rows={5}
+              maxLength={2000}
+              className="min-h-32 w-full rounded-[16px] bg-sunken p-4 text-[15px] leading-relaxed text-ink placeholder:text-ink-muted"
+              placeholder="Start with what it does, then why it works…"
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              {canScore && (
+                <Button onClick={score} disabled={!enough || busy} icon={busy ? <FiLoader aria-hidden className="animate-spin" /> : undefined}>
+                  Score my explanation
+                </Button>
+              )}
+              {canScore ? (
+                <button
+                  type="button"
+                  onClick={() => setPhase('self')}
+                  disabled={!enough || busy}
+                  className="rounded-full px-1 py-1 text-sm font-semibold text-accent-ink underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Check it myself instead
+                </button>
+              ) : (
+                <Button onClick={() => setPhase('self')} disabled={!enough || busy}>
+                  Check it against the key points
+                </Button>
+              )}
+              <span className="ml-auto text-xs text-ink-muted" aria-live="polite">
+                {enough ? `${count} words` : `${count} of at least ${MIN_WORDS} words`} · draft saved on this device
+              </span>
+            </div>
+            {status?.enabled && !status.signedIn && (
+              <p className="text-xs text-ink-muted">
+                <Link href={`/account?next=${encodeURIComponent(`/learn/${lesson}`)}`} className="font-semibold text-accent-ink underline underline-offset-2">
+                  Sign in
+                </Link>{' '}
+                to have your explanation scored point by point.
+              </p>
+            )}
+            {canScore && <p className="text-xs text-ink-muted">Your text isn’t stored.</p>}
+            {error && (
+              <p role="alert" className="rounded-well bg-bad-soft px-4 py-3 text-sm text-bad-title">
+                {error}
+              </p>
+            )}
+          </>
+        ) : (
+          <blockquote className="rounded-[16px] bg-sunken px-4 py-3 text-sm whitespace-pre-wrap text-ink-soft">{text}</blockquote>
         )}
       </div>
 
-      {phase === 'write' ? (
-        <>
-          <textarea
-            id={fieldId}
-            value={text}
-            onChange={(e) => edit(e.target.value)}
-            rows={5}
-            maxLength={2000}
-            className="w-full rounded-lg border border-line-strong bg-page p-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
-            placeholder="Start with what it does, then why it works…"
-          />
-          <div className="flex flex-wrap items-center gap-3">
-            {canScore && (
-              <button
-                type="button"
-                onClick={score}
-                disabled={!enough || busy}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busy && <FiLoader aria-hidden className="animate-spin" />} Score my explanation
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setPhase('self')}
-              disabled={!enough || busy}
-              className={
-                canScore
-                  ? 'text-sm text-accent-ink underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50'
-                  : 'rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50'
-              }
-            >
-              {canScore ? 'Check it myself instead' : 'Check it against the key points'}
-            </button>
-            <span className="text-xs text-ink-muted" aria-live="polite">
-              {enough ? `${count} words` : `${count} of at least ${MIN_WORDS} words`}
-            </span>
-          </div>
-          {status?.enabled && !status.signedIn && (
-            <p className="text-xs text-ink-muted">
-              <Link href={`/account?next=${encodeURIComponent(`/learn/${lesson}`)}`} className="text-accent-ink underline underline-offset-2">
-                Sign in
-              </Link>{' '}
-              to have your explanation scored point by point.
-            </p>
-          )}
-          {canScore && <p className="text-xs text-ink-muted">Scoring uses one of your {status?.turnsLeft} tutor turns left today. Your text isn’t stored.</p>}
-          {error && (
-            <p role="alert" className="text-sm text-bad-ink">
-              {error}
-            </p>
-          )}
-        </>
-      ) : (
-        <blockquote className="rounded-lg border-l-4 border-line bg-subtle px-4 py-2 text-sm whitespace-pre-wrap text-ink-soft">{text}</blockquote>
-      )}
-
       {phase === 'self' && (
-        <div className="space-y-3">
-          <p className="text-sm text-ink">For each key point, did your explanation say it?</p>
-          <ol className="space-y-2">
+        <div className="flex flex-col gap-3 rounded-tile bg-surface p-5 text-ink">
+          <div>
+            <p className="text-base font-semibold">Checking it yourself</p>
+            <p className="text-sm text-ink-muted">For each key point, did your explanation say it?</p>
+          </div>
+          <ol className="flex flex-col gap-2">
             {rubric.map((point, i) => (
               <li key={i}>
-                <fieldset className="rounded-lg border border-line p-3">
-                  <legend className="px-1 text-sm text-ink">{point}</legend>
-                  <div className="flex flex-wrap gap-3 pt-1">
+                <fieldset className="rounded-[18px] bg-sunken p-3.5">
+                  <legend className="float-left mb-2 w-full text-sm font-medium">{point}</legend>
+                  <div className="clear-both flex flex-wrap gap-1.5">
                     {(['yes', 'partly', 'no'] as const).map((v) => (
-                      <label key={v} className="inline-flex items-center gap-1.5 text-sm text-ink-soft">
+                      <label
+                        key={v}
+                        className={cx(
+                          'inline-flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold',
+                          self[i] === v ? 'bg-surface text-ink shadow-segment' : 'text-ink-soft hover:text-ink',
+                        )}
+                      >
                         <input
                           type="radio"
                           name={`${fieldId}-point-${i}`}
@@ -239,16 +252,11 @@ function Explainer({ id, prompt, rubric, example }: Props) {
             ))}
           </ol>
           <Example example={example} open />
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={saveSelf}
-              disabled={self.some((v) => v === null)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
-            >
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={saveSelf} disabled={self.some((v) => v === null)}>
               Save my score
-            </button>
-            <button type="button" onClick={revise} className="text-sm text-accent-ink underline-offset-2 hover:underline">
+            </Button>
+            <button type="button" onClick={revise} className="rounded-full px-1 py-1 text-sm font-semibold text-accent-ink underline underline-offset-4">
               Back to my explanation
             </button>
           </div>
@@ -256,36 +264,38 @@ function Explainer({ id, prompt, rubric, example }: Props) {
       )}
 
       {phase === 'scored' && result && (
-        <div className="space-y-3" aria-live="polite">
-          <p className="font-medium text-ink">
+        <div className="flex flex-col gap-3 rounded-tile bg-surface p-5 text-ink" aria-live="polite">
+          <p className="text-base font-semibold">
             {result.points.filter((p) => p.verdict === 'yes').length} of {rubric.length} key points covered
             {result.points.some((p) => p.verdict === 'partly') && `, ${result.points.filter((p) => p.verdict === 'partly').length} partly`}.
-            <span className="ml-2 text-xs font-normal text-ink-muted">{result.by === 'model' ? 'Scored by the tutor model' : 'Scored by you'}</span>
+            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-0.5 align-middle text-xs font-semibold text-accent-ink">
+              {result.by === 'model' && <FiZap aria-hidden className="size-3" />}
+              {result.by === 'model' ? 'Scored by the tutor model' : 'Scored by you'}
+            </span>
           </p>
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {rubric.map((point, i) => {
               const p = result.points[i];
               const v = VERDICT[p.verdict];
               return (
-                <li key={i} className="flex gap-2 text-sm">
-                  <v.icon aria-hidden className={`mt-0.5 shrink-0 ${v.className}`} />
-                  <span>
-                    <span className={`font-medium ${v.className}`}>{v.label}: </span>
-                    <span className="text-ink">{point}</span>
-                    {p.evidence && <span className="block text-ink-muted">You wrote: “{p.evidence}”</span>}
-                    {p.feedback && <span className="block text-ink-soft">{p.feedback}</span>}
+                <li key={i} className="flex items-start gap-3 rounded-[18px] bg-sunken px-3.5 py-3 text-sm">
+                  <span className={cx('shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold', v.chip)}>{v.label}</span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-semibold">{point}</span>
+                    {p.evidence && <span className="text-ink-muted">You wrote: “{p.evidence}”</span>}
+                    {p.feedback && <span className="text-ink-soft">{p.feedback}</span>}
                   </span>
                 </li>
               );
             })}
           </ul>
-          {result.feedback && <p className="rounded-lg bg-subtle px-4 py-3 text-sm text-ink">{result.feedback}</p>}
+          {result.feedback && <p className="rounded-[16px] bg-sunken px-4 py-3 text-sm">{result.feedback}</p>}
           {result.mistake && (
-            <p className="flex gap-2 rounded-lg border border-warn-line bg-warn-soft px-3 py-2 text-sm text-ink">
+            <p className="flex gap-2 rounded-[18px] bg-warn-soft px-4 py-3 text-sm text-warn-title">
               <FiAlertTriangle aria-hidden className="mt-0.5 shrink-0 text-warn-ink" />
               <span>
-                Your explanation says something the lesson lists as a common mistake:{' '}
-                <a href={`#${mistakeAnchor(result.mistake.id)}`} className="font-medium text-warn-ink underline underline-offset-2">
+                <strong>Your explanation says something the lesson lists as a common mistake:</strong>{' '}
+                <a href={`#${mistakeAnchor(result.mistake.id)}`} className="font-semibold underline underline-offset-2">
                   {result.mistake.title}
                 </a>
                 . It will come back in your daily review.
@@ -293,9 +303,9 @@ function Explainer({ id, prompt, rubric, example }: Props) {
             </p>
           )}
           {result.by === 'model' && <Example example={example} />}
-          <button type="button" onClick={revise} className="inline-flex items-center gap-1.5 text-sm text-accent-ink underline-offset-2 hover:underline">
-            <FiEdit3 aria-hidden /> Revise it and check again
-          </button>
+          <Button onClick={revise} icon={<FiEdit3 aria-hidden />} className="self-start">
+            Revise it and check again
+          </Button>
         </div>
       )}
     </div>
@@ -304,8 +314,8 @@ function Explainer({ id, prompt, rubric, example }: Props) {
 
 function Example({ example, open = false }: { example: string; open?: boolean }) {
   return (
-    <details open={open} className="rounded-lg border border-line-soft bg-subtle px-4 py-2 text-sm">
-      <summary className="cursor-pointer font-medium text-ink">An example answer</summary>
+    <details open={open} className="rounded-[16px] bg-sunken px-4 py-3 text-sm">
+      <summary className="cursor-pointer font-semibold text-accent-ink">An example answer</summary>
       <p className="mt-2 text-ink-soft">{example}</p>
     </details>
   );

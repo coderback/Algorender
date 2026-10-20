@@ -31,6 +31,8 @@ export type TodayConcept = {
   minutes: number;
   lesson?: { slug: string; title: string; minutes: number };
   visualisers: number;
+  /** Other pages that teach it (Big-O's growth chart, say). */
+  links: { href: string; label: string }[];
   /** Easiest first. */
   problems: {
     slug: string;
@@ -83,8 +85,9 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
   // Continue: the lesson in progress, else the next step with a lesson.
   const inProgress = lessonInProgress(events, new Set(lessons.completed));
   const resume = inProgress ? byId.get(graph.lessons[inProgress]) : undefined;
-  const upNext = resume ?? steps.find((s) => s.concept.lesson)?.concept ?? steps[0]?.concept;
   const mode: ContinueMode = resume ? 'resume' : events.length === 0 ? 'first' : 'next';
+  // A new learner starts at the top of the map (Big-O's visualiser), lesson or not.
+  const upNext = resume ?? (mode === 'first' ? steps[0]?.concept : (steps.find((s) => s.concept.lesson)?.concept ?? steps[0]?.concept));
 
   // This week's plan: what is left in the current window.
   const thisWeek = plan?.weeks.find((w) => w.index === plan.week) ?? null;
@@ -226,7 +229,7 @@ function ContinueCard({ concept, info, mode }: { concept: MasteryConcept; info: 
         {/* TODO(redesign): the board's step pills (Hook ✓ … Predict) and "about 8 minutes left" need lesson progress step by step, which isn't recorded yet. */}
         {info && <p className="max-w-xl text-[15px] leading-relaxed">{info.summary}</p>}
         <div className="mt-1 flex flex-wrap items-center gap-3">
-          <ButtonLink href={conceptHref(concept)} size="l" trailing={<FiArrowRight aria-hidden />}>
+          <ButtonLink href={!lesson && !concept.visualisers.length && info?.links[0] ? info.links[0].href : conceptHref(concept)} size="l" trailing={<FiArrowRight aria-hidden />}>
             {action}
           </ButtonLink>
           {lesson && <span className="text-sm">About {lesson.minutes} minutes</span>}

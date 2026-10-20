@@ -10,7 +10,9 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
 test('a new learner gets a first lesson and nothing to review', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Start your first lesson' })).toBeVisible();
+  // The top of the map: Big-O, which starts in its visualiser.
+  await expect(page.getByRole('heading', { name: 'Big-O and growth' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open the visualiser' })).toHaveAttribute('href', '/compare');
   await expect(page.getByText('Nothing due, nice.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Set a goal' })).toBeVisible();
   // Mastery and mistakes wait until there is something to show.

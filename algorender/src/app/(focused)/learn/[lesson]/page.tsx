@@ -1,13 +1,16 @@
-import { FocusBar } from '@/components/shell/PhoneHeader';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { FiArrowLeft, FiArrowRight, FiClock } from 'react-icons/fi';
-import { LessonComplete } from '@/components/lesson/Completion';
+import { LessonChrome } from '@/components/lesson/LessonChrome';
+import { LessonFinish } from '@/components/lesson/Completion';
 import { LessonProvider } from '@/components/lesson/LessonContext';
+import { TrackCard, trackTitle } from '@/components/ui/Card';
+import { cx } from '@/components/ui/cx';
+import { TRACK_CLASSES, trackColour } from '@/data/tracks';
 import { getConcept, loadConcepts, unlockedBy } from '@/content/concepts';
 import { getLesson, lessons } from '@/content/lessons';
 import { lessonMisconceptions } from '@/content/lessons/assessment';
+import { lessonSections } from '@/content/lessons/sections';
 
 export const dynamicParams = false;
 
@@ -22,6 +25,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return lesson ? { title: `${lesson.title} | Algorender`, description: lesson.summary } : {};
 }
 
+/** Bars of the track's colour across the hero: decoration only. */
+const MOTIF = [
+  [44, 46],
+  [44, 22, 22],
+  [44, 18, 10],
+];
+
 export default async function LessonPage({ params }: Props) {
   const { lesson: slug } = await params;
   const lesson = getLesson(slug);
@@ -31,75 +41,47 @@ export default async function LessonPage({ params }: Props) {
   const { default: Body } = await import(`@/content/lessons/${slug}.mdx`);
   const track = loadConcepts().tracks.find((t) => t.id === concept.track);
   const prereqs = concept.prereqs.map((p) => getConcept(p)!);
-  const next = unlockedBy(concept.id).filter((c) => !c.planned);
-  const href = (c: { id: string; lesson?: string }) => (c.lesson ? `/learn/${c.lesson}` : `/learn#${c.id}`);
+  const href = (c: { id: string; lesson?: string; visualisers?: string[] }) => (c.lesson ? `/learn/${c.lesson}` : c.visualisers?.[0] ? `/visualisers/${c.visualisers[0]}` : `/learn#${c.id}`);
+  // The next lesson: the first concept this one unlocks that has a lesson.
+  const nextConcept = unlockedBy(concept.id).find((c) => !c.planned && c.lesson);
+  const nextLesson = nextConcept?.lesson ? getLesson(nextConcept.lesson) : undefined;
 
   return (
-    <>
-      {/* TODO(redesign): this page gets its own focus header in its phase. */}
-      <FocusBar />
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <nav aria-label="Breadcrumb" className="mb-4 text-sm">
-          <Link href="/learn" className="inline-flex items-center gap-1.5 text-accent-ink hover:underline">
-            <FiArrowLeft aria-hidden /> Concept map
-          </Link>
-          {track && <span className="text-ink-muted"> / {track.title}</span>}
-        </nav>
-
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-ink sm:text-4xl">{lesson.title}</h1>
-          <p className="mt-2 text-lg text-ink-soft">{lesson.summary}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <FiClock aria-hidden /> About {lesson.minutes} minutes
-            </span>
-            {prereqs.length > 0 && (
-              <span>
-                Builds on{' '}
-                {prereqs.map((p, i) => (
-                  <span key={p.id}>
-                    {i > 0 && ', '}
-                    <Link href={href(p)} className="text-ink-soft underline decoration-line-strong underline-offset-2 hover:text-accent-ink">
-                      {p.title}
-                    </Link>
-                  </span>
-                ))}
-              </span>
-            )}
+    <LessonChrome trackTitle={track?.title ?? ''} title={concept.title} minutes={lesson.minutes} sections={lessonSections(slug)}>
+      <TrackCard track={concept.track} as="div" className="gap-5 rounded-[36px] p-7 sm:p-9">
+        <p className="text-eyebrow uppercase">
+          {track?.title} · {lesson.minutes} min
+        </p>
+        <h1 className={cx('font-display text-[clamp(34px,4.6vw,56px)] leading-[1.02] font-bold tracking-[-0.03em]', trackTitle(concept.track))}>{lesson.title}</h1>
+        <p className="max-w-2xl text-[16px] leading-relaxed">{lesson.summary}</p>
+        {prereqs.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-[13px]">
+            <span className="font-semibold">Builds on</span>
+            {prereqs.map((p) => (
+              <Link key={p.id} href={href(p)} className="rounded-full bg-chip-on-track px-3 py-1 font-semibold hover:underline">
+                {p.title}
+              </Link>
+            ))}
           </div>
-        </header>
-
-        <LessonProvider slug={slug} mistakes={Object.fromEntries(lessonMisconceptions().filter((m) => m.lesson === slug).map((m) => [m.id, m.title]))}>
-          <article className="space-y-10">
-            <Body />
-          </article>
-        </LessonProvider>
-
-        <footer className="mt-12 space-y-6 border-t border-line pt-8">
-          <LessonComplete slug={slug} />
-          {next.length > 0 && (
-            <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-muted">What this unlocks</h2>
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {next.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={href(c)}
-                      className="flex h-full items-start justify-between gap-3 rounded-xl border border-line-soft bg-surface p-4 shadow-xs hover:border-accent-line"
-                    >
-                      <span>
-                        <span className="block font-medium text-ink">{c.title}</span>
-                        <span className="text-sm text-ink-soft">{c.summary}</span>
-                      </span>
-                      <FiArrowRight aria-hidden className="mt-1 shrink-0 text-accent-ink" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+        )}
+        <div aria-hidden className="mt-1 flex flex-col gap-2.5">
+          {MOTIF.map((row, r) => (
+            <div key={r} className="flex gap-1.5">
+              {row.map((w, i) => (
+                <span key={i} className={cx('h-2 rounded-full', i === 0 ? 'bg-chip-on-track' : TRACK_CLASSES[trackColour(concept.track)].fill, i === 1 && 'opacity-60')} style={{ width: `${w}%` }} />
+              ))}
             </div>
-          )}
-        </footer>
-      </main>
-    </>
+          ))}
+        </div>
+      </TrackCard>
+
+      <LessonProvider slug={slug} mistakes={Object.fromEntries(lessonMisconceptions().filter((m) => m.lesson === slug).map((m) => [m.id, m.title]))}>
+        <article className="flex flex-col gap-14">
+          <Body />
+        </article>
+      </LessonProvider>
+
+      <LessonFinish slug={slug} next={nextLesson && { href: `/learn/${nextLesson.slug}`, title: nextConcept!.title }} />
+    </LessonChrome>
   );
 }

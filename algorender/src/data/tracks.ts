@@ -52,17 +52,22 @@ export interface TrackClasses {
   title: string;
   /** The track's mid-tone, for a bar or dot on a neutral or pastel surface. */
   fill: string;
+  /** A solid fill in the track's ink (a mastered path node), with onSolid text on it. */
+  solid: string;
+  onSolid: string;
+  /** A border in the track's ink (a practised path node, a met connector). */
+  edge: string;
 }
 
 // Written out in full so Tailwind sees every class.
 export const TRACK_CLASSES: Record<TrackColour, TrackClasses> = {
-  lilac: { bg: 'bg-track-lilac', ink: 'text-track-lilac-ink', title: 'text-track-lilac-title', fill: 'bg-track-lilac-bar' },
-  peach: { bg: 'bg-track-peach', ink: 'text-track-peach-ink', title: 'text-track-peach-title', fill: 'bg-track-peach-bar' },
-  mint: { bg: 'bg-track-mint', ink: 'text-track-mint-ink', title: 'text-track-mint-title', fill: 'bg-track-mint-bar' },
-  sky: { bg: 'bg-track-sky', ink: 'text-track-sky-ink', title: 'text-track-sky-title', fill: 'bg-track-sky-bar' },
-  butter: { bg: 'bg-track-butter', ink: 'text-track-butter-ink', title: 'text-track-butter-title', fill: 'bg-track-butter-bar' },
-  rose: { bg: 'bg-track-rose', ink: 'text-track-rose-ink', title: 'text-track-rose-title', fill: 'bg-track-rose-bar' },
-  teal: { bg: 'bg-track-teal', ink: 'text-track-teal-ink', title: 'text-track-teal-title', fill: 'bg-track-teal-bar' },
+  lilac: { bg: 'bg-track-lilac', ink: 'text-track-lilac-ink', title: 'text-track-lilac-title', fill: 'bg-track-lilac-bar', solid: 'bg-track-lilac-ink', onSolid: 'text-track-lilac', edge: 'border-track-lilac-ink' },
+  peach: { bg: 'bg-track-peach', ink: 'text-track-peach-ink', title: 'text-track-peach-title', fill: 'bg-track-peach-bar', solid: 'bg-track-peach-ink', onSolid: 'text-track-peach', edge: 'border-track-peach-ink' },
+  mint: { bg: 'bg-track-mint', ink: 'text-track-mint-ink', title: 'text-track-mint-title', fill: 'bg-track-mint-bar', solid: 'bg-track-mint-ink', onSolid: 'text-track-mint', edge: 'border-track-mint-ink' },
+  sky: { bg: 'bg-track-sky', ink: 'text-track-sky-ink', title: 'text-track-sky-title', fill: 'bg-track-sky-bar', solid: 'bg-track-sky-ink', onSolid: 'text-track-sky', edge: 'border-track-sky-ink' },
+  butter: { bg: 'bg-track-butter', ink: 'text-track-butter-ink', title: 'text-track-butter-title', fill: 'bg-track-butter-bar', solid: 'bg-track-butter-ink', onSolid: 'text-track-butter', edge: 'border-track-butter-ink' },
+  rose: { bg: 'bg-track-rose', ink: 'text-track-rose-ink', title: 'text-track-rose-title', fill: 'bg-track-rose-bar', solid: 'bg-track-rose-ink', onSolid: 'text-track-rose', edge: 'border-track-rose-ink' },
+  teal: { bg: 'bg-track-teal', ink: 'text-track-teal-ink', title: 'text-track-teal-title', fill: 'bg-track-teal-bar', solid: 'bg-track-teal-ink', onSolid: 'text-track-teal', edge: 'border-track-teal-ink' },
 };
 
 /** A track's colour; unknown ids fall back to lilac. */

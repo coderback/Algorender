@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* Automatic source detection skips folders named in parentheses (Next's route
+   groups: (shell), (detail), (focused)), so the app folder is listed by hand. */
+@source './';
+
 /* Dark mode follows the OS unless the reader picks a theme: the toggle (or an
    embed's ?theme=) stamps data-theme on <html>, which wins in both directions. */
 @custom-variant dark {
@@ -66,6 +70,8 @@
   --color-feature: #17161c;
   --color-on-feature: #ffffff;
   --color-feature-muted: #c9c7d1;
+  /* Violet on a feature card (eyebrows, a progress ring): light in both themes. */
+  --color-feature-accent: #bdb2ff;
 
   /* The left rail and the phone tab bar. */
   --color-rail: #17161c;

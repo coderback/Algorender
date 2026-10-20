@@ -36,6 +36,11 @@ const ROUTES: { name: string; path: string; seeded?: boolean }[] = [
   // Phase 3: Today and the review with a week of progress (the rows above show a new learner).
   { name: 'today-seeded', path: '/', seeded: true },
   { name: 'review-seeded', path: '/review', seeded: true },
+  // Phase 4: Learn with progress (path, lessons, plan) and a lesson part-way through.
+  { name: 'learn-seeded', path: '/learn', seeded: true },
+  { name: 'lessons', path: '/learn?tab=lessons', seeded: true },
+  { name: 'plan-seeded', path: '/plan', seeded: true },
+  { name: 'lesson-seeded', path: '/learn/binary-search', seeded: true },
 ];
 
 const VIEWPORTS = [
