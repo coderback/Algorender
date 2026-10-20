@@ -153,11 +153,18 @@ export function TraceStage<S>({
               {toolbar && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">{toolbar}</div>}
             </div>
           )}
+          {/* The stage well (V0). TODO(redesign): the board puts a caption ("Graph · 6 nodes · weighted, undirected") and view tools (zoom, fit, full screen, pan) above it; views don't describe themselves in words or zoom yet. */}
           <div className="rounded-tile bg-subtle px-3 pt-4 pb-3 sm:px-6" style={{ '--tween': `${tweenMs}ms` } as CSSProperties}>
             <ViewEditContext value={edit ?? null}>
               <View state={frame.state} />
             </ViewEditContext>
           </div>
+          {/* Banners sit under the stage, in feedback colours, with the reason. */}
+          {trace.truncated && (
+            <p className="rounded-well bg-warn-soft px-4 py-2.5 text-[13px] font-semibold text-warn-title">
+              Stopped at {trace.frames.length.toLocaleString()} steps. Try a smaller input to see it all.
+            </p>
+          )}
           <Narration note={frame.note} live={!player.playing} step={player.index + 1} />
           {question && (
             <PredictCard
@@ -170,7 +177,6 @@ export function TraceStage<S>({
             />
           )}
           <PlayerControls player={player} share={share} hint={hint ?? (predicting ? '← → step · Space play · Home / End jump · number keys answer' : undefined)} />
-          {trace.truncated && <p className="px-1 text-sm text-warn-ink">This run was cut short because it produced too many steps. Try a smaller input.</p>}
           {panels && sheet && wide && (
             <button
               type="button"
