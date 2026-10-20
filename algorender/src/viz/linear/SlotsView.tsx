@@ -125,7 +125,7 @@ function WrapArrow({ n }: { n: number }) {
   const inset = `calc(${50 / n}% - 1px)`;
   return (
     <div className="relative h-6" aria-hidden>
-      <div className="absolute top-0 h-3.5 rounded-b-xl border-x-2 border-b-2 border-dashed border-line-strong" style={{ left: inset, right: inset }} />
+      <div className="absolute top-0 h-3.5 rounded-b-xl border-x-2 border-b-2 border-dashed border-edge" style={{ left: inset, right: inset }} />
       <span className="absolute -top-2 -translate-x-1/2 text-[10px] leading-none text-ink-muted" style={{ left: `${50 / n}%` }}>
         ▲
       </span>
@@ -146,7 +146,7 @@ function StackColumn({ row, state }: { row: SlotRow; state: SlotsState }) {
         {row.slots.map((id, i) => (
           <div key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)_4rem] items-center gap-2">
             <span className="text-right font-mono text-[11px] text-ink-muted">{i}</span>
-            <div className={cx('border-x-2 border-line-strong px-1.5 py-[3px]', i === 0 && 'rounded-b-[22px] border-b-2 pb-1.5')}>
+            <div className={cx('border-x-2 border-edge px-1.5 py-[3px]', i === 0 && 'rounded-b-[22px] border-b-2 pb-1.5')}>
               <Slot id={id} stale={null} state={state} className="h-10" />
             </div>
             <div className="flex flex-col items-start gap-0.5">

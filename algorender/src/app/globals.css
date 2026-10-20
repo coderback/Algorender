@@ -229,8 +229,13 @@
      amber on top of orange (ΔE 9 normal, 3.5 deutan). Brightness is the lesser
      cost, and the glyphs carry the meaning either way. */
   --color-bar: #cfcadf;
-  /* Idle edges, node rings and arrows on the stage: line-strong in light, lifted in dark so they read on the dark well. */
-  --color-edge: #c9c6bd;
+  /* Idle edges, node rings, arrows and empty slots on the stage, at 3:1 or
+     more on the stage, cards and wells (WCAG 1.4.11): they carry the shape of
+     a graph or a tree. */
+  --color-edge: #8a8884;
+  /* The hairline round text fields, selects and text areas, also 3:1, so a
+     field reads as a field and not just a tinted patch. */
+  --color-field-line: #8a8884;
   --color-mark-compare: #0072b2;
   --color-mark-swap: #d55e00;
   --color-mark-write: #cc79a7;
@@ -356,7 +361,8 @@
       --shadow-float: 0 24px 48px -24px rgb(0 0 0 / 0.6);
 
       --color-bar: #4a4658;
-      --color-edge: #615e6d;
+      --color-edge: #737080;
+      --color-field-line: #737080;
 
       --color-mark-compare-ink: #5aa9e6;
       --color-mark-swap-ink: #f08a4b;
@@ -411,6 +417,13 @@
   html:not([data-home='today']) [data-home-view='today'],
   html[data-home='today'] [data-home-view='landing'] {
     display: none;
+  }
+
+  /* Fields get a hairline at 3:1 against any surface. An input inside a
+     wrapper that draws the field (a search pill) opts out with data-bare and
+     the wrapper carries the line. */
+  :where(input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'], [type='file'], [data-bare]), select, textarea) {
+    border: 1px solid var(--color-field-line);
   }
 
   /* Every interactive element shows the same keyboard focus ring. */

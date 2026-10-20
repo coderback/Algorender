@@ -190,7 +190,7 @@ export function TreeView({ state }: { state: TreeState }) {
     <div ref={ref} role="group" aria-label="Tree" className="flex flex-col gap-3">
       <p className="sr-only">{state.description}</p>
       {!hasTree && (
-        <p className="rounded-tile border-2 border-dashed border-line-strong py-10 text-center text-sm text-ink-muted" aria-hidden>
+        <p className="rounded-tile border-2 border-dashed border-edge py-10 text-center text-sm text-ink-muted" aria-hidden>
           {state.emptyLabel}
         </p>
       )}

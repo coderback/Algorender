@@ -16,10 +16,10 @@ export function InputsDemo() {
   const [shape, setShape] = useState<'random' | 'sorted' | 'reversed' | 'few'>('random');
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex h-12 items-center gap-2.5 rounded-full bg-sunken pr-2 pl-4 text-sm text-ink-muted">
+      <label className="flex h-12 items-center gap-2.5 rounded-full border border-field-line bg-sunken pr-2 pl-4 text-sm text-ink-muted">
         <FiSearch aria-hidden className="size-[18px] shrink-0" />
         <span className="sr-only">Search</span>
-        <input type="search" placeholder="Search visualisers, lessons, problems" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-ink-muted" />
+        <input data-bare type="search" placeholder="Search visualisers, lessons, problems" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-ink-muted" />
         <Kbd tone="surface">Ctrl K</Kbd>
       </label>
       <Segmented

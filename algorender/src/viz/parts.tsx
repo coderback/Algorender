@@ -18,7 +18,7 @@ export function Pointer({ children, className }: { children: ReactNode; classNam
 export const CELL_RADIUS = 'rounded-[10px]';
 
 /** An empty slot (a hole in an array, an unfilled table cell, a free queue slot). */
-export const EMPTY_SLOT = 'rounded-[10px] border-2 border-dashed border-line-strong';
+export const EMPTY_SLOT = 'rounded-[10px] border-2 border-dashed border-edge';
 
 /** A value that was ruled out: it stays in place on paper grey, its text dimmed. */
 export const RULED_OUT = 'bg-line-soft text-ink-muted';

@@ -105,10 +105,11 @@ export function Library({ tiles, graph, initial }: { tiles: readonly Tile[]; gra
               );
             })}
           </div>
-          <label className="order-first flex h-12 min-w-0 items-center sm:flex-1 sm:basis-60 gap-2.5 rounded-full bg-surface px-4 text-ink-muted sm:order-none sm:bg-sunken">
+          <label className="order-first flex h-12 min-w-0 items-center sm:flex-1 sm:basis-60 gap-2.5 rounded-full border border-field-line bg-surface px-4 text-ink-muted sm:order-none sm:bg-sunken">
             <FiSearch aria-hidden className="size-4 shrink-0" />
             <span className="sr-only">Filter visualisers</span>
             <input
+              data-bare
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

@@ -274,6 +274,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
       <div className="flex items-center gap-3 border-b border-line-soft px-5 py-4 sm:px-6">
         <FiSearch aria-hidden className="size-5 shrink-0 text-accent-ink" />
         <input
+          data-bare
           autoFocus
           role="combobox"
           aria-expanded="true"
