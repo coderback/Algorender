@@ -32,8 +32,6 @@ const TEXT_BY_LENGTH = [
  * viewBox is one unit per cell, so they line up with the square cells at any
  * width.
  */
-// TODO(redesign): V6 adds a "rule used" chip naming the recurrence ("C = C → diagonal + 1"), candidate values on
-// a Sudoku cell and attack shading on N-Queens; the state carries none of these, so they wait.
 export function GridView({ state }: { state: GridState }) {
   const id = useId();
   // Tables in one group (e.g. meetings and rooms over the same time axis) share the widest row-header column.

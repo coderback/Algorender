@@ -21,6 +21,7 @@ const pseudocode = [
 ];
 
 const LIST = 'taken';
+const RULE = 'rule';
 
 function* run({ items, capacity: W }: KnapsackInput): Generator<Frame<GridState>> {
   const n = items.length;
@@ -41,6 +42,10 @@ function* run({ items, capacity: W }: KnapsackInput): Generator<Frame<GridState>
 
   for (let c = 0; c <= W; c++) t.set([0, c], 0);
   for (let i = 1; i <= n; i++) t.set([i, 0], 0);
+  // The recurrence's cases as a "Rule used" chip row (V6); a cell's decision frame marks the one it used.
+  t.addList({ id: RULE, label: 'Rule used', empty: '' });
+  t.addItem(RULE, { id: 'heavy', text: 'too heavy → copy ↑' });
+  t.addItem(RULE, { id: 'best', text: 'else max(skip ↑, value + ↖)' });
   yield t.frame({ line: 0, note: 'With no items, or no capacity, nothing can be packed: row 0 and column 0 are 0.', vars: { n, W } });
 
   for (let i = 1; i <= n; i++) {
@@ -59,7 +64,7 @@ function* run({ items, capacity: W }: KnapsackInput): Generator<Frame<GridState>
           tooSmall === 1
             ? `${name} weighs ${w}, more than capacity 1, so it cannot fit there: copy K[${i - 1},1] from above.`
             : `${name} weighs ${w}, more than capacities 1–${tooSmall}, so it cannot fit in any of them: copy those cells from the row above.`,
-        marks: { key: run.map((c) => [i, c] as const), compare: [...run.map((c) => [i - 1, c] as const), { row: i }] },
+        marks: { key: [...run.map((c) => [i, c] as const), { list: RULE, item: 'heavy' }], compare: [...run.map((c) => [i - 1, c] as const), { row: i }] },
         arrows: run.map((c) => ({ from: [i - 1, c] as const, to: [i, c] as const, mark: 'compare' as const })),
         vars: { i, item: name, 'w[i]': w, 'v[i]': v },
       });
@@ -92,7 +97,7 @@ function* run({ items, capacity: W }: KnapsackInput): Generator<Frame<GridState>
           take > skip
             ? `Taking ${name} wins: ${v} + ${rest} = ${take} beats ${skip}, so K[${i},${c}] = ${take}.`
             : `Skipping ${name} is at least as good: ${skip} ≥ ${v} + ${rest} = ${take}, so K[${i},${c}] = ${skip}.`,
-        marks: { key: [here], compare: [from, { row: i }, { col: c }] },
+        marks: { key: [here, { list: RULE, item: 'best' }], compare: [from, { row: i }, { col: c }] },
         arrows: [{ from, to: here, mark: 'compare' }],
         vars: { ...vars, take, [`K[${i},${c}]`]: best },
       });

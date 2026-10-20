@@ -19,6 +19,7 @@ const pseudocode = [
 ];
 
 const LIST = 'lcs';
+const RULE = 'rule';
 const STEP_CHOICES = ['↖ Diagonally: the letter is shared', '↑ Up', '← Left'] as const;
 
 /** The traceback's next move from (i, j): diagonal on a match, else towards the larger neighbour (ties go up). */
@@ -37,6 +38,10 @@ function* run({ a, b }: StringPair): Generator<Frame<GridState>> {
     rows: [{ label: 'ε', sub: '0' }, ...[...a].map((ch, i) => ({ label: ch, sub: String(i + 1) }))],
     cols: [{ label: 'ε', sub: '0' }, ...[...b].map((ch, j) => ({ label: ch, sub: String(j + 1) }))],
   });
+  // The recurrence's cases as a "Rule used" chip row (V6); a cell's decision frame marks the one it used.
+  t.addList({ id: RULE, label: 'Rule used', empty: '' });
+  t.addItem(RULE, { id: 'match', text: 'letters match → diagonal + 1' });
+  t.addItem(RULE, { id: 'differ', text: 'else max(↑, ←)' });
   t.addList({ id: LIST, label: 'Common subsequence', empty: 'Read off during the traceback' });
   const L = (r: number, c: number) => t.num([r, c]);
 
@@ -91,7 +96,7 @@ function* run({ a, b }: StringPair): Generator<Frame<GridState>> {
         note: match
           ? `'${x}' = '${y}': extend the best common subsequence of the shorter prefixes by this letter, so L[${i},${j}] = L[${i - 1},${j - 1}] + 1 = ${value}.`
           : `'${x}' ≠ '${y}': drop one of them and keep the better result, max(↑ ${up}, ← ${left}) = ${value}.`,
-        marks: { key: [here], compare: [from, ...headers] },
+        marks: { key: [here, { list: RULE, item: match ? 'match' : 'differ' }], compare: [from, ...headers] },
         arrows: [{ from, to: here, mark: 'compare' }],
         vars: { ...vars, [`L[${i},${j}]`]: value },
       });
