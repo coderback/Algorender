@@ -40,7 +40,8 @@ const ARROW_HEAD = 9;
  * matrix sends it and the whole grid warps with it. Handles can be dragged, or
  * moved with the arrow keys, when the module takes dragged input.
  */
-// TODO(redesign): V8–V10 also fill contour bands as a lilac wash (lower is darker), dock a controls card beside
+// TODO(redesign): V10 adds attention arcs over the sentence, a layer/head picker and a time scrubber with thumbnails
+// for diffusion; none are in the states. V8–V10 also fill contour bands as a lilac wash (lower is darker), dock a controls card beside
 // the plane and draw optimiser paths as numbered steps; the states draw contour lines and keep controls in the toolbar.
 export function PlotView({ state }: { state: PlotState }) {
   const figures = state.parts.filter((p): p is PlanePart | ImagePart | NetworkPart => p.kind === 'plane' || p.kind === 'image' || p.kind === 'network');
@@ -672,23 +673,27 @@ function ImageView({ part }: { part: ImagePart }) {
   const { width: w, height: h } = part;
   const size = part.size ?? MAX_IMAGE_PX;
   // Pixel colours change between frames by CSS transition, so a picture sharpens smoothly as terms are added.
+  // A small image (a kernel, a matrix, a toy picture) draws its pixels as rounded cells with gaps (V10); a big one stays a crisp raster.
+  const cells = w <= 16 && h <= 16;
+  const gap = cells ? 0.08 : 0;
   return (
     <figure className={`m-0 min-w-0 ${part.size ? '' : 'basis-40'}`} style={{ width: size, maxWidth: '100%' }} aria-hidden>
       <svg viewBox={`-0.1 -0.1 ${w + 0.2} ${h + 0.2}`} className="block h-auto w-full overflow-visible">
-        <g shapeRendering="crispEdges">
+        <g shapeRendering={cells ? undefined : 'crispEdges'}>
           {part.pixels.map((v, k) => (
             <rect
               key={k}
-              x={k % w}
-              y={Math.floor(k / w)}
-              width={1.02}
-              height={1.02}
+              x={(k % w) + gap / 2}
+              y={Math.floor(k / w) + gap / 2}
+              width={cells ? 1 - gap : 1.02}
+              height={cells ? 1 - gap : 1.02}
+              rx={cells ? 0.16 : 0}
               className="transition-[fill]"
               style={{ fill: pixelColour(v, part.scale), transitionDuration: 'var(--tween, 300ms)' }}
             />
           ))}
         </g>
-        <rect x={0} y={0} width={w} height={h} fill="none" className="stroke-line" strokeWidth={0.04} />
+        {!cells && <rect x={0} y={0} width={w} height={h} rx={Math.max(w, h) / 60} fill="none" className="stroke-line-soft" strokeWidth={Math.max(w, h) / 200} />}
         {part.values?.map((text, k) =>
           text ? (
             <text
@@ -712,6 +717,7 @@ function ImageView({ part }: { part: ImagePart }) {
               key={b.id}
               initial={false}
               animate={{ x: b.x, y: b.y, width: b.w, height: b.h }}
+              rx={Math.min(b.w, b.h) * 0.12}
               fill="none"
               strokeWidth={Math.max(0.12, w / 60)}
               strokeLinejoin="round"
