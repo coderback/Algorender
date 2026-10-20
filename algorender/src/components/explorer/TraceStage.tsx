@@ -2,12 +2,16 @@
 
 import { MotionConfig } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { FiChevronUp, FiEye, FiHelpCircle } from 'react-icons/fi';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { cx } from '@/components/ui/cx';
+import { Segmented } from '@/components/ui/Segmented';
 import type { LegendEntry, StatSpec, ViewKind } from '@/engine/module';
 import type { Trace } from '@/engine/types';
 import { usePlayerKeyboard, useTracePlayer } from '@/engine/useTracePlayer';
 import { ViewEditContext, type ViewEdit } from '@/viz/edit';
 import { VIEWS } from '@/viz/views';
-import { CodePanel, Legend, Narration, StatsPanel, VarsPanel } from './panels';
+import { CodePanel, CountsPanel, Legend, Narration } from './panels';
 import { PlayerControls } from './PlayerControls';
 import { PredictCard } from './PredictCard';
 
@@ -49,6 +53,10 @@ export function TraceStage<S>({
   onFrame,
   edit,
   live = false,
+  toolbar,
+  panels = true,
+  sheet = false,
+  hint,
 }: {
   trace: Trace<S>;
   view: ViewKind;
@@ -74,6 +82,14 @@ export function TraceStage<S>({
   edit?: ViewEdit;
   /** True while a handle is being dragged: the view follows the pointer with no tween. */
   live?: boolean;
+  /** Controls at the right of the stage's toolbar (the input and its Edit and Reset). */
+  toolbar?: ReactNode;
+  /** The code, counts and legend beside the stage; an embed shows the stage alone. */
+  panels?: boolean;
+  /** Phones: tuck the panels into a bottom sheet behind a code peek (the visualiser page). */
+  sheet?: boolean;
+  /** The keyboard hint under the player. */
+  hint?: string;
 }) {
   const View = VIEWS[view];
   // Answers belong to the trace they were given on: a drag records a new trace in place, and its questions start fresh.
@@ -110,24 +126,39 @@ export function TraceStage<S>({
   const answered = [...answers].filter(([i]) => trace.frames[i].checkpoint);
   const correct = answered.filter(([i, c]) => trace.frames[i].checkpoint!.answer === c).length;
 
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const wide = layout === 'wide';
+  const side = (
+    <>
+      <CodePanel lines={pseudocode} current={frame.line} title={code?.title} numberAll={code?.numberAll} />
+      {/* The memory view draws every name itself. */}
+      <CountsPanel stats={stats} values={frame.stats} vars={view !== 'memory' ? frame.vars : undefined} />
+      <Legend entries={legend} />
+    </>
+  );
+  const modeSwitch = <ModeSwitch predict={predict} hasQuestions={asked.size > 0} score={{ correct, total: answered.length }} />;
+
   return (
     <MotionConfig transition={{ duration: tweenMs / 1000, ease: [0.4, 0, 0.2, 1] }} reducedMotion="user">
       <div
         ref={rootRef}
         // Focusable so that clicking anywhere in a local-keyboard stage makes its shortcuts active.
         tabIndex={keyboard === 'local' ? -1 : undefined}
-        className={`grid gap-4 outline-none ${layout === 'wide' ? 'lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]' : ''}`}
+        className={cx('grid items-start gap-4 outline-none', wide && panels && 'lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]')}
       >
-        <div className="min-w-0 space-y-3">
-          <div
-            className="rounded-xl border border-line-soft bg-surface px-3 pt-4 pb-3 shadow-xs sm:px-6"
-            style={{ '--tween': `${tweenMs}ms` } as CSSProperties}
-          >
+        <div className="flex min-w-0 flex-col gap-3.5 rounded-card bg-surface p-3 sm:p-[18px]">
+          {(asked.size > 0 || toolbar) && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              {modeSwitch}
+              {toolbar && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">{toolbar}</div>}
+            </div>
+          )}
+          <div className="rounded-tile bg-subtle px-3 pt-4 pb-3 sm:px-6" style={{ '--tween': `${tweenMs}ms` } as CSSProperties}>
             <ViewEditContext value={edit ?? null}>
               <View state={frame.state} />
             </ViewEditContext>
           </div>
-          <Narration note={frame.note} live={!player.playing} />
+          <Narration note={frame.note} live={!player.playing} step={player.index + 1} />
           {question && (
             <PredictCard
               key={player.index}
@@ -135,22 +166,40 @@ export function TraceStage<S>({
               chosen={answers.get(player.index)}
               onAnswer={answer}
               scope={keyboard === 'local' ? rootRef : undefined}
+              step={player.index + 1}
             />
           )}
-          <PlayerControls player={player} share={share}>
-            <ModeSwitch predict={predict} hasQuestions={asked.size > 0} score={{ correct, total: answered.length }} />
-          </PlayerControls>
-          {trace.truncated && (
-            <p className="text-sm text-warn-ink">This run was cut short because it produced too many steps. Try a smaller input.</p>
+          <PlayerControls player={player} share={share} hint={hint ?? (predicting ? '← → step · Space play · Home / End jump · number keys answer' : undefined)} />
+          {trace.truncated && <p className="px-1 text-sm text-warn-ink">This run was cut short because it produced too many steps. Try a smaller input.</p>}
+          {panels && sheet && wide && (
+            <button
+              type="button"
+              onClick={() => setSheetOpen(true)}
+              aria-haspopup="dialog"
+              className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 rounded-t-[28px] bg-code px-5 pt-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-code-ink lg:hidden"
+            >
+              <span aria-hidden className="mx-auto h-1 w-9 rounded-full bg-code-muted/60" />
+              <span className="flex items-center justify-between gap-3 text-xs">
+                <span className="text-[13px] font-semibold tracking-[0.06em] text-code-muted uppercase">{code?.title ?? 'Pseudo-code'}</span>
+                <span className="inline-flex items-center gap-1 text-code-muted">
+                  {stats.map((st) => `${frame.stats[st.key] ?? 0} ${st.label.toLowerCase()}`).join(' · ') || 'Code, counts and legend'}
+                  <FiChevronUp aria-hidden />
+                </span>
+              </span>
+              {frame.line != null && pseudocode[frame.line] != null && (
+                <span className="truncate rounded-[10px] bg-code-highlight px-2.5 py-1.5 font-mono text-[13px]">{pseudocode[frame.line].trim()}</span>
+              )}
+            </button>
           )}
         </div>
-        <aside className={layout === 'wide' ? 'min-w-0 space-y-3' : 'grid min-w-0 gap-3 md:grid-cols-2 md:items-start'}>
-          <CodePanel lines={pseudocode} current={frame.line} title={code?.title} numberAll={code?.numberAll} />
-          {stats.length > 0 && <StatsPanel stats={stats} values={frame.stats} />}
-          {/* The memory view draws every name itself. */}
-          {view !== 'memory' && <VarsPanel vars={frame.vars} />}
-          <Legend entries={legend} />
-        </aside>
+        {panels && (
+          <aside className={cx('min-w-0 gap-3', wide ? cx('flex-col', sheet ? 'hidden lg:flex' : 'flex') : 'grid md:grid-cols-2 md:items-start')}>{side}</aside>
+        )}
+        {panels && sheet && wide && (
+          <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Code and state" className="lg:hidden">
+            {sheetOpen && <div className="flex flex-col gap-3">{side}</div>}
+          </BottomSheet>
+        )}
       </div>
     </MotionConfig>
   );
@@ -166,36 +215,30 @@ function ModeSwitch({
   score: { correct: number; total: number };
 }) {
   if (!hasQuestions) return null;
-  const option = (mode: Mode, label: ReactNode) => (
-    <button
-      type="button"
-      aria-pressed={predict.mode === mode}
-      onClick={() => predict.setMode(mode)}
-      className={`px-2.5 py-1 text-xs transition-colors ${
-        predict.mode === mode ? 'bg-ink text-surface' : 'bg-surface text-ink-soft hover:bg-sunken'
-      }`}
-    >
-      {label}
-    </button>
-  );
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="inline-flex overflow-hidden rounded-md border border-line" role="group" aria-label="Mode">
-        {option('watch', 'Watch')}
-        {option('predict', 'Predict')}
-      </div>
+      <Segmented
+        label="Mode"
+        size="m"
+        value={predict.mode}
+        onChange={predict.setMode}
+        options={[
+          { value: 'watch', label: 'Watch', icon: <FiEye aria-hidden /> },
+          { value: 'predict', label: 'Predict', icon: <FiHelpCircle aria-hidden /> },
+        ]}
+      />
       {predict.mode === 'predict' && (
         <>
           <select
             value={predict.density}
             onChange={(e) => predict.setDensity(e.target.value as Density)}
             aria-label="How often to ask"
-            className="rounded-md border border-line bg-surface px-1.5 py-1 text-xs text-ink-soft"
+            className="h-10 rounded-full bg-sunken px-3 text-[13px] font-semibold text-ink"
           >
             <option value="some">Ask sometimes</option>
             <option value="all">Ask at every decision</option>
           </select>
-          <span className="font-mono text-xs text-ink-soft" aria-label="Predictions correct">
+          <span className="rounded-full bg-accent-soft px-3.5 py-2 text-[13px] font-semibold text-accent-ink tabular-nums" aria-label="Predictions correct">
             {score.correct}/{score.total} right
           </span>
         </>

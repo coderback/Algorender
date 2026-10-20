@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { CompareLab } from '@/components/compare/CompareLab';
+import { DetailHeader } from '@/components/explorer/DetailHeader';
 
 export const metadata: Metadata = {
   title: 'Sorting race and complexity playground | Algorender',
@@ -9,15 +10,13 @@ export const metadata: Metadata = {
 
 export default function ComparePage() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent-ink">Compare</div>
-        <h1 className="text-3xl font-bold text-ink">Sorting race and complexity playground</h1>
-        <p className="mt-1 max-w-3xl text-ink-soft">
-          Big-O is a claim about how work grows. Here you can test it: race algorithms on the same input, change its shape,
-          and see which curve each one follows as n grows.
-        </p>
-      </div>
+    <main className="flex flex-col gap-5 px-4 pt-6 pb-6 md:px-0 md:pt-1">
+      <DetailHeader
+        crumb="Lab"
+        back="/explore"
+        title="Race the sorts"
+        description="Same input, same rules, side by side. Then see how the gap grows as the input does: Big-O is a claim about how work grows, and here you can test it."
+      />
       <CompareLab />
     </main>
   );

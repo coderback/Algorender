@@ -21,15 +21,21 @@ export function GrowthChart({
   series,
   references,
   metric,
+  onHover,
 }: {
   ns: readonly number[];
   series: readonly GrowthSeries[];
   references: readonly Reference[];
   metric: string;
+  /** Called with the index of n under the crosshair, or null when it leaves. */
+  onHover?: (index: number | null) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const width = useWidth(boxRef, 640);
   const [hover, setHover] = useState<number | null>(null);
+  useEffect(() => {
+    onHover?.(hover);
+  }, [hover, onHover]);
   const [showTable, setShowTable] = useState(false);
 
   const innerW = Math.max(120, width - MARGIN.left - MARGIN.right);
@@ -193,7 +199,7 @@ export function GrowthChart({
 
         {hover != null && (
           <div
-            className="pointer-events-none absolute z-10 min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm shadow-md"
+            className="pointer-events-none absolute z-10 min-w-40 rounded-well bg-surface px-3 py-2 text-sm shadow-segment ring-1 ring-line"
             style={{ top: MARGIN.top, left: flip ? undefined : tipLeft + 12, right: flip ? width - tipLeft + 12 : undefined }}
             role="status"
           >
@@ -222,15 +228,15 @@ export function GrowthChart({
         type="button"
         onClick={() => setShowTable((v) => !v)}
         aria-expanded={showTable}
-        className="mt-2 text-xs text-accent-ink hover:underline"
+        className="mt-2 text-xs font-semibold text-accent-ink hover:underline"
       >
         {showTable ? 'Hide table' : 'Show as a table'}
       </button>
       {showTable && (
-        <div className="mt-2 max-h-80 overflow-auto rounded-lg border border-line-soft">
+        <div className="mt-2 max-h-80 overflow-auto rounded-well bg-subtle">
           <table className="w-full text-right text-sm tabular-nums">
             <caption className="sr-only">{metric} by input size</caption>
-            <thead className="sticky top-0 bg-subtle text-xs text-ink-muted">
+            <thead className="sticky top-0 bg-sunken text-xs text-ink-muted">
               <tr>
                 <th scope="col" className="px-3 py-2 text-left font-medium">n</th>
                 {series.map((s) => (

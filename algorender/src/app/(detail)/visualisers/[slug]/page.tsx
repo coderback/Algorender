@@ -1,16 +1,24 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Suspense, type ReactNode } from 'react';
-import { FiArrowLeft, FiCode } from 'react-icons/fi';
+import { Suspense } from 'react';
+import { FiBookOpen, FiCode } from 'react-icons/fi';
+import { sorting } from '@/algorithms/sorting';
+import { ConceptStatus } from '@/components/explorer/ConceptStatus';
+import { DetailHeader } from '@/components/explorer/DetailHeader';
 import { Visualiser } from '@/components/explorer/Visualiser';
+import { ButtonLink } from '@/components/ui/Button';
+import { Card, TrackCard } from '@/components/ui/Card';
+import { cx } from '@/components/ui/cx';
 import { exerciseForVisualiser } from '@/content/exercises';
+import { getLesson } from '@/content/lessons';
+import { masteryGraph } from '@/content/mastery';
 import { loadProblems } from '@/problems/load';
 import { getVisualiserBySlug } from '@/data/visualisers';
+import { TRACK_CLASSES, trackColour } from '@/data/tracks';
 import { getModule, modules } from '@/registry';
 
-// Serves every visualiser ported to the trace engine. Legacy pages still live in
-// their own static folders under app/visualisers/ until they are ported.
+// Serves every visualiser ported to the trace engine.
 export const dynamicParams = false;
 
 export function generateStaticParams() {
@@ -36,73 +44,47 @@ export default async function VisualiserPage({ params }: Props) {
   if (!visualiser || !meta) notFound();
   const { idea, invariant, whenToUse, traits } = visualiser.content;
   const isAlgorithm = meta.type === 'algorithm';
-  const back = BACK[meta.type as keyof typeof BACK];
   const cost = 'timeComplexity' in meta ? meta : null;
   const exercise = exerciseForVisualiser(slug);
   const problems = loadProblems().filter((p) => p.visualisers.includes(slug)).slice(0, 4);
+  const graph = masteryGraph();
+  // The concept that teaches it sets the page's colour, its status and its lesson, as on its Explore tile.
+  const concept = graph.concepts.find((c) => !c.planned && c.visualisers.includes(slug));
+  const colour = trackColour(concept?.track ?? (meta.type === 'systems' || meta.type === 'math' ? meta.type : ''));
+  const c = TRACK_CLASSES[colour];
+  const lesson = concept?.lesson ? getLesson(concept.lesson) : undefined;
+  const race = sorting.some((a) => a.slug === slug) ? { href: '/compare', label: 'Race it against other sorts' } : undefined;
 
-  return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <Link
-        href={`/explore?kind=${back.tab}`}
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline"
-      >
-        <FiArrowLeft aria-hidden /> {back.label}
-      </Link>
-
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent-ink">{meta.category}</div>
-          <h1 className="text-3xl font-bold text-ink">{meta.name}</h1>
-          <p className="mt-1 max-w-3xl text-ink-soft">{idea}</p>
-          {exercise && (
-            <Link
-              href={`/code/${exercise.slug}`}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent-line bg-surface px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-soft"
-            >
-              <FiCode aria-hidden /> Write it yourself in Python, JavaScript or TypeScript
-            </Link>
-          )}
-          {problems.length > 0 && (
-            <p className="mt-3 text-sm text-ink-soft">
-              Practise it:{' '}
-              {problems.map((p, i) => (
-                <span key={p.slug}>
-                  {i > 0 && ' · '}
-                  <Link href={`/practice/${p.slug}`} className="text-accent-ink underline decoration-accent-line underline-offset-2 hover:decoration-current">
-                    {p.title}
-                  </Link>
-                </span>
-              ))}
-            </p>
-          )}
-        </div>
-        {cost && (
-          <dl className="flex shrink-0 flex-wrap gap-2 text-sm">
-            <Chip label={isAlgorithm ? 'Average time' : 'Typical operation'} value={cost.timeComplexity.average} />
-            <Chip label="Space" value={cost.spaceComplexity} />
-          </dl>
-        )}
-      </div>
-
-      <Suspense fallback={<div className="h-[640px] animate-pulse rounded-xl bg-surface" aria-label="Loading visualiser" />}>
-        <Visualiser slug={slug} />
-      </Suspense>
-
-      <section className="mt-8 grid gap-4 lg:grid-cols-3" aria-label="Understanding it">
-        <Card title="What stays true">
-          <p>{invariant}</p>
-          <p className="mt-2 text-sm text-ink-muted">
-            An invariant like this is what you would use to prove it correct, and the fastest way to predict its next
-            step.
+  const details = (
+    <section className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]" aria-label="Understanding it">
+      <TrackCard track="lilac" as="article" className="gap-2.5">
+        <h2 className="font-display text-[22px] font-bold text-track-lilac-title">What stays true</h2>
+        <p className="text-[15px] leading-relaxed text-track-lilac-title">{invariant}</p>
+        <p className="text-[13px] leading-normal">
+          An invariant like this is what you would use to prove it correct, and the fastest way to predict its next step.
+        </p>
+      </TrackCard>
+      <TrackCard track="butter" as="article" className="gap-2.5">
+        <h2 className="font-display text-[22px] font-bold text-track-butter-title">When to use it</h2>
+        <p className="text-[15px] leading-relaxed text-track-butter-title">{whenToUse}</p>
+        {problems.length > 0 && (
+          <p className="mt-auto text-[13px]">
+            Practise it:{' '}
+            {problems.map((p, i) => (
+              <span key={p.slug}>
+                {i > 0 && ' · '}
+                <Link href={`/practice/${p.slug}`} className="font-semibold text-track-butter-title underline underline-offset-2 hover:no-underline">
+                  {p.title}
+                </Link>
+              </span>
+            ))}
           </p>
-        </Card>
-        <Card title="When to use it">
-          <p>{whenToUse}</p>
-        </Card>
-        <Card title={cost ? 'Cost and properties' : 'Properties'}>
-          {cost && (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+        )}
+      </TrackCard>
+      <Card as="article" className="gap-3">
+        <h2 className="font-display text-[22px] font-bold">{cost ? 'Cost and properties' : 'Properties'}</h2>
+        {cost && (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-[18px] gap-y-1.5 text-sm">
             <dt className="text-ink-muted">Best</dt>
             <dd className="font-mono">{cost.timeComplexity.best}</dd>
             <dt className="text-ink-muted">Average</dt>
@@ -112,48 +94,77 @@ export default async function VisualiserPage({ params }: Props) {
             <dt className="text-ink-muted">Space</dt>
             <dd className="font-mono">{cost.spaceComplexity}</dd>
           </dl>
-          )}
-          {traits.length > 0 && (
-            <ul className={`${cost ? 'mt-3 ' : ''}flex flex-wrap gap-1.5 text-xs`}>
-              {traits.map((t) => (
-                <li
-                  key={t.label}
-                  className={`rounded-full px-2.5 py-1 ${
-                    t.good === true ? 'bg-good-soft text-good-ink' : t.good === false ? 'bg-warn-soft text-warn-ink' : 'bg-sunken text-ink-soft'
-                  }`}
-                >
-                  {t.label}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </section>
+        )}
+        {traits.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {traits.map((t) => (
+              <li
+                key={t.label}
+                className={cx(
+                  'rounded-full px-2.5 py-1 text-xs font-semibold',
+                  t.good === true ? 'bg-good-soft text-good-ink' : t.good === false ? 'bg-warn-soft text-warn-ink' : 'bg-sunken text-ink-soft',
+                )}
+              >
+                {t.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </section>
+  );
+
+  return (
+    <main className="flex flex-col gap-5 px-4 pt-6 pb-6 md:px-0 md:pt-1">
+      <DetailHeader
+        crumb={meta.category}
+        back="/explore"
+        title={meta.name}
+        eyebrowClass={c.ink}
+        chips={
+          <>
+            <span className={cx('rounded-full px-3 py-[5px] text-[13px] font-semibold', c.bg, c.ink)}>{meta.category}</span>
+            {concept && <ConceptStatus graph={graph} concept={concept.id} />}
+          </>
+        }
+        description={idea}
+        actions={
+          <>
+            {cost && (
+              <dl className="hidden gap-2 sm:flex">
+                <CostTile label={isAlgorithm ? 'Average time' : 'Typical operation'} value={cost.timeComplexity.average} />
+                <CostTile label="Space" value={cost.spaceComplexity} />
+              </dl>
+            )}
+            {lesson && (
+              <ButtonLink href={`/learn/${lesson.slug}`} kind="onTrack" size="l" className={PHONE_M} icon={<FiBookOpen aria-hidden />}>
+                Lesson · {lesson.minutes} min
+              </ButtonLink>
+            )}
+            {exercise && (
+              <ButtonLink href={`/code/${exercise.slug}`} size="l" className={PHONE_M} icon={<FiCode aria-hidden />} title="Write it yourself in Python, JavaScript or TypeScript">
+                Write it yourself
+              </ButtonLink>
+            )}
+          </>
+        }
+      />
+
+      <Suspense fallback={<div className="h-[640px] animate-pulse rounded-card bg-surface" aria-label="Loading visualiser" />}>
+        <Visualiser slug={slug} colour={colour} next={race} details={details} />
+      </Suspense>
     </main>
   );
 }
 
-const BACK = {
-  'data-structure': { tab: 'data-structures', label: 'All data structures' },
-  algorithm: { tab: 'algorithms', label: 'All algorithms' },
-  math: { tab: 'math', label: 'All math and ML' },
-  systems: { tab: 'systems', label: 'All systems' },
-} as const;
+/** Large buttons, medium on phones so both actions fit on one row. */
+const PHONE_M = 'h-11 px-4 text-sm sm:h-13 sm:px-[22px] sm:text-[15px]';
 
-function Chip({ label, value }: { label: string; value: string }) {
+function CostTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-line bg-surface px-3 py-1.5">
+    <div className="rounded-[16px] bg-surface px-3.5 py-2">
       <dt className="text-[11px] text-ink-muted">{label}</dt>
-      <dd className="font-mono font-semibold text-ink">{value}</dd>
-    </div>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-line-soft bg-surface p-5 text-ink-soft shadow-xs">
-      <h2 className="mb-2 font-semibold text-ink">{title}</h2>
-      {children}
+      <dd className="font-mono text-[15px] font-semibold text-ink">{value}</dd>
     </div>
   );
 }

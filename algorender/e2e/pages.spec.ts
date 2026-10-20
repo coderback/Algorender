@@ -32,7 +32,7 @@ test('embeds render the visualiser without the site chrome', async ({ page }) =>
   await page.locator('[data-hydrated="true"]').waitFor();
   await expect(page.getByRole('link', { name: /Open in Algorender/ })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
-  await expect(page.getByText(/^5\/\d+$/)).toBeVisible();
+  await expect(page.getByText(/^5 \/ \d+$/)).toBeVisible();
 });
 
 test('the sitemap lists the visualisers', async ({ request }) => {

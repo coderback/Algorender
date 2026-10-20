@@ -9,9 +9,10 @@ import { TopBar } from './TopBar';
 /**
  * The app frame. Desktop: the rail beside the page, with the top bar (search
  * and XP) on hub and sub-pages; detail pages (visualisers, the race) drop the
- * top bar. Phones: a header row and, on hubs, the bottom tab bar.
+ * top bar. Phones: a header row and, on hubs, the bottom tab bar; detail
+ * pages draw their own phone header (back, title, share) instead.
  */
-export function AppShell({ topBar = true, children }: { topBar?: boolean; children: ReactNode }) {
+export function AppShell({ topBar = true, phoneHeader = true, children }: { topBar?: boolean; phoneHeader?: boolean; children: ReactNode }) {
   return (
     <PaletteProvider>
       <SessionSync />
@@ -25,7 +26,7 @@ export function AppShell({ topBar = true, children }: { topBar?: boolean; childr
         <Rail />
         <div className="flex min-w-0 flex-1 flex-col gap-6 pb-28 md:px-2 md:pt-1 md:pb-6">
           {topBar && <TopBar />}
-          <PhoneHeader />
+          {phoneHeader && <PhoneHeader />}
           <div id="content" tabIndex={-1} className="min-w-0 outline-none">
             {children}
           </div>

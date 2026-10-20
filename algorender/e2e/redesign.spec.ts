@@ -41,6 +41,11 @@ const ROUTES: { name: string; path: string; seeded?: boolean }[] = [
   { name: 'lessons', path: '/learn?tab=lessons', seeded: true },
   { name: 'plan-seeded', path: '/plan', seeded: true },
   { name: 'lesson-seeded', path: '/learn/binary-search', seeded: true },
+  // Phase 5: Explore with statuses, a visualiser in Predict mode, a structure after operations, the race.
+  { name: 'explore-seeded', path: '/explore', seeded: true },
+  { name: 'visualiser-predict', path: '/visualisers/bubble-sort?preset=reversed&n=7&seed=1&mode=predict&step=2', seeded: true },
+  { name: 'structure', path: '/visualisers/stack?start=example&ops=push:5;push:9;pop' },
+  { name: 'math-visualiser', path: '/visualisers/gradient-descent' },
 ];
 
 const VIEWPORTS = [

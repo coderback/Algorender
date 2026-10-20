@@ -13,7 +13,7 @@ const SORTS = [
 ];
 
 const narration = (page: Page) => page.getByTestId('narration');
-const stepCounter = (page: Page) => page.getByText(/^\d+\/\d+$/);
+const stepCounter = (page: Page) => page.getByText(/^\d+ \/ \d+$/);
 const mainLane = (page: Page) => page.getByRole('group', { name: 'Array', exact: true }).locator('p.sr-only');
 
 /** Opens a visualiser and waits until React has attached its handlers. */
@@ -56,7 +56,7 @@ for (const slug of SORTS) {
     const errors = collectErrors(page);
 
     await open(page, `/visualisers/${slug}?preset=random&n=8&seed=3`);
-    await expect(stepCounter(page)).toHaveText(/^1\/\d+$/);
+    await expect(stepCounter(page)).toHaveText(/^1 \/ \d+$/);
     await page.keyboard.press('End');
     await expect(narration(page)).toContainText(/sorted/i);
     expect(errors).toEqual([]);
@@ -90,16 +90,16 @@ test('reduced motion jumps straight to each new state', async ({ page }) => {
 
 test('keyboard: arrows step, Home/End jump, Space plays', async ({ page }) => {
   await open(page, '/visualisers/bubble-sort?preset=reversed&n=6&seed=1');
-  await expect(stepCounter(page)).toHaveText(/^1\//);
+  await expect(stepCounter(page)).toHaveText(/^1 \//);
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
-  await expect(stepCounter(page)).toHaveText(/^3\//);
+  await expect(stepCounter(page)).toHaveText(/^3 \//);
   await page.keyboard.press('ArrowLeft');
-  await expect(stepCounter(page)).toHaveText(/^2\//);
+  await expect(stepCounter(page)).toHaveText(/^2 \//);
   await page.keyboard.press('End');
   await expect(narration(page)).toContainText(/sorted/i);
   await page.keyboard.press('Home');
-  await expect(stepCounter(page)).toHaveText(/^1\//);
+  await expect(stepCounter(page)).toHaveText(/^1 \//);
 
   await page.getByLabel('Speed').selectOption('32');
   await narration(page).click(); // move focus off the select so Space reaches the player
@@ -124,7 +124,7 @@ test('step backward restores the exact earlier state', async ({ page }) => {
 
 test('a deep link opens at the linked step', async ({ page }) => {
   await open(page, '/visualisers/heap-sort?preset=random&n=8&seed=5&step=12');
-  await expect(stepCounter(page)).toHaveText(/^13\//);
+  await expect(stepCounter(page)).toHaveText(/^13 \//);
 });
 
 test('custom input runs and updates the shareable URL', async ({ page }) => {

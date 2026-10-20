@@ -93,7 +93,7 @@ test('G then R starts the review', async ({ page }) => {
 test('old catalogue links land on Explore', async ({ page }) => {
   await page.goto('/?tab=systems');
   await expect(page).toHaveURL(/\/explore\?(.*&)?kind=systems/);
-  await expect(page.getByRole('tab', { name: /Systems/, selected: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Kind' }).getByRole('button', { name: /Systems/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test.describe('on a phone', () => {

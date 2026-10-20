@@ -43,6 +43,30 @@ export const TRACK_LABEL: Record<TrackId, string> = {
 
 export const trackLabel = (track: string): string => (TRACK_LABEL as Record<string, string>)[track] ?? track;
 
+/** The seven colours in map order, named for the tracks that share them (Explore's track chips). */
+export const COLOURS: readonly TrackColour[] = ['lilac', 'peach', 'mint', 'sky', 'butter', 'rose', 'teal'];
+
+export const COLOUR_LABEL: Record<TrackColour, string> = {
+  lilac: 'Arrays & lists',
+  peach: 'Sorting & searching',
+  mint: 'Trees & hashing',
+  sky: 'Graphs & strings',
+  butter: 'Patterns & design',
+  rose: 'Math & ML',
+  teal: 'Systems',
+};
+
+/** Phone chips: one word each. */
+export const COLOUR_SHORT: Record<TrackColour, string> = {
+  lilac: 'Arrays',
+  peach: 'Sorting',
+  mint: 'Trees',
+  sky: 'Graphs',
+  butter: 'Patterns',
+  rose: 'Math & ML',
+  teal: 'Systems',
+};
+
 export interface TrackClasses {
   /** The pastel fill. */
   bg: string;

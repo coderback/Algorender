@@ -80,8 +80,8 @@ test('keyboard shortcuts only drive the visualiser being used', async ({ page })
   const second = stages.nth(1);
   await first.getByRole('button', { name: /Step forward/ }).click();
   await page.keyboard.press('ArrowRight');
-  await expect(first.getByText(/^3\/\d+$/)).toBeVisible();
-  await expect(second.getByText(/^1\/\d+$/)).toBeVisible();
+  await expect(first.getByText(/^3 \/ \d+$/)).toBeVisible();
+  await expect(second.getByText(/^1 \/ \d+$/)).toBeVisible();
 });
 
 test('the prediction challenge counts answers towards its goal', async ({ page }) => {

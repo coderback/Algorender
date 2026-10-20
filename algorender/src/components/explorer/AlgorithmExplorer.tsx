@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { FiShuffle } from 'react-icons/fi';
+import { Button, IconButton } from '@/components/ui/Button';
 import type { AnyAlgorithm } from '@/engine/module';
 import { randomSeed } from '@/engine/random';
 import { recordTrace } from '@/engine/trace';
@@ -54,6 +56,39 @@ export function AlgorithmExplorer({
   };
 
   const { drag, custom } = algo.input;
+  const newValues = () =>
+    changeSource({
+      kind: 'example',
+      example: source.kind === 'example' ? source.example : algo.input.examples[0].id,
+      size: source.kind === 'example' ? source.size : (algo.input.size?.default ?? 0),
+      seed: randomSeed(),
+    });
+  const toolbar = options.showInput ? (
+    <>
+      {custom && (
+        <>
+          <span className="hidden text-[13px] text-ink-muted sm:inline">Input</span>
+          <span className="hidden max-w-[16rem] truncate rounded-xl bg-sunken px-3 py-2 font-mono text-sm text-ink sm:inline" title={custom.format(input)}>
+            {custom.format(input)}
+          </span>
+          <Button
+            kind="secondary"
+            size="s"
+            onClick={() => {
+              const field = document.getElementById('custom-input');
+              field?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+              field?.focus({ preventScroll: true });
+            }}
+          >
+            Edit
+          </Button>
+        </>
+      )}
+      <IconButton label="New random input" kind="secondary" size="s" onClick={newValues}>
+        <FiShuffle aria-hidden />
+      </IconButton>
+    </>
+  ) : undefined;
   const edit: ViewEdit | undefined =
     drag && custom
       ? {
@@ -70,7 +105,7 @@ export function AlgorithmExplorer({
       : undefined;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Remount the stage for each new input so playback restarts cleanly. Mode
           changes don't remount: the predict gate reacts to them in place. */}
       <TraceStage
@@ -87,10 +122,16 @@ export function AlgorithmExplorer({
         onPrediction={options.onPrediction}
         edit={edit}
         live={dragging}
+        toolbar={toolbar}
+        panels={options.panels}
+        sheet={options.sheet}
       />
       {options.showInput && <InputPanel key={`input-${dragged}`} spec={algo.input} source={source} onChange={changeSource} />}
+      {options.details}
       {options.showExperiments && (
         <Experiments
+          colour={options.colour}
+          next={options.next}
           suffix="input"
           items={algo.content.experiments.map((x, i) => ({
             key: `${x.example}-${i}`, // several experiments can start from one example
