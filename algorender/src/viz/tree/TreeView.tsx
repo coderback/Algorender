@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { useWidth } from '@/viz/linear/useWidth';
 import { MARKS, type MarkKey } from '@/viz/marks';
+import { EDGE_ACTIVE, EDGE_IDLE, NODE_IDLE_SVG, NODE_RING } from '@/viz/parts';
 import { labelWidth, layoutTree, rootsOf, type Box, type Metrics, type TreeLayout } from './layout';
 import { linkId, type NodeId, type TableRow, type TreeNode, type TreeState } from './types';
 
@@ -100,6 +101,10 @@ function chooseLayout(state: TreeState, width: number): TreeLayout {
  * the parent, the arrays as a table underneath) and search trees (every call
  * laid out up front, revealed as the search reaches it, each new call growing
  * out of its parent).
+ *
+ * TODO(redesign): V3 also writes a decision trail beside a search ("45 < 50 ← left"),
+ * draws rotations and splits as before and after side by side, and labels
+ * recursion-tree nodes with their partial result; the state has none of these.
  */
 export function TreeView({ state }: { state: TreeState }) {
   const reduce = useReducedMotion();
@@ -185,7 +190,7 @@ export function TreeView({ state }: { state: TreeState }) {
     <div ref={ref} role="group" aria-label="Tree" className="flex flex-col gap-3">
       <p className="sr-only">{state.description}</p>
       {!hasTree && (
-        <p className="rounded-lg border border-dashed border-line py-10 text-center text-sm text-ink-muted" aria-hidden>
+        <p className="rounded-tile border-2 border-dashed border-line-strong py-10 text-center text-sm text-ink-muted" aria-hidden>
           {state.emptyLabel}
         </p>
       )}
@@ -215,7 +220,7 @@ export function TreeView({ state }: { state: TreeState }) {
                   <motion.line
                     key={`k:${l.id}`}
                     initial={{ opacity: 0, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2 }}
-                    animate={{ opacity: 1, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, strokeWidth: l.mark ? 3 : 1.5 }}
+                    animate={{ opacity: 1, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, strokeWidth: l.mark ? 3 : 2 }}
                     exit={{ opacity: 0 }}
                     transition={instant}
                     strokeLinecap="round"
@@ -237,7 +242,7 @@ export function TreeView({ state }: { state: TreeState }) {
                   <motion.line
                     key={`e:${e.child.id}`}
                     initial={{ opacity: 0, ...start }}
-                    animate={{ opacity: 1, x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, strokeWidth: hot ? 3.5 : search ? 1.5 : 2 }}
+                    animate={{ opacity: 1, x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, strokeWidth: hot ? (search ? 3.5 : EDGE_ACTIVE) : search ? 2 : EDGE_IDLE }}
                     exit={{ opacity: 0 }}
                     transition={instant}
                     strokeLinecap="round"
@@ -300,13 +305,13 @@ export function TreeView({ state }: { state: TreeState }) {
       )}
       {state.output && (
         <div className="flex flex-wrap items-center gap-1.5 text-sm" aria-label={state.output.label}>
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{state.output.label}</span>
+          <span className="mr-1 text-xs font-medium text-ink-muted">{state.output.label}</span>
           {state.output.items.length === 0 ? (
             <span className="text-xs text-ink-muted">none yet</span>
           ) : (
             state.output.items.map((item, i) => (
               // The list only grows at the end, so positions are stable keys.
-              <span key={i} className="rounded-full bg-good-soft px-2 py-0.5 font-mono text-xs text-good-ink ring-1 ring-good-line">
+              <span key={i} className="rounded-[10px] bg-mark-done px-2 py-0.5 font-mono text-xs font-semibold text-on-mark">
                 {item}
               </span>
             ))
@@ -409,8 +414,8 @@ function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: 
       {p.node.terminal && <circle r={r + 4} fill="none" strokeWidth={2} className="stroke-ink-soft" />}
       <circle
         r={r}
-        strokeWidth={meta ? 2.5 : 2}
-        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-bar'}`}
+        strokeWidth={NODE_RING}
+        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : NODE_IDLE_SVG}`}
         style={TWEEN}
       />
       {badges?.top && (
@@ -450,9 +455,9 @@ function BoxNode({ p, mark, instant }: { p: Placed; mark: MarkKey | undefined; i
         animate={{ width: p.box.w }}
         transition={instant}
         height={p.box.h}
-        rx={6}
-        strokeWidth={meta ? 3 : 1.5}
-        className={`fill-surface transition-colors ${meta ? meta.stroke : 'stroke-ink-faint'}`}
+        rx={12}
+        strokeWidth={meta ? 3 : NODE_RING}
+        className={`fill-surface transition-colors ${meta ? meta.stroke : 'stroke-line-strong'}`}
         style={TWEEN}
       />
       {mark && <Glyph mark={mark} x={-3} y={-3} />}
@@ -488,9 +493,9 @@ function KeyCell({
           y={-m.cellH / 2}
           width={m.cellW - 3}
           height={m.cellH}
-          rx={4}
+          rx={8}
           strokeWidth={1}
-          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
+          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-soft'}`}
           style={TWEEN}
         />
       )}
@@ -536,8 +541,8 @@ function EdgeLabel({
         y={-h / 2}
         width={width}
         height={h}
-        rx={4}
-        strokeWidth={hot ? 2 : 1}
+        rx={h / 2}
+        strokeWidth={hot ? 2 : 1.5}
         className={`fill-surface transition-colors ${hot ? 'stroke-mark-done' : 'stroke-line-strong'}`}
         style={TWEEN}
       />
@@ -589,7 +594,7 @@ function Strip({ state, ids, label, top, cell }: { state: TreeState; ids: readon
   const labelOf = (id: NodeId) => state.nodes[id]?.cells[0]?.label ?? '';
   return (
     <g>
-      <text x={left} y={top - 8} fontSize={10} className="fill-ink-muted font-semibold uppercase" letterSpacing={1}>
+      <text x={left} y={top - 8} fontSize={11} className="fill-ink-muted font-medium">
         {label}
       </text>
       <AnimatePresence initial={false}>
@@ -605,9 +610,9 @@ function Strip({ state, ids, label, top, cell }: { state: TreeState; ids: readon
                 y={-cell / 2}
                 width={cell - 2}
                 height={cell}
-                rx={4}
+                rx={8}
                 strokeWidth={meta ? 2 : 1}
-                className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
+                className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line'}`}
                 style={TWEEN}
               />
               <text textAnchor="middle" dominantBaseline="central" fontSize={12} className={`font-mono font-semibold ${ink(mark)}`}>
@@ -660,10 +665,10 @@ function Table({ state, rows, top, geometry }: { state: TreeState; rows: readonl
                       y={-TABLE_CELL / 2}
                       width={TABLE_CELL - 2}
                       height={TABLE_CELL}
-                      rx={4}
+                      rx={8}
                       strokeWidth={meta ? 2 : 1}
                       strokeDasharray={empty && !meta ? '3 2' : undefined}
-                      className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
+                      className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line'}`}
                       style={TWEEN}
                     />
                     <text textAnchor="middle" dominantBaseline="central" fontSize={12} className={`font-mono font-semibold ${ink(mark)}`}>
