@@ -37,12 +37,6 @@ export function BloomView({ state }: { state: BloomState }) {
                 <span className="text-ink-muted">no item in hand</span>
               )}
             </span>
-            {state.verdict && (
-              <span className={`inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-semibold ring-2 ring-current ring-inset ${MARKS[state.verdict.mark].text}`}>
-                <span aria-hidden>{MARKS[state.verdict.mark].glyph}</span>
-                {state.verdict.text}
-              </span>
-            )}
           </div>
           <Calc lines={state.calc} rule={`each of the k = ${state.k} hash functions picks one bit: hᵢ(x) mod ${m}`} />
           <div role="group" aria-label="Bits">
@@ -69,6 +63,17 @@ export function BloomView({ state }: { state: BloomState }) {
               })}
             </div>
           </div>
+          {state.verdict && (
+            // The answer in plain words (V5), with the bit that decides it.
+            <div className="rounded-[18px] bg-surface px-4 py-3 ring-1 ring-line-soft ring-inset">
+              <div className={CAPTION}>Answer</div>
+              <div className={`flex items-center gap-2 font-display text-xl font-bold ${MARKS[state.verdict.mark].text}`}>
+                <span aria-hidden>{MARKS[state.verdict.mark].glyph}</span>
+                {state.verdict.text}
+              </div>
+              <p className="text-[13px] text-ink-soft">{verdictReason(state)}</p>
+            </div>
+          )}
           <dl className="grid gap-2.5 text-xs text-ink-soft sm:grid-cols-2">
             <div className="rounded-[18px] bg-sunken p-3">
               <dt className="inline text-ink-muted">Really added </dt>
@@ -89,6 +94,14 @@ export function BloomView({ state }: { state: BloomState }) {
       )}
     </div>
   );
+}
+
+/** Why the answer follows from the bits in play: one 0 is proof of absence; all 1s only make it possible. */
+function verdictReason(state: BloomState): string {
+  const zero = Object.keys(state.bitMarks).map(Number).find((i) => state.bits[i] === 0);
+  if (zero != null) return `Bit ${zero} is 0, and every added item sets all ${state.k} of its bits, so this one was never added.`;
+  if (state.verdict?.mark === 'reject') return `All ${state.k} of its bits are 1, yet it was never added: other items set them.`;
+  return `All ${state.k} of its bits are 1. Every added item looks like this, but other items could have set them too, so it is only a maybe.`;
 }
 
 function describe(state: BloomState): string {

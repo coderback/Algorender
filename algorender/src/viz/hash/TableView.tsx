@@ -23,8 +23,7 @@ const entryLabel = (e: HashEntry) => (e.value == null ? e.key : `${e.key}: ${e.v
  * keyed by id, so a put flies the key into its bucket and a resize visibly
  * moves every key to its new bucket.
  * TODO(redesign): V5 puts chaining and linear probing on one toggle over the
- * same insert, and answers a Bloom test in a big plain-words card; each
- * visualiser shows only its own strategy.
+ * same insert; there is no linear-probing table to show yet, only chaining.
  */
 export function TableView({ state }: { state: TableState }) {
   const group = useId();
