@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { useViewEdit, type ViewEdit } from '@/viz/edit';
 import { MARKS, TONES, type MarkKey, type Tone } from '@/viz/marks';
+import { fillFor, PLAIN_CELL } from '@/viz/parts';
 import { describe } from './describe';
 import { NetworkView } from './NetworkView';
 import { clipLine, fmt, fmtVec, gridReach, planeGeometry, snap, ticks, warpedGrid, type PlaneGeometry } from './geometry';
@@ -39,6 +40,8 @@ const ARROW_HEAD = 9;
  * matrix sends it and the whole grid warps with it. Handles can be dragged, or
  * moved with the arrow keys, when the module takes dragged input.
  */
+// TODO(redesign): V8–V10 also fill contour bands as a lilac wash (lower is darker), dock a controls card beside
+// the plane and draw optimiser paths as numbered steps; the states draw contour lines and keep controls in the toolbar.
 export function PlotView({ state }: { state: PlotState }) {
   const figures = state.parts.filter((p): p is PlanePart | ImagePart | NetworkPart => p.kind === 'plane' || p.kind === 'image' || p.kind === 'network');
   const rows = state.parts.filter((p): p is BitsPart => p.kind === 'bits');
@@ -141,7 +144,7 @@ function Background({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
 
   return (
     <g>
-      <rect x={left} y={top} width={inner.w} height={inner.h} className="fill-surface stroke-line" strokeWidth={1} />
+      <rect x={left} y={top} width={inner.w} height={inner.h} rx={6} className="fill-surface stroke-line-soft" strokeWidth={1} />
       {xs.map((v) => {
         const [x] = g.px([v, 0]);
         return <line key={`gx${v}`} x1={x} x2={x} y1={top} y2={bottom} className={gridClass} strokeWidth={1} />;
@@ -150,8 +153,8 @@ function Background({ plane, g }: { plane: PlanePart; g: PlaneGeometry }) {
         const [, y] = g.px([0, v]);
         return <line key={`gy${v}`} x1={left} x2={right} y1={y} y2={y} className={gridClass} strokeWidth={1} />;
       })}
-      {showX0 && <line x1={ox} x2={ox} y1={top} y2={bottom} className="stroke-line-strong" strokeWidth={1.25} />}
-      {showY0 && <line x1={left} x2={right} y1={oy} y2={oy} className="stroke-line-strong" strokeWidth={1.25} />}
+      {showX0 && <line x1={ox} x2={ox} y1={top} y2={bottom} className="stroke-ink-faint" strokeWidth={1.25} />}
+      {showY0 && <line x1={left} x2={right} y1={oy} y2={oy} className="stroke-ink-faint" strokeWidth={1.25} />}
       {xt.map((t) => {
         const [x] = g.px([t.at, 0]);
         return (
@@ -363,6 +366,8 @@ function BarsView({ s, g }: { s: BarsShape; g: PlaneGeometry }) {
             key={b.id}
             initial={false}
             animate={{ x: x0, y: top, width: Math.max(0, x1 - x0), height: Math.max(0, base - top) }}
+            // Rounded like the array view's bars, never more than a quarter of a narrow bar.
+            rx={Math.min(5, Math.max(0, x1 - x0) / 4)}
             className={`stroke-surface ${fl.className}`}
             style={fl.style}
             strokeWidth={0.75}
@@ -593,7 +598,8 @@ function HandleControl({
         className="fill-none stroke-accent opacity-0 group-hover:opacity-60 group-focus-visible:opacity-100"
         strokeWidth={2}
       />
-      <motion.circle initial={false} animate={{ cx, cy }} r={6.5} className={`stroke-surface ${fl.className}`} style={fl.style} strokeWidth={2} />
+      <motion.circle initial={false} animate={{ cx, cy }} r={7.5} className="fill-surface stroke-accent" strokeWidth={3} />
+      <motion.circle initial={false} animate={{ cx, cy }} r={2.75} className={fl.className} style={fl.style} />
     </g>
   );
 }
@@ -603,7 +609,7 @@ function HandleControl({
 function MatrixView({ part }: { part: MatrixPart }) {
   const rows = part.cols[0]?.values.length ?? 0;
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-line-soft bg-surface px-3 py-2">
+    <div className="flex items-center gap-2 rounded-[14px] bg-surface px-3 py-2">
       <span className="font-mono text-sm text-ink">{part.name} =</span>
       <div
         className="grid gap-x-3 rounded-md border-x-2 border-ink-soft px-2 py-0.5 font-mono text-sm tabular-nums"
@@ -626,13 +632,15 @@ function MatrixView({ part }: { part: MatrixPart }) {
 
 function Readouts({ part }: { part: ReadoutPart }) {
   return (
-    <dl className="flex flex-wrap items-center gap-2">
+    <dl className="flex flex-wrap items-stretch gap-2">
       {part.items.map((item) => (
-        <div key={item.id} className="flex items-center gap-2 rounded-lg border border-line-soft bg-surface px-3 py-1.5">
-          {item.tone && <span className="h-1 w-3 rounded-full" style={{ background: TONES[item.tone] }} />}
-          {item.mark && <span className={`text-xs font-bold ${MARKS[item.mark].text}`}>{MARKS[item.mark].glyph}</span>}
-          <dt className="text-xs text-ink-muted">{item.label}</dt>
-          <dd className="font-mono text-sm font-semibold text-ink tabular-nums">{item.value}</dd>
+        <div key={item.id} className="flex min-w-24 flex-col gap-0.5 rounded-[14px] bg-surface px-3 py-2">
+          <dt className="flex items-center gap-1.5 text-[11px] text-ink-muted">
+            {item.tone && <span className="h-1 w-3 rounded-full" style={{ background: TONES[item.tone] }} />}
+            {item.mark && <span className={`font-bold ${MARKS[item.mark].text}`}>{MARKS[item.mark].glyph}</span>}
+            {item.label}
+          </dt>
+          <dd className="font-mono text-[15px] font-semibold text-ink tabular-nums">{item.value}</dd>
         </div>
       ))}
     </dl>
@@ -718,11 +726,19 @@ function ImageView({ part }: { part: ImagePart }) {
   );
 }
 
+/** Each series tone's pastel, for a field of bits: blue sky, orange peach, green mint, amber butter. */
+const TONE_PASTEL: Record<number, string> = {
+  1: 'bg-track-sky text-track-sky-title',
+  2: 'bg-track-peach text-track-peach-title',
+  3: 'bg-track-mint text-track-mint-title',
+  4: 'bg-track-butter text-track-butter-title',
+};
+
 /** A wrapping row of token chips; spaces show as · so a leading space (part of a GPT token) is visible. */
 function TokensView({ part }: { part: TokensPart }) {
   return (
     <div className="mx-auto w-full max-w-3xl" aria-hidden>
-      <div className="mb-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{part.label}</div>
+      <div className="mb-1.5 text-xs font-medium text-ink-muted">{part.label}</div>
       <div className="flex flex-wrap gap-1">
         {part.tokens.map((t) => {
           const mark = t.mark ? MARKS[t.mark] : null;
@@ -732,9 +748,7 @@ function TokensView({ part }: { part: TokensPart }) {
               layout="position"
               initial={false}
               // Colours switch instantly: fading text and background together passes through unreadable blends.
-              className={`inline-flex min-w-6 flex-col items-center rounded-md border px-1.5 py-0.5 leading-tight ${
-                mark ? `${mark.bg} border-transparent ${t.mark === 'compare' ? 'text-white' : 'text-on-mark'}` : 'border-line bg-surface text-ink'
-              }`}
+              className={`inline-flex min-w-6 flex-col items-center rounded-[8px] px-2 py-0.5 leading-tight ${mark ? fillFor(t.mark) : PLAIN_CELL}`}
               style={{ boxShadow: t.tone && !mark ? `inset 0 -3px 0 ${TONES[t.tone]}` : undefined }}
             >
               <span className="font-mono text-sm whitespace-pre">{t.text.replace(/ /g, '·').replace(/\n/g, '↵')}</span>
@@ -753,16 +767,17 @@ function BitsView({ part }: { part: BitsPart }) {
   const grid: CSSProperties = { gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, containerType: 'inline-size' };
   return (
     <div className="mx-auto w-full max-w-3xl" aria-hidden>
-      <div className="mb-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{part.label}</div>
-      <div className="grid gap-px" style={grid}>
+      <div className="mb-1.5 text-xs font-medium text-ink-muted">{part.label}</div>
+      <div className="grid gap-0.5" style={grid}>
         {part.bits.map((b, i) => {
           const field = part.fields.find((f) => i >= f.from && i < f.to);
           const mark = b.mark ? MARKS[b.mark] : null;
           return (
             <div
               key={b.id}
-              className={`flex aspect-[3/4] items-center justify-center rounded-[3px] font-mono font-semibold transition-colors ${
-                mark ? `${mark.bg} ${b.mark === 'compare' ? 'text-white' : 'text-on-mark'}` : 'bg-sunken text-ink'
+              // A field's bits take the pastel of its tone (sign, exponent, fraction); a mark fills over it.
+              className={`flex aspect-[3/4] items-center justify-center rounded-[4px] font-mono font-semibold transition-colors ${
+                mark ? fillFor(b.mark) : field?.tone ? TONE_PASTEL[field.tone] : 'bg-sunken text-ink'
               }`}
               style={{
                 fontSize: `clamp(8px, ${(60 / n).toFixed(2)}cqw, 16px)`,
@@ -775,7 +790,7 @@ function BitsView({ part }: { part: BitsPart }) {
           );
         })}
       </div>
-      <div className="mt-1 grid gap-px" style={grid}>
+      <div className="mt-1 grid gap-0.5" style={grid}>
         {part.fields.map((f) => {
           // A field a few bits wide (a sign bit) lets its text run on to the right instead of truncating to nothing.
           const narrow = f.to - f.from < 4;
