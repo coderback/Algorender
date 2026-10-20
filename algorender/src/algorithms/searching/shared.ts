@@ -2,7 +2,7 @@ import type { InputExample, InputSpec, StatSpec } from '@/engine/module';
 import { createRng, parseArrayInput } from '@/engine/random';
 import type { Frame } from '@/engine/types';
 import { ArrayTracer, MAIN, type FrameOptions } from '@/viz/array/tracer';
-import type { ArrayState, Mark, Range } from '@/viz/array/types';
+import type { ArrayState, LogEntry, Mark, Range } from '@/viz/array/types';
 
 export type SearchInput = { values: number[]; target: number };
 
@@ -223,9 +223,14 @@ export class SearchTracer {
   private at = 0;
   private values: Record<string, number> | null = null;
 
+  /** Every probe so far, in order, for the history beside the array. */
+  private probed: { i: number; v: number }[] = [];
+
   constructor({ values, target }: SearchInput, stats: readonly string[], laneLabel: string) {
     this.t = new ArrayTracer(values, stats);
     this.t.setLaneLabel(MAIN, laneLabel);
+    // Position matters in a search, not size: values sit in cells (V1).
+    this.t.setLook('cells');
     this.n = values.length;
     this.x = target;
   }
@@ -243,7 +248,26 @@ export class SearchTracer {
   probe(i: number): number {
     this.t.count('probes');
     this.at = i;
-    return this.t.value(i);
+    const v = this.t.value(i);
+    this.probed.push({ i, v });
+    return v;
+  }
+
+  /**
+   * The probe history: each probe and how it compared with the target. The
+   * probe being made in this frame shows its value only, since the frame may
+   * ask where the target can be.
+   */
+  private log(probe: number | null | undefined, found: number | null | undefined): ArrayState['log'] {
+    if (this.probed.length === 0) return undefined;
+    const last = this.probed.length - 1;
+    const entries = this.probed.map(({ i, v }, k): LogEntry => {
+      const base = { id: `probe-${k}`, text: `A[${i}] = ${v}` };
+      if (v === this.x && found === i) return { ...base, note: 'found', mark: 'found' };
+      if (k === last && probe === i) return { ...base, mark: 'compare' };
+      return { ...base, note: v < this.x ? `< ${this.x}` : v > this.x ? `> ${this.x}` : `= ${this.x}` };
+    });
+    return { title: 'Probes', entries };
   }
 
   /** Moves the target bar without probing (e.g. to where the first probe will be). */
@@ -284,6 +308,7 @@ export class SearchTracer {
         values: this.values,
         lanes: [{ id: TARGET, label: `Target ${this.x}`, slots }, ...base.state.lanes],
         marks: { ...base.state.marks, [TARGET]: found != null ? 'found' : 'key' },
+        ...(this.probed.length > 0 && { log: this.log(probe, found) }),
       },
     };
   }

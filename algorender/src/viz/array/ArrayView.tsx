@@ -4,16 +4,27 @@ import { LayoutGroup, motion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { cx } from '@/components/ui/cx';
 import { MARKS, NEUTRAL, type MarkKey } from '@/viz/marks';
-import { Bracket, CAPTION, EMPTY_SLOT, PLAIN_CELL, Pointer } from '@/viz/parts';
+import { Bracket, CAPTION, EMPTY_SLOT, fillFor, PLAIN_CELL, Pointer } from '@/viz/parts';
 import { RANGE_TONES } from './marks';
 import { useArraySelect, type ArraySelect } from './select';
-import type { ArrayState, Counter, ItemId, Lane, Mark } from './types';
+import type { ArrayState, Counter, ItemId, Lane, LogEntry, Mark, Readout } from './types';
 
 /** Widest a slot gets, so short arrays don't turn into slabs. */
 const SLOT_MAX_PX = 72;
 const COUNTER_MAX_PX = 52;
 
-type Scale = { maxValue: number; digits: number; labelSize: string | null; barHeight: string; radius: string; gap: string; hole: string; emptyLane: string };
+type Scale = {
+  maxValue: number;
+  digits: number;
+  labelSize: string | null;
+  barHeight: string;
+  radius: string;
+  gap: string;
+  hole: string;
+  emptyLane: string;
+  /** Square cells instead of bars (searches, patterns). */
+  cells: boolean;
+};
 
 /**
  * Renders array lanes as bars. Elements are keyed by identity and share a
@@ -21,19 +32,23 @@ type Scale = { maxValue: number; digits: number; labelSize: string | null; barHe
  * (into a merge buffer, up to a "key" slot) flies the bar across. `compact`
  * (side-by-side races) drops value labels and counters and shortens the bars.
  * Inside an ArraySelectContext (a game), each bar is a button the learner can pick.
- * TODO(redesign): V1 draws searches and patterns as 40px cells (position
- * matters, not size), with probe history and live readouts beside them; the
- * state has no hint saying which a module wants, so every array draws bars.
+ * With `look: 'cells'` (searches, patterns: position matters, not size) values
+ * sit in square cells instead (V1); `readouts` are live lines under the array
+ * and `log` a history beside it (a search's probes).
  */
 export function ArrayView({ state, compact = false }: { state: ArrayState; compact?: boolean }) {
   const groupId = useId();
   const maxValue = Math.max(1, ...Object.values(state.values));
   const columns = Math.max(1, ...state.lanes.map((l) => l.slots.length));
+  const cells = state.look === 'cells' && !compact;
   const scale: Scale = {
+    cells,
     maxValue,
     digits: String(maxValue).length,
     labelSize: compact ? null : columns <= 12 ? 'text-sm' : columns <= 24 ? 'text-xs' : null,
-    barHeight: compact
+    barHeight: cells
+      ? 'h-[3.75rem]'
+      : compact
       ? state.lanes.length === 1
         ? 'h-24'
         : 'h-14'
@@ -44,18 +59,24 @@ export function ArrayView({ state, compact = false }: { state: ArrayState; compa
     radius: columns <= 24 && !compact ? 'rounded-t-[14px] rounded-b-[8px]' : 'rounded-t-[5px] rounded-b-[3px]',
     gap: columns <= 16 ? 'gap-1.5 sm:gap-2' : 'gap-1',
     // A race's small boards keep holes and empty lanes small too.
-    hole: compact ? 'h-2.5' : 'h-10',
-    emptyLane: compact ? 'h-6' : 'h-14',
+    hole: compact ? 'h-2.5' : cells ? 'h-11' : 'h-10',
+    emptyLane: compact ? 'h-6' : cells ? 'h-[3.75rem]' : 'h-14',
   };
 
   return (
     // layoutIds are global unless namespaced: without an id, two views on one page
     // (e.g. a race) would animate elements with the same id into each other.
     <LayoutGroup id={groupId}>
-      <div className="mx-auto flex w-full flex-col gap-4" style={{ maxWidth: columns * SLOT_MAX_PX }}>
-        {state.lanes.map((lane) => (
-          <LaneView key={lane.id} lane={lane} state={state} columns={columns} scale={scale} />
-        ))}
+      <div className="@container">
+        <div className={cx(state.log && !compact && '@3xl:grid @3xl:grid-cols-[minmax(0,1fr)_14rem] @3xl:items-start @3xl:gap-5')}>
+          <div className="mx-auto flex w-full flex-col gap-4" style={{ maxWidth: columns * SLOT_MAX_PX }}>
+            {state.lanes.map((lane) => (
+              <LaneView key={lane.id} lane={lane} state={state} columns={columns} scale={scale} />
+            ))}
+            {!compact && state.readouts && <Readouts readouts={state.readouts} />}
+          </div>
+          {!compact && state.log && <Log title={state.log.title} entries={state.log.entries} />}
+        </div>
       </div>
       {!compact && state.counters.length > 0 && (
         <div className="mt-5 flex flex-col gap-4">
@@ -79,6 +100,8 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
   }
   const description = lane.slots.map((id) => (id == null ? 'empty' : state.values[id])).join(', ');
   const select = useArraySelect();
+  // In cells, a lane holding one value (a search's target over the probe) leaves the rest blank rather than dashed.
+  const bare = scale.cells && lane.slots.filter((id) => id != null).length <= 1;
 
   return (
     <div role="group" aria-label={lane.label}>
@@ -92,7 +115,7 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
         <div className={cx('grid', scale.gap, lane.slots.some((id) => id != null) ? scale.barHeight : scale.emptyLane)} style={grid}>
           {lane.slots.map((id, index) =>
             id == null ? (
-              <Hole key={`hole-${index}`} radius={scale.radius} height={scale.hole} />
+              <Hole key={`hole-${index}`} radius={scale.radius} height={scale.hole} bare={bare} />
             ) : (
               <Item
                 key={id}
@@ -156,10 +179,17 @@ function Item({
   select: ArraySelect | null;
 }) {
   const meta = mark ? MARKS[mark] : null;
-  const height = Math.max(4, (value / scale.maxValue) * 100);
+  const height = scale.cells ? 100 : Math.max(4, (value / scale.maxValue) * 100);
   // With a label inside, a bar is never shorter than its number.
   const style: CSSProperties = { height: scale.labelSize ? `max(1.75rem, ${height}%)` : `${height}%`, transitionDuration: 'var(--tween, 300ms)' };
-  const bar = (
+  const bar = scale.cells ? (
+    <span
+      className={cx('flex h-11 w-full items-center justify-center rounded-[10px] font-mono font-semibold tabular-nums transition-colors', fillFor(mark), scale.labelSize ?? 'text-xs')}
+      style={{ transitionDuration: 'var(--tween, 300ms)' }}
+    >
+      {value}
+    </span>
+  ) : (
     <span className="relative block w-full min-h-0 flex-1">
       <span className={cx('absolute inset-x-0 bottom-0 flex items-end justify-center pb-1.5 transition-colors', scale.radius, meta ? meta.bg : NEUTRAL.bg, inkOn(mark))} style={style}>
         {scale.labelSize && <ValueLabel value={value} size={scale.labelSize} digits={scale.digits} digitPlace={digitPlace} />}
@@ -198,6 +228,39 @@ function Item({
   );
 }
 
+/** Live lines under the array, e.g. two pointers' sum against the target. */
+function Readouts({ readouts }: { readouts: readonly Readout[] }) {
+  return (
+    <div aria-hidden className="flex flex-wrap justify-center gap-2">
+      {readouts.map((r) => (
+        <span key={r.id} className={cx('rounded-full px-3 py-1 font-mono text-[13px] font-semibold tabular-nums transition-colors', r.mark ? fillFor(r.mark) : PLAIN_CELL)}>
+          {r.text}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** What has happened so far, numbered in order (a search's probes); beside the array on a wide stage, under it otherwise. */
+function Log({ title, entries }: { title: string; entries: readonly LogEntry[] }) {
+  return (
+    <div role="group" aria-label={title} className="mt-4 rounded-well bg-sunken p-3 @3xl:mt-0">
+      <div className={cx('mb-2', CAPTION)}>{title}</div>
+      <ol className="flex flex-col gap-1.5">
+        {entries.map((e, k) => (
+          <li key={e.id} className="flex items-center gap-2 font-mono text-[13px] tabular-nums">
+            <span className={cx('grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-bold', e.mark ? fillFor(e.mark) : 'bg-primary text-on-primary')}>
+              {e.mark === 'found' ? MARKS.found.glyph : k + 1}
+            </span>
+            <span className="font-semibold text-ink">{e.text}</span>
+            {e.note && <span className={cx('ml-auto', e.mark === 'found' ? MARKS.found.text : 'text-ink-muted')}>{e.note}</span>}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 /** Grid rows for ranges: each goes in the first row where it overlaps nothing already there. */
 function rangeRows(ranges: readonly { from: number; to: number }[]): number[] {
   const placed: { from: number; to: number }[][] = [];
@@ -214,12 +277,12 @@ function inkOn(mark: MarkKey | undefined) {
   return mark === 'compare' ? 'text-white' : mark ? 'text-on-mark' : 'text-ink';
 }
 
-function Hole({ radius, height }: { radius: string; height: string }) {
+function Hole({ radius, height, bare = false }: { radius: string; height: string; bare?: boolean }) {
   return (
     <div className="flex h-full min-w-0 flex-col items-center">
       <span className="h-4 shrink-0" />
       <div className="flex w-full flex-1 items-end">
-        <div className={cx('w-full', height, EMPTY_SLOT, radius)} />
+        <div className={cx('w-full', height, !bare && EMPTY_SLOT, radius)} />
       </div>
     </div>
   );

@@ -18,6 +18,8 @@ const ANSWER = 'answer';
 
 function* run(input: readonly number[]) {
   const t = new ArrayTracer(input, ['comparisons', 'pushes']);
+  // Position matters here, not size: values sit in cells (V1).
+  t.setLook('cells');
   const n = t.length;
   // Waiting elements lift into the stack lane (bottom on the left) and drop
   // back into their own slot once their next greater value is found.

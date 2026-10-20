@@ -1,5 +1,5 @@
 import type { Checkpoint, Frame, VarValue } from '@/engine/types';
-import type { ArrayState, Counter, ItemId, Lane, Mark, Pointer, Range, RangeTone } from './types';
+import type { ArrayState, Counter, ItemId, Lane, Mark, Pointer, Range, RangeTone, Readout } from './types';
 
 export const MAIN = 'main';
 
@@ -17,6 +17,8 @@ export type FrameOptions = {
   counterHighlight?: Record<string, number | null>;
   /** Predict-mode question about the next frame. This frame's note must not reveal the answer. */
   checkpoint?: Checkpoint;
+  /** Live lines under the array for this step. */
+  readouts?: readonly Readout[];
 };
 
 /**
@@ -31,6 +33,7 @@ export class ArrayTracer {
   private counters: Counter[] = [];
   private readonly sorted = new Set<ItemId>();
   private digitPlace: number | null = null;
+  private look: 'cells' | null = null;
   readonly stats: Record<string, number>;
 
   constructor(input: readonly number[], trackedStats: readonly string[] = ['comparisons', 'swaps']) {
@@ -175,6 +178,11 @@ export class ArrayTracer {
     this.digitPlace = place;
   }
 
+  /** Draw values as cells rather than bars, for algorithms where position matters more than size. */
+  setLook(look: 'cells' | null) {
+    this.look = look;
+  }
+
   /** Snapshot of the current state plus this step's narration and highlights. */
   frame(opts: FrameOptions): Frame<ArrayState> {
     const marks: Record<ItemId, Mark> = {};
@@ -213,6 +221,8 @@ export class ArrayTracer {
         ranges,
         counters,
         digitPlace: this.digitPlace,
+        ...(this.look && { look: this.look }),
+        ...(opts.readouts?.length && { readouts: opts.readouts }),
       },
       line: opts.line ?? null,
       note: opts.note,

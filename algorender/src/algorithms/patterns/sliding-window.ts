@@ -16,6 +16,8 @@ const pseudocode = [
 
 function* run({ values, k }: Input) {
   const t = new ArrayTracer(values, ['additions']);
+  // Position matters here, not size: values sit in cells (V1).
+  t.setLook('cells');
   const n = t.length;
   let sum = 0;
   for (let i = 0; i < k; i++) {

@@ -28,6 +28,12 @@ export type Counter = {
   highlight: number | null;
 };
 
+/** A short live line under the array: "2 + 11 = 13 > 12 → move R". A mark fills it. */
+export type Readout = { id: string; text: string; mark?: Mark };
+
+/** A list beside the array of what has happened so far, e.g. a search's probes: "A[7] = 45", "< 66". */
+export type LogEntry = { id: string; text: string; note?: string; mark?: Mark };
+
 export type ArrayState = {
   values: Readonly<Record<ItemId, number>>;
   lanes: readonly Lane[];
@@ -37,4 +43,8 @@ export type ArrayState = {
   counters: readonly Counter[];
   /** Radix sort: the place value (1, 10, 100…) whose digit labels should emphasise. */
   digitPlace: number | null;
+  /** 'cells' when position matters more than size (searches, patterns): values in square cells, not bars (V1). */
+  look?: 'cells';
+  readouts?: readonly Readout[];
+  log?: { title: string; entries: readonly LogEntry[] };
 };

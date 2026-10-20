@@ -228,3 +228,24 @@ describe('custom input', () => {
     expect(parseSearch(' → 3', true)).toHaveProperty('error');
   });
 });
+
+describe('probe history (V1)', () => {
+  for (const algo of searching) {
+    it(`${algo.slug} lists every probe, and never answers a question before it is asked`, () => {
+      fc.assert(
+        fc.property(needsSorted(algo) ? sortedInputs : unsortedInputs, (input) => {
+          for (const frame of traceOf(algo, input).frames) {
+            const entries = frame.state.log?.entries ?? [];
+            expect(entries.length).toBe(frame.stats.probes ?? 0);
+            // A question asked while the newest probe is being compared: its outcome stays hidden.
+            const last = entries.at(-1);
+            const i = last ? Number(/A\[(\d+)\]/.exec(last.text)![1]) : -1;
+            const comparing = last && frame.state.marks[mainLane(frame.state).slots[i]!] === 'compare';
+            if (frame.checkpoint && comparing) expect(last.note).toBeUndefined();
+            for (const e of entries.slice(0, -1)) expect(e.note).toBeDefined();
+          }
+        }),
+      );
+    });
+  }
+});
