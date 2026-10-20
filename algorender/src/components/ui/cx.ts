@@ -11,7 +11,7 @@ const merge = extendTailwindMerge({
     theme: {
       text: ['title-page', 'title-section', 'title-card', 'number-big', 'number-tile', 'eyebrow'],
       radius: ['card', 'tile', 'well', 'chip'],
-      shadow: ['segment', 'review'],
+      shadow: ['segment', 'review', 'float'],
       ease: ['standard'],
     },
   },

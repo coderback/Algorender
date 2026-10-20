@@ -5,10 +5,10 @@ import { seed } from './seed';
 // themes, for a side-by-side check against docs/redesign/renders. Shots land in
 // test-results/redesign/. No pixel diffs: the boards use sample data. Each
 // phase adds the routes it finishes.
-const ROUTES: { name: string; path: string; seeded?: boolean }[] = [
+const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean; signedIn?: boolean }[] = [
   { name: 'dev-ui', path: '/dev/ui' },
   // Phase 2: every page in its shell (hub, sub-page, detail, focused).
-  { name: 'today', path: '/' },
+  { name: 'today', path: '/', started: true },
   { name: 'explore', path: '/explore' },
   { name: 'learn', path: '/learn' },
   { name: 'placement', path: '/learn/placement' },
@@ -53,6 +53,10 @@ const ROUTES: { name: string; path: string; seeded?: boolean }[] = [
   // Phase 7: Play with XP, levels and badges, and the games' index.
   { name: 'play-seeded', path: '/play', seeded: true },
   { name: 'be-the-algorithm-index', path: '/play/be-the-algorithm' },
+  // Phase 8: the landing page (a first visit to /), the onboarding, and the account signed in with progress.
+  { name: 'landing', path: '/' },
+  { name: 'start', path: '/start' },
+  { name: 'account-signed-in', path: '/account', seeded: true, signedIn: true },
 ];
 
 const VIEWPORTS = [
@@ -65,9 +69,18 @@ for (const theme of ['light', 'dark'] as const) {
     for (const route of ROUTES) {
       test(`${route.name} at ${vp.name} in ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
+        if (route.started) await page.addInitScript(() => window === window.top && localStorage.setItem('algorender:started', '1'));
         if (route.seeded) {
           await page.goto('/explore');
           await seed(page);
+        }
+        // Signing in claims the device's progress for the account.
+        if (route.signedIn) {
+          const res = await page.request.post('/api/auth/sign-up/email', {
+            data: { name: 'Ada', email: `ada-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`, password: 'correct horse battery' },
+            headers: { origin: new URL(test.info().project.use.baseURL!).origin },
+          });
+          expect(res.ok(), 'sign up').toBe(true);
         }
         const sep = route.path.includes('?') ? '&' : '?';
         const res = await page.goto(`${route.path}${sep}theme=${theme}`);
@@ -75,6 +88,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
         await page.waitForLoadState('networkidle');
         await page.evaluate(() => document.fonts.ready);
+        if (route.signedIn) await expect(page.getByRole('status').filter({ hasText: /Synced/ })).toBeVisible({ timeout: 20_000 });
         // No horizontal page scroll at any width.
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         expect(overflow, 'horizontal page scroll').toBeLessThanOrEqual(0);

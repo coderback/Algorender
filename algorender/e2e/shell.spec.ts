@@ -8,6 +8,8 @@ const rail = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
 test('the rail marks the section a page belongs to', async ({ page }) => {
+  // / is Today once the learner has started (a first visit gets the landing page, with no rail).
+  await page.addInitScript(() => window === window.top && localStorage.setItem('algorender:started', '1'));
   for (const [path, place] of [
     ['/', 'Today'],
     ['/plan', 'Learn'],
@@ -72,7 +74,7 @@ test('escape closes the palette and focus returns to the trigger', async ({ page
 test('the palette passes axe in both themes', async ({ page }) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
-    await page.goto('/');
+    await page.goto('/explore');
     await page.waitForLoadState('networkidle'); // the shortcut works once the page has hydrated
     await page.keyboard.press('Control+k');
     const dialog = page.getByRole('dialog');

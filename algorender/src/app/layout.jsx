@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { SITE_URL } from "@/lib/site";
+import { HOME_SCRIPT } from "@/components/home/returning";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -36,6 +37,8 @@ export default function RootLayout({ children }) {
       <body className="antialiased">
         {/* Next moves beforeInteractive scripts into <head>, ahead of hydration, so a saved theme never flashes. */}
         <Script id="theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
+        {/* Whether / shows Today or the landing page, guessed before paint (decision D1; src/components/home). */}
+        <Script id="home" strategy="beforeInteractive">{HOME_SCRIPT}</Script>
         {children}
         <Analytics />
         <ServiceWorker />

@@ -26,7 +26,9 @@ const AREA_HINT: Record<AreaId, string> = {
 const STEPS = ['Areas', 'Questions', 'Where to start'] as const;
 
 /** Where the check is: done steps get a tick, the current one is the dark pill. */
-function Stepper({ at, aside }: { at: number; aside?: ReactNode }) {
+function Stepper({ at, aside, bare = false }: { at: number; aside?: ReactNode; bare?: boolean }) {
+  // Inside the onboarding, its own stepper says where the learner is; only the aside stays.
+  if (bare) return aside ? <div className="flex justify-end">{aside}</div> : null;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <ol aria-label="Placement check steps" className="flex flex-wrap gap-2">
@@ -54,8 +56,23 @@ function Stepper({ at, aside }: { at: number; aside?: ReactNode }) {
  * what was placed out and where to start. Each answer is recorded as it is
  * given, so leaving halfway keeps what was learned.
  */
-export function Placement({ graph, questions }: { graph: MasteryGraph; questions: Record<string, PlacementQuestion[]> }) {
-  const [areas, setAreas] = useState<AreaId[]>(['dsa']);
+export function Placement({
+  graph,
+  questions,
+  bare = false,
+  initialAreas = ['dsa'],
+  onFinish,
+}: {
+  graph: MasteryGraph;
+  questions: Record<string, PlacementQuestion[]>;
+  /** Inside another flow (the onboarding): no card and no stepper of its own. */
+  bare?: boolean;
+  initialAreas?: AreaId[];
+  /** Offered on the results instead of the links to the path and the plan. */
+  onFinish?: () => void;
+}) {
+  const [areas, setAreas] = useState<AreaId[]>(initialAreas);
+  const Frame = bare ? BareFrame : CardFrame;
   const [phase, setPhase] = useState<'choose' | 'asking' | 'done'>('choose');
   const [answers, setAnswers] = useState<PlacementAnswer[]>([]);
   const [current, setCurrent] = useState<Asked | null>(null);
@@ -96,8 +113,8 @@ export function Placement({ graph, questions }: { graph: MasteryGraph; questions
 
   if (phase === 'choose') {
     return (
-      <Card className="gap-6 rounded-[36px] p-6 sm:p-8">
-        <Stepper at={0} />
+      <Frame>
+        {!bare && <Stepper at={0} />}
         <fieldset className="flex flex-col gap-4">
           <legend className="mb-4 font-display text-title-section">First: what do you want to learn?</legend>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -133,7 +150,7 @@ export function Placement({ graph, questions }: { graph: MasteryGraph; questions
         <Button size="l" className="self-end" disabled={areas.length === 0} onClick={start} trailing={<FiArrowRight aria-hidden />}>
           Start
         </Button>
-      </Card>
+      </Frame>
     );
   }
 
@@ -142,8 +159,9 @@ export function Placement({ graph, questions }: { graph: MasteryGraph; questions
     const done = current.picked !== null;
     const right = current.picked === q.answer;
     return (
-      <Card className="gap-6 rounded-[36px] p-6 sm:p-8">
+      <Frame>
         <Stepper
+          bare={bare}
           at={1}
           aside={
             answers.length > 0 &&
@@ -204,14 +222,45 @@ export function Placement({ graph, questions }: { graph: MasteryGraph; questions
             </Button>
           )}
         </div>
-      </Card>
+      </Frame>
     );
   }
 
-  return <Results graph={graph} answers={answers} areas={areas} onRetake={() => setPhase('choose')} />;
+  return <Results graph={graph} answers={answers} areas={areas} bare={bare} onFinish={onFinish} onRetake={() => setPhase('choose')} />;
 }
 
-function Results({ graph, answers, areas, onRetake }: { graph: MasteryGraph; answers: PlacementAnswer[]; areas: AreaId[]; onRetake: () => void }) {
+function CardFrame({ children, ...rest }: { children: ReactNode; 'aria-live'?: 'polite' }) {
+  return (
+    <Card className="gap-6 rounded-[36px] p-6 sm:p-8" {...rest}>
+      {children}
+    </Card>
+  );
+}
+
+function BareFrame({ children, ...rest }: { children: ReactNode; 'aria-live'?: 'polite' }) {
+  return (
+    <div className="flex flex-col gap-6" {...rest}>
+      {children}
+    </div>
+  );
+}
+
+function Results({
+  graph,
+  answers,
+  areas,
+  bare,
+  onFinish,
+  onRetake,
+}: {
+  graph: MasteryGraph;
+  answers: PlacementAnswer[];
+  areas: AreaId[];
+  bare: boolean;
+  onFinish?: () => void;
+  onRetake: () => void;
+}) {
+  const Frame = bare ? BareFrame : CardFrame;
   const m = useMastery(graph);
   const goal = graph.concepts.filter((c) => areas.includes(areaOf(c.track))).map((c) => c.id);
   const { known } = settled(graph, answers);
@@ -219,18 +268,24 @@ function Results({ graph, answers, areas, onRetake }: { graph: MasteryGraph; ans
   const steps = nextSteps(m, graph, { limit: 4, toward: goal });
   const right = answers.filter((a) => a.correct).length;
   return (
-    <Card className="gap-6 rounded-[36px] p-6 sm:p-8" aria-live="polite">
-      <Stepper at={2} />
+    <Frame aria-live="polite">
+      {!bare && <Stepper at={2} />}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="font-display text-title-section sm:text-[32px]">
           Done: {right} of {answers.length} right
         </h2>
-        <div className="flex flex-wrap gap-2">
-          <ButtonLink href="/learn">See the path</ButtonLink>
-          <ButtonLink href="/plan" kind="secondary">
-            Make a plan
-          </ButtonLink>
-        </div>
+        {onFinish ? (
+          <Button onClick={onFinish} trailing={<FiArrowRight aria-hidden />}>
+            See your plan
+          </Button>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/learn">See the path</ButtonLink>
+            <ButtonLink href="/plan" kind="secondary">
+              Make a plan
+            </ButtonLink>
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-3 rounded-tile bg-accent-soft p-5 text-accent-ink">
         <p className="text-[15px] font-semibold">{placed.length > 0 ? `You placed out of ${placed.length} ${placed.length === 1 ? 'concept' : 'concepts'}` : 'Nothing placed out yet'}</p>
@@ -271,6 +326,6 @@ function Results({ graph, answers, areas, onRetake }: { graph: MasteryGraph; ans
       <button type="button" onClick={onRetake} className="self-start rounded-full px-1 py-1 text-sm font-semibold text-accent-ink hover:underline">
         Check another area
       </button>
-    </Card>
+    </Frame>
   );
 }

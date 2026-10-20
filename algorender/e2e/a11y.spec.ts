@@ -9,6 +9,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
 
 const pages = [
   '/',
+  '/start',
   '/explore',
   '/explore?kind=algorithms',
   '/learn',
@@ -59,7 +60,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
 test('the theme toggle cycles system → light → dark and is remembered', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
-  await page.goto('/');
+  await page.goto('/explore');
   const html = page.locator('html');
   const toggle = page.getByRole('button', { name: /^Theme:/ });
   await expect(toggle).toHaveAccessibleName('Theme: System. Switch to Light');

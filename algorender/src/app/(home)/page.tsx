@@ -1,4 +1,8 @@
 import type { Metadata } from 'next';
+import { HomeGate } from '@/components/home/HomeGate';
+import { landingData } from '@/components/landing/data';
+import { Landing } from '@/components/landing/Landing';
+import { AppShell } from '@/components/shell/AppShell';
 import { Today, type TodayData } from '@/components/today/Today';
 import { loadConcepts } from '@/content/concepts';
 import { goals } from '@/content/goals';
@@ -9,9 +13,11 @@ import { loadProblems } from '@/problems/load';
 import { PATTERNS } from '@/problems/patterns';
 import { misconceptionCard } from '@/progress/misconceptions';
 
+// The landing page is what a crawler sees, so it sets the title; returning learners get Today at the same URL.
 export const metadata: Metadata = {
-  title: 'Today | Algorender',
-  description: 'Where you left off, what is due for review, this week’s plan and what you are ready to learn next.',
+  title: 'Algorender: watch algorithms think',
+  description:
+    'Step through sorting, graphs, trees, dynamic programming and machine learning, forwards and backwards, with the code and the reason for every move. Then predict the next step yourself.',
 };
 
 /** What Today needs from content, compact: everything about the learner comes from their events. */
@@ -47,7 +53,17 @@ function todayData(): TodayData {
   };
 }
 
-// TODO(redesign): Phase 8 shows the landing page here to first-time visitors (decision D1).
-export default function TodayPage() {
-  return <Today data={todayData()} />;
+// / is outside the route groups: Today brings the app shell, the landing page has its own header.
+// The root layout's HOME_SCRIPT has put the D1 hint on <html> before either view paints.
+export default function HomePage() {
+  return (
+    <HomeGate
+      landing={<Landing data={landingData()} />}
+      today={
+        <AppShell>
+          <Today data={todayData()} />
+        </AppShell>
+      }
+    />
+  );
 }

@@ -72,6 +72,8 @@
   --color-feature-muted: #c9c7d1;
   /* Violet on a feature card (eyebrows, a progress ring): light in both themes. */
   --color-feature-accent: #bdb2ff;
+  /* The landing page's closing call to action: the feature card, lilac in dark mode. */
+  --color-cta: #17161c;
 
   /* The left rail and the phone tab bar. */
   --color-rail: #17161c;
@@ -214,6 +216,8 @@
      track. The one shadow in the design sits under it. */
   --color-segment: #ffffff;
   --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.08);
+  /* The landing hero's floating cards, the only other lift. */
+  --shadow-float: 0 1px 2px rgb(23 22 28 / 0.04), 0 24px 48px -24px rgb(23 22 28 / 0.25);
 
   /* shadcn/ui names, kept for components/ui. */
   --color-background: var(--color-surface);
@@ -295,6 +299,7 @@
       --color-feature: #0a090d;
       --color-on-feature: #f2f0ea;
       --color-feature-muted: #a3a0ad;
+      --color-cta: #2a2546;
 
       --color-rail: #0a090d;
       --color-rail-ink: #a3a0ad;
@@ -357,6 +362,7 @@
 
       --color-segment: #3a3942;
       --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.4);
+      --shadow-float: 0 24px 48px -24px rgb(0 0 0 / 0.6);
 
       --color-bar: #4a4658;
 
@@ -392,6 +398,13 @@
   body {
     background: var(--color-page);
     color: var(--color-ink);
+  }
+
+  /* Decision D1 on /: until the device's progress is read, the hint that
+     HOME_SCRIPT stamps before paint picks Today or the landing page. */
+  html:not([data-home='today']) [data-home-view='today'],
+  html[data-home='today'] [data-home-view='landing'] {
+    display: none;
   }
 
   /* Every interactive element shows the same keyboard focus ring. */
