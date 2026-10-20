@@ -5,7 +5,7 @@ import { useId, type CSSProperties } from 'react';
 import { RANGE_TONES } from '@/viz/array/marks';
 import { MARKS, type MarkKey } from '@/viz/marks';
 import { EMPTY_SLOT, fillFor, PLAIN_CELL, Pointer, RULED_OUT } from '@/viz/parts';
-import type { TextCell, TextRow, TextState } from './types';
+import type { HistoryEntry, Skip, TextCell, TextRow, TextState } from './types';
 
 /** Widest a column gets, so short strings don't turn into slabs. */
 const CELL_MAX_PX = 44;
@@ -18,8 +18,8 @@ type Sizes = { char: string; number: string; small: string };
  * current shift: cells are keyed by id and animate their position, so the
  * learner sees the pattern move rather than be redrawn.
  */
-// TODO(redesign): V7 draws the skip itself (KMP's dashed slide arrow, Rabin–Karp's window history, Manacher's
-// mirror bars) and counts comparisons against the naive way; the state doesn't carry these yet.
+// TODO(redesign): V7 also draws Manacher's mirror bars and the Z-algorithm's "comparisons saved"; neither
+// module records the mirror or the savings yet.
 export function TextView({ state }: { state: TextState }) {
   const groupId = useId();
   const cols = Math.max(1, state.columns);
@@ -42,6 +42,7 @@ export function TextView({ state }: { state: TextState }) {
             <RowView key={row.id} row={row} state={state} cols={cols} grid={grid} gap={gap} sizes={sizes} />
           ))}
           <Results results={state.results} />
+          {state.history && <History title={state.history.title} entries={state.history.entries} />}
         </div>
       </div>
     </LayoutGroup>
@@ -112,6 +113,8 @@ function RowView({
         </div>
       )}
 
+      {state.skip?.row === row.id && <SkipArrow skip={state.skip} cols={cols} grid={grid} gap={gap} />}
+
       {row.rangeLabels && (
         <div className={`mt-1 grid h-5 ${gap}`} style={grid}>
           {ranges
@@ -129,6 +132,46 @@ function RowView({
             ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** A slide drawn under its row (V7): a dashed arc from the old offset to the new one, and why it can skip. */
+function SkipArrow({ skip, cols, grid, gap }: { skip: Skip; cols: number; grid: CSSProperties; gap: string }) {
+  const from = Math.max(0, Math.min(cols - 1, skip.from));
+  const to = Math.max(from, Math.min(cols - 1, skip.to));
+  const span = to - from + 1;
+  const inset = `calc(${50 / span}% - 1px)`;
+  return (
+    <div className={`mt-1 grid ${gap}`} style={grid}>
+      {to > from && (
+        <div className="relative h-4" style={{ gridColumn: `${from + 1} / ${to + 2}`, gridRow: 1 }}>
+          <div className="absolute top-0 h-3 rounded-b-xl border-x-2 border-b-2 border-dashed border-mark-done" style={{ left: inset, right: inset }} />
+          <span className="absolute -top-1.5 -translate-x-1/2 text-[10px] leading-none text-mark-done-ink" style={{ right: inset, transform: 'translateX(50%)' }}>
+            ▲
+          </span>
+        </div>
+      )}
+      <p className="text-xs font-semibold text-mark-done-ink" style={{ gridColumn: `${from + 1} / ${cols + 1}`, gridRow: 2 }}>
+        {skip.label}
+      </p>
+    </div>
+  );
+}
+
+/** A history under the rows (V7), oldest first: Rabin–Karp's windows, each with its hash and what became of it. */
+function History({ title, entries }: { title: string; entries: readonly HistoryEntry[] }) {
+  return (
+    <div>
+      <div className="mb-1 text-xs font-medium text-ink-muted">{title}</div>
+      <ol className="flex flex-wrap gap-1.5">
+        {entries.map((e) => (
+          <li key={e.id} className={`flex items-baseline gap-1.5 rounded-[10px] px-2.5 py-1 text-xs ${e.mark ? fillFor(e.mark) : PLAIN_CELL}`}>
+            <span className="font-mono font-semibold">{e.text}</span>
+            <span className={e.mark ? '' : 'text-ink-muted'}>{e.detail}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

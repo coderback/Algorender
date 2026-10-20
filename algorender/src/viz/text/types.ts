@@ -35,6 +35,12 @@ export type TextPointer = { row: string; index: number; label: string };
 /** A span of cells `from`–`to` (inclusive, cell indices) of one row, e.g. a Z-box. */
 export type TextRange = { row: string; from: number; to: number; tone: RangeTone; label?: string };
 
+/** A slide drawn under a row (KMP's jump): from one offset to another, with why. Columns, not cell indices. */
+export type Skip = { row: string; from: number; to: number; label: string };
+
+/** One entry of a history under the rows, e.g. a Rabin–Karp window: its letters, its hash, what happened. */
+export type HistoryEntry = { id: string; text: string; detail: string; mark?: MarkKey };
+
 /** A labelled value shown above the rows, e.g. "window hash 37". */
 export type Readout = { id: string; label: string; value: string; mark?: MarkKey };
 
@@ -47,5 +53,8 @@ export type TextState = {
   ranges: readonly TextRange[];
   readouts: readonly Readout[];
   /** What the algorithm has found so far: match positions, the longest palindrome… */
-  results: { label: string; items: readonly string[]; empty: string };
+  results: { label: string; items: readonly string[]; empty: string };  /** The slide this step makes, drawn as a dashed arrow under the row (V7). */
+  skip?: Skip;
+  /** A history under the rows, e.g. every window Rabin–Karp has looked at (V7). */
+  history?: { title: string; entries: readonly HistoryEntry[] };
 };

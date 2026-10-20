@@ -36,6 +36,22 @@ export function occurrences(text: string, pattern: string): number[] {
 export const HASH_BASE = 26;
 export const HASH_MOD = 101;
 export const letterValue = (ch: string) => ch.charCodeAt(0) - 96;
+/**
+ * Character comparisons the naive search makes on the same text: at every
+ * shift, compare left to right until a mismatch or the whole pattern. Shown
+ * beside the real count so the saving is visible (V7).
+ */
+export function naiveComparisons(text: string, pattern: string): number {
+  let count = 0;
+  for (let s = 0; s + pattern.length <= text.length; s++) {
+    for (let j = 0; j < pattern.length; j++) {
+      count++;
+      if (text[s + j] !== pattern[j]) break;
+    }
+  }
+  return count;
+}
+
 export function hashOf(s: string): number {
   let h = 0;
   for (const ch of s) h = (h * HASH_BASE + letterValue(ch)) % HASH_MOD;

@@ -6,7 +6,7 @@ import type { Frame } from '@/engine/types';
 import { TextTracer } from '@/viz/text/tracer';
 import type { TextState } from '@/viz/text/types';
 import { stringAlgorithms } from '.';
-import { hashOf, occurrences, parseMatch, parseWord, type MatchInput } from './shared';
+import { hashOf, naiveComparisons, occurrences, parseMatch, parseWord, type MatchInput } from './shared';
 
 const bySlug = (slug: string) => stringAlgorithms.find((a) => a.slug === slug)!;
 const matchers = stringAlgorithms.filter((a) => a.slug !== 'manacher');
@@ -378,5 +378,44 @@ describe('TextTracer', () => {
     expect(after.state.marks).toEqual({ 'a:0': 'found', 'a:1': 'compare' });
     expect(() => t.addRow('a', 'again', 'x')).toThrow();
     expect(() => t.text('a', 3)).toThrow();
+  });
+});
+
+describe('the work strings skip (V7)', () => {
+  it('counts the naive search the same way it would run', () => {
+    expect(naiveComparisons('ababcab', 'abc')).toBe(3 + 1 + 3 + 1 + 1);
+    expect(naiveComparisons('ab', 'abc')).toBe(0);
+  });
+
+  it('KMP draws every slide from the pattern’s old place to its new one', () => {
+    fc.assert(
+      fc.property(matchInputs(textMaxOf(bySlug('kmp'))), (input) => {
+        const frames = traceOf(bySlug('kmp'), input).frames;
+        frames.forEach(({ state }, k) => {
+          if (!state.skip) return;
+          const offsetOf = (s: TextState) => s.rows.find((r) => r.id === state.skip!.row)!.offset;
+          expect(state.skip.to).toBe(offsetOf(state));
+          expect(state.skip.from).toBe(offsetOf(frames[k - 1].state));
+          expect(state.skip.to).toBeGreaterThan(state.skip.from);
+        });
+      }),
+    );
+  });
+
+  it('Rabin–Karp lists each window once, only after its question is answered', () => {
+    fc.assert(
+      fc.property(matchInputs(textMaxOf(bySlug('rabin-karp'))), (input) => {
+        const { text, pattern } = input as MatchInput;
+        const frames = traceOf(bySlug('rabin-karp'), input).frames;
+        let before = 0;
+        for (const f of frames) {
+          const entries = f.state.history?.entries ?? [];
+          if (f.checkpoint) expect(entries.length).toBe(before);
+          before = entries.length;
+        }
+        const windows = text.length >= pattern.length && pattern.length > 0 ? text.length - pattern.length + 1 : 0;
+        expect(frames.at(-1)!.state.history?.entries.length ?? 0).toBe(windows);
+      }),
+    );
   });
 });
