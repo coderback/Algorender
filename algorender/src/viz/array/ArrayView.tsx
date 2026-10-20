@@ -13,7 +13,7 @@ import type { ArrayState, Counter, ItemId, Lane, Mark } from './types';
 const SLOT_MAX_PX = 72;
 const COUNTER_MAX_PX = 52;
 
-type Scale = { maxValue: number; digits: number; labelSize: string | null; barHeight: string; radius: string; gap: string };
+type Scale = { maxValue: number; digits: number; labelSize: string | null; barHeight: string; radius: string; gap: string; hole: string; emptyLane: string };
 
 /**
  * Renders array lanes as bars. Elements are keyed by identity and share a
@@ -43,6 +43,9 @@ export function ArrayView({ state, compact = false }: { state: ArrayState; compa
     // Round-topped bars (V1): 14px over 8px, tighter when there are many.
     radius: columns <= 24 && !compact ? 'rounded-t-[14px] rounded-b-[8px]' : 'rounded-t-[5px] rounded-b-[3px]',
     gap: columns <= 16 ? 'gap-1.5 sm:gap-2' : 'gap-1',
+    // A race's small boards keep holes and empty lanes small too.
+    hole: compact ? 'h-2.5' : 'h-10',
+    emptyLane: compact ? 'h-6' : 'h-14',
   };
 
   return (
@@ -86,10 +89,10 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
 
       <div aria-hidden={select ? undefined : true}>
         {/* A lane with nothing in it yet (a buffer, the key's slot) is just its row of empty slots. */}
-        <div className={cx('grid', scale.gap, lane.slots.some((id) => id != null) ? scale.barHeight : 'h-14')} style={grid}>
+        <div className={cx('grid', scale.gap, lane.slots.some((id) => id != null) ? scale.barHeight : scale.emptyLane)} style={grid}>
           {lane.slots.map((id, index) =>
             id == null ? (
-              <Hole key={`hole-${index}`} radius={scale.radius} />
+              <Hole key={`hole-${index}`} radius={scale.radius} height={scale.hole} />
             ) : (
               <Item
                 key={id}
@@ -211,12 +214,12 @@ function inkOn(mark: MarkKey | undefined) {
   return mark === 'compare' ? 'text-white' : mark ? 'text-on-mark' : 'text-ink';
 }
 
-function Hole({ radius }: { radius: string }) {
+function Hole({ radius, height }: { radius: string; height: string }) {
   return (
     <div className="flex h-full min-w-0 flex-col items-center">
       <span className="h-4 shrink-0" />
       <div className="flex w-full flex-1 items-end">
-        <div className={cx('h-10 w-full', EMPTY_SLOT, radius)} />
+        <div className={cx('w-full', height, EMPTY_SLOT, radius)} />
       </div>
     </div>
   );
