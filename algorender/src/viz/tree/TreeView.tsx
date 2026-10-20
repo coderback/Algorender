@@ -4,8 +4,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { useWidth } from '@/viz/linear/useWidth';
 import { MARKS, type MarkKey } from '@/viz/marks';
-import { EDGE_ACTIVE, EDGE_IDLE, NODE_IDLE_SVG, NODE_RING } from '@/viz/parts';
+import { EDGE_ACTIVE, EDGE_IDLE, fillFor, NODE_IDLE_SVG, NODE_RING, PLAIN_CELL } from '@/viz/parts';
 import { labelWidth, layoutTree, rootsOf, type Box, type Metrics, type TreeLayout } from './layout';
+import { decisionTrail, type TrailStep } from './trail';
 import { linkId, type NodeId, type TableRow, type TreeNode, type TreeState } from './types';
 
 /** Room around the tree for glyphs above the root and the probe beside a node. */
@@ -76,17 +77,50 @@ function frameOf(state: TreeState, layout: TreeLayout) {
  * the left, leaves in a column), where a phone has room. Other trees always
  * grow downwards.
  */
-function chooseLayout(state: TreeState, width: number): TreeLayout {
+/**
+ * A search tree too wide for the stage first drops its long node labels (the
+ * subsets on a decision tree, which the results list also holds), then turns
+ * sideways if that is still too small. Returns the layout and the state to draw.
+ */
+function chooseLayout(state: TreeState, width: number): { layout: TreeLayout; state: TreeState } {
   const down = layoutTree(state);
-  if (!state.search || width <= 0) return down;
-  const scale = (layout: TreeLayout) => {
-    const { W, H } = frameOf(state, layout);
+  if (!state.search || width <= 0) return { layout: down, state };
+  const scale = (layout: TreeLayout, s: TreeState) => {
+    const { W, H } = frameOf(s, layout);
     return Math.min(MAX_SCALE, width / W, MAX_HEIGHT / H);
   };
-  const downScale = scale(down);
-  if (downScale >= MIN_SEARCH_SCALE) return down;
-  const side = layoutTree(state, { sideways: true });
-  return scale(side) > downScale ? side : down;
+  if (scale(down, state) >= MIN_SEARCH_SCALE) return { layout: down, state };
+  const plain = withoutLongLabels(state);
+  const plainDown = layoutTree(plain);
+  const plainScale = scale(plainDown, plain);
+  if (plainScale >= MIN_SEARCH_SCALE) return { layout: plainDown, state: plain };
+  const side = layoutTree(plain, { sideways: true });
+  return scale(side, plain) > plainScale ? { layout: side, state: plain } : { layout: plainDown, state: plain };
+}
+
+/** The same tree with labels longer than a circle holds taken off its round nodes. */
+function withoutLongLabels(state: TreeState): TreeState {
+  const nodes = Object.fromEntries(
+    Object.entries(state.nodes).map(([id, n]) => [id, n.shape === 'round' && [...(n.cells[0]?.label ?? '')].length > 2 ? { ...n, cells: [] } : n]),
+  );
+  return { ...state, nodes };
+}
+
+/** From this stage width the decision trail floats at the top right, as the board draws it; narrower, it sits above the tree. */
+const TRAIL_OVERLAY_PX = 560;
+
+/** The decisions on the way down, newest last; the comparison in hand is filled like a compare mark. */
+function Trail({ steps, overlay }: { steps: readonly TrailStep[]; overlay: boolean }) {
+  return (
+    <ol aria-hidden className={`flex flex-col gap-1 ${overlay ? 'pointer-events-none absolute top-0 right-0 z-10 items-end' : 'items-start'}`}>
+      {steps.map((step) => (
+        <li key={step.id} className={`rounded-[10px] px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap ${step.current ? fillFor('compare') : PLAIN_CELL}`}>
+          {step.text}
+          {step.current && ` ${MARKS.compare.glyph}`}
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 /**
@@ -102,15 +136,17 @@ function chooseLayout(state: TreeState, width: number): TreeLayout {
  * laid out up front, revealed as the search reaches it, each new call growing
  * out of its parent).
  *
- * TODO(redesign): V3 also writes a decision trail beside a search ("45 < 50 ← left"),
- * draws rotations and splits as before and after side by side, and labels
- * recursion-tree nodes with their partial result; the state has none of these.
+ * A search walk (a probe on a binary search tree, AVL tree or B-tree) gets a
+ * decision trail beside it, read from the frame (`decisionTrail`). Rotations
+ * and splits animate in place rather than as the board's before and after,
+ * so the nodes the learner was following keep moving instead of jumping to a
+ * second copy of the tree.
  */
-export function TreeView({ state }: { state: TreeState }) {
+export function TreeView({ state: given }: { state: TreeState }) {
   const reduce = useReducedMotion();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [ref, width] = useWidth<HTMLDivElement>();
-  const layout = chooseLayout(state, width);
+  const { layout, state } = chooseLayout(given, width);
   const m = layout.metrics;
   const { W, H, padTop, stripTop, stripCell, tableTop, table, hasTree } = frameOf(state, layout);
   const strip = state.strip;
@@ -184,11 +220,13 @@ export function TreeView({ state }: { state: TreeState }) {
 
   const probeAt = state.probe ? at.get(state.probe.at) : undefined;
   const probe = probeAt && state.probe ? probeSpot(probeAt, placed, state.probe.label, W) : null;
+  const trail = decisionTrail(state);
   const glyphR = search ? 5 : 7.5;
 
   return (
-    <div ref={ref} role="group" aria-label="Tree" className="flex flex-col gap-3">
+    <div ref={ref} role="group" aria-label="Tree" className="relative flex flex-col gap-3">
       <p className="sr-only">{state.description}</p>
+      {trail && <Trail steps={trail} overlay={width >= TRAIL_OVERLAY_PX} />}
       {!hasTree && (
         <p className="rounded-tile border-2 border-dashed border-edge py-10 text-center text-sm text-ink-muted" aria-hidden>
           {state.emptyLabel}
@@ -402,7 +440,10 @@ function Arrowhead({ id, className }: { id: string; className: string }) {
 }
 
 function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: number; mark: MarkKey | undefined }) {
-  const r = p.box.h / 2;
+  // The box swaps width and height when the tree is drawn sideways, so the circle is its shorter side.
+  const r = Math.min(p.box.h, 2 * p.box.left) / 2;
+  // Half the width beyond the circle: a pill when the label is too long for a circle.
+  const stretch = Math.max(p.box.h, 2 * p.box.left) / 2 - r;
   const meta = mark ? MARKS[mark] : null;
   const badges = p.node.badges;
   // A glyph sits on the node's top-left; a small node's glyph overlaps it less. A
@@ -412,12 +453,20 @@ function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: 
   return (
     <motion.g initial={{ opacity: 0, x: from.x, y: from.y }} animate={{ opacity: 1, x: p.x, y: p.y }} exit={{ opacity: 0 }}>
       {p.node.terminal && <circle r={r + 4} fill="none" strokeWidth={2} className="stroke-ink-soft" />}
-      <circle
-        r={r}
-        strokeWidth={NODE_RING}
-        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : NODE_IDLE_SVG}`}
-        style={TWEEN}
-      />
+      {stretch > 0.5 ? (
+        <rect
+          x={-r - stretch}
+          y={-r}
+          width={2 * (r + stretch)}
+          height={2 * r}
+          rx={r}
+          strokeWidth={NODE_RING}
+          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : NODE_IDLE_SVG}`}
+          style={TWEEN}
+        />
+      ) : (
+        <circle r={r} strokeWidth={NODE_RING} className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : NODE_IDLE_SVG}`} style={TWEEN} />
+      )}
       {badges?.top && (
         <text
           x={r + 2}
@@ -439,7 +488,7 @@ function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: 
           {meta!.glyph}
         </text>
       )}
-      {mark && !inside && <Glyph mark={mark} x={-g} y={-g} r={glyphR} />}
+      {mark && !inside && <Glyph mark={mark} x={-g - stretch} y={-g} r={glyphR} />}
     </motion.g>
   );
 }
