@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { FiArrowLeft } from 'react-icons/fi';
+import { PlayHeader } from '@/components/play/PlayHeader';
 import { getVisualiserBySlug } from '@/data/visualisers';
 import { BeTheAlgorithm } from '@/play/be-the-algorithm/BeTheAlgorithm';
 import { isSupported, SUPPORTED } from '@/play/be-the-algorithm/moves';
@@ -27,17 +26,12 @@ export default async function BeTheAlgorithmRoundPage({ params }: Props) {
   const { slug } = await params;
   if (!isSupported(slug)) notFound();
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <nav aria-label="Breadcrumb" className="mb-4 text-sm">
-        <Link href="/play/be-the-algorithm" className="inline-flex items-center gap-1.5 text-accent-ink hover:underline">
-          <FiArrowLeft aria-hidden /> Be the algorithm
-        </Link>
-      </nav>
-      <header className="mb-6 max-w-3xl">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent-ink">Be the algorithm</div>
-        <h1 className="text-3xl font-bold text-ink">Be {nameOf(slug).toLowerCase()}</h1>
-        <p className="mt-2 text-ink-soft">Make every swap it makes, in order, then say when it is done. Select two bars and swap them.</p>
-      </header>
+    <main className="flex flex-col gap-[22px] px-4 pb-6 md:px-0 md:pt-2">
+      <PlayHeader
+        active="/play/be-the-algorithm"
+        title={`Be ${nameOf(slug).toLowerCase()}`}
+        intro="Pick the two bars it swaps next, then say when it is done. The link holds the round, so you can share it."
+      />
       <BeTheAlgorithm slug={slug} />
     </main>
   );

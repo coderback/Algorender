@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PlayHeader } from '@/components/play/PlayHeader';
 import { PlayHub } from '@/components/play/PlayHub';
 import { masteryGraph } from '@/content/mastery';
 
@@ -9,15 +10,8 @@ export const metadata: Metadata = {
 
 export default function PlayPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <header className="mb-6 max-w-3xl">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent-ink">Play</div>
-        <h1 className="text-3xl font-bold text-ink">Play</h1>
-        <p className="mt-2 text-ink-soft">
-          Games where the learning is the game: make the moves yourself, find the limits, break things on purpose. XP counts what you can do
-          and remember, not how long you spent.
-        </p>
-      </header>
+    <main className="flex flex-col gap-[22px] px-4 pb-6 md:px-0 md:pt-2">
+      <PlayHeader active="/play" intro="Three games that check you can do it, not that you watched it." />
       <PlayHub graph={masteryGraph()} />
     </main>
   );

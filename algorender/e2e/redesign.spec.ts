@@ -50,6 +50,9 @@ const ROUTES: { name: string; path: string; seeded?: boolean }[] = [
   { name: 'practice-seeded', path: '/practice', seeded: true },
   { name: 'code-bug', path: '/code/bubble-sort-bug' },
   { name: 'problem-design', path: '/practice/min-stack' },
+  // Phase 7: Play with XP, levels and badges, and the games' index.
+  { name: 'play-seeded', path: '/play', seeded: true },
+  { name: 'be-the-algorithm-index', path: '/play/be-the-algorithm' },
 ];
 
 const VIEWPORTS = [

@@ -14,7 +14,7 @@ export interface SectionTab {
  */
 export function SectionTabs({ tabs, active, label = 'Section', className }: { tabs: readonly SectionTab[]; active: string; label?: string; className?: string }) {
   return (
-    <nav aria-label={label} className={cx('max-w-full overflow-x-auto rounded-full bg-surface p-1.5', className)}>
+    <nav aria-label={label} className={cx('w-fit max-w-full overflow-x-auto rounded-full bg-surface p-1.5', className)}>
       <ul className="flex w-max gap-1">
         {tabs.map((t) => {
           const current = t.href === active;
