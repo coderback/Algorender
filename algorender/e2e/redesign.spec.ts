@@ -6,7 +6,6 @@ import { seed } from './seed';
 // test-results/redesign/. No pixel diffs: the boards use sample data. Each
 // phase adds the routes it finishes.
 const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean; signedIn?: boolean }[] = [
-  { name: 'dev-ui', path: '/dev/ui' },
   // Phase 2: every page in its shell (hub, sub-page, detail, focused).
   { name: 'today', path: '/', started: true },
   { name: 'explore', path: '/explore' },
@@ -57,6 +56,13 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'landing', path: '/' },
   { name: 'start', path: '/start' },
   { name: 'account-signed-in', path: '/account', seeded: true, signedIn: true },
+  // Phase 9: one visualiser per view family a step in, on the stage system.
+  { name: 'viz-graph', path: '/visualisers/dijkstra?step=6' },
+  { name: 'viz-tree', path: '/visualisers/avl-tree' },
+  { name: 'viz-grid', path: '/visualisers/n-queens?step=8' },
+  { name: 'viz-text', path: '/visualisers/kmp?step=10' },
+  { name: 'viz-hash', path: '/visualisers/hash-table' },
+  { name: 'viz-plot', path: '/visualisers/k-means?step=4' },
 ];
 
 const VIEWPORTS = [

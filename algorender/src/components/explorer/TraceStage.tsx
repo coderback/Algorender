@@ -182,6 +182,7 @@ export function TraceStage<S>({
               type="button"
               onClick={() => setSheetOpen(true)}
               aria-haspopup="dialog"
+              data-sticks="bottom"
               className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 rounded-t-[28px] bg-code px-5 pt-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-code-ink lg:hidden"
             >
               <span aria-hidden className="mx-auto h-1 w-9 rounded-full bg-code-muted/60" />

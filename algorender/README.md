@@ -1,43 +1,38 @@
 # Algorender
 
-Algorender is an interactive web application for visualizing algorithms and data structures. It provides a hands-on learning experience to help users understand how various algorithms and data structures work through visual representations and interactive operations.
+Algorender is a place to learn algorithms, data structures, the maths behind machine learning, and systems by watching them think. Every visualiser is a real run of the algorithm, recorded step by step and narrated, and you can stop at any decision and predict what happens next. Lessons, practice problems, a code workspace, games and a spaced review queue sit around the visualisers, and your progress is kept on your device (and synced if you sign in).
+
+## Screenshots
+
+| Today | A visualiser in Predict mode |
+| --- | --- |
+| ![Today: continue where you left off, reviews due, this week's plan and mastery by track](docs/screenshots/today.jpg) | ![Bubble sort paused at a comparison, asking what happens next](docs/screenshots/visualiser.jpg) |
+
+| Learn, in dark mode | On a phone |
+| --- | --- |
+| ![The concept map: a row of concepts per track, each with its status](docs/screenshots/learn-dark.jpg) | ![Explore in light and Dijkstra in dark, at phone width](docs/screenshots/phone.jpg) |
 
 ## Features
 
-### Data Structure Visualizations
-- **Linear**: Array, Stack, Queue, Linked List, Deque
-- **Hierarchical**: Binary Tree, AVL Tree, B-Tree, Heap
-- **Graph-Based**: Graph, Adjacency List, Adjacency Matrix
-- **Hash-Based**: Hash Table, Hash Set
-
-### Algorithm Visualizations
-- **Sorting**: Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, Heap Sort, Counting Sort, Radix Sort
-- **Searching**: Linear Search, Binary Search, Jump Search, Interpolation Search, Exponential Search, Fibonacci Search
-- **Graph**: Breadth-First Search, Depth-First Search, Dijkstra's Algorithm, Bellman-Ford Algorithm, Floyd-Warshall Algorithm, Prim's Algorithm, Kruskal's Algorithm, Topological Sort, Kosaraju's Algorithm, Tarjan's Algorithm
-- **Greedy**: Knapsack (Greedy), Activity Selection
-- **Dynamic Programming**: Fibonacci (Memoization), 0/1 Knapsack, Longest Common Subsequence, Edit Distance
-- **Backtracking**: N-Queens Problem, Sudoku Solver
-- **String Matching**: Rabin-Karp Algorithm, KMP Algorithm, Z-Algorithm, Trie (Prefix Matching), Manacher's Algorithm
-
-### Interactive Operations
-- Perform operations on data structures (insert, remove, search, push/pop, enqueue/dequeue, depending on the structure)
-- Watch most algorithms run step by step with an adjustable speed control; sorting and searching visualizations can also be paused and resumed
-- Follow live statistics such as comparisons, swaps, sizes and distances
-- See time and space complexity and a short "How it Works" summary on every page
-- Find any visualization from the search bar in the header
+- **Visualisers**: sorting, searching, graphs, trees, hashing, dynamic programming, backtracking and strings; linear algebra, calculus, probability, information theory, machine learning, deep learning, LLMs, reinforcement learning and diffusion; CPU scheduling, caches, consistent hashing, queueing, Raft, LSM trees and more. Step forward and back, scrub, change the input, or switch to Predict mode and answer at each decision.
+- **Explore**: every visualiser as a tile, filtered by kind, track and name, with your status on each.
+- **Learn**: a concept map with mastery per concept, lessons that follow a learning loop (watch, predict, do, check, explain), a placement check and a study plan.
+- **Practice**: interview-style problems judged in the browser in Python, JavaScript and TypeScript (and on the server in Java, C++ and Go), code exercises from Parsons puzzles to bug hunts, pattern drills and system-design case studies on a simulator.
+- **Review**: a daily spaced-review queue of the questions, problems and mistakes you've met.
+- **Play**: games that test the ideas (be the algorithm, beat the comparison budget, break it), with XP for evidence of learning, levels and badges.
+- **Light and dark themes**, a command palette (Ctrl K / ⌘K), and layouts for desktop and phone.
 
 ## Technologies Used
 
-- **Frontend Framework**: Next.js 15.3.3 (App Router)
-- **UI Library**: React 19
-- **Styling**: Tailwind CSS 3.4
-- **Components**: Radix UI tabs, shadcn/ui-style card and tabs, react-icons
-- **Analytics**: Vercel Analytics
+- **Framework**: Next.js 16 (App Router), React 19, TypeScript
+- **Styling**: Tailwind CSS 4 with semantic theme tokens, Motion for animation
+- **Accounts and progress**: Better Auth, Drizzle over Postgres (PGlite locally), an IndexedDB event log on the device
+- **Tests**: Vitest with fast-check, Playwright with axe accessibility scans
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18.18 or later
+- Node.js 20.9 or later
 - npm
 
 ### Installation
@@ -60,34 +55,38 @@ The Next.js app lives in the `algorender/` folder of the repository; run all npm
    npm run dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
+4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the application. Nothing else is needed locally: the database is an embedded Postgres in `.data/`.
 
 ## Usage
 
-1. **Browse Categories**: On the home page, choose between the Data Structures and Algorithms tabs.
-2. **Select a Visualization**: Click on any card, or search for it from the header.
-3. **Interact with the Visualization**: Use the provided controls to perform operations or run the algorithm, and adjust the speed to follow along.
-4. **Learn from Information**: Each visualization shows its time and space complexity and explains how the data structure or algorithm works.
+1. **Start**: a first visit shows the landing page; "Start learning" asks for a goal and a few hours a week and builds a plan. After that, `/` is Today: where to continue, what's due and this week's plan.
+2. **Find something**: browse Explore or Learn, or press Ctrl K (⌘K) to search everything.
+3. **Watch or predict**: play a visualiser, step through it, or switch to Predict mode and answer before each decision.
+4. **Practise and review**: solve problems and exercises, then come back to the review queue each day.
 
 ## Project Structure
 
 ```
-algorender/                     Next.js app
-├── src/app/page.jsx            Home page
-├── src/app/visualisers/        One folder per visualization (page.jsx)
-├── src/components/             Layout, controls, SortingChart and shared UI
-├── src/data/visualisers.js     Registry of every visualization (home page, search, navigation)
-└── src/hooks/                  Shared hooks, e.g. useCancellableWait for animation timing
-VISUALIZER_GUIDE.md             How to add a new visualization
+algorender/                       Next.js app
+├── src/app/                      Routes, grouped by frame: (home), (shell), (detail), (focused)
+├── src/engine/                   The trace engine: record a run as frames, replay it
+├── src/algorithms/, structures/  Visualiser modules, one per algorithm or data structure
+├── src/viz/                      The views that draw a frame (array, graph, tree, grid, plot, …)
+├── src/components/               Pages' UI; src/components/ui/ holds the design-system primitives
+├── src/content/                  Concept graph, lessons (MDX), problems, exercises, case studies
+├── src/progress/                 The progress event log and its projections (review, mastery, plan)
+└── e2e/                          Playwright tests
+CLAUDE.md                         Architecture notes and conventions
+REVAMP_PLAN.md                    The roadmap
 ```
 
 ## Adding a Visualization
 
-1. Create `algorender/src/app/visualisers/<slug>/page.jsx` and wrap it in the `Layout` component.
-2. Add an entry for it to `algorender/src/data/visualisers.js`; the home page, search and back link pick it up from there.
-3. Time animation steps with `wait(ms)` from `useCancellableWait` so they stop when the user navigates away.
+1. Write a module in `algorender/src/algorithms/<family>/` (a generator that yields narrated frames) or `algorender/src/structures/<family>/` (operations on an immutable model).
+2. Add it to its family's `index.ts` and to `algorender/src/data/visualisers.js`; the page at `/visualisers/<slug>`, Explore and the palette pick it up from there.
+3. Add property tests next to it.
 
-See the [Visualizer Development Guide](https://github.com/coderback/Algorender/blob/master/VISUALIZER_GUIDE.md) for patterns and templates.
+`CLAUDE.md` describes the engine, the views and the conventions in full.
 
 ## Building for Production
 
@@ -105,7 +104,7 @@ npm run start
 
 ## Deployment
 
-The easiest way to deploy Algorender is to use the [Vercel Platform](https://vercel.com/new) from the creators of Next.js.
+Algorender deploys to [Vercel](https://vercel.com/new). Set `DATABASE_URL` (any Postgres; run `npm run db:migrate` against it first) and `BETTER_AUTH_SECRET`; `CLAUDE.md` lists the optional settings (social sign-in, the server judge, the AI tutor).
 
 ## Contributing
 
@@ -113,7 +112,7 @@ Contributions are welcome! If you'd like to contribute to Algorender:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/new-feature`)
-3. Run `npm run lint` and `npm run build` in `algorender/` to check your changes
+3. Run `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` in `algorender/` to check your changes
 4. Commit your changes (`git commit -m 'feat(feature): new feature'`)
 5. Push to the branch (`git push origin feature/new-feature`)
 6. Open a Pull Request

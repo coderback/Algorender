@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FiChevronLeft, FiSearch, FiX } from 'react-icons/fi';
+import { FiChevronLeft, FiSearch } from 'react-icons/fi';
 import { Avatar } from './Avatar';
 import { usePalette } from './CommandPalette';
 import { isHub, parentOf } from './places';
@@ -20,10 +20,10 @@ export function SearchButton() {
 }
 
 /** A 44px round link back to the page above. */
-export function BackButton({ href, close = false }: { href: string; close?: boolean }) {
+export function BackButton({ href }: { href: string }) {
   return (
-    <Link href={href} aria-label={close ? 'Close' : 'Back'} className={circle}>
-      {close ? <FiX aria-hidden className="size-5" /> : <FiChevronLeft aria-hidden className="size-5" />}
+    <Link href={href} aria-label="Back" className={circle}>
+      <FiChevronLeft aria-hidden className="size-5" />
     </Link>
   );
 }
@@ -42,16 +42,6 @@ export function PhoneHeader() {
         <SearchButton />
         {hub && <Avatar size="s" />}
       </div>
-    </header>
-  );
-}
-
-/** Focused pages (lesson, problem, review): one way out, and nothing else. */
-export function FocusBar() {
-  const pathname = usePathname();
-  return (
-    <header className="flex items-center gap-2 px-4 pt-4 sm:px-6">
-      <BackButton href={parentOf(pathname)} close />
     </header>
   );
 }

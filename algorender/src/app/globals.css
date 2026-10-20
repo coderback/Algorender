@@ -125,7 +125,6 @@
   /* Feedback: right / careful / wrong. A soft fill with a dark title and a
      coloured icon (the ink). good is also a fill, with on-good text. */
   --color-good: #17634a;
-  --color-good-strong: #0b3b2a;
   --color-on-good: #ffffff;
   --color-good-ink: #17634a;
   --color-good-title: #0b3b2a;
@@ -218,15 +217,6 @@
   --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.08);
   /* The landing hero's floating cards, the only other lift. */
   --shadow-float: 0 1px 2px rgb(23 22 28 / 0.04), 0 24px 48px -24px rgb(23 22 28 / 0.25);
-
-  /* shadcn/ui names, kept for components/ui. */
-  --color-background: var(--color-surface);
-  --color-foreground: var(--color-ink);
-  --color-card: var(--color-surface);
-  --color-card-foreground: var(--color-ink);
-  --color-muted: var(--color-sunken);
-  --color-muted-foreground: var(--color-ink-muted);
-  --color-ring: var(--color-accent);
 
   /* Visualiser state colours: one meaning per colour across every view.
      Okabe–Ito hues, distinguishable with the common colour-vision deficiencies;
@@ -323,7 +313,6 @@
       --shadow-review: 0 0 0 1px rgb(255 255 255 / 0.06);
 
       --color-good: #9be3c2;
-      --color-good-strong: #c9f2df;
       --color-on-good: #121116;
       --color-good-ink: #9be3c2;
       --color-good-title: #c9f2df;
@@ -392,10 +381,24 @@
     border-color: var(--color-line, currentcolor);
   }
 
-  /* Nothing sticks to the top of the page (the rail is beside it, the phone
-     tab bar below), so anchors only need a little air above them. */
+  /* Anchors and focused elements get a little air above them, and stay clear
+     of bars that stick to an edge (WCAG 2.4.11): a lesson's focus header at
+     the top; on phones and tablets the tab bar, the code peek, a problem's
+     judge buttons and the review's grades at the bottom. Such bars carry
+     data-sticks. */
   html {
     scroll-padding-top: 1.5rem;
+  }
+  html:has([data-sticks='top']) {
+    scroll-padding-top: 6rem;
+  }
+  @media (width < 64rem) {
+    html:has([data-sticks='bottom']) {
+      scroll-padding-bottom: 7rem;
+    }
+    html:has([data-sticks='bottom-tall']) {
+      scroll-padding-bottom: 11rem;
+    }
   }
 
   body {

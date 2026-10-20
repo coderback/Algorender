@@ -64,7 +64,7 @@ export function LessonChrome({
 
   return (
     <SectionIndex.Provider value={index}>
-      <header className="sticky top-0 z-30 border-b border-line-soft bg-page/90 backdrop-blur-md">
+      <header data-sticks="top" className="sticky top-0 z-30 border-b border-line-soft bg-page/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1180px] items-center gap-4 px-4 py-3 sm:px-6">
           <Link href="/learn" aria-label="Close the lesson, back to Learn" className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-surface text-ink hover:bg-subtle">
             <FiX aria-hidden className="size-5" />

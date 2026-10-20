@@ -15,8 +15,8 @@ import { MARKS, type MarkKey } from '@/viz/marks';
 import { FieldsDemo, InputsDemo, SheetDemo } from './Interactive';
 
 // A development sheet for the design system: every primitive in the current
-// theme, to check against docs/redesign/renders/system/Main.jpg. It is not
-// linked, not in the sitemap and not indexed.
+// theme, to check against docs/redesign/renders/system/Main.jpg. Only the dev
+// server serves it (the .dev.tsx extension; see next.config.mjs).
 export const metadata: Metadata = {
   title: 'UI foundations · Algorender',
   robots: { index: false, follow: false },

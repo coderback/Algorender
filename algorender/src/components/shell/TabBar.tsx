@@ -19,6 +19,7 @@ export function TabBar() {
   return (
     <nav
       aria-label="Main"
+      data-sticks="bottom"
       className="fixed inset-x-3 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-30 grid grid-cols-6 gap-[3px] rounded-[26px] bg-rail p-[7px] md:hidden"
     >
       {PLACES.map((p) => {

@@ -31,7 +31,6 @@ const pages = [
   '/review',
   ...exercises.map((e) => `/code/${e.slug}`),
   '/embed/bubble-sort',
-  '/dev/ui',
   '/visualisers/bubble-sort?mode=predict',
   ...visualisers.filter((v: { hidden?: boolean }) => !v.hidden).map((v: { path: string }) => v.path),
 ];

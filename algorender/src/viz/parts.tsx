@@ -56,10 +56,9 @@ export const STAGE_CAPTION = 'text-[13px] font-semibold text-ink-soft';
 export const NODE_IDLE_SVG = 'fill-surface stroke-edge';
 export const NODE_RING = 2.5;
 
-/** Edges: idle 2.5px grey, active 5px in its mark's colour. */
+/** Edges: idle 2.5px in the `edge` token, active 5px in its mark's colour. */
 export const EDGE_IDLE = 2.5;
 export const EDGE_ACTIVE = 5;
-export const EDGE_IDLE_SVG = 'stroke-edge';
 
 /**
  * A range under cells (a search window, a sorted run, a partition): a soft

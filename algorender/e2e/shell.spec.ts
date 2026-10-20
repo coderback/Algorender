@@ -61,6 +61,51 @@ test('the command palette finds a visualiser and opens it from the keyboard', as
   await expect(dialog).toHaveCount(0);
 });
 
+test('the palette tells a screen reader what the list holds as the query and filter change', async ({ page }) => {
+  await page.goto('/explore');
+  await page.waitForLoadState('networkidle');
+  await page.keyboard.press('Control+k');
+  const dialog = page.getByRole('dialog', { name: 'Search and actions' });
+  const input = dialog.getByRole('combobox');
+  await expect(input).toHaveAccessibleDescription(/arrows move through the results.*Tab changes what to show/);
+  await input.fill('sort');
+  const status = dialog.getByRole('status');
+  await expect(status).toHaveText(/^\d+ results$/);
+  await page.keyboard.press('Tab');
+  await expect(status).toHaveText(/^\d+ results? in Visualisers$/);
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(status).toHaveText(/ in Actions$/);
+
+  // Back round to All. The arrows move the active option; focus stays in the input.
+  await page.keyboard.press('Tab');
+  await expect(status).toHaveText(/^\d+ results$/);
+  const first = await input.getAttribute('aria-activedescendant');
+  await page.keyboard.press('ArrowDown');
+  await expect(input).not.toHaveAttribute('aria-activedescendant', first!);
+  await page.keyboard.press('ArrowUp');
+  await expect(input).toHaveAttribute('aria-activedescendant', first!);
+  await expect(input).toBeFocused();
+});
+
+test('keyboard focus starts at the skip link, then the rail, then the page', async ({ page }) => {
+  await page.goto('/explore');
+  await page.waitForLoadState('networkidle');
+  await page.keyboard.press('Tab');
+  const skip = page.getByRole('link', { name: 'Skip to content' });
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeInViewport();
+  await page.keyboard.press('Tab');
+  await expect(rail(page).getByRole('link', { name: 'Algorender home' })).toBeFocused();
+
+  // The skip link jumps past the rail and the top bar into the page.
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#content')).toBeFocused();
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => !!document.activeElement?.closest('#content'))).toBe(true);
+});
+
 test('escape closes the palette and focus returns to the trigger', async ({ page }) => {
   await page.goto('/practice');
   const trigger = page.getByRole('button', { name: /Search visualisers, lessons, problems/ });
@@ -113,5 +158,21 @@ test.describe('on a phone', () => {
 
     await page.goto('/visualisers/stack');
     await expect(page.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/explore');
+  });
+
+  test('the tab bar never covers the focused element', async ({ page }) => {
+    await page.goto('/explore');
+    await page.waitForLoadState('networkidle');
+    const bar = await rail(page).boundingBox();
+    // Tab forward from the filters into the tiles below the fold.
+    await page.getByRole('searchbox', { name: 'Filter visualisers' }).focus();
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press('Tab');
+      const box = await page.evaluate(() => {
+        const r = document.activeElement!.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom };
+      });
+      expect(box.bottom, `focus stop ${i + 1}`).toBeLessThanOrEqual(bar!.y);
+    }
   });
 });

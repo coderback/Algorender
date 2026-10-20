@@ -315,7 +315,7 @@ function Session({
 
         {showing && (
           // On phones the grades stay pinned to the bottom, so a long answer never hides them.
-          <div className="flex flex-col gap-2.5 max-sm:sticky max-sm:bottom-0 max-sm:-mx-4 max-sm:bg-review-page max-sm:px-4 max-sm:pt-3 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div data-sticks="bottom-tall" className="flex flex-col gap-2.5 max-sm:sticky max-sm:bottom-0 max-sm:-mx-4 max-sm:bg-review-page max-sm:px-4 max-sm:pt-3 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <p className="text-center text-sm text-track-butter-title">{question && !right ? 'It comes back tomorrow.' : 'How well did you remember it?'}</p>
             <div role="group" aria-label="Rate your recall" className={clsx('grid gap-2.5', grades.length === 1 ? 'grid-cols-1' : grades.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4')}>
               {grades.map((g) => (

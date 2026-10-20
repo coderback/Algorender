@@ -281,6 +281,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
           aria-autocomplete="list"
           aria-activedescendant={current ? optionId(Math.min(active, flat.length - 1)) : undefined}
           aria-label="Search visualisers, lessons, problems and actions"
+          aria-describedby={`${base}-keys`}
           placeholder="Search visualisers, lessons, problems"
           value={query}
           onChange={(e) => {
@@ -293,7 +294,14 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg">
           <Kbd>esc</Kbd>
         </button>
+        <p id={`${base}-keys`} className="sr-only">
+          Up and down arrows move through the results, Enter opens one, Tab changes what to show, Escape closes.
+        </p>
       </div>
+      {/* Says what the list holds as the query or the filter changes, since focus stays in the input. */}
+      <p role="status" className="sr-only">
+        {index && `${flat.length} ${flat.length === 1 ? 'result' : 'results'}${filter === 'all' ? '' : ` in ${FILTERS.find((f) => f.id === filter)!.label}`}`}
+      </p>
 
       <div role="group" aria-label="Show" className="flex flex-wrap gap-2 px-5 pt-4 sm:px-6">
         {FILTERS.map((f) => (

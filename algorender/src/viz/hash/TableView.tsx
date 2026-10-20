@@ -12,6 +12,8 @@ import type { BucketTable, HashEntry, Holder, TableState } from './types';
 
 /** Two columns of buckets when there are many and room for them. */
 const TWO_COLUMNS_MIN_PX = 560;
+/** Below this stage width the load meter sits above the key holders instead of between them. */
+const METER_ROW_MAX_PX = 480;
 
 const entryLabel = (e: HashEntry) => (e.value == null ? e.key : `${e.key}: ${e.value}`);
 
@@ -37,9 +39,11 @@ export function TableView({ state }: { state: TableState }) {
         {width > 0 && (
           <div aria-hidden className="flex flex-col gap-3">
             <Calc lines={state.calc} rule={`bucket = hash(key) mod m, with m = ${state.buckets}`} />
-            <div className="flex items-end gap-3">
+            {/* On a narrow stage the meter takes its own row, so the key holders don't squeeze it. */}
+            {width < METER_ROW_MAX_PX && <LoadMeter size={state.size} buckets={state.buckets} max={state.maxLoad} />}
+            <div className="flex items-end justify-between gap-3">
               <HolderSpot holder={inHolder} state={state} />
-              <LoadMeter size={state.size} buckets={state.buckets} max={state.maxLoad} />
+              {width >= METER_ROW_MAX_PX && <LoadMeter size={state.size} buckets={state.buckets} max={state.maxLoad} />}
               <HolderSpot holder={outHolder} state={state} />
             </div>
             <div className={`grid gap-4 ${state.tables.length > 1 ? 'md:grid-cols-2' : ''}`}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Reorder, useDragControls } from 'motion/react';
+import { MotionConfig, Reorder, useDragControls } from 'motion/react';
 import { useId, useState, type ReactNode } from 'react';
 import { FiArrowDown, FiArrowUp, FiChevronLeft, FiChevronRight, FiMenu, FiPlus, FiX } from 'react-icons/fi';
 import type { Language } from '../protocol';
@@ -60,63 +60,66 @@ export function ParsonsStage({
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div role="group" aria-labelledby={`${uid}-pool`} className="rounded-tile bg-surface p-4">
-        <div id={`${uid}-pool`} className="mb-3 text-[15px] font-semibold text-ink">
-          Lines to use <span className="font-normal text-ink-muted">· some aren’t needed</span>
+    // Lines slide as they're reordered, unless the OS asks for reduced motion.
+    <MotionConfig reducedMotion="user">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div role="group" aria-labelledby={`${uid}-pool`} className="rounded-tile bg-surface p-4">
+          <div id={`${uid}-pool`} className="mb-3 text-[15px] font-semibold text-ink">
+            Lines to use <span className="font-normal text-ink-muted">· some aren’t needed</span>
+          </div>
+          {pool.length === 0 ? (
+            <p className="px-1 py-2 text-sm text-ink-muted">All lines are in your program.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {pool.map((id) => (
+                <li key={id} className="flex items-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-line-strong px-3 py-1.5">
+                  <code className="min-w-0 flex-1 font-mono text-[13px] break-words whitespace-pre-wrap text-ink">{text(id)}</code>
+                  <IconButton label={`Add “${text(id)}” to your program`} onClick={() => add(id)}>
+                    <FiPlus />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        {pool.length === 0 ? (
-          <p className="px-1 py-2 text-sm text-ink-muted">All lines are in your program.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {pool.map((id) => (
-              <li key={id} className="flex items-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-line-strong px-3 py-1.5">
-                <code className="min-w-0 flex-1 font-mono text-[13px] break-words whitespace-pre-wrap text-ink">{text(id)}</code>
-                <IconButton label={`Add “${text(id)}” to your program`} onClick={() => add(id)}>
-                  <FiPlus />
-                </IconButton>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
-      <div role="group" aria-labelledby={`${uid}-program`} className="rounded-tile bg-surface p-4">
-        <div id={`${uid}-program`} className="mb-3 text-[15px] font-semibold text-ink">
-          Your program{' '}
-          <span className="font-normal text-ink-muted">· {python ? 'order and indent the lines' : 'put the lines in order'}</span>
+        <div role="group" aria-labelledby={`${uid}-program`} className="rounded-tile bg-surface p-4">
+          <div id={`${uid}-program`} className="mb-3 text-[15px] font-semibold text-ink">
+            Your program{' '}
+            <span className="font-normal text-ink-muted">· {python ? 'order and indent the lines' : 'put the lines in order'}</span>
+          </div>
+          {program.length === 0 ? (
+            <p className="px-1 py-2 text-sm text-ink-muted">Add lines from the left, in the order they should run.</p>
+          ) : (
+            <Reorder.Group
+              axis="y"
+              values={program.map((p) => p.id)}
+              onReorder={(ids: string[]) => onChange({ pool, program: ids.map((id) => program.find((p) => p.id === id)!) })}
+              className="space-y-1.5"
+            >
+              {program.map((p, i) => (
+                <ProgramLine
+                  key={p.id}
+                  id={p.id}
+                  text={text(p.id)}
+                  position={i}
+                  count={program.length}
+                  indent={shownIndent[i]}
+                  python={python}
+                  flagged={flagged === i}
+                  onMove={(by) => move(i, by)}
+                  onIndent={(by) => indent(i, by)}
+                  onRemove={() => remove(i)}
+                />
+              ))}
+            </Reorder.Group>
+          )}
         </div>
-        {program.length === 0 ? (
-          <p className="px-1 py-2 text-sm text-ink-muted">Add lines from the left, in the order they should run.</p>
-        ) : (
-          <Reorder.Group
-            axis="y"
-            values={program.map((p) => p.id)}
-            onReorder={(ids: string[]) => onChange({ pool, program: ids.map((id) => program.find((p) => p.id === id)!) })}
-            className="space-y-1.5"
-          >
-            {program.map((p, i) => (
-              <ProgramLine
-                key={p.id}
-                id={p.id}
-                text={text(p.id)}
-                position={i}
-                count={program.length}
-                indent={shownIndent[i]}
-                python={python}
-                flagged={flagged === i}
-                onMove={(by) => move(i, by)}
-                onIndent={(by) => indent(i, by)}
-                onRemove={() => remove(i)}
-              />
-            ))}
-          </Reorder.Group>
-        )}
+        <p role="status" className="sr-only">
+          {said}
+        </p>
       </div>
-      <p role="status" className="sr-only">
-        {said}
-      </p>
-    </div>
+    </MotionConfig>
   );
 }
 

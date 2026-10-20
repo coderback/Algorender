@@ -482,7 +482,7 @@ function Solver({
         </section>
       )}
       {/* Phones: the language and the judge buttons stay in reach at the bottom. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 bg-surface px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-1px_0_var(--color-line-soft)] md:hidden">
+      <div data-sticks="bottom" className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 bg-surface px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-1px_0_var(--color-line-soft)] md:hidden">
         {languageSelect}
         <span className="ml-auto flex gap-2 [&>button]:px-3.5">
           {runButton(true)}
