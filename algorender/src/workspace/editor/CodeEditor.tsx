@@ -23,40 +23,43 @@ import { tags as t } from '@lezer/highlight';
 import { useEffect, useRef } from 'react';
 import type { ProblemLanguage } from '@/problems/languages';
 
-// Colours come from the theme tokens, so the editor follows light and dark mode
-// with the rest of the page; every ink used here clears 4.5:1 on the surface.
-const theme = EditorView.theme({
-  '&': { color: 'var(--color-ink)', backgroundColor: 'var(--color-surface)', fontSize: '13.5px' },
-  '.cm-content': { fontFamily: 'var(--font-mono)', caretColor: 'var(--color-ink)', padding: '8px 0' },
-  '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6' },
-  '.cm-gutters': { backgroundColor: 'var(--color-subtle)', color: 'var(--color-ink-muted)', borderRight: '1px solid var(--color-line)' },
-  '.cm-activeLine': { backgroundColor: 'transparent' },
-  '&.cm-focused .cm-activeLine': { backgroundColor: 'var(--color-subtle)' },
-  '.cm-activeLineGutter': { backgroundColor: 'var(--color-sunken)', color: 'var(--color-ink)' },
-  '&.cm-focused': { outline: '2px solid var(--color-accent)', outlineOffset: '-2px' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--color-ink)' },
-  '.cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
-    backgroundColor: 'color-mix(in oklab, var(--color-accent) 28%, transparent)',
+// The editor is the dark code panel in both themes: colours are the code-*
+// tokens in globals.css, each clearing 4.5:1 on the panel and its line fills.
+const theme = EditorView.theme(
+  {
+    '&': { color: 'var(--color-code-ink)', backgroundColor: 'var(--color-code)', fontSize: '13.5px' },
+    '.cm-content': { fontFamily: 'var(--font-mono)', caretColor: 'var(--color-code-ink)', padding: '10px 0' },
+    '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6' },
+    '.cm-gutters': { backgroundColor: 'var(--color-code)', color: 'var(--color-code-muted)', border: 'none' },
+    '.cm-activeLine': { backgroundColor: 'transparent' },
+    '&.cm-focused .cm-activeLine': { backgroundColor: 'color-mix(in oklab, var(--color-code-highlight) 60%, transparent)' },
+    '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--color-code-ink)' },
+    '&.cm-focused': { outline: '3px solid var(--color-accent)', outlineOffset: '-3px' },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--color-code-ink)' },
+    '.cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+      backgroundColor: 'color-mix(in oklab, var(--color-feature-accent) 30%, transparent)',
+    },
+    '.cm-matchingBracket': { backgroundColor: 'var(--color-code-highlight)', outline: '1px solid var(--color-code-muted)' },
+    // The line the trace is on, and the line an error came from.
+    '.cm-run-line': { backgroundColor: 'var(--color-code-highlight)', boxShadow: 'inset 3px 0 var(--color-feature-accent)' },
+    '.cm-error-line': { backgroundColor: 'color-mix(in oklab, var(--color-code-bad) 16%, var(--color-code))', boxShadow: 'inset 3px 0 var(--color-code-bad)' },
+    // The line the tutor points at.
+    '.cm-point-line': { backgroundColor: 'color-mix(in oklab, var(--color-code-warn) 14%, var(--color-code))', boxShadow: 'inset 3px 0 var(--color-code-warn)' },
   },
-  '.cm-matchingBracket': { backgroundColor: 'var(--color-sunken)', outline: '1px solid var(--color-line-strong)' },
-  // The line the trace is on, and the line an error came from.
-  '.cm-run-line': { backgroundColor: 'var(--color-accent-soft)', boxShadow: 'inset 3px 0 var(--color-accent)' },
-  '.cm-error-line': { backgroundColor: 'var(--color-bad-soft)', boxShadow: 'inset 3px 0 var(--color-bad-ink)' },
-  // The line the tutor points at.
-  '.cm-point-line': { backgroundColor: 'var(--color-warn-soft)', boxShadow: 'inset 3px 0 var(--color-warn-ink)' },
-});
+  { dark: true },
+);
 
 const highlight = HighlightStyle.define([
-  { tag: [t.keyword, t.controlKeyword, t.definitionKeyword, t.moduleKeyword, t.operatorKeyword], color: 'var(--color-mark-write-ink)', fontWeight: '600' },
-  { tag: [t.string, t.special(t.string)], color: 'var(--color-good-ink)' },
-  { tag: [t.number, t.bool, t.null], color: 'var(--color-mark-swap-ink)' },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: 'var(--color-ink-muted)', fontStyle: 'italic' },
+  { tag: [t.keyword, t.controlKeyword, t.definitionKeyword, t.moduleKeyword, t.operatorKeyword], color: 'var(--color-code-keyword)', fontWeight: '600' },
+  { tag: [t.string, t.special(t.string)], color: 'var(--color-code-string)' },
+  { tag: [t.number, t.bool, t.null], color: 'var(--color-code-number)' },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: 'var(--color-code-muted)', fontStyle: 'italic' },
   {
     tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.function(t.variableName))],
-    color: 'var(--color-syntax-name)',
+    color: 'var(--color-code-fn)',
   },
-  { tag: [t.typeName, t.className], color: 'var(--color-mark-frontier-ink)' },
-  { tag: t.invalid, color: 'var(--color-bad-ink)' },
+  { tag: [t.typeName, t.className], color: 'var(--color-code-type)' },
+  { tag: t.invalid, color: 'var(--color-code-bad)' },
 ]);
 
 /** 1-based lines to highlight: where the trace is, where an error was raised, and where the tutor points. */
@@ -179,6 +182,8 @@ export function CodeEditor({
             indentWithTab,
           ]),
           theme,
+          // Long lines wrap rather than scroll sideways (the code panel's rule).
+          EditorView.lineWrapping,
           marksField,
           languageSlot.current.of(languageExtension(language)),
           editableSlot.current.of([EditorView.editable.of(!readOnly), EditorState.readOnly.of(readOnly)]),
@@ -224,5 +229,5 @@ export function CodeEditor({
     v.dispatch({ effects: EditorView.scrollIntoView(v.state.doc.line(pointLine).from, { y: 'center' }) });
   }, [pointLine]);
 
-  return <div ref={host} className="overflow-hidden rounded-xl border border-line bg-surface text-left" />;
+  return <div ref={host} className="overflow-hidden rounded-well bg-code text-left" />;
 }

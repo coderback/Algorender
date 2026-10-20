@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { FiArrowRight, FiEdit3, FiHash } from 'react-icons/fi';
+import { FiArrowRight, FiChevronRight } from 'react-icons/fi';
+import { CaseStudies } from '@/components/design/CaseStudies';
 import { targetList } from '@/components/design/format';
+import { PracticeHeader } from '@/components/practice/PracticeHeader';
+import { buttonClass } from '@/components/ui/Button';
 import { caseStudies } from '@/content/designs';
+import { drillRound } from '@/systems/design/estimation';
 
 export const metadata: Metadata = {
   title: 'System design | Algorender',
@@ -12,74 +16,36 @@ export const metadata: Metadata = {
 
 export default function DesignPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <header className="mb-8 max-w-3xl">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent-ink">Systems</div>
-        <h1 className="text-3xl font-bold text-ink">System design</h1>
-        <p className="mt-2 text-ink-soft">
-          Wire clients, load balancers, app servers, caches, databases and queues together, then run traffic through the design and watch what it does:
-          latency at the median and the tail, errors, stale reads and cost, and what breaks when a machine crashes or traffic spikes.
-        </p>
-      </header>
+    <main className="flex flex-col gap-[22px] px-4 pb-6 md:px-0 md:pt-2">
+      <PracticeHeader
+        active="design"
+        title="System design"
+        intro="Wire up clients, servers, caches, queues and databases, then run real traffic through them. Each case teaches one trade-off."
+      />
 
-      <section aria-labelledby="cases" className="mb-10">
-        <h2 id="cases" className="mb-3 text-xl font-semibold text-ink">
-          Case studies
-        </h2>
-        {caseStudies.length === 0 ? (
-          <p className="text-ink-soft">Case studies with targets to meet are on their way. Until then, try the free canvas below.</p>
-        ) : (
-          <ol className="grid gap-3 sm:grid-cols-2">
-            {caseStudies.map((c, i) => (
-              <li key={c.slug}>
-                <Link href={`/design/${c.slug}`} className="group flex h-full flex-col rounded-xl border border-line-soft bg-surface p-4 shadow-xs hover:border-accent-line">
-                  <span className="text-xs font-semibold text-ink-muted">Case {i + 1}</span>
-                  <span className="font-semibold text-ink">{c.title}</span>
-                  <span className="mt-1 text-sm text-ink-soft">{c.summary}</span>
-                  <span className="mt-2 text-xs text-ink-muted">{targetList(c.targets).length} targets</span>
-                  <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-accent-ink">
-                    Design it <FiArrowRight aria-hidden className="transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+      <CaseStudies cases={caseStudies.map((c) => ({ slug: c.slug, title: c.title, summary: c.summary, targets: targetList(c.targets).length }))} />
 
-      <section aria-labelledby="more" className="mb-10">
-        <h2 id="more" className="mb-3 text-xl font-semibold text-ink">
-          Practise
-        </h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          <li>
-            <Link href="/design/sandbox" className="group flex h-full flex-col rounded-xl border border-line-soft bg-surface p-4 shadow-xs hover:border-accent-line">
-              <span className="flex items-center gap-2 font-semibold text-ink">
-                <FiEdit3 aria-hidden className="text-accent-ink" /> Free canvas
-              </span>
-              <span className="mt-1 text-sm text-ink-soft">No targets: build anything, set the traffic yourself, crash machines and share the design as a link.</span>
-              <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-accent-ink">
-                Open the canvas <FiArrowRight aria-hidden className="transition-transform group-hover:translate-x-0.5" />
-              </span>
-            </Link>
-          </li>
-          <li>
-            <Link href="/design/estimate" className="group flex h-full flex-col rounded-xl border border-line-soft bg-surface p-4 shadow-xs hover:border-accent-line">
-              <span className="flex items-center gap-2 font-semibold text-ink">
-                <FiHash aria-hidden className="text-accent-ink" /> Estimation drills
-              </span>
-              <span className="mt-1 text-sm text-ink-soft">Back-of-the-envelope practice: requests a second, storage and bandwidth from a few facts, to the nearest power of ten.</span>
-              <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-accent-ink">
-                Start a drill <FiArrowRight aria-hidden className="transition-transform group-hover:translate-x-0.5" />
-              </span>
-            </Link>
-          </li>
-        </ul>
-      </section>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <Link href="/design/sandbox" className="group flex flex-col gap-3 rounded-card bg-feature p-6 text-on-feature sm:p-7">
+          <span className="text-eyebrow font-semibold text-track-teal-bar uppercase">Free canvas</span>
+          <strong className="font-display text-[26px] leading-[1.15] font-bold">Build anything, set the traffic, crash machines, share it as a link</strong>
+          <span className={buttonClass({ kind: 'onFeature' }) + ' mt-2 w-fit'}>
+            Open the canvas <FiArrowRight aria-hidden className="transition-transform duration-150 ease-standard group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+        <Link href="/design/estimate" className="group flex flex-col gap-3 rounded-card bg-track-butter p-6 text-track-butter-ink sm:p-7">
+          <span className="text-sm font-semibold">Estimation drills · {drillRound(1).length} questions</span>
+          <strong className="font-display text-[26px] leading-[1.15] font-bold text-track-butter-title">Requests, storage and servers, to the nearest power of ten</strong>
+          <span className={buttonClass({ kind: 'primary' }) + ' mt-2 w-fit'}>Start a drill</span>
+        </Link>
+      </div>
 
-      <details className="rounded-xl border border-line-soft bg-surface p-4 text-sm text-ink-soft">
-        <summary className="cursor-pointer font-medium text-ink">How the simulator works</summary>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
+      <details className="group rounded-card bg-surface px-6 py-4 text-sm text-ink-soft">
+        <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-[15px] font-semibold text-ink [&::-webkit-details-marker]:hidden">
+          <FiChevronRight aria-hidden className="transition-transform duration-150 ease-standard group-open:rotate-90" />
+          How the simulator works
+        </summary>
+        <ul className="mt-3 mb-2 flex list-disc flex-col gap-1.5 pl-9 leading-relaxed">
           <li>Every request is simulated one by one, with seeded randomness, so the same design and seed always give the same numbers.</li>
           <li>Each server is a queue in front of a few workers: when requests arrive faster than the workers finish them, the queue grows and latency climbs long before the server is “full”.</li>
           <li>The cache is a real LRU or LFU cache that evicts keys, spread over nodes by consistent hashing; shards are placed the same way. The rate limiter is a token bucket.</li>

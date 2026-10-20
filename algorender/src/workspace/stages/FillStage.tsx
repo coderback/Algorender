@@ -43,8 +43,8 @@ export function FillStage({
               type="button"
               aria-pressed={level === i}
               onClick={() => onLevel(i)}
-              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 ${
-                level === i ? 'border-ink bg-ink text-surface' : 'border-line bg-surface text-ink-soft hover:bg-sunken'
+              className={`inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-150 ease-standard ${
+                level === i ? 'bg-primary text-on-primary' : 'bg-sunken text-ink hover:bg-line-soft'
               }`}
             >
               {i <= passedLevel && <FiCheck aria-label="passed" />}
@@ -53,13 +53,13 @@ export function FillStage({
           ))}
         </div>
       )}
-      <div role="group" aria-label="Code with gaps" className="overflow-x-auto rounded-xl border border-line bg-surface py-2 font-mono text-[13.5px] leading-[2]">
+      <div role="group" aria-label="Code with gaps" className="overflow-x-auto rounded-well bg-code py-2.5 font-mono text-[13.5px] leading-[2] text-code-ink">
         {lines.map((line, i) => (
           <div key={i} className="flex">
-            <span className="w-10 shrink-0 pr-3 text-right text-ink-muted select-none" aria-hidden>
+            <span className="w-10 shrink-0 pr-3 text-right text-code-muted select-none" aria-hidden>
               {i + 1}
             </span>
-            <span className="whitespace-pre text-ink">
+            <span className="whitespace-pre text-code-ink">
               {line.map((s, k) =>
                 s.kind === 'text' || !hidden.has(s.n) ? (
                   <span key={k}>{s.kind === 'text' ? s.text : s.answer}</span>
@@ -74,7 +74,7 @@ export function FillStage({
                     autoCorrect="off"
                     autoComplete="off"
                     style={{ width: `${Math.max(4, s.answer.length + 2)}ch` }}
-                    className="mx-0.5 rounded border border-dashed border-accent-line bg-accent-soft px-1 font-mono text-ink focus:border-solid focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line"
+                    className="mx-0.5 rounded-md border border-dashed border-feature-accent bg-code-highlight px-1 font-mono text-code-ink focus:border-solid"
                   />
                 ),
               )}

@@ -61,8 +61,8 @@ export function ParsonsStage({
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <div role="group" aria-labelledby={`${uid}-pool`} className="rounded-xl border border-line-soft bg-surface p-3 shadow-xs">
-        <div id={`${uid}-pool`} className="mb-2 text-sm font-semibold text-ink">
+      <div role="group" aria-labelledby={`${uid}-pool`} className="rounded-tile bg-surface p-4">
+        <div id={`${uid}-pool`} className="mb-3 text-[15px] font-semibold text-ink">
           Lines to use <span className="font-normal text-ink-muted">· some aren’t needed</span>
         </div>
         {pool.length === 0 ? (
@@ -70,7 +70,7 @@ export function ParsonsStage({
         ) : (
           <ul className="space-y-1.5">
             {pool.map((id) => (
-              <li key={id} className="flex items-center gap-2 rounded-lg border border-line bg-subtle px-2 py-1.5">
+              <li key={id} className="flex items-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-line-strong px-3 py-1.5">
                 <code className="min-w-0 flex-1 font-mono text-[13px] break-words whitespace-pre-wrap text-ink">{text(id)}</code>
                 <IconButton label={`Add “${text(id)}” to your program`} onClick={() => add(id)}>
                   <FiPlus />
@@ -81,8 +81,8 @@ export function ParsonsStage({
         )}
       </div>
 
-      <div role="group" aria-labelledby={`${uid}-program`} className="rounded-xl border border-line-soft bg-surface p-3 shadow-xs">
-        <div id={`${uid}-program`} className="mb-2 text-sm font-semibold text-ink">
+      <div role="group" aria-labelledby={`${uid}-program`} className="rounded-tile bg-surface p-4">
+        <div id={`${uid}-program`} className="mb-3 text-[15px] font-semibold text-ink">
           Your program{' '}
           <span className="font-normal text-ink-muted">· {python ? 'order and indent the lines' : 'put the lines in order'}</span>
         </div>
@@ -149,16 +149,14 @@ function ProgramLine({
       value={id}
       dragListener={false}
       dragControls={controls}
-      className={`flex items-center gap-1.5 rounded-lg border bg-surface px-1.5 py-1 ${
-        flagged ? 'border-warn-line ring-2 ring-warn-line' : 'border-line'
-      }`}
+      className={`flex items-center gap-1.5 rounded-[14px] bg-sunken px-1.5 py-1 ${flagged ? 'ring-2 ring-warn-ink ring-inset' : ''}`}
     >
       <button
         type="button"
         aria-hidden
         tabIndex={-1}
         onPointerDown={(e) => controls.start(e)}
-        className="cursor-grab touch-none rounded p-1 text-ink-muted hover:bg-sunken active:cursor-grabbing"
+        className="cursor-grab touch-none rounded-md p-1 text-ink-muted hover:bg-line-soft active:cursor-grabbing"
         title="Drag to reorder"
       >
         <FiMenu />
@@ -200,7 +198,7 @@ function IconButton({ label, onClick, disabled, children }: { label: string; onC
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-soft hover:bg-sunken hover:text-ink disabled:opacity-30"
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors duration-150 ease-standard hover:bg-line-soft hover:text-ink disabled:opacity-30"
     >
       {children}
     </button>

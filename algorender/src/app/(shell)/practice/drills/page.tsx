@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { FiArrowLeft } from 'react-icons/fi';
+import { PracticeHeader } from '@/components/practice/PracticeHeader';
 import { loadProblems } from '@/problems/load';
 import { Drill, type DrillQuestion } from '@/problems/ui/Drill';
 import { Markdown } from '@/problems/ui/Markdown';
@@ -20,16 +19,12 @@ export default function DrillsPage() {
     why: p.why,
   }));
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <Link href="/practice" className="mb-4 inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline">
-        <FiArrowLeft aria-hidden /> All problems
-      </Link>
-      <div className="mb-1 text-xs font-semibold tracking-wider text-accent-ink uppercase">Practice</div>
-      <h1 className="text-3xl font-bold text-ink">Pattern drills</h1>
-      <p className="mt-2 mb-6 text-ink-soft">
-        Most of a problem is spotting what kind of problem it is. Read each one, pick the pattern that cracks it, and
-        see why. The patterns are mixed, so the clue has to come from the problem itself.
-      </p>
+    <main className="flex flex-col gap-[22px] px-4 pb-6 md:px-0 md:pt-2">
+      <PracticeHeader
+        active="drills"
+        title="Pattern drills"
+        intro="Read a problem and name the pattern before you write any code. The patterns are mixed, so the clue has to come from the problem itself."
+      />
       <Drill questions={questions} />
     </main>
   );

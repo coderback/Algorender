@@ -46,6 +46,10 @@ const ROUTES: { name: string; path: string; seeded?: boolean }[] = [
   { name: 'visualiser-predict', path: '/visualisers/bubble-sort?preset=reversed&n=7&seed=1&mode=predict&step=2', seeded: true },
   { name: 'structure', path: '/visualisers/stack?start=example&ops=push:5;push:9;pop' },
   { name: 'math-visualiser', path: '/visualisers/gradient-descent' },
+  // Phase 6: Practice with progress, a bug hunt, and a design problem with a class to write.
+  { name: 'practice-seeded', path: '/practice', seeded: true },
+  { name: 'code-bug', path: '/code/bubble-sort-bug' },
+  { name: 'problem-design', path: '/practice/min-stack' },
 ];
 
 const VIEWPORTS = [

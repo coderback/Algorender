@@ -80,7 +80,7 @@ export function Inspector({
   const id = `${idPrefix}-${c.id}`;
 
   return (
-    <div role="group" aria-labelledby={`${id}-title`} className="space-y-4 rounded-xl border border-line-soft bg-surface p-4 shadow-xs">
+    <div role="group" aria-labelledby={`${id}-title`} className="flex flex-col gap-4 rounded-card bg-surface p-5">
       <div className="flex items-start gap-2">
         <Icon aria-hidden className="mt-1 h-5 w-5 shrink-0 text-accent-ink" />
         <div className="min-w-0 flex-1">
@@ -93,7 +93,7 @@ export function Inspector({
           <button
             type="button"
             onClick={onRemove}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1 text-sm text-ink-soft hover:border-bad-line hover:text-bad-ink"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-accent-ink transition-colors duration-150 ease-standard hover:bg-bad-soft hover:text-bad-ink"
           >
             <FiTrash2 aria-hidden /> Remove
           </button>
@@ -251,7 +251,7 @@ export function Inspector({
 }
 
 const inputClass =
-  'w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line aria-invalid:border-bad-line';
+  'h-11 w-full rounded-[14px] bg-sunken px-3.5 text-sm text-ink aria-invalid:ring-[1.5px] aria-invalid:ring-bad-ink aria-invalid:ring-inset';
 
 /** A number input that keeps what the learner types until it is a valid value, then commits it. */
 function NumberField({ id, spec, limit, value, onCommit }: { id: string; spec: NumberSpec; limit: Limit; value: number; onCommit: (v: number) => void }) {
@@ -269,7 +269,7 @@ function NumberField({ id, spec, limit, value, onCommit }: { id: string; spec: N
   const describedBy = [spec.help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(' ') || undefined;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-ink-muted">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-semibold text-ink">
         {spec.label}
         {limit.unit ? ` (${limit.unit})` : ''}
       </label>
@@ -312,7 +312,7 @@ function TextField({ id, label, value, onCommit }: { id: string; label: string; 
   const [draft, setDraft] = useState<string | null>(null);
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-ink-muted">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-semibold text-ink">
         {label}
       </label>
       <input
@@ -348,7 +348,7 @@ function SelectField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-ink-muted">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-semibold text-ink">
         {label}
       </label>
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-invalid={invalid} className={inputClass}>

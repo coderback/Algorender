@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { FiArrowLeft } from 'react-icons/fi';
 import { DesignCanvas } from '@/components/design/DesignCanvas';
+import { DetailHeader } from '@/components/explorer/DetailHeader';
 import { starterDesign } from '@/systems/design';
 
 export const metadata: Metadata = {
@@ -11,17 +10,14 @@ export const metadata: Metadata = {
 
 export default function SandboxPage() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <Link href="/design" className="mb-4 inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline">
-        <FiArrowLeft aria-hidden /> System design
-      </Link>
-      <header className="mb-5 max-w-3xl">
-        <h1 className="text-3xl font-bold text-ink">Free design canvas</h1>
-        <p className="mt-2 text-ink-soft">
+    <main className="flex flex-col gap-5 px-4 pb-6 md:px-0 md:pt-1">
+      <div className="flex flex-col gap-3">
+        <DetailHeader root={{ href: '/design', label: 'System design' }} crumb="Free canvas" title="Free design canvas" />
+        <p className="max-w-[900px] text-base leading-relaxed text-ink-soft">
           Start from clients, a load balancer, two app servers and a database. Raise the traffic until something saturates, then add what fixes it:
           more instances, a cache, replicas, shards, a queue or a rate limiter. The link always holds your current design.
         </p>
-      </header>
+      </div>
       <section aria-labelledby="canvas-title">
         <h2 id="canvas-title" className="sr-only">
           Your design

@@ -53,7 +53,7 @@ test('Java asks a signed-out learner to sign in, and keeps their code', async ({
   const errors = collectErrors(page);
   await withJava(page.context(), TWO_SUM_JAVA);
   await page.goto('/practice/two-sum');
-  await expect(page.getByRole('button', { name: 'Java', pressed: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('java');
   await expect(page.getByText('Java runs on our server, so it needs an account')).toBeVisible();
   await page.getByRole('button', { name: 'Run examples' }).click();
   const card = page.locator('main').getByRole('alert').filter({ hasText: 'Sign in to run Java' });
@@ -73,7 +73,7 @@ test('a signed-in learner solves a problem in Java on the server, and it counts 
   await expect(page.getByRole('group', { name: 'Test results' })).toContainText(/Solved: all \d+ tests pass\./);
   await expect(page.getByText('Compiled and judged on our server, in a sandbox.')).toBeVisible();
   await page.goto('/practice');
-  await expect(page.getByText(/^1 of \d+ solved in this browser$/)).toBeVisible();
+  await expect(page.getByText('Solved', { exact: true }).locator('..')).toContainText(/Solved\s*1 \//);
 });
 
 test('a compile error shows the compiler’s message at its line, and passes axe', async ({ page }) => {

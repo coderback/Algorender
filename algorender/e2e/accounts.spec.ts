@@ -57,6 +57,8 @@ async function signIn(page: Page, email: string, password = PASSWORD) {
   await page.locator('form').getByRole('button', { name: 'Sign in' }).click();
 }
 
+/** The Practice header's solved tile: "Solved" over "n / 91". */
+const solvedTile = (page: Page) => page.getByText('Solved', { exact: true }).locator('..');
 const synced = (page: Page) => expect(page.getByRole('status').filter({ hasText: /Synced/ })).toBeVisible({ timeout: 20_000 });
 
 test('work done before signing up comes with the account, and reaches another device', async ({ page, browser }) => {
@@ -73,7 +75,7 @@ test('work done before signing up comes with the account, and reaches another de
   await signIn(phone, email);
   await synced(phone);
   await phone.goto('/practice');
-  await expect(phone.getByText(/^1 of \d+ solved in this browser$/)).toBeVisible();
+  await expect(solvedTile(phone)).toContainText(/Solved\s*1 \//);
   await other.close();
   expect(errors).toEqual([]);
 });
@@ -88,12 +90,12 @@ test('signing out clears this device, and signing back in brings the progress ba
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Create an account' })).toBeVisible();
   await page.goto('/practice');
-  await expect(page.getByText(/^0 of \d+ solved in this browser$/)).toBeVisible();
+  await expect(solvedTile(page)).toContainText(/Solved\s*0 \//);
 
   await signIn(page, email);
   await synced(page);
   await page.goto('/practice');
-  await expect(page.getByText(/^1 of \d+ solved in this browser$/)).toBeVisible();
+  await expect(solvedTile(page)).toContainText(/Solved\s*1 \//);
 });
 
 test('a wrong password and a taken email are explained', async ({ page }) => {

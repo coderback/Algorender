@@ -72,20 +72,25 @@ async function openWith(page: Page, slug: string, language: string, code: string
 
 const results = (page: Page) => page.getByRole('group', { name: 'Test results' });
 
-test('the problem list groups by pattern, filters, and mixes the patterns away', async ({ page }) => {
+test('the problem list filters by pattern and level, and mixes the patterns away', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/practice');
-  await expect(page.getByRole('heading', { level: 1, name: 'Practice problems' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'Hashing' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Practice' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Section' }).getByRole('link', { name: /^Problems/ })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('link', { name: /Two Sum/ })).toBeVisible();
+
+  // A pattern tile filters the table to that pattern.
+  await page.getByRole('button', { name: /^Two pointers/ }).click();
+  await expect(page.getByRole('link', { name: /Two Sum/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Clear the pattern filter' }).click();
 
   await page.getByRole('group', { name: 'Difficulty' }).getByRole('button', { name: 'Hard' }).click();
   await expect(page.getByRole('link', { name: /Two Sum/ })).toHaveCount(0);
   await page.getByRole('group', { name: 'Difficulty' }).getByRole('button', { name: 'All' }).click();
 
-  await page.getByLabel('Mix them up and hide the patterns').check();
-  await expect(page.getByRole('heading', { level: 2, name: 'Hashing' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /Two Sum/ })).toBeVisible();
+  await page.getByLabel('Order').selectOption('mixed');
+  await expect(page.getByRole('heading', { level: 2, name: 'By pattern' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Two Sum/ })).not.toContainText('Hashing');
   expect(errors).toEqual([]);
 });
 
@@ -118,7 +123,7 @@ test('a right answer solves the problem, and the list remembers it', async ({ pa
   await page.getByRole('button', { name: 'Submit' }).click();
   await expect(results(page)).toContainText(/Solved: all \d+ tests pass\./);
   await page.goto('/practice');
-  await expect(page.getByText(/1 of \d+ solved in this browser/)).toBeVisible();
+  await expect(page.getByText('Solved', { exact: true }).locator('..')).toContainText(/Solved\s*1 \/ \d+/);
   await expect(page.getByRole('link', { name: /Two Sum/ }).getByLabel('Solved')).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -190,6 +195,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await openWith(page, 'two-sum', 'javascript', TWO_SUM_WRONG);
       await page.getByRole('button', { name: 'Submit' }).click();
       await expect(results(page)).toBeVisible();
+      await page.getByRole('group', { name: 'Statement' }).getByRole('button', { name: 'Hints' }).click();
       await page.getByText('Show the pattern').click();
       await page.getByRole('button', { name: 'Watch your code on this test' }).click();
       await page.locator('#watch').getByRole('button', { name: /Step forward/ }).click();

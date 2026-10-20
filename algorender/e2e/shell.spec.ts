@@ -31,7 +31,8 @@ test('focused pages have no rail and one way out', async ({ page }) => {
   ] as const) {
     await page.goto(path);
     await expect(rail(page)).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Close' })).toHaveAttribute('href', parent);
+    // Lessons and the review close; a problem goes back to the list. Either way, one link out.
+    await expect(page.getByRole('link', { name: /^Close|^Back to the problems$/ })).toHaveAttribute('href', parent);
   }
 });
 

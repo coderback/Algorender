@@ -17,22 +17,9 @@ import type { ExerciseProgress } from '@/progress/projections';
 import { loadCode, loadLanguage, saveCode, saveLanguage } from './storage';
 import { allPass, useExerciseRun, type Outcome } from './useExerciseRun';
 import { TutorPanel, type TutorResults } from '@/components/tutor/TutorPanel';
+import { STAGE_LABEL, stagesFor, type Stage } from './ladder';
 
-export type Stage = 'parsons' | 'fill' | 'write' | 'bug';
-
-const STAGE_LABEL: Record<Stage, string> = {
-  parsons: 'Order the lines',
-  fill: 'Fill the gaps',
-  write: 'Write it',
-  bug: 'Find the bug',
-};
-
-/** The fading ladder: arrange the lines, fill gaps that grow, then write it all. A bug hunt has one stage. */
-export function stagesFor(exercise: Exercise): Stage[] {
-  if (exercise.kind === 'bug') return ['bug'];
-  if (exercise.kind === 'modify') return ['write'];
-  return ['parsons', ...(exercise.blanks ? (['fill'] as const) : []), 'write'];
-}
+export { stagesFor, type Stage };
 
 const noSubscribe = () => () => {};
 
@@ -47,6 +34,7 @@ export function Workspace({
   stages,
   variant = 'page',
   tutor = false,
+  aside,
 }: {
   slug: string;
   /** Which stages to offer (lessons can embed just one); defaults to the exercise's ladder. */
@@ -54,6 +42,8 @@ export function Workspace({
   variant?: 'page' | 'lesson';
   /** The AI tutor is switched on: offer it beside the editor (on the exercise's own page). */
   tutor?: boolean;
+  /** Page only: the side column (hints, the reference visualiser); the tutor joins it. */
+  aside?: ReactNode;
 }) {
   const exercise = getExercise(slug)!;
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
@@ -61,12 +51,12 @@ export function Workspace({
   const { ready } = useProgressSnapshot();
   if (!hydrated || !ready) {
     return (
-      <div data-workspace="loading" className="rounded-xl border border-line bg-surface p-4">
-        <pre className="font-mono text-[13.5px] leading-[1.6] whitespace-pre-wrap text-ink-soft">{exercise.starter.python}</pre>
+      <div data-workspace="loading" className="rounded-card bg-surface p-5">
+        <pre className="rounded-well bg-code p-5 font-mono text-[13.5px] leading-[1.6] whitespace-pre-wrap text-code-ink">{exercise.starter.python}</pre>
       </div>
     );
   }
-  return <Ladder exercise={exercise} stages={stages ?? stagesFor(exercise)} variant={variant} tutor={tutor && variant === 'page'} />;
+  return <Ladder exercise={exercise} stages={stages ?? stagesFor(exercise)} variant={variant} tutor={tutor && variant === 'page'} aside={variant === 'page' ? aside : undefined} />;
 }
 
 /** A run as the tutor sees it: how many tests pass, and the first failure's own explanation. */
@@ -82,7 +72,7 @@ function passedStage(progress: ExerciseProgress, stage: Stage, levels: number): 
   return progress[stage] === true;
 }
 
-function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stages: Stage[]; variant: 'page' | 'lesson'; tutor: boolean }) {
+function Ladder({ exercise, stages, variant, tutor, aside }: { exercise: Exercise; stages: Stage[]; variant: 'page' | 'lesson'; tutor: boolean; aside?: ReactNode }) {
   /** The line the tutor last pointed at. */
   const [pointLine, setPointLine] = useState<number | null>(null);
   const [language, setLanguage] = useState<Language>(() => loadLanguage() ?? 'python');
@@ -175,14 +165,14 @@ function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stag
   const lesson = variant === 'lesson';
   const toolbar = (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="inline-flex overflow-hidden rounded-lg border border-line" role="group" aria-label="Language">
+      <div className="inline-flex gap-0.5 rounded-full bg-sunken p-[3px]" role="group" aria-label="Language">
         {(Object.keys(LANGUAGES) as Language[]).map((l) => (
           <button
             key={l}
             type="button"
             aria-pressed={language === l}
             onClick={() => chooseLanguage(l)}
-            className={`px-3 py-1.5 text-sm transition-colors ${language === l ? 'bg-ink text-surface' : 'bg-surface text-ink-soft hover:bg-sunken'}`}
+            className={`rounded-full px-3 py-1.5 text-[13px] transition-colors duration-150 ease-standard ${language === l ? 'bg-segment font-semibold text-ink shadow-segment' : 'font-medium text-ink-soft hover:text-ink'}`}
           >
             {LANGUAGES[l].label}
           </button>
@@ -190,7 +180,7 @@ function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stag
       </div>
       <label className="flex items-center gap-2 text-sm text-ink-soft">
         Watch it run on
-        <select value={example} onChange={(e) => setExample(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1.5 text-sm text-ink">
+        <select value={example} onChange={(e) => setExample(e.target.value)} className="h-9 rounded-full bg-sunken px-3 text-[13px] font-semibold text-ink">
           {exercise.examples.map((e) => (
             <option key={e.id} value={e.id}>
               {e.label}
@@ -248,11 +238,11 @@ function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stag
                   setConfirmReset(false);
                   clear();
                 }}
-                className="rounded-md px-2 py-1.5 text-bad-ink hover:bg-bad-soft"
+                className="h-9 rounded-full px-3 font-semibold text-bad-ink hover:bg-bad-soft"
               >
                 Reset
               </button>
-              <button type="button" onClick={() => setConfirmReset(false)} className="rounded-md px-2 py-1.5 text-ink-soft hover:bg-sunken">
+              <button type="button" onClick={() => setConfirmReset(false)} className="h-9 rounded-full px-3 font-semibold text-ink-soft hover:bg-sunken">
                 Keep it
               </button>
             </span>
@@ -267,7 +257,7 @@ function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stag
           disabled={busy || (stage === 'parsons' && arrangement.program.length === 0)}
           aria-busy={busy}
           aria-keyshortcuts={stage === 'write' || stage === 'bug' ? 'Control+Enter Meta+Enter' : undefined}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60"
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-[18px] text-sm font-semibold text-on-accent transition-colors duration-150 ease-standard hover:bg-accent-strong disabled:opacity-60"
         >
           {busy ? <FiLoader aria-hidden className="animate-spin" /> : <FiPlay aria-hidden />}
           {running ? 'Running…' : 'Run'}
@@ -277,7 +267,7 @@ function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stag
   );
 
   const body = (s: Stage) => (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <p className="text-sm text-ink-soft">
         <InlineText text={stageIntro(s, exercise, language, levels.length)} />
       </p>
@@ -321,54 +311,47 @@ function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stag
             onRun={() => void onRun()}
           />
           <p className="text-xs text-ink-muted">Ctrl/⌘ + Enter runs your code. Tab indents; press Esc, then Tab, to leave the editor.</p>
-          {tutor && (
-            <TutorPanel
-              item={{ kind: 'exercise', slug: exercise.slug }}
-              language={language}
-              code={codes[language]}
-              results={outcome && !stale ? tutorResults(outcome) : undefined}
-              onPoint={setPointLine}
-            />
-          )}
         </>
       )}
       {s === 'bug' && exercise.bug && outcome && allPass(outcome) && !stale && (
-        <p className="rounded-lg border border-good-line bg-good-soft px-4 py-3 text-sm text-ink">
-          <span className="font-semibold text-good-ink">Fixed. </span>
+        <p className="rounded-well bg-good-soft px-4 py-3 text-sm text-good-ink">
+          <span className="font-semibold text-good-title">Fixed. </span>
           <InlineText text={exercise.bug.explanation} />
         </p>
       )}
     </div>
   );
 
-  return (
-    <div className="space-y-4">
+  const main = (
+    <div className="flex min-w-0 flex-col gap-4">
       {stages.length > 1 ? (
         <Tabs.Root value={stage} onValueChange={(v) => chooseStage(v as Stage)} className="space-y-4">
-          <Tabs.List aria-label="Ways to practise" className="flex flex-wrap gap-1.5">
+          <Tabs.List aria-label="Ways to practise" className="flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-surface p-1.5">
             {stages.map((s, i) => (
               <Tabs.Trigger
                 key={s}
                 value={s}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm text-ink-soft hover:bg-sunken data-[state=active]:border-ink data-[state=active]:bg-ink data-[state=active]:text-surface"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-ink-soft transition-colors duration-150 ease-standard hover:bg-sunken hover:text-ink data-[state=active]:bg-primary data-[state=active]:text-on-primary"
               >
-                {i + 1}. {stageLabel(s, exercise)}
-                {passedStage(progress, s, levels.length) && <FiCheck aria-label="done" />}
+                {passedStage(progress, s, levels.length) && <FiCheck aria-label="done" strokeWidth={3} />}
+                {i + 1} · {stageLabel(s, exercise)}
               </Tabs.Trigger>
             ))}
           </Tabs.List>
-          {toolbar}
-          {stages.map((s) => (
-            <Tabs.Content key={s} value={s}>
-              {body(s)}
-            </Tabs.Content>
-          ))}
+          <div className="flex flex-col gap-4 rounded-card bg-surface p-4 sm:p-5">
+            {toolbar}
+            {stages.map((s) => (
+              <Tabs.Content key={s} value={s}>
+                {body(s)}
+              </Tabs.Content>
+            ))}
+          </div>
         </Tabs.Root>
       ) : (
-        <>
+        <div className="flex flex-col gap-4 rounded-card bg-surface p-4 sm:p-5">
           {toolbar}
           {body(stage)}
-        </>
+        </div>
       )}
 
       <p className="text-right text-xs text-ink-muted" role="status">
@@ -385,6 +368,24 @@ function Ladder({ exercise, stages, variant, tutor }: { exercise: Exercise; stag
           keyboard={lesson ? 'local' : 'page'}
         />
       )}
+    </div>
+  );
+  if (lesson) return main;
+  return (
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)]">
+      {main}
+      <aside aria-label="Help with this exercise" className="flex min-w-0 flex-col gap-4">
+        {aside}
+        {tutor && (stage === 'write' || stage === 'bug') && (
+          <TutorPanel
+            item={{ kind: 'exercise', slug: exercise.slug }}
+            language={language}
+            code={codes[language]}
+            results={outcome && !stale ? tutorResults(outcome) : undefined}
+            onPoint={setPointLine}
+          />
+        )}
+      </aside>
     </div>
   );
 }
@@ -423,7 +424,7 @@ function ToolButton({ onClick, icon, disabled, children }: { onClick: () => void
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink-soft hover:bg-sunken disabled:opacity-40"
+      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-sunken px-3.5 text-[13px] font-semibold text-ink transition-colors duration-150 ease-standard hover:bg-line-soft disabled:opacity-40"
     >
       <span aria-hidden>{icon}</span> {children}
     </button>

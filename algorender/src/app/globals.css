@@ -93,10 +93,16 @@
   --color-code-ink: #e9e7f0;
   --color-code-muted: #8e8c98;
   --color-code-highlight: #2e2b45;
-
-  /* Function names in the code editor: compare's hue, deep enough to clear
-     4.5:1 on the run, error and hint line fills. */
-  --color-syntax-name: #005f96;
+  /* Syntax on the code panel, the same in both themes (the panel is dark in
+     both): each clears 4.5:1 on code and on code-highlight. The error, run
+     and hint line fills are tints of these over the panel. */
+  --color-code-keyword: #e3a3c7;
+  --color-code-string: #9be3c2;
+  --color-code-number: #f6a06b;
+  --color-code-fn: #6cb6ee;
+  --color-code-type: #8fd0f5;
+  --color-code-bad: #f7b4a8;
+  --color-code-warn: #f0d77a;
 
   /* The daily review: a full-bleed butter page with a white card stack on
      it, translucent side panels, and its own progress bar. */
@@ -299,8 +305,6 @@
 
       --color-code: #0a090d;
       --color-code-highlight: #2a2546;
-
-      --color-syntax-name: #5aa9e6;
 
       --color-review-page: #18160e;
       --color-review-card: #24221c;
