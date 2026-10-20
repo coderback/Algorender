@@ -66,7 +66,9 @@ export type BarsShape = { kind: 'bars'; id: string; bars: readonly Bar[] };
  * `blend` mixes tone `low` (0) into tone `high` (1); `classes` colours each
  * cell by an integer index into `tones`. Both are drawn as a pale wash under
  * the data. `intensity` is a matrix of weights in 0..1 (attention), from bare
- * (0) to a strong `tone` (1), so the big entries stand out.
+ * (0) to a strong `tone` (1), so the big entries stand out. `depth` is a soft
+ * violet wash under contour lines, 0 bare to 1 deepest: a loss surface's low
+ * ground (V8).
  */
 export type HeatmapShape = {
   kind: 'heatmap';
@@ -78,7 +80,7 @@ export type HeatmapShape = {
   cols: number;
   rows: number;
   values: readonly number[];
-  scale: { kind: 'blend'; low: Tone; high: Tone } | { kind: 'classes'; tones: readonly Tone[] } | { kind: 'intensity'; tone: Tone };
+  scale: { kind: 'blend'; low: Tone; high: Tone } | { kind: 'classes'; tones: readonly Tone[] } | { kind: 'intensity'; tone: Tone } | { kind: 'depth' };
 };
 
 export type Shape = VectorShape | PointShape | PathShape | LineShape | LabelShape | ContourShape | BarsShape | HeatmapShape;

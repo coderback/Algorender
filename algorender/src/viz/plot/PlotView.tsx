@@ -40,9 +40,9 @@ const ARROW_HEAD = 9;
  * matrix sends it and the whole grid warps with it. Handles can be dragged, or
  * moved with the arrow keys, when the module takes dragged input.
  */
-// TODO(redesign): V10 adds attention arcs over the sentence, a layer/head picker and a time scrubber with thumbnails
-// for diffusion; none are in the states. V8–V10 also fill contour bands as a lilac wash (lower is darker), dock a controls card beside
-// the plane and draw optimiser paths as numbered steps; the states draw contour lines and keep controls in the toolbar.
+// TODO(redesign): V10 adds attention arcs over the sentence, a layer/head picker (the toy model has one head)
+// and a time scrubber with thumbnails for diffusion; V8–V10 dock a controls card beside the plane and number
+// an optimiser's steps. None are in the states yet; loss surfaces do get their violet depth wash (V8).
 export function PlotView({ state }: { state: PlotState }) {
   const figures = state.parts.filter((p): p is PlanePart | ImagePart | NetworkPart => p.kind === 'plane' || p.kind === 'image' || p.kind === 'network');
   const rows = state.parts.filter((p): p is BitsPart => p.kind === 'bits');
@@ -335,10 +335,11 @@ function Heatmap({ s, g }: { s: HeatmapShape; g: PlaneGeometry }) {
     if (scale.kind === 'classes') return TONES[scale.tones[Math.round(v)] ?? scale.tones[0]];
     const p = Math.round(100 * Math.min(1, Math.max(0, v)));
     if (scale.kind === 'intensity') return `color-mix(in oklab, ${TONES[scale.tone]} ${p}%, transparent)`;
+    if (scale.kind === 'depth') return `color-mix(in oklab, var(--color-accent) ${p}%, transparent)`;
     return `color-mix(in oklab, ${TONES[scale.high]} ${p}%, ${TONES[scale.low]})`;
   };
   return (
-    <g opacity={scale.kind === 'intensity' ? 0.75 : 0.28} shapeRendering="crispEdges">
+    <g opacity={scale.kind === 'intensity' ? 0.75 : scale.kind === 'depth' ? 0.35 : 0.28} shapeRendering="crispEdges">
       {s.values.map((v, k) => (
         <rect
           key={k}

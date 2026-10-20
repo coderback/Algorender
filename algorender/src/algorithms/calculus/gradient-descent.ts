@@ -3,7 +3,7 @@ import type { Frame } from '@/engine/types';
 import { askInOrder, numbersIn, plain, plotFrame } from '@/viz/plot/frame';
 import { fmt, fmtVec, round } from '@/viz/plot/geometry';
 import type { PlanePart, PlotPart, PlotState, Shape, Vec } from '@/viz/plot/types';
-import { contourShape, parseSurface, SURFACES, type Surface, type SurfaceId } from './surfaces';
+import { contourShape, parseSurface, SURFACES, washShape, type Surface, type SurfaceId } from './surfaces';
 
 export const MAX_STEPS = 40;
 /** A gradient this small counts as flat ground: the run has arrived. */
@@ -54,6 +54,7 @@ function contourPlane(s: Surface, xs: readonly Vec[], extra: Shape[], start: Vec
     y: s.y,
     equal: true,
     shapes: [
+      washShape(s),
       contourShape(s),
       ...s.minima.map((m, k): Shape => ({ kind: 'point', id: `min${k}`, at: m, mark: 'found', size: 'sm' })),
       { kind: 'path', id: 'trail', points: xs, dots: true },
