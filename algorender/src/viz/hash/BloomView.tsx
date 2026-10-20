@@ -1,8 +1,9 @@
 'use client';
 
-import { MarkSkin } from '@/viz/linear/ValueBox';
+import { cx } from '@/components/ui/cx';
 import { useWidth } from '@/viz/linear/useWidth';
 import { MARKS } from '@/viz/marks';
+import { CAPTION, fillFor, MarkBadge, RULED_OUT } from '@/viz/parts';
 import { Calc } from './Calc';
 import type { BloomState } from './types';
 
@@ -30,14 +31,14 @@ export function BloomView({ state }: { state: BloomState }) {
             <span className="font-mono text-sm text-ink-soft">
               {state.item ? (
                 <>
-                  item <span className="rounded-md bg-sunken px-1.5 py-0.5 font-semibold text-ink">&quot;{state.item}&quot;</span>
+                  item <span className="rounded-[10px] bg-mark-focus px-2 py-1 font-semibold text-on-mark">&quot;{state.item}&quot;</span>
                 </>
               ) : (
                 <span className="text-ink-muted">no item in hand</span>
               )}
             </span>
             {state.verdict && (
-              <span className={`inline-flex items-center gap-1.5 rounded-full border border-current px-3 py-1 text-sm font-semibold ${MARKS[state.verdict.mark].text}`}>
+              <span className={`inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-semibold ring-2 ring-current ring-inset ${MARKS[state.verdict.mark].text}`}>
                 <span aria-hidden>{MARKS[state.verdict.mark].glyph}</span>
                 {state.verdict.text}
               </span>
@@ -45,39 +46,36 @@ export function BloomView({ state }: { state: BloomState }) {
           </div>
           <Calc lines={state.calc} rule={`each of the k = ${state.k} hash functions picks one bit: hᵢ(x) mod ${m}`} />
           <div role="group" aria-label="Bits">
-            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Bits · m = {m}</div>
-            <div className="mx-auto grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, maxWidth: cols * 52 }}>
+            <div className={cx('mb-1.5', CAPTION)}>Bits · m = {m}</div>
+            <div className="mx-auto grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, maxWidth: cols * 52 }}>
               {state.bits.map((bit, i) => {
                 const mark = state.bitMarks[i];
                 return (
                   <div key={i} className="flex min-w-0 flex-col items-center gap-0.5">
-                    <span className="font-mono text-[10px] leading-3 text-ink-muted">{i}</span>
+                    {/* A set bit is filled, a clear one paper grey; the bits in play take their mark. */}
                     <div
-                      className={`relative grid h-10 w-full place-items-center rounded-md font-mono text-sm ring-1 ring-inset transition-colors ${
-                        bit ? 'bg-sunken font-bold text-ink ring-ink-faint' : 'bg-surface text-ink-muted ring-line'
-                      }`}
+                      className={cx(
+                        'relative grid h-10 w-full place-items-center rounded-[10px] font-mono text-sm transition-colors',
+                        mark ? `${fillFor(mark)} font-bold` : bit ? `${fillFor(null)} font-bold` : RULED_OUT,
+                      )}
                       style={{ transitionDuration: 'var(--tween, 300ms)' }}
                     >
-                      {mark || bit ? (
-                        <MarkSkin mark={mark}>
-                          <span className="relative">{bit}</span>
-                        </MarkSkin>
-                      ) : (
-                        <span>{bit}</span>
-                      )}
+                      {bit}
+                      <MarkBadge mark={mark} />
                     </div>
+                    <span className="font-mono text-[11px] leading-3 text-ink-muted">{i}</span>
                   </div>
                 );
               })}
             </div>
           </div>
-          <dl className="grid gap-x-4 gap-y-1 text-xs text-ink-soft sm:grid-cols-2">
-            <div>
+          <dl className="grid gap-2.5 text-xs text-ink-soft sm:grid-cols-2">
+            <div className="rounded-[18px] bg-sunken p-3">
               <dt className="inline text-ink-muted">Really added </dt>
               <dd className="inline font-mono text-ink">{n ? state.added.map((a) => `"${a}"`).join(', ') : 'nothing yet'}</dd>
               <div className="text-[11px] text-ink-muted">A real filter doesn&apos;t keep this list; the demo does, to check its answers.</div>
             </div>
-            <div>
+            <div className="rounded-[18px] bg-sunken p-3">
               <div>
                 Expected false-positive rate with n = {n}: <span className="font-mono text-ink">{(expected * 100).toFixed(1)}%</span>
               </div>
