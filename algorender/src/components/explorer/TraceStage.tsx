@@ -9,11 +9,13 @@ import { Segmented } from '@/components/ui/Segmented';
 import type { LegendEntry, StatSpec, ViewKind } from '@/engine/module';
 import type { Trace } from '@/engine/types';
 import { usePlayerKeyboard, useTracePlayer } from '@/engine/useTracePlayer';
+import { stageCaption } from '@/viz/captions';
 import { ViewEditContext, type ViewEdit } from '@/viz/edit';
 import { VIEWS } from '@/viz/views';
 import { CodePanel, CountsPanel, Legend, Narration } from './panels';
 import { PlayerControls } from './PlayerControls';
 import { PredictCard } from './PredictCard';
+import { StageWell } from './StageWell';
 
 export type Mode = 'watch' | 'predict';
 
@@ -107,6 +109,7 @@ export function TraceStage<S>({
   const gate = useCallback((i: number) => predicting && asked.has(i) && !answers.has(i), [predicting, asked, answers]);
   const player = useTracePlayer(trace.frames.length, { initialIndex, gate, autoPlay });
   const rootRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   usePlayerKeyboard(player, keyboard === 'local' ? rootRef : undefined);
   const frame = trace.frames[player.index];
   const tweenMs = live ? 0 : player.tweenMs;
@@ -146,19 +149,23 @@ export function TraceStage<S>({
         tabIndex={keyboard === 'local' ? -1 : undefined}
         className={cx('grid items-start gap-4 outline-none', wide && panels && 'lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]')}
       >
-        <div className="flex min-w-0 flex-col gap-3.5 rounded-card bg-surface p-3 sm:p-[18px]">
+        <div
+          ref={cardRef}
+          // In full screen the card fills the screen and scrolls; the narration and player come with it.
+          className="flex min-w-0 flex-col gap-3.5 rounded-card bg-surface p-3 sm:p-[18px] [&:fullscreen]:overflow-y-auto [&:fullscreen]:rounded-none [&:fullscreen]:p-6"
+        >
           {(asked.size > 0 || toolbar) && (
             <div className="flex flex-wrap items-center justify-between gap-2.5">
               {modeSwitch}
               {toolbar && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">{toolbar}</div>}
             </div>
           )}
-          {/* The stage well (V0). TODO(redesign): the board puts a caption ("Graph · 6 nodes · weighted, undirected") and view tools (zoom, fit, full screen, pan) above it; views don't describe themselves in words or zoom yet. */}
-          <div className="rounded-tile bg-subtle px-3 pt-4 pb-3 sm:px-6" style={{ '--tween': `${tweenMs}ms` } as CSSProperties}>
+          {/* The stage well (V0), with its caption and view tools. */}
+          <StageWell caption={stageCaption(view, frame.state)} card={cardRef} style={{ '--tween': `${tweenMs}ms` } as CSSProperties}>
             <ViewEditContext value={edit ?? null}>
               <View state={frame.state} />
             </ViewEditContext>
-          </div>
+          </StageWell>
           {/* Banners sit under the stage, in feedback colours, with the reason. */}
           {trace.truncated && (
             <p className="rounded-well bg-warn-soft px-4 py-2.5 text-[13px] font-semibold text-warn-title">

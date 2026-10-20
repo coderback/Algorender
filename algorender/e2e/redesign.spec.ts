@@ -63,6 +63,7 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'viz-text', path: '/visualisers/kmp?step=10' },
   { name: 'viz-hash', path: '/visualisers/hash-table' },
   { name: 'viz-plot', path: '/visualisers/k-means?step=4' },
+  { name: 'viz-ring', path: '/visualisers/queue' },
 ];
 
 const VIEWPORTS = [

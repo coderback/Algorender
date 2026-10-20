@@ -1,8 +1,10 @@
 'use client';
 
 import { LayoutGroup, motion } from 'motion/react';
-import { useId } from 'react';
+import { useId, useState, type CSSProperties } from 'react';
+import { Segmented } from '@/components/ui/Segmented';
 import { cx } from '@/components/ui/cx';
+import { MARKS } from '@/viz/marks';
 import { CAPTION, EMPTY_SLOT, Pointer, STAGE_CAPTION } from '@/viz/parts';
 import type { Holder, SlotRow, SlotsState } from './types';
 import { useWidth } from './useWidth';
@@ -13,6 +15,7 @@ const GAP_PX = 4;
 const MIN_CELL_PX = 30;
 const MIN_RING_CELL_PX = 26;
 const MAX_CELL_PX = 60;
+const TWEEN: CSSProperties = { transitionDuration: 'var(--tween, 300ms)' };
 
 /**
  * Array-backed structures: rows of memory cells with their indices, the
@@ -24,6 +27,9 @@ export function SlotsView({ state }: { state: SlotsState }) {
   const group = useId();
   const [ref, width] = useWidth<HTMLDivElement>();
   const stack = state.layout === 'stack';
+  // A ring buffer is drawn as the ring it is (V2), or unrolled into a line with a wrap arrow.
+  const [shape, setShape] = useState<'ring' | 'line'>('ring');
+  const ring = state.ring && shape === 'ring';
 
   return (
     <LayoutGroup id={group}>
@@ -31,18 +37,147 @@ export function SlotsView({ state }: { state: SlotsState }) {
         <p className="sr-only">{describe(state)}</p>
         {/* Drawn once the width is known (before the first paint), so nothing animates in from a provisional layout. */}
         {width > 0 && (
-          <div aria-hidden className="flex flex-col gap-3">
-            <p className={STAGE_CAPTION}>{state.summary}</p>
-            <Holders holders={state.holders} state={state} centered={stack} />
-            {stack ? (
-              <StackColumn row={state.rows[0]} state={state} />
-            ) : (
-              state.rows.map((row) => <RowView key={row.id} row={row} state={state} width={width} />)
-            )}
+          <div className="flex flex-col gap-3">
+            <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+              <p aria-hidden className={STAGE_CAPTION}>
+                {state.summary}
+              </p>
+              {state.ring && (
+                <Segmented
+                  label="Draw the slots as"
+                  value={shape}
+                  onChange={setShape}
+                  options={[
+                    { value: 'ring', label: 'Ring' },
+                    { value: 'line', label: 'Line' },
+                  ]}
+                />
+              )}
+            </div>
+            <div aria-hidden className="flex flex-col gap-3">
+              <Holders holders={state.holders} state={state} centered={stack || ring} />
+              {stack ? (
+                <StackColumn row={state.rows[0]} state={state} />
+              ) : ring ? (
+                <RingView row={state.rows[0]} state={state} width={width} />
+              ) : (
+                state.rows.map((row) => <RowView key={row.id} row={row} state={state} width={width} />)
+              )}
+            </div>
           </div>
         )}
       </div>
     </LayoutGroup>
+  );
+}
+
+/** The ring's drawing box at full size; a narrower stage scales the whole drawing down. */
+const RING_BOX = { w: 440, h: 380 } as const;
+const RING_R = 110;
+const RING_THICK = 44;
+const CENTRE: [number, number] = [RING_BOX.w / 2, RING_BOX.h / 2];
+
+/** Where slot boundary `k` of `n` points (slot 0 starts at the top; the slots run clockwise). */
+const angle = (k: number, n: number) => (k / n) * 2 * Math.PI - Math.PI / 2;
+const polar = (a: number, r: number): [number, number] => [CENTRE[0] + r * Math.cos(a), CENTRE[1] + r * Math.sin(a)];
+/** The middle of slot `i`, `r` from the centre, as a position inside the drawing box. */
+const onRing = (i: number, n: number, r: number): CSSProperties => {
+  const [x, y] = polar(angle(i + 0.5, n), r);
+  return { left: `${(x / RING_BOX.w) * 100}%`, top: `${(y / RING_BOX.h) * 100}%` };
+};
+
+/**
+ * A ring buffer as a donut of slots: each slot a segment (empty, holding a
+ * value, or marked), its index outside, the pointers (head, tail) further out,
+ * and how many slots are in use in the middle. Wrapping round is just the next
+ * segment.
+ */
+function RingView({ row, state, width }: { row: SlotRow; state: SlotsState; width: number }) {
+  const n = row.slots.length;
+  const used = row.slots.filter((id) => id != null).length;
+  const labels = pointerLabels(state, row);
+  const small = width < 360;
+  const arc = (i: number) => {
+    const [x0, y0] = polar(angle(i, n), RING_R);
+    const [x1, y1] = polar(angle(i + 1, n), RING_R);
+    return `M ${x0} ${y0} A ${RING_R} ${RING_R} 0 0 1 ${x1} ${y1}`;
+  };
+
+  return (
+    <div role="group" aria-label={row.label}>
+      <div className={cx('mb-1.5', CAPTION)}>{row.label}</div>
+      <div className="relative mx-auto w-full" style={{ maxWidth: RING_BOX.w, aspectRatio: `${RING_BOX.w} / ${RING_BOX.h}` }}>
+        <svg viewBox={`0 0 ${RING_BOX.w} ${RING_BOX.h}`} className="absolute inset-0 size-full" aria-hidden>
+          {row.slots.map((id, i) => {
+            const mark = id != null ? state.marks[id] : undefined;
+            return (
+              <path
+                key={i}
+                d={arc(i)}
+                fill="none"
+                strokeWidth={RING_THICK}
+                className={cx('transition-colors', mark ? MARKS[mark].stroke : id != null ? 'stroke-bar' : 'stroke-line-soft')}
+                style={TWEEN}
+              />
+            );
+          })}
+          {/* Gaps between the slots, in the well's colour. */}
+          {row.slots.map((_, i) => {
+            const [x0, y0] = polar(angle(i, n), RING_R - RING_THICK / 2 - 2);
+            const [x1, y1] = polar(angle(i, n), RING_R + RING_THICK / 2 + 2);
+            return <line key={i} x1={x0} y1={y0} x2={x1} y2={y1} strokeWidth={4} className="stroke-subtle" />;
+          })}
+        </svg>
+        {row.slots.map((id, i) => {
+          const mark = id != null ? state.marks[id] : undefined;
+          return (
+            <div key={i}>
+              <span
+                className="absolute -translate-x-1/2 -translate-y-1/2 font-mono text-[11px] leading-none text-ink-muted"
+                style={onRing(i, n, RING_R + RING_THICK / 2 + 12)}
+              >
+                {i}
+              </span>
+              {id != null && (
+                // The value sits on its slot; it shares its id with the holders, so it glides in and out of them.
+                <motion.span
+                  layout="position"
+                  layoutId={id}
+                  className={cx(
+                    'absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 font-mono font-semibold tabular-nums',
+                    small ? 'text-xs' : 'text-sm',
+                    mark === 'compare' ? 'text-white' : mark ? 'text-on-mark' : 'text-ink',
+                  )}
+                  style={onRing(i, n, RING_R)}
+                >
+                  {state.values[id]}
+                  {mark && <span className="text-[9px]">{MARKS[mark].glyph}</span>}
+                </motion.span>
+              )}
+            </div>
+          );
+        })}
+        {[...labels].map(([i, names]) => (
+          <motion.div
+            key={names.join(',')}
+            layout="position"
+            layoutId={`ptr-${row.id}-${names.join(',')}`}
+            className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
+            style={onRing(i, n, RING_R + RING_THICK / 2 + 34)}
+          >
+            {names.map((name) => (
+              <Pointer key={name}>{name}</Pointer>
+            ))}
+          </motion.div>
+        ))}
+        <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center leading-tight">
+          <span className={cx('font-display font-bold text-ink tabular-nums', small ? 'text-lg' : 'text-2xl')}>
+            {used}/{n}
+          </span>
+          <span className="text-[11px] text-ink-muted">slots used</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -120,7 +255,7 @@ function Slot({ id, stale, state, className }: { id: string | null; stale: numbe
   );
 }
 
-/** The ring: an arrow from under the last slot back round to slot 0. TODO(redesign): V2 draws a queue as the ring itself (a donut of slots with "5/8 slots used" inside, a Ring / Line switch); the line with a wrap arrow stays until then. */
+/** The ring unrolled into a line: an arrow from under the last slot back round to slot 0. */
 function WrapArrow({ n }: { n: number }) {
   const inset = `calc(${50 / n}% - 1px)`;
   return (

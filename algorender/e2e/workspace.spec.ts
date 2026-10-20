@@ -194,7 +194,7 @@ test('line by line: an exercise run can play on the memory view', async ({ page 
   await expect(tests(page)).toContainText('All 7 tests pass.');
   // Switching re-runs the same code, now recording every line.
   await page.getByLabel('Line by line, with memory').check();
-  const memory = page.getByRole('group', { name: 'Memory' });
+  const memory = page.getByRole('group', { name: 'Memory', exact: true });
   await expect(memory).toBeVisible();
   await expect(page.getByTestId('narration')).toHaveText('The program starts at line 1.');
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: /Step forward/ }).click();
@@ -210,7 +210,7 @@ test('the recursion lesson traces the call stack, and asks before the second run
   await page.goto('/learn/recursion');
   const runs = page.getByRole('button', { name: 'Run it line by line' });
   await runs.first().click();
-  const memory = page.getByRole('group', { name: 'Memory' }).first();
+  const memory = page.getByRole('group', { name: 'Memory', exact: true }).first();
   await expect(memory).toBeVisible();
   const forward = page.getByRole('button', { name: /Step forward/ }).first();
   for (let i = 0; i < 8; i++) await forward.click();
@@ -226,7 +226,7 @@ test('the recursion lesson traces the call stack, and asks before the second run
   await expect(page.getByTestId('narration').nth(1)).toHaveText('The program starts at line 1.');
   await page.getByRole('button', { name: /Step forward/ }).nth(1).click();
   await expect(page.getByTestId('narration').nth(1)).toHaveText('Line 1 defines total.');
-  await expect(page.getByRole('group', { name: 'Memory' }).nth(1).getByRole('group', { name: 'Objects' })).toContainText('Function total (new).');
+  await expect(page.getByRole('group', { name: 'Memory', exact: true }).nth(1).getByRole('group', { name: 'Objects' })).toContainText('Function total (new).');
   expect(errors).toEqual([]);
 });
 
@@ -236,7 +236,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await useLanguage(page, 'javascript');
     await page.goto('/learn/recursion');
     await page.getByRole('button', { name: 'Run it line by line' }).first().click();
-    await expect(page.getByRole('group', { name: 'Memory' }).first()).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Memory', exact: true }).first()).toBeVisible();
     for (let i = 0; i < 9; i++) await page.getByRole('button', { name: /Step forward/ }).first().click();
     const { violations } = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
@@ -295,7 +295,7 @@ test('graphs: a BFS in JavaScript passes, and its own queue and reads drive the 
   await expect(page.getByText('Under each node:')).toContainText('level');
   // The memory diagram is one switch away, for the same run.
   await page.getByLabel('Show the memory diagram').check();
-  await expect(page.getByRole('group', { name: 'Memory' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Memory', exact: true })).toBeVisible();
   await expect(tests(page)).toContainText('All 9 tests pass.');
   expect(errors).toEqual([]);
 });
