@@ -115,7 +115,7 @@ export function MemoryView({ state }: { state: MemoryState }) {
 
 function PanelLabel({ children }: { children: ReactNode }) {
   return (
-    <div aria-hidden className="mb-1.5 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
+    <div aria-hidden className="mb-2 text-xs font-medium text-ink-muted">
       {children}
     </div>
   );
@@ -123,7 +123,7 @@ function PanelLabel({ children }: { children: ReactNode }) {
 
 // ───────────────────────────── frames ─────────────────────────────
 
-/** One call: its function's name, then a row per local name. The current frame is outlined in the accent and labelled. */
+/** One call: its function's name, then a row per local name. The running frame is outlined in the "current" mark (amber) and labelled. */
 function FrameBox({ frame, present }: { frame: StackFrame; present: Set<string> }) {
   const global = frame.fn === 'Global frame';
   return (
@@ -132,24 +132,22 @@ function FrameBox({ frame, present }: { frame: StackFrame; present: Set<string> 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       data-frame={frame.id}
-      className={`rounded-lg border bg-surface ${frame.active ? 'border-accent ring-1 ring-accent' : 'border-line-strong'}`}
+      className={`rounded-[14px] border bg-surface ${frame.active ? 'border-mark-focus ring-1 ring-mark-focus' : 'border-line'}`}
     >
-      <div
-        className={`flex items-center justify-between gap-2 rounded-t-[7px] border-b px-2.5 py-1 ${
-          frame.active ? 'border-accent-line bg-accent-soft' : 'border-line bg-subtle'
-        }`}
-      >
+      <div className="flex items-center justify-between gap-2 rounded-t-[13px] border-b border-line-soft px-3 py-1.5">
         <span className={`min-w-0 truncate text-sm font-semibold ${global ? '' : 'font-mono'} ${frame.active ? 'text-ink' : 'text-ink-soft'}`}>
           {frame.fn}
         </span>
         {frame.active && (
-          <span className="shrink-0 rounded-full bg-accent px-1.5 py-px text-[10px] font-semibold tracking-wide text-on-accent uppercase">current</span>
+          <span className="shrink-0 text-[11px] font-semibold text-mark-focus-ink">
+            <span aria-hidden>● </span>current
+          </span>
         )}
       </div>
       {frame.locals.length === 0 && !frame.returning ? (
-        <p className="px-2.5 py-1.5 text-xs text-ink-muted">No names yet</p>
+        <p className="px-3 py-1.5 text-xs text-ink-muted">No names yet</p>
       ) : (
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 px-2.5 py-2">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 px-3 py-2">
           {frame.locals.map((l) => (
             <Fragment key={l.name}>
               <span className="text-right font-mono text-sm wrap-anywhere text-ink-soft">{l.name}</span>
@@ -173,12 +171,12 @@ function FrameBox({ frame, present }: { frame: StackFrame; present: Set<string> 
 function Slot({ src, value, changed, present }: { src: string; value: MemValue; changed: boolean; present: Set<string> }) {
   return (
     <span
-      className={`relative inline-flex min-h-7 max-w-full min-w-9 items-center justify-center justify-self-start rounded border bg-surface px-1.5 py-0.5 ${
+      className={`relative inline-flex min-h-7 max-w-full min-w-9 items-center justify-center justify-self-start rounded-[8px] border bg-surface px-1.5 py-0.5 ${
         changed ? 'border-mark-write' : 'border-line-strong'
       }`}
     >
       {/* Keyed by the value, so a second change in a row flashes again. */}
-      {changed && <Wash key={'ref' in value ? `@${value.ref}` : value.prim} rounded="rounded-[3px]" />}
+      {changed && <Wash key={'ref' in value ? `@${value.ref}` : value.prim} rounded="rounded-[7px]" />}
       <Value src={src} value={value} present={present} />
       {changed && (
         <span
@@ -275,8 +273,8 @@ function Badge({ children }: { children: ReactNode }) {
 /** The bordered box arrows point at (data-obj): they land on its left edge. */
 function ObjectFrame({ id, flash, children }: { id: string; flash: string; children: ReactNode }) {
   return (
-    <div data-obj={id} className={`relative max-w-full rounded-md border bg-surface ${flash ? 'border-mark-write' : 'border-line-strong'}`}>
-      {flash && <Wash key={flash} rounded="rounded-[5px]" />}
+    <div data-obj={id} className={`relative max-w-full rounded-[12px] border bg-surface ${flash ? 'border-mark-write' : 'border-line'}`}>
+      {flash && <Wash key={flash} rounded="rounded-[11px]" />}
       {children}
     </div>
   );
@@ -372,7 +370,7 @@ function Printed({ lines }: { lines: string[] }) {
       <PanelLabel>Printed</PanelLabel>
       <div
         ref={ref}
-        className="max-h-40 overflow-y-auto rounded-md border border-line bg-sunken px-3 py-2"
+        className="max-h-40 overflow-y-auto rounded-well bg-sunken px-3.5 py-2.5"
         tabIndex={overflowing ? 0 : -1}
         role={overflowing ? 'region' : undefined}
         aria-label={overflowing ? 'Printed output (scrolls)' : undefined}

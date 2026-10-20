@@ -2,6 +2,8 @@
 
 import { LayoutGroup, motion } from 'motion/react';
 import { useId } from 'react';
+import { cx } from '@/components/ui/cx';
+import { CAPTION, EMPTY_SLOT, Pointer, STAGE_CAPTION } from '@/viz/parts';
 import type { Holder, SlotRow, SlotsState } from './types';
 import { useWidth } from './useWidth';
 import { ValueBox } from './ValueBox';
@@ -29,8 +31,8 @@ export function SlotsView({ state }: { state: SlotsState }) {
         <p className="sr-only">{describe(state)}</p>
         {/* Drawn once the width is known (before the first paint), so nothing animates in from a provisional layout. */}
         {width > 0 && (
-          <div aria-hidden className="flex flex-col gap-2">
-            <p className="text-center font-mono text-xs text-ink-soft">{state.summary}</p>
+          <div aria-hidden className="flex flex-col gap-3">
+            <p className={STAGE_CAPTION}>{state.summary}</p>
             <Holders holders={state.holders} state={state} centered={stack} />
             {stack ? (
               <StackColumn row={state.rows[0]} state={state} />
@@ -52,8 +54,8 @@ function Holders({ holders, state, centered }: { holders: readonly Holder[]; sta
         <div key={h.id} className="flex w-24 flex-col items-center gap-1">
           {h.item && (
             <>
-              <span className="max-w-full truncate font-mono text-[11px] text-ink-muted">{h.label}</span>
-              <div className="relative h-10 w-12 rounded-md border border-dashed border-line-strong">
+              <span className={cx('max-w-full truncate', CAPTION)}>{h.label}</span>
+              <div className={cx('relative h-12 w-14', EMPTY_SLOT)}>
                 <ValueBox id={h.item} label={state.values[h.item]} mark={state.marks[h.item]} className="absolute inset-0" />
               </div>
             </>
@@ -80,22 +82,17 @@ function RowView({ row, state, width }: { row: SlotRow; state: SlotsState; width
 
   return (
     <div role="group" aria-label={row.label}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{row.label}</div>
+      <div className={cx('mb-1.5', CAPTION)}>{row.label}</div>
       <div className="mx-auto" style={{ maxWidth: cols * MAX_CELL_PX }}>
-        <div className="grid gap-x-1 gap-y-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        <div className="grid gap-x-1.5 gap-y-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
           {row.slots.map((id, i) => (
             <div key={i} className="flex min-w-0 flex-col items-center gap-0.5">
-              <span className="font-mono text-[10px] leading-3 text-ink-muted">{i}</span>
-              <Slot id={id} stale={row.stale?.[i] ?? null} state={state} className="h-10 w-full" />
-              <div className="flex h-7 flex-col items-center">
+              <span className="font-mono text-[11px] leading-3 text-ink-muted">{i}</span>
+              <Slot id={id} stale={row.stale?.[i] ?? null} state={state} className="h-12 w-full" />
+              <div className="flex min-h-7 flex-col items-center gap-0.5 pt-0.5">
                 {(labels.get(i) ?? []).map((label) => (
-                  <motion.span
-                    key={label}
-                    layout="position"
-                    layoutId={`ptr-${row.id}-${label}`}
-                    className="font-mono text-[10px] leading-3.5 font-semibold whitespace-nowrap text-ink-soft"
-                  >
-                    ▲{label}
+                  <motion.span key={label} layout="position" layoutId={`ptr-${row.id}-${label}`}>
+                    <Pointer>{label}</Pointer>
                   </motion.span>
                 ))}
               </div>
@@ -112,7 +109,7 @@ function RowView({ row, state, width }: { row: SlotRow; state: SlotsState; width
 function Slot({ id, stale, state, className }: { id: string | null; stale: number | null; state: SlotsState; className: string }) {
   return (
     <div className={`relative ${className}`}>
-      <div className="absolute inset-0 rounded-md border border-dashed border-line-strong bg-subtle" />
+      <div className={cx('absolute inset-0', EMPTY_SLOT)} />
       {id == null && stale != null && (
         <span className="absolute inset-0 grid place-items-center font-mono text-sm text-ink-muted" title="old copy">
           {stale}
@@ -123,7 +120,7 @@ function Slot({ id, stale, state, className }: { id: string | null; stale: numbe
   );
 }
 
-/** The ring: an arrow from under the last slot back round to slot 0. */
+/** The ring: an arrow from under the last slot back round to slot 0. TODO(redesign): V2 draws a queue as the ring itself (a donut of slots with "5/8 slots used" inside, a Ring / Line switch); the line with a wrap arrow stays until then. */
 function WrapArrow({ n }: { n: number }) {
   const inset = `calc(${50 / n}% - 1px)`;
   return (
@@ -132,7 +129,7 @@ function WrapArrow({ n }: { n: number }) {
       <span className="absolute -top-2 -translate-x-1/2 text-[10px] leading-none text-ink-muted" style={{ left: `${50 / n}%` }}>
         ▲
       </span>
-      <span className="absolute top-1.5 left-1/2 -translate-x-1/2 bg-surface px-1.5 font-mono text-[10px] whitespace-nowrap text-ink-muted">
+      <span className="absolute top-1.5 left-1/2 -translate-x-1/2 bg-subtle px-1.5 text-[11px] whitespace-nowrap text-ink-muted">
         after slot {n - 1} comes slot 0
       </span>
     </div>
@@ -142,35 +139,25 @@ function WrapArrow({ n }: { n: number }) {
 function StackColumn({ row, state }: { row: SlotRow; state: SlotsState }) {
   const labels = pointerLabels(state, row);
   return (
-    <div role="group" aria-label={row.label} className="mx-auto w-full max-w-64">
-      <div className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{row.label}</div>
-      <div className="flex flex-col-reverse gap-1">
+    <div role="group" aria-label={row.label} className="mx-auto w-full max-w-72">
+      <div className={cx('mb-1.5 text-center', CAPTION)}>{row.label}</div>
+      {/* The stack's tube: open at the top, closed at the bottom. */}
+      <div className="flex flex-col-reverse">
         {row.slots.map((id, i) => (
-          <div key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)_3.5rem] items-center gap-2">
-            <span className="text-right font-mono text-[10px] text-ink-muted">{i}</span>
-            <Slot id={id} stale={null} state={state} className="h-9" />
-            <div className="flex flex-col">
+          <div key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)_4rem] items-center gap-2">
+            <span className="text-right font-mono text-[11px] text-ink-muted">{i}</span>
+            <div className={cx('border-x-2 border-line-strong px-1.5 py-[3px]', i === 0 && 'rounded-b-[22px] border-b-2 pb-1.5')}>
+              <Slot id={id} stale={null} state={state} className="h-10" />
+            </div>
+            <div className="flex flex-col items-start gap-0.5">
               {(labels.get(i) ?? []).map((label) => (
-                <motion.span
-                  key={label}
-                  layout="position"
-                  layoutId={`ptr-${row.id}-${label}`}
-                  className="font-mono text-[11px] font-semibold whitespace-nowrap text-ink-soft"
-                >
-                  ◀ {label}
+                <motion.span key={label} layout="position" layoutId={`ptr-${row.id}-${label}`}>
+                  <Pointer>← {label}</Pointer>
                 </motion.span>
               ))}
             </div>
           </div>
         ))}
-      </div>
-      <div className="mt-1 grid grid-cols-[1.25rem_minmax(0,1fr)_3.5rem] gap-2">
-        <span />
-        <div className="h-1.5 rounded-full bg-line-strong" />
-      </div>
-      <div className="grid grid-cols-[1.25rem_minmax(0,1fr)_3.5rem] gap-2 text-center text-[10px] text-ink-muted">
-        <span />
-        <span>bottom</span>
       </div>
     </div>
   );
