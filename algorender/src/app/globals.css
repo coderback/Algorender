@@ -239,6 +239,8 @@
      amber on top of orange (ΔE 9 normal, 3.5 deutan). Brightness is the lesser
      cost, and the glyphs carry the meaning either way. */
   --color-bar: #cfcadf;
+  /* Idle edges, node rings and arrows on the stage: line-strong in light, lifted in dark so they read on the dark well. */
+  --color-edge: #c9c6bd;
   --color-mark-compare: #0072b2;
   --color-mark-swap: #d55e00;
   --color-mark-write: #cc79a7;
@@ -365,6 +367,7 @@
       --shadow-float: 0 24px 48px -24px rgb(0 0 0 / 0.6);
 
       --color-bar: #4a4658;
+      --color-edge: #615e6d;
 
       --color-mark-compare-ink: #5aa9e6;
       --color-mark-swap-ink: #f08a4b;

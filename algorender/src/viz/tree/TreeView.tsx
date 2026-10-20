@@ -247,7 +247,7 @@ export function TreeView({ state }: { state: TreeState }) {
                     transition={instant}
                     strokeLinecap="round"
                     markerEnd={state.parentArrows ? `url(#${uid}-${hot ? 'up-hot' : 'up'})` : undefined}
-                    className={`transition-colors ${hot ? 'stroke-mark-done' : state.parentArrows ? 'stroke-ink-faint' : 'stroke-line-strong'}`}
+                    className={`transition-colors ${hot ? 'stroke-mark-done' : state.parentArrows ? 'stroke-ink-faint' : 'stroke-edge'}`}
                     style={TWEEN}
                   />
                 );
@@ -457,7 +457,7 @@ function BoxNode({ p, mark, instant }: { p: Placed; mark: MarkKey | undefined; i
         height={p.box.h}
         rx={12}
         strokeWidth={meta ? 3 : NODE_RING}
-        className={`fill-surface transition-colors ${meta ? meta.stroke : 'stroke-line-strong'}`}
+        className={`fill-surface transition-colors ${meta ? meta.stroke : 'stroke-edge'}`}
         style={TWEEN}
       />
       {mark && <Glyph mark={mark} x={-3} y={-3} />}
@@ -543,7 +543,7 @@ function EdgeLabel({
         height={h}
         rx={h / 2}
         strokeWidth={hot ? 2 : 1.5}
-        className={`fill-surface transition-colors ${hot ? 'stroke-mark-done' : 'stroke-line-strong'}`}
+        className={`fill-surface transition-colors ${hot ? 'stroke-mark-done' : 'stroke-edge'}`}
         style={TWEEN}
       />
       <text textAnchor="middle" dominantBaseline="central" fontSize={font} className={`font-mono font-bold ${hot ? 'fill-mark-done-ink' : 'fill-ink-soft'}`}>

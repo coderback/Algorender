@@ -3,6 +3,7 @@
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { MARKS } from '@/viz/marks';
+import { EDGE_ACTIVE, EDGE_IDLE, NODE_IDLE_SVG, NODE_RING } from '@/viz/parts';
 import { GraphPanels, svgOnMark } from './GraphPanels';
 import { edgeGeometry, NODE_R, placeLabels, type Geometry } from './layout';
 import type { GraphEdge, GraphNode, GraphState, Mark } from './types';
@@ -22,6 +23,8 @@ const TWEEN: CSSProperties = { transitionDuration: 'var(--tween, 300ms)' };
  * width, plus the side panels the algorithm keeps in its state (queue, table,
  * matrix…). Marks change colour by CSS transition; a relaxed edge pulses once.
  */
+// TODO(redesign): V4 also draws BFS layers as bands, DFS discovery/finish stamps, SCCs as soft hulls and a
+// Drawing / List / Matrix switch for graph structures; none of these are in the state yet.
 export function GraphView({ state }: { state: GraphState }) {
   const groupId = useId();
   const byId = new Map(state.nodes.map((n) => [n.id, n]));
@@ -53,20 +56,22 @@ export function GraphView({ state }: { state: GraphState }) {
 
   return (
     <LayoutGroup id={groupId}>
-      <div className="flex flex-col gap-4">
+      <div className="@container">
+      <div className={`grid grid-cols-1 gap-4 ${state.panels.length > 0 ? '@3xl:grid-cols-[minmax(0,1fr)_16rem] @3xl:items-start' : ''}`}>
         <p className="sr-only">{describe(state)}</p>
         {state.nodes.length === 0 ? (
           <p className="py-10 text-center text-sm text-ink-muted">The graph is empty. Add a vertex to start.</p>
         ) : (
           <div aria-hidden>
             {state.annotationLabel && (
-              <p className="mb-1 text-[11px] text-ink-muted">
+              <p className="mb-1 text-xs text-ink-muted">
                 Under each node: <span className="font-mono font-semibold text-ink-soft">{state.annotationLabel}</span>
               </p>
             )}
             <svg
               viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
-              className="mx-auto block h-auto w-full"
+              // Curved edges' weight pills can reach past the nodes' box; the stage well has room for them.
+              className="mx-auto block h-auto w-full overflow-visible"
               style={{ maxWidth: vb.w * MAX_SCALE, aspectRatio: `${vb.w} / ${vb.h}` }}
             >
               <AnimatePresence initial={false}>
@@ -106,12 +111,13 @@ export function GraphView({ state }: { state: GraphState }) {
         )}
         <GraphPanels panels={state.panels} />
       </div>
+      </div>
     </LayoutGroup>
   );
 }
 
 function EdgeLine({ edge, geo, mark, directed }: { edge: GraphEdge; geo: Geometry; mark: Mark | undefined; directed: boolean }) {
-  const stroke = mark ? MARKS[mark].stroke : 'stroke-line-strong';
+  const stroke = mark ? MARKS[mark].stroke : 'stroke-edge';
   const fill = mark ? MARKS[mark].fill : 'fill-ink-faint';
   return (
     <motion.g data-edge={edge.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -120,7 +126,7 @@ function EdgeLine({ edge, geo, mark, directed }: { edge: GraphEdge; geo: Geometr
         animate={{ d: geo.d }}
         fill="none"
         strokeLinecap="round"
-        strokeWidth={mark ? (mark === 'path' ? 4.5 : 3.5) : 2}
+        strokeWidth={mark ? EDGE_ACTIVE : EDGE_IDLE}
         strokeDasharray={mark === 'reject' ? '6 5' : undefined}
         className={`transition-[stroke,stroke-width] ${stroke}`}
         style={TWEEN}
@@ -134,25 +140,30 @@ function EdgeLine({ edge, geo, mark, directed }: { edge: GraphEdge; geo: Geometr
 
 function EdgeLabel({ edge, at, mark, weighted }: { edge: GraphEdge; at: { x: number; y: number }; mark: Mark | undefined; weighted: boolean }) {
   if (!weighted && !mark) return null;
+  // Mono digits are about 0.6em wide; the glyph adds one more character and a gap.
+  const chars = (weighted ? String(edge.weight).length : 0) + (mark ? 1 : 0);
+  const w = Math.max(20, chars * 7.5 + (weighted && mark ? 4 : 0) + 12);
   return (
-    <text
-      x={at.x}
-      y={at.y}
-      textAnchor="middle"
-      dominantBaseline="central"
-      fontSize={13}
-      paintOrder="stroke"
-      strokeWidth={4}
-      strokeLinejoin="round"
-      className="fill-ink-soft stroke-surface font-mono font-semibold"
-    >
-      {weighted && <tspan>{edge.weight}</tspan>}
-      {mark && (
-        <tspan className={`fill-current ${MARKS[mark].text}`} dx={weighted ? 2 : 0} fontSize={11}>
-          {MARKS[mark].glyph}
-        </tspan>
-      )}
-    </text>
+    <g>
+      <rect
+        x={at.x - w / 2}
+        y={at.y - 9.5}
+        width={w}
+        height={19}
+        rx={9.5}
+        strokeWidth={1.5}
+        className={`fill-surface transition-colors ${mark ? MARKS[mark].stroke : 'stroke-edge'}`}
+        style={TWEEN}
+      />
+      <text x={at.x} y={at.y} textAnchor="middle" dominantBaseline="central" fontSize={12} className="fill-ink font-mono font-semibold">
+        {weighted && <tspan>{edge.weight}</tspan>}
+        {mark && (
+          <tspan className={`fill-current ${MARKS[mark].text}`} dx={weighted ? 3 : 0} fontSize={11}>
+            {MARKS[mark].glyph}
+          </tspan>
+        )}
+      </text>
+    </g>
   );
 }
 
@@ -166,8 +177,8 @@ function NodeShape({ node, mark, annotation, badge }: { node: GraphNode; mark: M
         cx={x}
         cy={y}
         r={NODE_R}
-        strokeWidth={2}
-        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-bar'}`}
+        strokeWidth={NODE_RING}
+        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : NODE_IDLE_SVG}`}
         style={TWEEN}
       />
       <text
@@ -203,7 +214,7 @@ function NodeShape({ node, mark, annotation, badge }: { node: GraphNode; mark: M
             y={y - NODE_R - 9}
             width={badgeWidth}
             height={15}
-            rx={4}
+            rx={7.5}
             strokeWidth={1}
             className="fill-ink stroke-ink"
           />

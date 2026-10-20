@@ -53,13 +53,13 @@ export const CAPTION = 'text-xs font-medium text-ink-muted';
 export const STAGE_CAPTION = 'text-[13px] font-semibold text-ink-soft';
 
 /** Nodes in SVG: idle nodes are white with a grey ring; a state fills them (see marks.ts). */
-export const NODE_IDLE_SVG = 'fill-surface stroke-line-strong';
+export const NODE_IDLE_SVG = 'fill-surface stroke-edge';
 export const NODE_RING = 2.5;
 
 /** Edges: idle 2.5px grey, active 5px in its mark's colour. */
 export const EDGE_IDLE = 2.5;
 export const EDGE_ACTIVE = 5;
-export const EDGE_IDLE_SVG = 'stroke-line-strong';
+export const EDGE_IDLE_SVG = 'stroke-edge';
 
 /**
  * A range under cells (a search window, a sorted run, a partition): a soft
