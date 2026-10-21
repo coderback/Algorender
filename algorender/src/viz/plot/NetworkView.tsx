@@ -3,6 +3,7 @@
 import { motion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { MARKS, TONES } from '@/viz/marks';
+import { NODE_RING } from '@/viz/parts';
 import type { NetEdge, NetNode, NetworkPart } from './types';
 
 // A network diagram for PlotView: a computation graph (value boxes and
@@ -43,6 +44,8 @@ function edgeStyle(e: NetEdge): { className: string; style?: CSSProperties; widt
   return { className: e.mark ? MARKS[e.mark].stroke : 'stroke-line-strong', width: e.mark ? 2.5 : 1.5 };
 }
 
+// TODO(redesign): V9 draws each hidden neuron as a small tile of what it has learned to detect (its output over
+// the plane) and the playground's data, activation and split as a controls card; the state has neither.
 export function NetworkView({ part }: { part: NetworkPart }) {
   const arrow = useId();
   const byId = new Map(part.nodes.map((n) => [n.id, n]));
@@ -98,7 +101,7 @@ function NodeShape({ n }: { n: NetNode }) {
   // Marked nodes get the mark's fill; toned ones a tone outline; others the plain surface.
   const fillClass = mark ? mark.fill : 'fill-surface';
   const strokeStyle: CSSProperties | undefined = n.tone ? { stroke: TONES[n.tone] } : undefined;
-  const strokeClass = n.tone ? '' : mark ? mark.stroke : 'stroke-line-strong';
+  const strokeClass = n.tone ? '' : mark ? mark.stroke : 'stroke-edge';
   const ink = mark ? (n.mark === 'compare' ? 'fill-white' : 'fill-on-mark') : 'fill-ink';
   const soft = mark ? ink : 'fill-ink-soft';
   const common = { className: `transition-[fill,stroke] ${fillClass} ${strokeClass}`, style: { ...strokeStyle, transitionDuration: 'var(--tween, 300ms)' } };
@@ -106,7 +109,7 @@ function NodeShape({ n }: { n: NetNode }) {
   if (n.kind === 'value') {
     return (
       <motion.g initial={false} animate={{ x: n.x, y: n.y }}>
-        <rect x={-BOX.w / 2} y={-BOX.h / 2} width={BOX.w} height={BOX.h} rx={6} strokeWidth={1.5} {...common} />
+        <rect x={-BOX.w / 2} y={-BOX.h / 2} width={BOX.w} height={BOX.h} rx={10} strokeWidth={NODE_RING} {...common} />
         <text y={-BOX.h / 2 + 13} textAnchor="middle" className={`${ink} text-[11px] font-semibold`}>
           {n.label}
         </text>
@@ -126,7 +129,7 @@ function NodeShape({ n }: { n: NetNode }) {
   const r = n.kind === 'op' ? OP_R : NEURON_R;
   return (
     <motion.g initial={false} animate={{ x: n.x, y: n.y }}>
-      <circle r={r} strokeWidth={1.5} {...common} />
+      <circle r={r} strokeWidth={NODE_RING} {...common} />
       <text dy="0.35em" textAnchor="middle" className={`${ink} font-mono ${n.kind === 'op' ? 'text-[11px] font-semibold' : 'text-[9px]'}`}>
         {n.kind === 'op' ? n.label : (n.value ?? '')}
       </text>

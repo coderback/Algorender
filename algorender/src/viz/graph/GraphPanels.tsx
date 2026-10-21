@@ -25,15 +25,17 @@ export function GraphPanels({ panels }: { panels: readonly Panel[] }) {
   // Panels are labelled groups, not landmarks or headings: a page can show
   // several visualisers, and their panel titles don't belong in its outline.
   return (
-    <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+    <div className="@container min-w-0">
+      <div className="grid gap-2.5 @lg:grid-cols-2">
       {panels.map((panel) => (
-        <div key={panel.id} role="group" aria-labelledby={`${id}-${panel.id}`} className={`min-w-0 ${isWide(panel) ? 'sm:col-span-2' : ''}`}>
-          <div id={`${id}-${panel.id}`} className="mb-1.5 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
+        <div key={panel.id} role="group" aria-labelledby={`${id}-${panel.id}`} className={`min-w-0 rounded-[18px] bg-sunken p-3 ${isWide(panel) ? '@lg:col-span-2' : ''}`}>
+          <div id={`${id}-${panel.id}`} className="mb-2 text-xs font-semibold text-ink-soft">
             {panel.title}
           </div>
           <PanelBody panel={panel} />
         </div>
       ))}
+      </div>
     </div>
   );
 }
@@ -59,14 +61,14 @@ export function ChipView({ chip, layout = true }: { chip: Chip; layout?: boolean
   const meta = chip.mark ? MARKS[chip.mark] : null;
   const tone = chip.mark
     ? `${meta!.bg} ${onMark(chip.mark)} border-transparent`
-    : 'border-line bg-surface text-ink';
+    : 'border-transparent bg-surface text-ink';
   return (
     <motion.li
       layout={layout ? 'position' : false}
       initial={{ opacity: 0, scale: 0.85 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.85 }}
-      className={`inline-flex items-baseline gap-1 rounded-md border px-2 py-0.5 font-mono text-sm transition-colors ${tone}`}
+      className={`inline-flex items-baseline gap-1 rounded-[10px] border px-2 py-0.5 font-mono text-sm transition-colors ${tone}`}
       style={TWEEN}
     >
       {meta && (
@@ -84,7 +86,7 @@ function ChipsBody({ panel }: { panel: ChipsPanel }) {
   return (
     <div>
       {panel.ends && panel.chips.length > 0 && (
-        <div className="mb-0.5 flex justify-between text-[10px] text-ink-muted" aria-hidden>
+        <div className="mb-1 flex justify-between text-[11px] text-ink-muted" aria-hidden>
           <span>← {panel.ends[0]}</span>
           <span>{panel.ends[1]} →</span>
         </div>

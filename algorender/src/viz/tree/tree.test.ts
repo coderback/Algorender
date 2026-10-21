@@ -205,9 +205,20 @@ describe('tree view', () => {
     expect(viewBox(render(small))).toEqual(smallPhone);
   });
 
+  it('writes the subset built so far on each node of the decision tree', () => {
+    measured.width = 1000;
+    const html = render(last(subsets, 'three'));
+    for (const subset of ['∅', '{a}', '{a,b}', '{a,b,c}', '{b,c}']) expect(html).toContain(`>${subset}<`);
+  });
+
   it('drops crowded edge labels to their glyphs, keeping full labels wherever they fit', () => {
     measured.width = 1000;
-    const html = render(last(subsets, 'four'));
+    // Without the subsets written on the nodes, the leaves are narrow enough to crowd their edge labels.
+    const plain = (state: TreeState): TreeState => ({
+      ...state,
+      nodes: Object.fromEntries(Object.entries(state.nodes).map(([id, n]) => [id, { ...n, cells: [] }])),
+    });
+    const html = render(plain(last(subsets, 'four')));
     expect(html).toContain('>+c<');
     expect(html).not.toContain('>+d<');
     expect(html).toContain('>+<');

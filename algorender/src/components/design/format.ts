@@ -1,3 +1,4 @@
+import type { TrackColour } from '@/data/tracks';
 import type { Component, Targets } from '@/systems/design/types';
 
 // Plain-text summaries of components and numbers, shared by the diagram, the
@@ -53,3 +54,7 @@ export function targetList(t: Targets): string[] {
   if (t.survive) out.push(`${t.survive.label}: still at most ${pct(t.survive.maxErrorRate)} errors`);
   return out;
 }
+
+/** One pastel per case study, in order, so neighbouring cards read apart. */
+export const CASE_COLOURS: readonly TrackColour[] = ['teal', 'sky', 'butter', 'peach', 'lilac'];
+export const caseColour = (index: number): TrackColour => CASE_COLOURS[index % CASE_COLOURS.length];

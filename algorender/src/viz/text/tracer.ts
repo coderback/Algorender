@@ -1,7 +1,7 @@
 import type { Checkpoint, Frame, VarValue } from '@/engine/types';
 import type { RangeTone } from '@/viz/array/types';
 import type { MarkKey } from '@/viz/marks';
-import type { CellId, Readout, TextCell, TextPointer, TextRange, TextRow, TextState } from './types';
+import type { CellId, HistoryEntry, Readout, Skip, TextCell, TextPointer, TextRange, TextRow, TextState } from './types';
 
 /** A cell by row id and cell index (not column). */
 export type CellRef = readonly [row: string, index: number];
@@ -26,6 +26,8 @@ export type TextFrameOptions = {
   vars?: Record<string, VarValue>;
   /** Predict-mode question about the next frame. This frame's note must not reveal the answer. */
   checkpoint?: Checkpoint;
+  /** The slide this step makes (a row's old offset to its new one), drawn under the row. */
+  skip?: Skip;
 };
 
 /**
@@ -39,6 +41,7 @@ export class TextTracer {
   private rows: readonly TextRow[] = [];
   private persistent: Readonly<Record<CellId, MarkKey>> = {};
   private readouts: readonly Readout[] = [];
+  private history: TextState['history'];
   private results: TextState['results'];
   readonly stats: Record<string, number>;
 
@@ -136,6 +139,11 @@ export class TextTracer {
       : [...this.readouts, readout];
   }
 
+  /** Adds an entry to the history under the rows. */
+  addHistory(title: string, entry: HistoryEntry) {
+    this.history = { title, entries: [...(this.history?.entries ?? []), entry] };
+  }
+
   addResult(item: string) {
     this.results = { ...this.results, items: [...this.results.items, item] };
   }
@@ -186,6 +194,8 @@ export class TextTracer {
         pointers,
         ranges,
         readouts,
+        ...(this.history && { history: this.history }),
+        ...(opts.skip && { skip: opts.skip }),
         results: this.results,
       },
       line: opts.line ?? null,

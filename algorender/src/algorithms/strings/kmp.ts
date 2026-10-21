@@ -1,7 +1,7 @@
 import { defineAlgorithm } from '@/engine/module';
 import { TextTracer, type CellRef } from '@/viz/text/tracer';
 import type { TextState } from '@/viz/text/types';
-import { matchInput, quote, type MatchInput } from './shared';
+import { matchInput, type MatchInput, naiveComparisons, quote } from './shared';
 
 const pseudocode = [
   'buildLps(P):',
@@ -181,6 +181,7 @@ function* run({ text, pattern }: MatchInput) {
   t.addRow(LPS, 'lps (moves with P)', lps.map(String), { kind: 'numbers' });
 
   let j = 0;
+  t.setReadout('naive', 'Naive search, same text', `${naiveComparisons(text, pattern)} comparisons`);
   yield t.frame({
     line: L.start,
     note: 'Now scan the text once, left to right. j counts the pattern letters matched so far, so the pattern sits under the text at shift i − j. The text pointer i never moves backwards.',
@@ -244,6 +245,7 @@ function* run({ text, pattern }: MatchInput) {
         if (i < n - 1) {
           t.count('shifts');
           t.setOffset(PAT, i + 1 - j);
+          const kept = j > 0 ? `: “${pattern.slice(0, j)}” is kept` : '';
           yield t.frame({
             line: L.keepBorder,
             note:
@@ -253,6 +255,7 @@ function* run({ text, pattern }: MatchInput) {
             marks: { key: [[LPS, m - 1]], visited: [...cells(TEXT, i + 1 - j, i), ...cells(PAT, 0, j - 1)] },
             pointers: { i: [TEXT, i + 1], j: [PAT, j] },
             vars: { i: i + 1, j, shift: i + 1 - j },
+            skip: { row: PAT, from: at, to: i + 1 - j, label: `slide ${places(m - j)}${kept}` },
           });
         }
         break;
@@ -272,6 +275,12 @@ function* run({ text, pattern }: MatchInput) {
           marks: { key: [[LPS, old - 1]], reject: [[TEXT, i]], visited: [...cells(TEXT, i - j, i - 1), ...cells(PAT, 0, j - 1)] },
           pointers: { i: [TEXT, i], j: [PAT, j] },
           vars: { i, j, shift: i - j },
+          skip: {
+            row: PAT,
+            from: i - old,
+            to: i - j,
+            label: j > 0 && old - j > 1 ? `slide ${places(old - j)}, not 1: “${pattern.slice(0, j)}” already matches` : `slide ${places(old - j)}`,
+          },
         });
         continue;
       }

@@ -23,6 +23,7 @@ const pseudocode = [
 ];
 
 const NONE = 'None fits';
+const CANDIDATES = 'candidates';
 
 type Unit = 'row' | 'column' | 'box';
 type Clash = { digit: number; at: number; unit: Unit };
@@ -84,6 +85,10 @@ function* run({ size, cells }: SudokuInput): Generator<Frame<GridState>> {
     rows: Array.from({ length: N }, (_, r) => ({ label: String(r + 1) })),
     cols: Array.from({ length: N }, (_, c) => ({ label: String(c + 1) })),
   });
+  // The digits for the cell being filled (V6): marked once its search is over, never while the question about it is open.
+  t.addList({ id: CANDIDATES, label: 'Candidates for this cell', empty: '' });
+  for (let d = 1; d <= N; d++) t.addItem(CANDIDATES, { id: String(d), text: String(d) });
+  const digitRefs = (digits: readonly number[]) => digits.map((d) => ({ list: CANDIDATES, item: String(d) }));
   const ref = (k: number): CellRef => [Math.floor(k / N), k % N];
   const name = (k: number) => `row ${Math.floor(k / N) + 1}, column ${(k % N) + 1}`;
   grid.forEach((d, k) => {
@@ -152,7 +157,7 @@ function* run({ size, cells }: SudokuInput): Generator<Frame<GridState>> {
             from > N
               ? `Dead end: there is no digit above ${N} to try, so an earlier choice must change.`
               : `Dead end: ${range} already appears in this cell's row, column or box (${describeClashes(clashes)}), so an earlier choice must change.`,
-          marks: { reject: [here, ...clashes.map((c) => ref(c.at))] },
+          marks: { reject: [here, ...clashes.map((c) => ref(c.at)), ...digitRefs(clashes.map((c) => c.digit))] },
           tints: [region],
           arrows: arrowsFor(k, clashes),
           vars: { row: Math.floor(k / N) + 1, col: (k % N) + 1 },
@@ -169,7 +174,7 @@ function* run({ size, cells }: SudokuInput): Generator<Frame<GridState>> {
         note: clashes.length
           ? `Write ${digit}: ${describeClashes(clashes)}, but ${digit} appears nowhere in its row, column or box.`
           : `Write ${digit}: it appears nowhere in this cell's row, column or box.`,
-        marks: { write: [here], reject: clashes.map((c) => ref(c.at)) },
+        marks: { write: [here, ...digitRefs([digit])], reject: [...clashes.map((c) => ref(c.at)), ...digitRefs(clashes.map((c) => c.digit))] },
         tints: [region],
         arrows: arrowsFor(k, clashes),
         vars: { row: Math.floor(k / N) + 1, col: (k % N) + 1, digit },

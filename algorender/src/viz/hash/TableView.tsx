@@ -3,13 +3,17 @@
 import { LayoutGroup } from 'motion/react';
 import { Fragment, useId } from 'react';
 import { useWidth } from '@/viz/linear/useWidth';
-import { MarkSkin, ValueBox } from '@/viz/linear/ValueBox';
-import { MARKS, NEUTRAL } from '@/viz/marks';
+import { cx } from '@/components/ui/cx';
+import { ValueBox } from '@/viz/linear/ValueBox';
+import { MARKS } from '@/viz/marks';
+import { CAPTION, fillFor, MarkBadge } from '@/viz/parts';
 import { Calc } from './Calc';
 import type { BucketTable, HashEntry, Holder, TableState } from './types';
 
 /** Two columns of buckets when there are many and room for them. */
 const TWO_COLUMNS_MIN_PX = 560;
+/** Below this stage width the load meter sits above the key holders instead of between them. */
+const METER_ROW_MAX_PX = 480;
 
 const entryLabel = (e: HashEntry) => (e.value == null ? e.key : `${e.key}: ${e.value}`);
 
@@ -18,6 +22,8 @@ const entryLabel = (e: HashEntry) => (e.value == null ? e.key : `${e.key}: ${e.v
  * the load factor, and the bucket array with each bucket's chain. Keys are
  * keyed by id, so a put flies the key into its bucket and a resize visibly
  * moves every key to its new bucket.
+ * TODO(redesign): V5 puts chaining and linear probing on one toggle over the
+ * same insert; there is no linear-probing table to show yet, only chaining.
  */
 export function TableView({ state }: { state: TableState }) {
   const group = useId();
@@ -32,9 +38,11 @@ export function TableView({ state }: { state: TableState }) {
         {width > 0 && (
           <div aria-hidden className="flex flex-col gap-3">
             <Calc lines={state.calc} rule={`bucket = hash(key) mod m, with m = ${state.buckets}`} />
-            <div className="flex items-end gap-3">
+            {/* On a narrow stage the meter takes its own row, so the key holders don't squeeze it. */}
+            {width < METER_ROW_MAX_PX && <LoadMeter size={state.size} buckets={state.buckets} max={state.maxLoad} />}
+            <div className="flex items-end justify-between gap-3">
               <HolderSpot holder={inHolder} state={state} />
-              <LoadMeter size={state.size} buckets={state.buckets} max={state.maxLoad} />
+              {width >= METER_ROW_MAX_PX && <LoadMeter size={state.size} buckets={state.buckets} max={state.maxLoad} />}
               <HolderSpot holder={outHolder} state={state} />
             </div>
             <div className={`grid gap-4 ${state.tables.length > 1 ? 'md:grid-cols-2' : ''}`}>
@@ -54,7 +62,7 @@ function HolderSpot({ holder, state }: { holder: Holder | undefined; state: Tabl
     <div className="flex h-[3.75rem] w-24 shrink-0 flex-col items-center justify-end gap-1">
       {holder?.item && (
         <>
-          <span className="max-w-full truncate font-mono text-[11px] text-ink-muted">{holder.label}</span>
+          <span className={cx('max-w-full truncate', CAPTION)}>{holder.label}</span>
           <ValueBox id={holder.item} label={entryLabel(state.entries[holder.item])} mark={state.marks[holder.item]} className="h-9 min-w-10 px-1.5 text-xs" />
         </>
       )}
@@ -67,20 +75,23 @@ function LoadMeter({ size, buckets, max }: { size: number; buckets: number; max:
   const over = load > max;
   return (
     <div className="mb-2 min-w-0 flex-1">
-      <div className="flex flex-wrap justify-between gap-x-2 font-mono text-[11px] text-ink-soft">
-        <span>
-          load {size}/{buckets} = {load.toFixed(2)}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs">
+        <span className="font-semibold text-ink">
+          Load factor {load.toFixed(2)}
           {over ? ` > ${max}` : ''}
         </span>
-        <span className="text-ink-muted">resize above {max}</span>
+        <span className="text-ink-muted">
+          {size} {size === 1 ? 'key' : 'keys'} / {buckets} buckets
+        </span>
       </div>
-      <div className="relative mt-1 h-2 rounded-full bg-sunken">
+      <div className="relative mt-1.5 h-2.5 rounded-full bg-sunken">
         <div
-          className={`h-full rounded-full transition-[width,background-color] ${over ? MARKS.reject.bg : NEUTRAL.bg}`}
+          className={`h-full rounded-full transition-[width,background-color] ${over ? MARKS.reject.bg : 'bg-accent'}`}
           style={{ width: `${Math.min(1, load) * 100}%`, transitionDuration: 'var(--tween, 300ms)' }}
         />
-        <div className="absolute -top-1 h-4 w-0.5 rounded bg-ink-muted" style={{ left: `${max * 100}%` }} />
+        <div className="absolute -top-1 h-[18px] w-0.5 rounded bg-ink" style={{ left: `${max * 100}%` }} />
       </div>
+      <p className="mt-1 text-[11px] text-ink-muted">Above {max} the next insert doubles the table.</p>
     </div>
   );
 }
@@ -89,17 +100,22 @@ function Buckets({ table, state, twoColumns }: { table: BucketTable; state: Tabl
   const rows = Math.ceil(table.buckets.length / 2);
   return (
     <div role="group" aria-label={table.label} className="min-w-0">
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{table.label}</div>
+      <div className={cx('mb-1.5', CAPTION)}>{table.label}</div>
       <ol
         className={`grid gap-x-4 gap-y-1 ${twoColumns ? 'grid-flow-col grid-cols-2' : 'grid-cols-1'}`}
         style={twoColumns ? { gridTemplateRows: `repeat(${rows}, auto)` } : undefined}
       >
         {table.buckets.map((chain, b) => (
-          <li key={b} className="flex min-h-9 min-w-0 items-center gap-2">
-            <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-md bg-surface font-mono text-xs text-ink-soft ring-1 ring-line-strong ring-inset">
-              <MarkSkin mark={state.bucketMarks[`${table.id}:${b}`]}>
-                <span className="relative">{b}</span>
-              </MarkSkin>
+          <li key={b} className="flex min-h-10 min-w-0 items-center gap-2">
+            {/* Bucket numbers are ink squares; the bucket in play fills with its mark. */}
+            <span
+              className={cx(
+                'relative grid size-8 shrink-0 place-items-center rounded-[10px] font-mono text-xs font-semibold transition-colors',
+                state.bucketMarks[`${table.id}:${b}`] ? fillFor(state.bucketMarks[`${table.id}:${b}`]) : 'bg-primary text-on-primary',
+              )}
+            >
+              {b}
+              <MarkBadge mark={state.bucketMarks[`${table.id}:${b}`]} />
             </span>
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
               {chain.map((id, k) => (

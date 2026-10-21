@@ -13,7 +13,7 @@ const SORTS = [
 ];
 
 const narration = (page: Page) => page.getByTestId('narration');
-const stepCounter = (page: Page) => page.getByText(/^\d+\/\d+$/);
+const stepCounter = (page: Page) => page.getByText(/^\d+ \/ \d+$/);
 const mainLane = (page: Page) => page.getByRole('group', { name: 'Array', exact: true }).locator('p.sr-only');
 
 /** Opens a visualiser and waits until React has attached its handlers. */
@@ -56,7 +56,7 @@ for (const slug of SORTS) {
     const errors = collectErrors(page);
 
     await open(page, `/visualisers/${slug}?preset=random&n=8&seed=3`);
-    await expect(stepCounter(page)).toHaveText(/^1\/\d+$/);
+    await expect(stepCounter(page)).toHaveText(/^1 \/ \d+$/);
     await page.keyboard.press('End');
     await expect(narration(page)).toContainText(/sorted/i);
     expect(errors).toEqual([]);
@@ -90,16 +90,16 @@ test('reduced motion jumps straight to each new state', async ({ page }) => {
 
 test('keyboard: arrows step, Home/End jump, Space plays', async ({ page }) => {
   await open(page, '/visualisers/bubble-sort?preset=reversed&n=6&seed=1');
-  await expect(stepCounter(page)).toHaveText(/^1\//);
+  await expect(stepCounter(page)).toHaveText(/^1 \//);
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
-  await expect(stepCounter(page)).toHaveText(/^3\//);
+  await expect(stepCounter(page)).toHaveText(/^3 \//);
   await page.keyboard.press('ArrowLeft');
-  await expect(stepCounter(page)).toHaveText(/^2\//);
+  await expect(stepCounter(page)).toHaveText(/^2 \//);
   await page.keyboard.press('End');
   await expect(narration(page)).toContainText(/sorted/i);
   await page.keyboard.press('Home');
-  await expect(stepCounter(page)).toHaveText(/^1\//);
+  await expect(stepCounter(page)).toHaveText(/^1 \//);
 
   await page.getByLabel('Speed').selectOption('32');
   await narration(page).click(); // move focus off the select so Space reaches the player
@@ -124,7 +124,7 @@ test('step backward restores the exact earlier state', async ({ page }) => {
 
 test('a deep link opens at the linked step', async ({ page }) => {
   await open(page, '/visualisers/heap-sort?preset=random&n=8&seed=5&step=12');
-  await expect(stepCounter(page)).toHaveText(/^13\//);
+  await expect(stepCounter(page)).toHaveText(/^13 \//);
 });
 
 test('custom input runs and updates the shareable URL', async ({ page }) => {
@@ -173,4 +173,39 @@ test('switching back to Watch mode removes the questions', async ({ page }) => {
   await page.keyboard.press('Home');
   await page.getByRole('button', { name: /Play/ }).click();
   await expect(page.getByRole('group', { name: 'Predict the next step' })).toHaveCount(0);
+});
+
+test('the stage is captioned with what it holds, and zooms, fits and goes full screen', async ({ page }) => {
+  await open(page, '/visualisers/dijkstra');
+  const stage = page.getByRole('group', { name: 'Graph · 6 nodes · weighted, undirected' });
+  await expect(stage).toBeVisible();
+  const tools = page.getByRole('group', { name: 'View' });
+  const fit = tools.getByRole('button', { name: 'Fit to stage' });
+
+  // Zooming scales the drawing inside the well; the well keeps its size and scrolls.
+  const before = await stage.boundingBox();
+  await tools.getByRole('button', { name: 'Zoom in' }).click();
+  await tools.getByRole('button', { name: 'Zoom in' }).click();
+  await expect(stage.locator('[style*="scale(1.5)"]')).toHaveCount(1);
+  expect((await stage.boundingBox())!.height).toBeCloseTo(before!.height, 0);
+  await fit.click();
+  await expect(stage.locator('[style*="scale("]')).toHaveCount(0);
+
+  await tools.getByRole('button', { name: 'Full screen' }).click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
+  await tools.getByRole('button', { name: 'Exit full screen' }).click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
+});
+
+test('a ring-buffer queue is drawn as a ring, or unrolled into a line', async ({ page }) => {
+  await open(page, '/visualisers/queue');
+  await expect(page.getByRole('group', { name: 'Queue · ring buffer · 3 of 8 slots used' })).toBeVisible();
+  const shape = page.getByRole('group', { name: 'Draw the slots as' });
+  await expect(shape.getByRole('button', { name: 'Ring' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('slots used', { exact: true })).toBeVisible();
+  await expect(page.getByText('after slot 7 comes slot 0')).toHaveCount(0);
+
+  await shape.getByRole('button', { name: 'Line' }).click();
+  await expect(page.getByText('after slot 7 comes slot 0')).toBeVisible();
+  await expect(page.getByText('slots used', { exact: true })).toHaveCount(0);
 });

@@ -1,8 +1,9 @@
 import { Analytics } from "@vercel/analytics/next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { SITE_URL } from "@/lib/site";
+import { HOME_SCRIPT } from "@/components/home/returning";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -16,6 +17,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// The display face: page titles, card titles and big numbers (font-display).
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  axes: ["opsz"],
+});
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Algorender - Algorithm & Data Structure Visualizer",
@@ -25,10 +33,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     // The theme script may stamp data-theme before React hydrates.
-    <html lang="en-GB" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang="en-GB" className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable}`} suppressHydrationWarning>
       <body className="antialiased">
         {/* Next moves beforeInteractive scripts into <head>, ahead of hydration, so a saved theme never flashes. */}
         <Script id="theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
+        {/* Whether / shows Today or the landing page, guessed before paint (decision D1; src/components/home). */}
+        <Script id="home" strategy="beforeInteractive">{HOME_SCRIPT}</Script>
         {children}
         <Analytics />
         <ServiceWorker />

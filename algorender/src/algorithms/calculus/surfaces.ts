@@ -1,5 +1,5 @@
 import { contours, logLevels } from '@/viz/plot/contours';
-import type { Axis, ContourShape, Vec } from '@/viz/plot/types';
+import type { Axis, ContourShape, HeatmapShape, Vec } from '@/viz/plot/types';
 
 // Loss surfaces f(x, y) for gradient descent and the optimizer race. Each has
 // its exact gradient, a view box, where its minima are, and step sizes that
@@ -95,6 +95,36 @@ export function contourShape(s: Surface): ContourShape {
     const hi = samples[Math.floor(samples.length * 0.85)];
     shape = { kind: 'contours', id: 'contours', levels: contours(s.f, s, logLevels(lo, hi, 12)) };
     contourCache.set(s.id, shape);
+  }
+  return shape;
+}
+
+const WASH_CELLS = 36;
+const washCache = new Map<SurfaceId, HeatmapShape>();
+
+/**
+ * The surface's low ground as a violet wash under its contours (V8), deepest
+ * at the minimum and fading out by the outer contour. Log-scaled like the
+ * contour levels, sampled at each cell's centre, rounded to hundredths so the
+ * server and the browser agree, and shared by every frame.
+ */
+export function washShape(s: Surface): HeatmapShape {
+  let shape = washCache.get(s.id);
+  if (!shape) {
+    const lo = s.f(...s.minima[0]);
+    const levels = contourShape(s).levels;
+    const hi = Math.max(lo + 1e-9, levels.at(-1)?.value ?? lo + 1);
+    const depth = (v: number) => {
+      const t = Math.log1p(Math.max(0, v - lo)) / Math.log1p(hi - lo);
+      return Math.round(100 * Math.max(0, 1 - t)) / 100;
+    };
+    const values: number[] = [];
+    for (let r = 0; r < WASH_CELLS; r++) {
+      const y = s.y.max - ((r + 0.5) * (s.y.max - s.y.min)) / WASH_CELLS;
+      for (let c = 0; c < WASH_CELLS; c++) values.push(depth(s.f(s.x.min + ((c + 0.5) * (s.x.max - s.x.min)) / WASH_CELLS, y)));
+    }
+    shape = { kind: 'heatmap', id: 'wash', x0: s.x.min, x1: s.x.max, y0: s.y.min, y1: s.y.max, cols: WASH_CELLS, rows: WASH_CELLS, values, scale: { kind: 'depth' } };
+    washCache.set(s.id, shape);
   }
   return shape;
 }

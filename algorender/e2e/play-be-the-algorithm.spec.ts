@@ -72,7 +72,7 @@ test('a move the algorithm wouldn’t make shows the one it does', async ({ page
   const j = values.findIndex((v, i) => i < values.length - 1 && v > values[i + 1]);
   await expect(page.getByRole('button', { name: /the algorithm’s pick/ })).toHaveCount(2);
   await expect(page.getByRole('button', { name: `${values[j]}, position ${j + 1}, the algorithm’s pick` })).toBeVisible();
-  await expect(page.getByText('Misses: 1', { exact: false })).toBeVisible();
+  await expect(page.getByText('Misses', { exact: true }).locator('..')).toContainText('1');
   await expectAccessible(page);
 
   await page.getByRole('button', { name: 'Continue' }).click();

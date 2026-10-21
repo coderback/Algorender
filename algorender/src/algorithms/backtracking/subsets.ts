@@ -115,6 +115,8 @@ function* run({ items: input }: ItemsInput): Generator<Frame<TreeState>> {
       id: c.id,
       parent: c.parent?.id ?? null,
       name: c.i === n ? `leaf ${show(c.cur)}` : `cur ${show(c.cur)} deciding ${items[c.i]}`,
+      // The subset built so far, written on the node (V3), without spaces to keep the nodes narrow.
+      label: c.cur.length ? `{${c.cur.map((k) => items[k]).join(',')}}` : '∅',
       ...edge,
     };
   });

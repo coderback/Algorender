@@ -6,12 +6,13 @@ import { FiPause, FiPlay, FiRotateCcw } from 'react-icons/fi';
 import type { Trace } from '@/engine/types';
 import { ArrayView } from '@/viz/array/ArrayView';
 import type { ArrayState } from '@/viz/array/types';
+import { cx } from '@/components/ui/cx';
 import { SERIES_COLORS, workOf } from './series';
 
 /** Work units (comparisons + swaps + writes) per second. */
 const RATES = [5, 10, 25, 50, 100, 250] as const;
 
-export type Runner = { slug: string; name: string; slot: number; trace: Trace<ArrayState> };
+export type Runner = { slug: string; name: string; slot: number; trace: Trace<ArrayState>; bigO?: string };
 
 /**
  * Runs several sorts on the same input on one shared clock measured in work,
@@ -62,8 +63,8 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
   const tween = Math.min(0.25, 2 / rate);
 
   return (
-    <section className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs" aria-label="Race">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+    <div className="flex flex-col gap-4" role="group" aria-label="Race">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => {
@@ -73,7 +74,7 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             }
             setPlaying((p) => !p);
           }}
-          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+          className="inline-flex h-12 items-center gap-2 rounded-full bg-accent px-[22px] text-[15px] font-semibold text-on-accent transition-colors duration-150 ease-standard hover:bg-accent-strong"
         >
           {playing ? <FiPause aria-hidden /> : done ? <FiRotateCcw aria-hidden /> : <FiPlay aria-hidden />}
           {playing ? 'Pause' : done ? 'Race again' : work > 0 ? 'Resume' : 'Start the race'}
@@ -86,17 +87,13 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             setWork(0);
           }}
           disabled={work === 0}
-          className="rounded-full px-3 py-2 text-sm text-ink-soft hover:bg-sunken disabled:opacity-40"
+          className="inline-flex h-12 items-center rounded-full bg-surface px-[18px] text-sm font-semibold text-ink transition-colors duration-150 ease-standard hover:bg-subtle disabled:opacity-45"
         >
           Reset
         </button>
-        <label className="flex items-center gap-2 text-xs text-ink-muted">
+        <label className="flex items-center gap-2 text-[13px] text-ink-soft">
           Speed
-          <select
-            value={rate}
-            onChange={(e) => setRate(Number(e.target.value))}
-            className="rounded-md border border-line bg-surface px-2 py-1 text-ink-soft"
-          >
+          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} className="h-10 rounded-full bg-surface px-3 text-[13px] font-semibold text-ink">
             {RATES.map((r) => (
               <option key={r} value={r}>
                 {r} operations/s
@@ -104,32 +101,43 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
             ))}
           </select>
         </label>
-        <span className="ml-auto font-mono text-sm tabular-nums text-ink-soft">{Math.floor(work)} operations</span>
+        <span className="ml-auto font-mono text-sm text-ink-soft tabular-nums">{Math.floor(work)} operations</span>
       </div>
 
       <MotionConfig transition={{ duration: tween }} reducedMotion="user">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {lanes.map((lane) => {
             const index = lastAtMost(lane.cost, work);
             const finished = work >= lane.total;
             const place = order.indexOf(lane.slug) + 1;
             return (
-              <div key={lane.slug} className="min-w-0 rounded-lg border border-line-soft p-3">
-                <div className="mb-2 flex items-center justify-between gap-2 text-sm">
-                  <span className="flex items-center gap-2 font-medium text-ink">
-                    <span className="h-0.5 w-4 rounded-full" style={{ background: SERIES_COLORS[lane.slot] }} aria-hidden />
-                    {lane.name}
-                  </span>
-                  <span className="font-mono text-xs tabular-nums text-ink-soft">
-                    {finished ? `${ordinal(place)} · ${lane.total} ops` : `${lane.cost[index]} / ${lane.total} ops`}
+              <div key={lane.slug} className="flex min-w-0 flex-col gap-3 rounded-card bg-surface p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ background: SERIES_COLORS[lane.slot] }} />
+                  <span className="font-semibold text-ink">{lane.name}</span>
+                  {lane.bigO && <span className="rounded-lg bg-sunken px-2 py-0.5 font-mono text-xs text-ink">{lane.bigO}</span>}
+                  <span
+                    className={cx(
+                      'ml-auto rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap',
+                      !finished ? 'bg-sunken text-ink-soft' : place === 1 ? 'bg-good-soft text-good-ink' : place === 2 ? 'bg-warn-soft text-warn-ink' : 'bg-sunken text-ink-soft',
+                    )}
+                  >
+                    {finished ? `${ordinal(place)} · ${lane.total} ops` : 'Running'}
                   </span>
                 </div>
-                <ArrayView state={lane.trace.frames[index].state} compact />
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-sunken" aria-hidden>
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${Math.min(100, (work / Math.max(1, lane.total)) * 100)}%`, background: SERIES_COLORS[lane.slot] }}
-                  />
+                <div className="rounded-tile bg-subtle p-3">
+                  <ArrayView state={lane.trace.frames[index].state} compact />
+                </div>
+                <div className="mt-auto flex items-center gap-3">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sunken" aria-hidden>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.min(100, (work / Math.max(1, lane.total)) * 100)}%`, background: SERIES_COLORS[lane.slot] }}
+                    />
+                  </div>
+                  <span className="shrink-0 font-mono text-[13px] text-ink-soft tabular-nums">
+                    {lane.cost[index]} / {lane.total} ops
+                  </span>
                 </div>
               </div>
             );
@@ -137,13 +145,13 @@ export function Race({ runners }: { runners: readonly Runner[] }) {
         </div>
       </MotionConfig>
       {done && (
-        <p className="mt-4 text-sm text-ink-soft" aria-live="polite">
+        <p className="px-1 text-sm text-ink-soft" aria-live="polite">
           {lanes.find((l) => l.slug === order[0])?.name} finished first with {lanes.find((l) => l.slug === order[0])?.total} operations.
           {lanes.length > 1 &&
             ` ${lanes.find((l) => l.slug === order.at(-1))?.name} needed ${lanes.find((l) => l.slug === order.at(-1))?.total}.`}
         </p>
       )}
-    </section>
+    </div>
   );
 }
 

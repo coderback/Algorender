@@ -547,3 +547,33 @@ describe('teaching examples behave as their labels promise', () => {
     expect(order).toEqual(['A', 'B', 'C', 'D']);
   });
 });
+
+describe('regions (V4)', () => {
+  it('BFS draws each level as one region, holding exactly the nodes at that level', () => {
+    fc.assert(
+      fc.property(arbGraph({ directed: 'any', weighted: false }), (g) => {
+        for (const { state } of traceOf(breadthFirstSearch, g).frames) {
+          const levels = column(panel(state, 'levels', 'table'), 1);
+          const placed = (state.regions ?? []).flatMap((r) => r.members.map((m) => [m, r.label] as const));
+          expect(new Set(placed.map(([m]) => m)).size).toBe(placed.length);
+          for (const [m, label] of placed) expect(label).toBe(`level ${levels[m]}`);
+          expect(placed.length).toBe(Object.values(levels).filter((l) => l !== '–').length);
+        }
+      }),
+    );
+  });
+
+  it('Kosaraju and Tarjan draw the components found so far, matching the components panel', () => {
+    fc.assert(
+      fc.property(arbGraph({ directed: true, weighted: false }), (g) => {
+        for (const algo of [kosaraju, tarjan]) {
+          for (const { state } of traceOf(algo, g).frames) {
+            const groups = state.panels.find((p): p is GroupsPanel => p.id === 'sccs');
+            if (!groups) continue;
+            expect((state.regions ?? []).map((r) => [r.label, [...r.members].sort()])).toEqual(groups.groups.map((c) => [c.label, [...c.members].sort()]));
+          }
+        }
+      }),
+    );
+  });
+});

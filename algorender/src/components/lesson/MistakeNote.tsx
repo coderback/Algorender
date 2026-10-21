@@ -1,5 +1,6 @@
 'use client';
 
+import { FiRotateCw } from 'react-icons/fi';
 import { useMistakes, useProgressSnapshot } from '@/progress/hooks';
 import { CLEAR_AFTER, misconceptionCard } from '@/progress/misconceptions';
 import { useLessonSlug } from './LessonContext';
@@ -14,11 +15,12 @@ export function MistakeNote({ id }: { id: string }) {
     m.status === 'cleared'
       ? `Cleared: you’ve answered it right ${CLEAR_AFTER} times in a row since you last made it.`
       : m.status === 'clearing'
-        ? 'You made this mistake before and have answered it right once since. One more right answer in your review clears it.'
-        : 'You made this mistake in a question here. It comes back in your daily review until you’ve answered it right twice.';
+        ? `You made this mistake before · clearing: right ${m.right} of ${CLEAR_AFTER} times. One more right answer in your review clears it.`
+        : `You made this mistake in a question here. It comes back in your daily review until you’ve answered it right ${CLEAR_AFTER} times.`;
   return (
-    <div data-mistake={m.status} className="mt-3 border-t border-warn-line pt-2 text-sm text-ink-soft">
+    <p data-mistake={m.status} className="mt-1 inline-flex items-start gap-1.5 self-start rounded-[14px] bg-surface/80 px-3 py-1.5 text-xs font-semibold text-warn-title">
+      <FiRotateCw aria-hidden className="mt-0.5 size-3 shrink-0" />
       {text}
-    </div>
+    </p>
   );
 }

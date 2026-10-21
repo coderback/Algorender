@@ -10,7 +10,7 @@ type Settings = Record<string, string | number>;
 const asParams = (s: Settings = {}) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, String(v)]));
 
 function Fallback() {
-  return <div className="h-[480px] animate-pulse rounded-xl bg-surface" aria-label="Loading visualiser" />;
+  return <div className="h-[480px] animate-pulse rounded-tile bg-subtle" aria-label="Loading visualiser" />;
 }
 
 /**
@@ -31,11 +31,11 @@ export function Explore({
   input?: boolean;
 }) {
   return (
-    <figure className="not-prose -mx-1 sm:mx-0">
+    <figure className="not-prose flex flex-col gap-2 rounded-card bg-surface p-3 sm:p-4">
       <Suspense fallback={<Fallback />}>
         <Visualiser slug={slug} variant="lesson" settings={asParams(settings)} showInput={input} />
       </Suspense>
-      {caption && <figcaption className="mt-2 text-sm text-ink-muted">{caption}</figcaption>}
+      {caption && <figcaption className="px-2 pb-1 text-[13px] text-ink-muted">{caption}</figcaption>}
     </figure>
   );
 }
@@ -61,24 +61,31 @@ export function PredictChallenge({ slug, settings, goal = 5 }: { slug: string; s
   );
 
   return (
-    <div className="not-prose space-y-3">
-      <div
-        className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm ${done ? 'border-good-line bg-good-soft' : 'border-warn-line bg-warn-soft'}`}
-        aria-live="polite"
-      >
-        {done ? <FiCheckCircle aria-hidden className="text-good-ink" /> : <FiTarget aria-hidden className="text-warn-ink" />}
-        <span className="font-medium text-ink">
-          {done
-            ? `Done: ${score.correct} of ${score.total} predictions right.`
-            : `Make ${goal} predictions: step forward and answer each question before the next step plays.`}
-        </span>
-        <span className="ml-auto font-mono text-ink-soft">
-          {Math.min(score.total, goal)}/{goal}
+    <div data-challenge={slug} className="not-prose flex flex-col gap-4 rounded-[28px] bg-track-lilac p-4 text-track-lilac-ink sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1" aria-live="polite">
+        <p className="flex items-center gap-2 text-sm font-semibold">
+          {done ? <FiCheckCircle aria-hidden className="size-4 shrink-0" /> : <FiTarget aria-hidden className="size-4 shrink-0" />}
+          {done ? `Done: ${score.correct} of ${score.total} predictions right.` : `Make ${goal} predictions: step forward and answer each question before the next step plays.`}
+        </p>
+        <span className="flex items-center gap-2 text-xs font-semibold">
+          <span className="sr-only">
+            {Math.min(score.total, goal)} of {goal} made
+          </span>
+          <span aria-hidden className="font-mono">
+            {Math.min(score.total, goal)}/{goal}
+          </span>
+          <span aria-hidden className="flex gap-1">
+            {Array.from({ length: goal }, (_, i) => (
+              <span key={i} className={i < score.total ? 'size-4 rounded-full bg-accent' : 'size-4 rounded-full ring-[1.5px] ring-accent ring-inset'} />
+            ))}
+          </span>
         </span>
       </div>
-      <Suspense fallback={<Fallback />}>
-        <Visualiser slug={slug} variant="lesson" settings={{ ...asParams(settings), mode: 'predict' }} onPrediction={onPrediction} />
-      </Suspense>
+      <div className="rounded-tile bg-surface p-3 text-ink sm:p-4">
+        <Suspense fallback={<Fallback />}>
+          <Visualiser slug={slug} variant="lesson" settings={{ ...asParams(settings), mode: 'predict' }} onPrediction={onPrediction} />
+        </Suspense>
+      </div>
     </div>
   );
 }

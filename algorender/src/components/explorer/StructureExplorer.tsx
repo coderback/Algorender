@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { FiCornerUpLeft, FiPlay } from 'react-icons/fi';
 import type { AnyStructure, OperationSpec } from '@/engine/module';
 import { randomSeed } from '@/engine/random';
@@ -10,8 +10,9 @@ import { argError, blockedReason, describeCall, parseArg, parseArgs, parseOps, r
 import { Experiments } from './Experiments';
 import type { ExplorerOptions } from './options';
 import { DEFAULT_SEED } from './source';
+import { useStartMode } from './startMode';
 import { TraceStage, type Density, type Mode } from './TraceStage';
-import { modeFromParams, writeUrl } from './url';
+import { writeUrl } from './url';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- a structure's model type is opaque to the explorer */
 type Model = any;
@@ -47,7 +48,7 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
     const { model, applied } = replay(ds, start.make(seed), parseOps(p.get('ops') ?? '', ds));
     return { start: start.id, seed, model, history: applied, trace: idle(ds, model, READY), pseudocode: [], id: 0, animate: false };
   });
-  const [mode, setMode] = useState<Mode>(() => modeFromParams(options.params));
+  const [mode, setMode] = useStartMode(options);
   const [density, setDensity] = useState<Density>(options.density);
 
   const sync = (next: Session, nextMode = mode) => {
@@ -97,8 +98,7 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
   };
 
   return (
-    <div className="space-y-4">
-      <OperationsPanel ds={ds} model={session.model} onRun={run} />
+    <div className="flex flex-col gap-4">
       <TraceStage
         key={session.id}
         trace={session.trace}
@@ -111,66 +111,80 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
         keyboard={options.keyboard}
         layout={options.layout}
         onPrediction={options.onPrediction}
+        panels={options.panels}
+        sheet={options.sheet}
       />
-      <div className="flex flex-col gap-3 rounded-xl border border-line-soft bg-surface p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
-          <span className="mr-1 text-xs font-medium text-ink-muted">History</span>
-          {session.history.length === 0 ? (
-            <span className="text-ink-muted">No operations yet.</span>
-          ) : (
-            session.history.map((h, i) => (
-              <span key={i} className="rounded-full bg-sunken px-2.5 py-0.5 font-mono text-xs text-ink-soft">
-                {describeCall(h.call, ds)}
-              </span>
-            ))
-          )}
-          {session.history.length > 0 && (
-            <button type="button" onClick={undo} className="ml-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs text-accent-ink hover:bg-accent-soft">
-              <FiCornerUpLeft aria-hidden /> Undo
-            </button>
-          )}
+      <OperationsPanel ds={ds} model={session.model} onRun={run}>
+        <div className="flex flex-col gap-3 border-t border-line-soft pt-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
+            <span className="mr-1 text-[13px] text-ink-muted">History</span>
+            {session.history.length === 0 ? (
+              <span className="text-ink-muted">No operations yet.</span>
+            ) : (
+              session.history.map((h, i) => (
+                <span key={i} className="rounded-full bg-sunken px-2.5 py-1 text-xs font-semibold text-ink">
+                  {describeCall(h.call, ds)}
+                </span>
+              ))
+            )}
+            {session.history.length > 0 && (
+              <button
+                type="button"
+                onClick={undo}
+                className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-accent-ink transition-colors duration-150 ease-standard hover:bg-accent-soft"
+              >
+                <FiCornerUpLeft aria-hidden /> Undo
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[13px] text-ink-muted">Start over with</span>
+            {ds.initial.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => reset(s.id)}
+                className="h-8 rounded-full bg-sunken px-3 text-xs font-semibold text-ink transition-colors duration-150 ease-standard hover:bg-line-soft"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-medium text-ink-muted">Start over with</span>
-          {ds.initial.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => reset(s.id)}
-              className="rounded-full border border-line px-3 py-1 text-sm text-ink-soft hover:border-accent-line hover:bg-accent-soft"
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      </OperationsPanel>
+      {options.details}
       {options.showExperiments && (
-      <Experiments
-        suffix=""
-        items={ds.content.experiments
-          .filter((x) => ds.initial.some((s) => s.id === x.example))
-          .map((x, i) => ({
-            key: `${x.example}-${i}`, // several experiments can start from one example
-            label: `Start from: ${ds.initial.find((s) => s.id === x.example)!.label}`,
-            prompt: x.prompt,
-            onTry: () => reset(x.example),
-          }))}
-      />
+        <Experiments
+          colour={options.colour}
+          suffix=""
+          items={ds.content.experiments
+            .filter((x) => ds.initial.some((s) => s.id === x.example))
+            .map((x, i) => ({
+              key: `${x.example}-${i}`, // several experiments can start from one example
+              label: `Start from: ${ds.initial.find((s) => s.id === x.example)!.label}`,
+              prompt: x.prompt,
+              onTry: () => reset(x.example),
+            }))}
+        />
       )}
     </div>
   );
 }
 
-function OperationsPanel({ ds, model, onRun }: { ds: AnyStructure; model: Model; onRun: (spec: Spec, call: OpCall) => void }) {
+function OperationsPanel({ ds, model, onRun, children }: { ds: AnyStructure; model: Model; onRun: (spec: Spec, call: OpCall) => void; children: ReactNode }) {
   return (
     // A labelled group, not a landmark or a heading: a lesson can hold several explorers (see CLAUDE.md's accessibility conventions).
-    <div role="group" className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs" aria-label="Operations">
-      <p className="mb-3 text-sm font-semibold text-ink">Operations</p>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div role="group" className="flex flex-col gap-4 rounded-card bg-surface p-5 sm:p-6" aria-label="Operations">
+      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="font-display text-title-card">Operations</span>
+        <span className="text-[13px] text-ink-muted">Each one plays step by step</span>
+      </p>
+      <div className="flex flex-wrap gap-2">
         {ds.operations.map((spec) => (
           <OperationForm key={spec.id} spec={spec} model={model} onRun={onRun} />
         ))}
       </div>
+      {children}
     </div>
   );
 }
@@ -216,9 +230,9 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
     );
   };
 
-  const field = 'w-20 min-w-0 flex-1 rounded-md border border-line px-2 py-1 font-mono text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line';
+  const field = 'h-9 min-w-0 rounded-full bg-surface px-3 font-mono text-sm text-ink placeholder:text-ink-muted';
   return (
-    <form onSubmit={submit} className="flex flex-col gap-1 rounded-lg border border-line p-2.5">
+    <form onSubmit={submit} className="flex max-w-full min-w-0 flex-col gap-1.5 rounded-tile bg-sunken p-1.5">
       <div className="flex items-center gap-2">
         {spec.args.map((a) =>
           a.type === 'choice' ? (
@@ -227,7 +241,7 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
               aria-label={`${spec.label}: ${a.label}`}
               value={values[a.name]}
               onChange={(e) => setRaw((prev) => ({ ...prev, [a.name]: e.target.value }))}
-              className={`${field} bg-surface`}
+              className={`${field} max-w-56`}
             >
               {a.options(model).map((o) => (
                 <option key={o} value={o}>
@@ -243,7 +257,7 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
               onChange={(e) => setRaw((prev) => ({ ...prev, [a.name]: e.target.value }))}
               inputMode={a.type === 'int' ? 'numeric' : 'text'}
               placeholder={a.type === 'text' ? (a.placeholder ?? a.label) : a.label}
-              className={field}
+              className={`${field} w-24`}
             />
           ),
         )}
@@ -251,12 +265,12 @@ function OperationForm({ spec, model, onRun }: { spec: Spec; model: Model; onRun
           type="submit"
           disabled={disabledReason != null}
           title={disabledReason ?? undefined}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-sm text-white hover:bg-accent-strong disabled:bg-line-strong"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[13px] font-semibold text-on-accent transition-colors duration-150 ease-standard hover:bg-accent-strong disabled:bg-line-strong disabled:text-ink-soft"
         >
           <FiPlay aria-hidden className="text-xs" /> {spec.label}
         </button>
       </div>
-      {(error || disabledReason) && <p className="text-xs text-ink-muted" role={error ? 'alert' : undefined}>{error ?? disabledReason}</p>}
+      {(error || disabledReason) && <p className="px-2 pb-1 text-xs text-ink-muted" role={error ? 'alert' : undefined}>{error ?? disabledReason}</p>}
     </form>
   );
 }

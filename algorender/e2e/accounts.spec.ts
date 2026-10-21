@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { collectErrors } from './errors';
@@ -57,6 +58,8 @@ async function signIn(page: Page, email: string, password = PASSWORD) {
   await page.locator('form').getByRole('button', { name: 'Sign in' }).click();
 }
 
+/** The Practice header's solved tile: "Solved" over "n / 91". */
+const solvedTile = (page: Page) => page.getByText('Solved', { exact: true }).locator('..');
 const synced = (page: Page) => expect(page.getByRole('status').filter({ hasText: /Synced/ })).toBeVisible({ timeout: 20_000 });
 
 test('work done before signing up comes with the account, and reaches another device', async ({ page, browser }) => {
@@ -73,7 +76,7 @@ test('work done before signing up comes with the account, and reaches another de
   await signIn(phone, email);
   await synced(phone);
   await phone.goto('/practice');
-  await expect(phone.getByText(/^1 of \d+ solved in this browser$/)).toBeVisible();
+  await expect(solvedTile(phone)).toContainText(/Solved\s*1 \//);
   await other.close();
   expect(errors).toEqual([]);
 });
@@ -88,12 +91,12 @@ test('signing out clears this device, and signing back in brings the progress ba
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Create an account' })).toBeVisible();
   await page.goto('/practice');
-  await expect(page.getByText(/^0 of \d+ solved in this browser$/)).toBeVisible();
+  await expect(solvedTile(page)).toContainText(/Solved\s*0 \//);
 
   await signIn(page, email);
   await synced(page);
   await page.goto('/practice');
-  await expect(page.getByText(/^1 of \d+ solved in this browser$/)).toBeVisible();
+  await expect(solvedTile(page)).toContainText(/Solved\s*1 \//);
 });
 
 test('a wrong password and a taken email are explained', async ({ page }) => {
@@ -122,8 +125,10 @@ test('a solved problem comes back for review a few days later', async ({ page })
   await expect(page.getByText('You have 1 card in all.')).toBeVisible();
 
   await page.clock.setFixedTime(new Date(Date.now() + 3 * DAY));
-  await page.goto('/review');
+  // The rail shows the due count; the review itself is a focused page without it.
+  await page.goto('/');
   await expect(page.getByRole('link', { name: 'Review: 1 due today' }).first()).toBeVisible();
+  await page.goto('/review');
   await expect(page.getByRole('heading', { name: 'Two Sum' })).toBeVisible();
   await page.keyboard.press('Space');
   await expect(page.getByText('Hashing', { exact: true })).toBeVisible();
@@ -171,7 +176,7 @@ test.describe('offline', () => {
     await context.setOffline(true);
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Daily review' })).toBeVisible();
-    await page.getByRole('button', { name: 'Show the answer' }).click();
+    await page.getByRole('button', { name: /Show answer/ }).click();
     await page.getByRole('button', { name: /^Good/ }).click();
     await expect(page.getByRole('heading', { name: /All done for today/ })).toBeVisible();
 
@@ -204,8 +209,32 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await solveTwoSum(page);
     await page.clock.setFixedTime(new Date(Date.now() + 3 * DAY));
     await page.goto('/review');
-    await page.getByRole('button', { name: 'Show the answer' }).click();
+    await page.getByRole('button', { name: /Show answer/ }).click();
     ({ violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze());
     expect(violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
   });
 }
+
+test('visualiser settings apply on this device, a link still decides, and progress exports as JSON', async ({ page }) => {
+  await withCode(page.context(), 'two-sum', TWO_SUM_JS);
+  await signUp(page, freshEmail());
+  await page.getByLabel('Playback speed').selectOption({ label: '4×' });
+  await page.getByRole('group', { name: 'Visualisers open in' }).getByRole('button', { name: 'Predict' }).click();
+
+  await page.goto('/visualisers/bubble-sort');
+  await expect(page.getByRole('button', { name: 'Predict', pressed: true })).toBeVisible();
+  await expect(page.getByLabel('Speed')).toHaveValue('8');
+  // A link that names a mode opens in it.
+  await page.goto('/visualisers/bubble-sort?mode=watch');
+  await expect(page.getByRole('button', { name: 'Watch', pressed: true })).toBeVisible();
+
+  await solveTwoSum(page);
+  await page.goto('/account');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export my data' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^algorender-progress-\d{4}-\d{2}-\d{2}\.json$/);
+  const data = JSON.parse(await readFile((await file.path())!, 'utf8'));
+  expect(data).toMatchObject({ app: 'algorender', format: 1 });
+  expect(data.events.some((e: { kind: string }) => e.kind === 'problem.submitted')).toBe(true);
+});

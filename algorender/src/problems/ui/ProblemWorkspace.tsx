@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
-import { FiArrowRight, FiCheck, FiClock, FiEye, FiLoader, FiPlay, FiRotateCcw, FiSend, FiServer, FiX } from 'react-icons/fi';
+import { FiArrowRight, FiCheck, FiChevronLeft, FiClock, FiEye, FiLoader, FiPlay, FiRotateCcw, FiSend, FiServer, FiTerminal, FiX } from 'react-icons/fi';
+import { DifficultyChip, type Difficulty } from '@/components/ui/Chip';
+import { cx } from '@/components/ui/cx';
+import { Segmented } from '@/components/ui/Segmented';
 import { TutorPanel, type TutorResults } from '@/components/tutor/TutorPanel';
 import type { LegendEntry } from '@/engine/module';
 import { CodeEditor } from '@/workspace/editor/CodeEditor';
@@ -40,46 +43,130 @@ type Watching = { test: JudgeCase; memory: boolean; code: string; run: RunTrace 
 const noSubscribe = () => () => {};
 const codeSlot = (slug: string) => `problem:${slug}`;
 
+/** The statement card's three panes, rendered on the server. */
+export type StatementPanes = { problem: ReactNode; hints: ReactNode; approach: ReactNode; brushUp?: ReactNode };
+
+/** What the focus header shows about the problem. */
+export type ProblemHeading = { title: string; difficulty: Difficulty; crumb: string };
+
+type Pane = 'problem' | 'code' | 'tests';
+
 /**
- * The editor, the judge and the replays for one problem. The statement (a
- * server-rendered node) sits beside it, and a replay plays full width below
- * both. Storage-backed state only exists in the browser, so the interactive
- * part mounts after hydration.
+ * The problem page: a focus header (back, where it sits, the title, the
+ * language and the two judge buttons), then three columns: the statement
+ * card, the editor, and the results with the tutor under them. A replay plays
+ * full width below. Phones switch between Problem, Code and Tests and keep the
+ * judge buttons in a bar at the bottom. Storage-backed state only exists in
+ * the browser, so the interactive part mounts after hydration.
  */
 export function ProblemWorkspace({
   spec,
+  heading,
   statement,
   next,
   tutor = false,
 }: {
   spec: ProblemSpec;
-  statement: ReactNode;
+  heading: ProblemHeading;
+  statement: StatementPanes;
   next?: { slug: string; title: string };
   /** The AI tutor is switched on (its server settings exist). */
   tutor?: boolean;
 }) {
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   return hydrated ? (
-    <Solver spec={spec} statement={statement} next={next} tutor={tutor} />
+    <Solver spec={spec} heading={heading} statement={statement} next={next} tutor={tutor} />
   ) : (
-    <Columns statement={statement}>
-      <div data-workspace="loading" className="rounded-xl border border-line bg-surface p-4">
-        <pre className="font-mono text-[13.5px] leading-[1.6] whitespace-pre-wrap text-ink-soft">{stub(spec, 'python')}</pre>
-      </div>
-    </Columns>
+    <>
+      <FocusHeader heading={heading} />
+      <Columns statement={<StatementCard panes={statement} />} pane="problem">
+        <div data-workspace="loading" className="rounded-card bg-code p-5">
+          <pre className="font-mono text-[13.5px] leading-[1.6] whitespace-pre-wrap text-code-ink">{stub(spec, 'python')}</pre>
+        </div>
+      </Columns>
+    </>
   );
 }
 
-function Columns({ statement, children }: { statement: ReactNode; children: ReactNode }) {
+/** The focus header; `actions` are the language and judge buttons once the page is live. */
+function FocusHeader({ heading, actions }: { heading: ProblemHeading; actions?: ReactNode }) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <div className="min-w-0">{statement}</div>
-      <div className="min-w-0 space-y-3">{children}</div>
+    <header className="px-3 pt-3 sm:px-4">
+      <div className="flex items-center gap-3 rounded-card bg-surface py-2.5 pr-3 pl-2.5 sm:gap-4">
+        <Link
+          href="/practice"
+          aria-label="Back to the problems"
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-sunken text-ink transition-colors duration-150 ease-standard hover:bg-line-soft"
+        >
+          <FiChevronLeft aria-hidden className="size-5" />
+        </Link>
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-xs text-ink-muted">{heading.crumb}</span>
+          <span className="flex min-w-0 items-center gap-2.5">
+            <h1 className="truncate text-base font-bold text-ink sm:text-[17px]">{heading.title}</h1>
+            <DifficultyChip level={heading.difficulty} className="hidden sm:inline-flex" />
+          </span>
+        </div>
+        {actions && <div className="ml-auto hidden items-center gap-2 md:flex">{actions}</div>}
+      </div>
+    </header>
+  );
+}
+
+function Columns({ statement, children, side, pane }: { statement: ReactNode; children: ReactNode; side?: ReactNode; pane: Pane }) {
+  const shown = (p: Pane) => (pane === p ? 'flex' : 'hidden md:flex');
+  return (
+    <div className="grid grid-cols-1 items-start gap-4 px-3 pt-4 pb-28 sm:px-4 md:pb-6 xl:grid-cols-[minmax(300px,0.95fr)_minmax(0,1.45fr)_minmax(300px,0.85fr)]">
+      <div className={cx('min-w-0 flex-col gap-4', shown('problem'))}>{statement}</div>
+      <div className={cx('min-w-0 flex-col gap-3', shown('code'))}>{children}</div>
+      {side && <div className={cx('min-w-0 flex-col gap-4', shown('tests'))}>{side}</div>}
     </div>
   );
 }
 
-function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement: ReactNode; next?: { slug: string; title: string }; tutor: boolean }) {
+/** Problem, Hints and Approach in one card. Every pane stays mounted, so revealed hints stay revealed. */
+function StatementCard({ panes }: { panes: StatementPanes }) {
+  const [tab, setTab] = useState<'problem' | 'hints' | 'approach'>('problem');
+  return (
+    <article aria-label="The problem" className="flex flex-col gap-5 rounded-card bg-surface p-5 sm:p-6">
+      <Segmented
+        label="Statement"
+        size="m"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: 'problem', label: 'Problem' },
+          { value: 'hints', label: 'Hints' },
+          { value: 'approach', label: 'Approach' },
+        ]}
+      />
+      <div hidden={tab !== 'problem'} className="flex flex-col gap-5">
+        {panes.problem}
+      </div>
+      <div hidden={tab !== 'hints'} className="flex flex-col gap-3">
+        {panes.hints}
+      </div>
+      <div hidden={tab !== 'approach'} className="flex flex-col gap-3">
+        {panes.approach}
+      </div>
+      {panes.brushUp}
+    </article>
+  );
+}
+
+function Solver({
+  spec,
+  heading,
+  statement,
+  next,
+  tutor,
+}: {
+  spec: ProblemSpec;
+  heading: ProblemHeading;
+  statement: StatementPanes;
+  next?: { slug: string; title: string };
+  tutor: boolean;
+}) {
   /** The line the tutor last pointed at. */
   const [pointLine, setPointLine] = useState<number | null>(null);
   const [language, setLanguage] = useState<ProblemLanguage>(() => loadProblemLanguage() ?? 'python');
@@ -97,6 +184,7 @@ function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement
   const [watching, setWatching] = useState<Watching | null>(null);
   const [frameLine, setFrameLine] = useState<number | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [pane, setPane] = useState<Pane>('problem');
   // Java, C++ and Go don't run in the browser; the JavaScript runner stands by unused (it starts on its first run).
   const { runtime, runtimeState, runtimeDetail } = useRuntime(onServer ? 'javascript' : language);
 
@@ -121,6 +209,7 @@ function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement
   const judge = async (kind: 'run' | 'submit') => {
     if (busy) return;
     setNotice(null);
+    setPane('tests');
     if (isServerLanguage(language)) return judgeOnServer(kind, language);
     const tests = kind === 'run' ? spec.cases.filter((c) => c.group === 'example') : spec.cases;
     const checked: Checked[] = [];
@@ -182,133 +271,184 @@ function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement
   };
 
   const errorLine = !stale && judged ? (judged.fatal?.line ?? null) : null;
+  const status = onServer
+    ? running
+      ? 'Compiling and running on our server…'
+      : ''
+    : progress && progress.total > 1
+      ? `Running test ${progress.done + 1} of ${progress.total}…`
+      : statusText(runtimeState, runtimeDetail, running);
+
+  const languageSelect = (
+    <label className="flex items-center">
+      <span className="sr-only">Language</span>
+      <select
+        value={language}
+        onChange={(e) => chooseLanguage(e.target.value as ProblemLanguage)}
+        className="h-11 rounded-full bg-sunken px-4 text-sm font-semibold text-ink"
+      >
+        <optgroup label="In your browser">
+          {PROBLEM_LANGUAGE_IDS.filter((l) => !isServerLanguage(l)).map((l) => (
+            <option key={l} value={l}>
+              {PROBLEM_LANGUAGES[l].label}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="On our server (sign in)">
+          {PROBLEM_LANGUAGE_IDS.filter(isServerLanguage).map((l) => (
+            <option key={l} value={l}>
+              {PROBLEM_LANGUAGES[l].label}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+    </label>
+  );
+  const runButton = (short: boolean) => (
+    <button
+      type="button"
+      onClick={() => void judge('run')}
+      disabled={busy}
+      aria-keyshortcuts="Control+Enter Meta+Enter"
+      className="inline-flex h-11 items-center gap-2 rounded-full bg-accent-soft px-[18px] text-sm font-semibold text-accent-ink transition-colors duration-150 ease-standard hover:bg-accent-line disabled:opacity-60"
+    >
+      <FiPlay aria-hidden /> {short ? 'Run' : 'Run examples'}
+    </button>
+  );
+  const submitButton = (short: boolean) => (
+    <button
+      type="button"
+      onClick={() => void judge('submit')}
+      disabled={busy}
+      aria-busy={busy}
+      className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-[18px] text-sm font-semibold text-on-primary transition-colors duration-150 ease-standard hover:bg-primary-hover disabled:opacity-60"
+    >
+      {busy ? <FiLoader aria-hidden className="animate-spin" /> : <FiSend aria-hidden />}
+      {short ? 'Submit' : 'Submit all tests'}
+    </button>
+  );
+
+  const editor = (
+    <section aria-label="Your code" className="flex flex-col gap-3 rounded-card bg-code p-3 text-code-ink sm:p-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
+        <span className="font-mono text-[13px]">{language === 'java' ? 'Solution.java' : `solution.${PROBLEM_LANGUAGES[language].extension}`}</span>
+        <span className="text-xs text-code-muted">Saved on this device</span>
+        <span className="ml-auto flex items-center gap-2 text-sm">
+          {confirmReset ? (
+            <>
+              <span className="text-code-muted">Discard your {PROBLEM_LANGUAGES[language].label} code?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCode(stub(spec, language));
+                  setConfirmReset(false);
+                  setJudged(null);
+                }}
+                className="h-9 rounded-full bg-code-highlight px-3 font-semibold text-code-bad"
+              >
+                Reset
+              </button>
+              <button type="button" onClick={() => setConfirmReset(false)} className="h-9 rounded-full px-3 font-semibold text-code-ink hover:bg-code-highlight">
+                Keep it
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              disabled={code === stub(spec, language)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-code-highlight px-3.5 text-[13px] font-semibold text-code-ink disabled:opacity-40"
+            >
+              <FiRotateCcw aria-hidden /> Reset code
+            </button>
+          )}
+        </span>
+      </div>
+      <CodeEditor
+        value={code}
+        onChange={setCode}
+        language={language}
+        label={`Your ${PROBLEM_LANGUAGES[language].label} code`}
+        runLine={watching && watching.code === code ? frameLine : null}
+        errorLine={errorLine}
+        pointLine={pointLine}
+        onRun={() => void judge('run')}
+        minLines={16}
+      />
+      <div className="flex flex-wrap justify-between gap-2 px-1 text-xs text-code-muted">
+        <span>{onServer ? 'Runs on our server' : 'Runs in your browser'} · Ctrl/⌘ + Enter runs the examples</span>
+        <span role="status">{status}</span>
+      </div>
+    </section>
+  );
+
+  const side = (
+    <>
+      {onServer && <ServerNote language={language} signedIn={signedIn} slug={spec.slug} />}
+      {notice && notice !== 'sign-in' && (
+        <p role="alert" className="rounded-well bg-warn-soft px-4 py-3 text-sm text-warn-ink">
+          {notice}
+        </p>
+      )}
+      {notice === 'sign-in' && onServer && <SignInCard language={language} slug={spec.slug} />}
+      {judged ? (
+        <Results spec={spec} judged={judged} stale={stale} selected={selected} onSelect={setSelected} onWatch={(test, memory) => void watch(test, memory)} busy={busy} next={next} />
+      ) : (
+        <section className="flex flex-col items-start gap-3 rounded-card bg-surface p-6">
+          <span aria-hidden className="flex size-12 items-center justify-center rounded-[14px] bg-accent-soft text-accent-ink">
+            <FiTerminal className="size-5" />
+          </span>
+          <h2 className="text-lg font-bold">Run your code to see results</h2>
+          <p className="text-sm text-ink-soft">
+            Run examples checks the examples; Submit all tests checks every test. If one fails, you can watch your own code run on it, line by line.
+          </p>
+        </section>
+      )}
+      {tutor && (
+        <TutorPanel
+          item={{ kind: 'problem', slug: spec.slug }}
+          language={language}
+          code={code}
+          results={judged && !stale ? tutorResults(judged) : undefined}
+          onPoint={setPointLine}
+        />
+      )}
+    </>
+  );
 
   return (
     <>
-      <Columns statement={statement}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex flex-wrap overflow-hidden rounded-lg border border-line" role="group" aria-label="Language">
-            {PROBLEM_LANGUAGE_IDS.map((l) => (
-              <button
-                key={l}
-                type="button"
-                aria-pressed={language === l}
-                onClick={() => chooseLanguage(l)}
-                title={isServerLanguage(l) ? 'Runs on our server' : 'Runs in your browser'}
-                className={`px-3 py-1.5 text-sm transition-colors ${l === 'java' ? 'border-l-2 border-line' : ''} ${
-                  language === l ? 'bg-ink text-surface' : 'bg-surface text-ink-soft hover:bg-sunken'
-                }`}
-              >
-                {PROBLEM_LANGUAGES[l].label}
-              </button>
-            ))}
-          </div>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {confirmReset ? (
-              <span className="flex items-center gap-2 text-sm text-ink-soft">
-                Discard your {PROBLEM_LANGUAGES[language].label} code?
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCode(stub(spec, language));
-                    setConfirmReset(false);
-                    setJudged(null);
-                  }}
-                  className="rounded-md px-2 py-1.5 text-bad-ink hover:bg-bad-soft"
-                >
-                  Reset
-                </button>
-                <button type="button" onClick={() => setConfirmReset(false)} className="rounded-md px-2 py-1.5 text-ink-soft hover:bg-sunken">
-                  Keep it
-                </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmReset(true)}
-                disabled={code === stub(spec, language)}
-                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink-soft hover:bg-sunken disabled:opacity-40"
-              >
-                <FiRotateCcw aria-hidden /> Reset code
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => void judge('run')}
-              disabled={busy}
-              aria-keyshortcuts="Control+Enter Meta+Enter"
-              className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink hover:bg-sunken disabled:opacity-60"
-            >
-              <FiPlay aria-hidden /> Run examples
-            </button>
-            <button
-              type="button"
-              onClick={() => void judge('submit')}
-              disabled={busy}
-              aria-busy={busy}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-60"
-            >
-              {busy ? <FiLoader aria-hidden className="animate-spin" /> : <FiSend aria-hidden />}
-              Submit
-            </button>
-          </div>
-        </div>
-        <CodeEditor
-          value={code}
-          onChange={setCode}
-          language={language}
-          label={`Your ${PROBLEM_LANGUAGES[language].label} code`}
-          runLine={watching && watching.code === code ? frameLine : null}
-          errorLine={errorLine}
-          pointLine={pointLine}
-          onRun={() => void judge('run')}
-          minLines={14}
+      <FocusHeader
+        heading={heading}
+        actions={
+          <>
+            {languageSelect}
+            {runButton(false)}
+            {submitButton(false)}
+          </>
+        }
+      />
+      <div className="px-3 pt-3 sm:px-4 md:hidden">
+        <Segmented
+          label="Show"
+          size="m"
+          value={pane}
+          onChange={setPane}
+          className="w-full [&>button]:flex-1 [&>button]:justify-center"
+          options={[
+            { value: 'problem', label: 'Problem' },
+            { value: 'code', label: 'Code' },
+            { value: 'tests', label: 'Tests' },
+          ]}
         />
-        <div className="flex flex-wrap justify-between gap-2 text-xs text-ink-muted">
-          <span>Ctrl/⌘ + Enter runs the examples. Your code is kept in this browser.</span>
-          <span role="status">
-            {onServer
-              ? running
-                ? 'Compiling and running on our server…'
-                : ''
-              : progress && progress.total > 1
-                ? `Running test ${progress.done + 1} of ${progress.total}…`
-                : statusText(runtimeState, runtimeDetail, running)}
-          </span>
-        </div>
-        {onServer && <ServerNote language={language} signedIn={signedIn} slug={spec.slug} />}
-        {notice && notice !== 'sign-in' && (
-          <p role="alert" className="rounded-lg border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn-ink">
-            {notice}
-          </p>
-        )}
-        {notice === 'sign-in' && onServer && <SignInCard language={language} slug={spec.slug} />}
-        {judged && (
-          <Results
-            spec={spec}
-            judged={judged}
-            stale={stale}
-            selected={selected}
-            onSelect={setSelected}
-            onWatch={(test, memory) => void watch(test, memory)}
-            busy={busy}
-            next={next}
-          />
-        )}
-        {tutor && (
-          <TutorPanel
-            item={{ kind: 'problem', slug: spec.slug }}
-            language={language}
-            code={code}
-            results={judged && !stale ? tutorResults(judged) : undefined}
-            onPoint={setPointLine}
-          />
-        )}
+      </div>
+      <Columns statement={<StatementCard panes={statement} />} side={side} pane={pane}>
+        {editor}
       </Columns>
       {watching && (
-        <section id="watch" aria-labelledby="watch-title" className="mt-6 scroll-mt-24 space-y-3">
+        <section id="watch" aria-labelledby="watch-title" className="flex scroll-mt-24 flex-col gap-3 px-3 pb-28 sm:px-4 md:pb-8">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="watch-title" className="text-xl font-semibold text-ink">
+            <h2 id="watch-title" className="font-display text-title-section">
               Watching {watching.test.label.toLowerCase()}
               {watching.memory ? ', line by line' : ''}
             </h2>
@@ -317,7 +457,7 @@ function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement
                 type="button"
                 onClick={() => void watch(watching.test, !watching.memory)}
                 disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-accent-ink hover:bg-sunken disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-3.5 text-sm font-semibold text-accent-ink hover:bg-accent-soft disabled:opacity-60"
               >
                 <FiEye aria-hidden /> {watching.memory ? `Show it on the ${spec.view}` : 'Line by line, with memory'}
               </button>
@@ -341,6 +481,14 @@ function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement
           )}
         </section>
       )}
+      {/* Phones: the language and the judge buttons stay in reach at the bottom. */}
+      <div data-sticks="bottom" className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 bg-surface px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-1px_0_var(--color-line-soft)] md:hidden">
+        {languageSelect}
+        <span className="ml-auto flex gap-2 [&>button]:px-3.5">
+          {runButton(true)}
+          {submitButton(true)}
+        </span>
+      </div>
     </>
   );
 }
@@ -349,7 +497,7 @@ function Solver({ spec, statement, next, tutor }: { spec: ProblemSpec; statement
 function ServerNote({ language, signedIn, slug }: { language: ServerLanguage; signedIn: boolean; slug: string }) {
   const name = PROBLEM_LANGUAGES[language].label;
   return (
-    <p className="flex items-start gap-2 text-sm text-ink-soft">
+    <p className="flex items-start gap-2.5 rounded-well bg-surface px-4 py-3 text-sm text-ink-soft">
       <FiServer aria-hidden className="mt-0.5 shrink-0" />
       {signedIn ? (
         <span>{name} is compiled and judged on our server, in a sandbox, so a run takes a few seconds.</span>
@@ -368,10 +516,10 @@ function ServerNote({ language, signedIn, slug }: { language: ServerLanguage; si
 
 function SignInCard({ language, slug }: { language: ServerLanguage; slug: string }) {
   return (
-    <div role="alert" className="rounded-xl border border-accent-line bg-accent-soft px-4 py-3 text-sm text-ink">
-      <p className="font-semibold">Sign in to run {PROBLEM_LANGUAGES[language].label}</p>
-      <p className="mt-1 text-ink-soft">Java, C++ and Go are compiled on our server, which needs an account. Your code stays in this browser while you sign in.</p>
-      <Link href={signInHref(slug)} className="mt-2 inline-flex items-center gap-1 font-medium text-accent-ink hover:underline">
+    <div role="alert" className="rounded-card bg-track-lilac px-5 py-4 text-sm text-track-lilac-ink">
+      <p className="font-semibold text-track-lilac-title">Sign in to run {PROBLEM_LANGUAGES[language].label}</p>
+      <p className="mt-1">Java, C++ and Go are compiled on our server, which needs an account. Your code stays in this browser while you sign in.</p>
+      <Link href={signInHref(slug)} className="mt-2 inline-flex items-center gap-1 font-semibold text-track-lilac-title underline underline-offset-2 hover:no-underline">
         Sign in or create an account <FiArrowRight aria-hidden />
       </Link>
     </div>
@@ -449,26 +597,26 @@ function Results({
   return (
     <div className="space-y-3" aria-live="polite">
       {stale && (
-        <p className="rounded-lg border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn-ink">
+        <p className="rounded-well bg-warn-soft px-4 py-3 text-sm text-warn-ink">
           You’ve changed the code since this run. Run it again to update the results.
         </p>
       )}
       {fatal && <ErrorCard error={fatal} />}
       {!fatal && (
-        <div role="group" aria-label="Test results" className="rounded-xl border border-line-soft bg-surface shadow-xs">
-          <div className={`flex flex-wrap items-center gap-2 border-b border-line-soft px-4 py-2.5 text-sm font-semibold ${allPass ? 'text-good-ink' : 'text-ink'}`}>
+        <div role="group" aria-label="Test results" className="flex flex-col gap-4 rounded-card bg-surface p-5">
+          <div className={`flex flex-wrap items-center gap-2 text-[17px] font-bold ${allPass ? 'text-good-ink' : 'text-ink'}`}>
             {allPass ? <FiCheck aria-hidden /> : null}
             {allPass
               ? kind === 'submit'
                 ? `Solved: all ${total} tests pass.`
                 : `All ${total} examples pass. Submit to run every test.`
               : `${passed} of ${total} ${kind === 'submit' ? 'tests' : 'examples'} pass.`}
-            {timedOut && <span className="font-normal text-ink-soft">The rest weren’t run after a test ran out of time.</span>}
+            {timedOut && <span className="text-sm font-normal text-ink-soft">The rest weren’t run after a test ran out of time.</span>}
           </div>
-          <div className="space-y-2 px-4 py-3">
+          <div className="flex flex-col gap-2.5">
             {groups.map((g) => (
               <div key={g} className="flex flex-wrap items-center gap-2">
-                <span className="w-28 shrink-0 text-xs text-ink-muted">{GROUP_LABEL[g]}</span>
+                <span className="w-24 shrink-0 text-xs font-semibold text-ink-muted">{GROUP_LABEL[g]}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {checked
                     .filter((c) => c.test.group === g)
@@ -480,7 +628,7 @@ function Results({
             ))}
           </div>
           {shown && <CaseDetail spec={spec} checked={shown} language={language} onWatch={onWatch} busy={busy || stale} />}
-          <p className="border-t border-line-soft px-4 py-2 text-xs text-ink-muted">
+          <p className="text-xs text-ink-muted">
             {isServerLanguage(language)
               ? 'Compiled and judged on our server, in a sandbox.'
               : 'Checked in your browser, as practice: passing here isn’t a proof your code is correct.'}{' '}
@@ -489,12 +637,12 @@ function Results({
         </div>
       )}
       {allPass && kind === 'submit' && (
-        <div className="rounded-xl border border-good-line bg-good-soft px-4 py-3 text-sm text-ink">
+        <div className="rounded-card bg-good-soft px-5 py-4 text-sm text-good-ink">
           <p>
-            <span className="font-semibold text-good-ink">Well done.</span> Compare your idea with the approach in the problem description, then try another.
+            <span className="font-semibold text-good-title">Well done.</span> Compare your idea with the approach in the problem description, then try another.
           </p>
           {next && (
-            <Link href={`/practice/${next.slug}`} className="mt-1 inline-flex items-center gap-1 font-medium text-accent-ink hover:underline">
+            <Link href={`/practice/${next.slug}`} className="mt-1.5 inline-flex items-center gap-1 font-semibold text-good-title underline underline-offset-2 hover:no-underline">
               Next: {next.title} <FiArrowRight aria-hidden />
             </Link>
           )}
@@ -505,10 +653,10 @@ function Results({
 }
 
 const STATUS = {
-  pass: { icon: FiCheck, label: 'passed', className: 'border-good-line bg-good-soft text-good-ink' },
-  fail: { icon: FiX, label: 'wrong answer', className: 'border-bad-line bg-bad-soft text-bad-ink' },
-  error: { icon: FiX, label: 'error', className: 'border-bad-line bg-bad-soft text-bad-ink' },
-  timeout: { icon: FiClock, label: 'out of time', className: 'border-warn-line bg-warn-soft text-warn-ink' },
+  pass: { icon: FiCheck, label: 'passed', className: 'bg-good-soft text-good-ink' },
+  fail: { icon: FiX, label: 'wrong answer', className: 'bg-bad-soft text-bad-ink' },
+  error: { icon: FiX, label: 'error', className: 'bg-bad-soft text-bad-ink' },
+  timeout: { icon: FiClock, label: 'out of time', className: 'bg-warn-soft text-warn-ink' },
 } as const;
 
 function CaseChip({ checked, selected, onSelect }: { checked: Checked; selected: boolean; onSelect: () => void }) {
@@ -521,8 +669,8 @@ function CaseChip({ checked, selected, onSelect }: { checked: Checked; selected:
       onClick={onSelect}
       aria-pressed={selected}
       aria-label={`${checked.test.label}: ${s.label}`}
-      className={`inline-flex h-7 min-w-9 items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-semibold ${s.className} ${
-        selected ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface' : ''
+      className={`inline-flex h-8 min-w-10 items-center justify-center gap-1 rounded-full px-2.5 text-xs font-semibold ${s.className} ${
+        selected ? 'ring-2 ring-ink ring-inset' : ''
       }`}
     >
       <Icon aria-hidden /> {n}
@@ -546,7 +694,7 @@ function CaseDetail({
   const { test, verdict: v, output } = checked;
   const s = STATUS[v.status];
   return (
-    <div className="space-y-2 border-t border-line-soft px-4 py-3 text-sm">
+    <div className="flex flex-col gap-2.5 rounded-well bg-sunken px-4 py-3.5 text-sm">
       <p className="font-semibold text-ink">
         {test.label} <span className={`font-normal ${v.status === 'pass' ? 'text-good-ink' : v.status === 'timeout' ? 'text-warn-ink' : 'text-bad-ink'}`}>· {s.label}</span>
         {v.status !== 'timeout' && <span className="font-normal text-ink-muted"> · {v.ms} ms</span>}
@@ -567,7 +715,7 @@ function CaseDetail({
       {output.length > 0 && (
         <div>
           <p className="text-xs text-ink-muted">Printed</p>
-          <pre className="max-h-40 overflow-auto rounded-md bg-sunken px-3 py-2 font-mono text-[13px] whitespace-pre-wrap text-ink-soft">{output.join('\n')}</pre>
+          <pre className="max-h-40 overflow-auto rounded-[12px] bg-code px-3 py-2 font-mono text-[13px] whitespace-pre-wrap text-code-ink">{output.join('\n')}</pre>
         </div>
       )}
       {isServerLanguage(language) ? (
@@ -580,7 +728,7 @@ function CaseDetail({
             type="button"
             onClick={() => onWatch(test, spec.view === 'memory')}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-accent-line bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-surface disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[13px] font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-60"
           >
             <FiEye aria-hidden /> Watch your code on this test
           </button>
@@ -589,7 +737,7 @@ function CaseDetail({
               type="button"
               onClick={() => onWatch(test, true)}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-ink-soft hover:bg-sunken disabled:opacity-60"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-3.5 text-[13px] font-semibold text-ink hover:bg-subtle disabled:opacity-60"
             >
               Line by line, with memory
             </button>

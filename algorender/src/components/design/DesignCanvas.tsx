@@ -176,9 +176,10 @@ function Canvas({
   for (const f of run?.faults ?? []) (crashed[f.component] ??= []).push(f.instance);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 rounded-card bg-surface p-3 sm:p-4">
       <div role="toolbar" aria-label="Add a component" className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-ink-muted">Add:</span>
+        <span className="text-[13px] text-ink-muted">Add:</span>
         {PALETTE.map((kind) => {
           const Icon = KIND_ICON[kind];
           return (
@@ -188,7 +189,7 @@ function Canvas({
               onClick={() => add(kind)}
               disabled={design.components.length >= 24}
               title={KIND_INFO[kind].blurb}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-sm text-ink-soft hover:border-accent-line hover:bg-accent-soft disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-ink ring-[1.5px] ring-line ring-inset transition-shadow duration-150 ease-standard hover:ring-line-strong disabled:opacity-50"
             >
               <FiPlus aria-hidden className="h-3.5 w-3.5" />
               <Icon aria-hidden className="h-3.5 w-3.5" />
@@ -199,10 +200,11 @@ function Canvas({
       </div>
 
       <Diagram design={design} selected={selected} onSelect={(id) => setSelected(id === selected ? null : id)} stats={run?.result.components ?? null} crashed={crashed} problems={badIds} />
+      </div>
 
       <NodeList design={design} />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22rem)]">
         <div>
           {current ? (
             <Inspector
@@ -216,24 +218,25 @@ function Canvas({
               idPrefix={variant === 'lesson' ? `${prefix}-inspect` : undefined}
             />
           ) : (
-            <p className="rounded-xl border border-dashed border-line p-4 text-sm text-ink-soft">
+            <p className="rounded-card border-[1.5px] border-dashed border-line-strong p-5 text-sm text-ink-soft">
               Select a component in the diagram to change its settings and connections, or add one above.
             </p>
           )}
         </div>
 
-        <div role="group" aria-labelledby={`${prefix}-run`} className="space-y-3 rounded-xl border border-line-soft bg-surface p-4 shadow-xs">
-          <h3 id={`${prefix}-run`} className="font-semibold text-ink">
+        <div className="flex flex-col gap-4">
+        <div role="group" aria-labelledby={`${prefix}-run`} className="flex flex-col gap-3.5 rounded-card bg-feature p-5 text-on-feature">
+          <h3 id={`${prefix}-run`} className="text-[13px] font-semibold tracking-[0.06em] text-feature-muted uppercase">
             {study ? 'Check the design' : 'Run traffic'}
           </h3>
           {study ? (
-            <p className="text-sm text-ink-soft">
+            <p className="text-sm text-feature-muted">
               Runs {study.seconds} simulated seconds of the case’s traffic{study.targets.survive ? `, then again with ${study.targets.survive.label.toLowerCase()}` : ''}, and checks every target.
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor={`${prefix}-seconds`} className="mb-1 block text-xs font-medium text-ink-muted">
+                <label htmlFor={`${prefix}-seconds`} className="mb-1 block text-xs font-medium text-feature-muted">
                   Simulated seconds
                 </label>
                 <select id={`${prefix}-seconds`} value={seconds} onChange={(e) => setSeconds(Number(e.target.value))} className={field}>
@@ -245,7 +248,7 @@ function Canvas({
                 </select>
               </div>
               <div>
-                <label htmlFor={`${prefix}-seed`} className="mb-1 block text-xs font-medium text-ink-muted">
+                <label htmlFor={`${prefix}-seed`} className="mb-1 block text-xs font-medium text-feature-muted">
                   Random seed
                 </label>
                 <input
@@ -263,30 +266,17 @@ function Canvas({
 
           {!study && <Faults design={design} faults={faults} seconds={seconds} onChange={setFaults} prefix={prefix} />}
 
-          {problems.length > 0 && (
-            <div id={`${prefix}-problems`} role="alert" className="rounded-lg border border-bad-line bg-bad-soft p-3 text-sm">
-              <p className="flex items-center gap-1.5 font-medium text-bad-ink">
-                <FiAlertTriangle aria-hidden /> Fix {problems.length === 1 ? 'this' : 'these'} to run:
-              </p>
-              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-ink">
-                {problems.map((p, i) => (
-                  <li key={i}>{p}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           <button
             type="button"
             onClick={go}
             disabled={problems.length > 0 || running}
             aria-describedby={problems.length > 0 ? `${prefix}-problems` : undefined}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 font-medium text-white hover:bg-accent-strong disabled:opacity-60"
+            className="inline-flex h-13 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-[15px] font-semibold text-on-accent transition-colors duration-150 ease-standard hover:bg-accent-strong disabled:opacity-60"
           >
             <FiPlay aria-hidden /> {running ? 'Running…' : study ? 'Run the checks' : 'Run'}
           </button>
           {error && (
-            <p role="alert" className="text-sm text-bad-ink">
+            <p role="alert" className="text-sm text-code-bad">
               The simulation stopped: {error}
             </p>
           )}
@@ -307,11 +297,24 @@ function Canvas({
             )}
           </div>
           {study && (
-            <p className="text-xs text-ink-muted">
+            <p className="text-xs text-feature-muted">
               {mine ? 'Showing one design that meets every target. Your own design comes back when you switch back.' : 'Showing a solution replaces your design on screen until you switch back.'}
             </p>
           )}
           {study && study.hints.length > 0 && <Hints hints={study.hints} />}
+        </div>
+          {problems.length > 0 && (
+            <div id={`${prefix}-problems`} role="alert" className="rounded-card bg-bad-soft p-4 text-sm text-bad-ink">
+              <p className="flex items-center gap-1.5 font-semibold text-bad-title">
+                <FiAlertTriangle aria-hidden /> Fix {problems.length === 1 ? 'this' : 'these'} to run:
+              </p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {problems.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
@@ -332,18 +335,18 @@ function Canvas({
         />
       )}
       {run?.passed && study && (
-        <div className="rounded-xl border border-good-line bg-good-soft p-4">
-          <h3 className="font-semibold text-ink">The trade-off</h3>
-          <p className="mt-1 text-sm text-ink-soft">{study.lesson}</p>
+        <div className="flex flex-col gap-2.5 rounded-card bg-track-mint p-5 text-track-mint-title">
+          <h3 className="w-fit rounded-full bg-surface/70 px-3 py-1 text-xs font-semibold">The trade-off</h3>
+          <p className="text-[15px] leading-relaxed">{study.lesson}</p>
         </div>
       )}
     </div>
   );
 }
 
-const field =
-  'w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line';
-const small = 'inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-sm text-ink-soft hover:border-accent-line hover:bg-accent-soft';
+// Fields and buttons on the dark run card.
+const field = 'h-10 w-full rounded-[12px] bg-on-feature/10 px-3 text-sm text-on-feature [&>option]:bg-surface [&>option]:text-ink';
+const small = 'inline-flex h-9 items-center gap-1.5 rounded-full bg-on-feature/10 px-3.5 text-[13px] font-semibold text-on-feature transition-colors duration-150 ease-standard hover:bg-on-feature/20';
 
 /**
  * The components and connections as text, for screen readers: the diagram's
@@ -399,16 +402,16 @@ function Faults({ design, faults, seconds, onChange, prefix }: { design: Design;
   if (machines.length === 0) return null;
   const limit = LIMITS['run.seconds'];
   return (
-    <fieldset className="space-y-2 border-t border-line-soft pt-3">
-      <legend className="text-sm font-medium text-ink">Crash a machine (optional)</legend>
+    <fieldset className="flex flex-col gap-2 border-t border-on-feature/15 pt-3">
+      <legend className="mb-2 text-sm font-semibold text-on-feature">Crash a machine (optional)</legend>
       {faults.length > 0 && (
-        <ul className="space-y-1 text-sm text-ink-soft">
+        <ul className="flex flex-col gap-1 text-sm text-feature-muted">
           {faults.map((f, i) => (
             <li key={i} className="flex items-center justify-between gap-2">
               <span>
                 Crash {nameOf(f)} at {f.at} s
               </span>
-              <button type="button" onClick={() => onChange(faults.filter((_, j) => j !== i))} className="text-ink-muted hover:text-bad-ink" aria-label={`Remove: crash ${nameOf(f)} at ${f.at} s`}>
+              <button type="button" onClick={() => onChange(faults.filter((_, j) => j !== i))} className="text-feature-muted hover:text-code-bad" aria-label={`Remove: crash ${nameOf(f)} at ${f.at} s`}>
                 <FiTrash2 aria-hidden />
               </button>
             </li>
@@ -417,7 +420,7 @@ function Faults({ design, faults, seconds, onChange, prefix }: { design: Design;
       )}
       <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-2">
         <div>
-          <label htmlFor={`${prefix}-fault-machine`} className="mb-1 block text-xs font-medium text-ink-muted">
+          <label htmlFor={`${prefix}-fault-machine`} className="mb-1 block text-xs font-medium text-feature-muted">
             Machine
           </label>
           <select id={`${prefix}-fault-machine`} value={Math.min(pick, machines.length - 1)} onChange={(e) => setPick(Number(e.target.value))} className={field}>
@@ -429,7 +432,7 @@ function Faults({ design, faults, seconds, onChange, prefix }: { design: Design;
           </select>
         </div>
         <div>
-          <label htmlFor={`${prefix}-fault-at`} className="mb-1 block text-xs font-medium text-ink-muted">
+          <label htmlFor={`${prefix}-fault-at`} className="mb-1 block text-xs font-medium text-feature-muted">
             At (s)
           </label>
           <input
@@ -451,7 +454,7 @@ function Faults({ design, faults, seconds, onChange, prefix }: { design: Design;
       >
         <FiPlus aria-hidden /> Add crash
       </button>
-      {faults.length > 0 && <p className="text-xs text-ink-muted">A crashed machine stays down; {pct(faults.length / Math.max(1, machines.length))} of machines will crash.</p>}
+      {faults.length > 0 && <p className="text-xs text-feature-muted">A crashed machine stays down; {pct(faults.length / Math.max(1, machines.length))} of machines will crash.</p>}
     </fieldset>
   );
 }

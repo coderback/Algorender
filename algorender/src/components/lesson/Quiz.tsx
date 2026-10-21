@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { FiCheckCircle, FiRotateCcw, FiXCircle } from 'react-icons/fi';
+import { cx } from '@/components/ui/cx';
 import { mistakeAnchor } from './anchors';
 import { useLessonMistakes, useLessonSlug } from './LessonContext';
 import { recordAnswer, recordMistake, recordScore } from './progress';
@@ -49,35 +50,34 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
   };
 
   return (
-    <div className="not-prose space-y-4">
-      <ol className="space-y-4">
+    <div className="not-prose flex flex-col gap-4">
+      <ol className="flex flex-col gap-4">
         {questions.map((question, qi) => {
           const choice = picked[qi];
           const trap = choice !== null ? question.traps?.[choice] : undefined;
+          const right = choice === question.answer;
           return (
-            <li key={qi} className="rounded-xl border border-line bg-surface p-4">
-              <p className="mb-3 font-medium text-ink">
-                <span className="mr-2 font-mono text-sm text-ink-muted">{qi + 1}.</span>
-                {question.q}
+            <li key={qi} className="flex flex-col gap-4 rounded-card bg-surface p-5 sm:p-6">
+              <p className="font-mono text-xs font-medium text-accent-ink">
+                Question {qi + 1} of {questions.length}
               </p>
-              <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={`Question ${qi + 1}`}>
+              <p className="-mt-2 font-display text-[22px] leading-snug font-bold tracking-[-0.01em]">{question.q}</p>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2" role="group" aria-label={`Question ${qi + 1}`}>
                 {question.choices.map((c, ci) => {
-                  const isAnswer = ci === question.answer;
-                  const style =
-                    choice === null
-                      ? 'border-line-strong hover:border-accent-line hover:bg-accent-soft'
-                      : isAnswer
-                        ? 'border-good-line bg-good-soft text-good-ink'
-                        : ci === choice
-                          ? 'border-bad-line bg-bad-soft text-bad-ink'
-                          : 'border-line text-ink-muted';
+                  const state = choice === null ? 'open' : ci === question.answer ? 'right' : ci === choice ? 'wrong' : 'other';
                   return (
                     <button
                       key={ci}
                       type="button"
                       disabled={choice !== null}
                       onClick={() => pick(qi, ci)}
-                      className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${style}`}
+                      className={cx(
+                        'min-h-13 rounded-[18px] px-4 py-3 text-left text-[15px] font-semibold ring-inset transition-colors duration-150 ease-standard',
+                        state === 'open' && 'ring-[1.5px] ring-line hover:ring-2 hover:ring-accent',
+                        state === 'right' && 'bg-good-soft text-good-title ring-2 ring-good-ink',
+                        state === 'wrong' && 'bg-bad-soft text-bad-title ring-[1.5px] ring-bad-line',
+                        state === 'other' && 'text-ink-muted ring-[1.5px] ring-line-soft',
+                      )}
                     >
                       {c}
                     </button>
@@ -85,45 +85,40 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
                 })}
               </div>
               {choice !== null && (
-                <p className="mt-3 flex gap-2 text-sm text-ink-soft">
-                  {choice === question.answer ? (
-                    <FiCheckCircle aria-hidden className="mt-0.5 shrink-0 text-good-ink" />
-                  ) : (
-                    <FiXCircle aria-hidden className="mt-0.5 shrink-0 text-bad-ink" />
-                  )}
+                <p className={cx('flex gap-2 rounded-well px-4 py-3 text-sm', right ? 'bg-good-soft text-good-title' : 'bg-bad-soft text-bad-title')}>
+                  {right ? <FiCheckCircle aria-hidden className="mt-0.5 shrink-0 text-good-ink" /> : <FiXCircle aria-hidden className="mt-0.5 shrink-0 text-bad-ink" />}
                   <span>
-                    <span className="font-medium">{choice === question.answer ? 'Right. ' : 'Not quite. '}</span>
+                    <span className="font-semibold">{right ? 'Right. ' : 'Not quite. '}</span>
                     {question.why}
                   </span>
                 </p>
               )}
               {trap && mistakes[trap] && (
-                <p className="mt-2 rounded-lg border border-warn-line bg-warn-soft px-3 py-2 text-sm text-ink">
+                <p className="rounded-well bg-warn-soft px-4 py-3 text-sm text-warn-title">
                   That answer comes from a common mistake:{' '}
-                  <a href={`#${mistakeAnchor(trap)}`} className="font-medium text-warn-ink underline underline-offset-2">
+                  <a href={`#${mistakeAnchor(trap)}`} className="font-semibold underline underline-offset-2">
                     {mistakes[trap]}
                   </a>
                   . It will come back in your daily review until you’ve answered it right twice.
                 </p>
               )}
+              {choice === null && qi === 0 && <p className="text-xs text-ink-muted">Your answer comes back in Review in a few days, so it sticks.</p>}
             </li>
           );
         })}
       </ol>
       {finished && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-subtle px-4 py-3 text-sm" aria-live="polite">
-          <span className="font-medium text-ink">
+        <div className="flex flex-wrap items-center gap-3 rounded-tile bg-surface px-5 py-4 text-sm" aria-live="polite">
+          <span className="font-semibold text-ink">
             {correct} of {questions.length} right.
           </span>
           <span className="text-ink-soft">
-            {correct === questions.length
-              ? 'Come back in a few days and try again: remembering it later is what makes it stick.'
-              : 'Reread the explanations above, then try again.'}
+            {correct === questions.length ? 'Come back in a few days and try again: remembering it later is what makes it stick.' : 'Reread the explanations above, then try again.'}
           </span>
           <button
             type="button"
             onClick={() => setPicked(questions.map(() => null))}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-accent-ink hover:bg-accent-soft"
           >
             <FiRotateCcw aria-hidden /> Try again
           </button>

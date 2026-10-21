@@ -22,6 +22,8 @@ const FOUND = 'Stop: this pair hits the target';
 
 function* run({ values, target }: Input) {
   const t = new ArrayTracer(values, ['comparisons']);
+  // Position matters here, not size: values sit in cells (V1).
+  t.setLook('cells');
   const n = t.length;
   let L = 0;
   let R = n - 1;
@@ -48,6 +50,7 @@ function* run({ values, target }: Input) {
       pointers: { L, R },
       ranges: window(),
       vars: { L, R, s, target },
+      readouts: [{ id: 'sum', text: `${a} + ${b} = ${s}` }, { id: 'target', text: `target ${target}` }],
       checkpoint: { question: 'What happens next?', choices: [MOVE_L, MOVE_R, FOUND], answer: [MOVE_L, MOVE_R, FOUND].indexOf(outcome) },
     });
     if (s === target) {
@@ -57,6 +60,7 @@ function* run({ values, target }: Input) {
         marks: { found: [L, R] },
         pointers: { L, R },
         vars: { L, R, s, target },
+        readouts: [{ id: 'sum', text: `${a} + ${b} = ${target} ✓`, mark: 'found' }],
       });
       return;
     }
@@ -68,6 +72,7 @@ function* run({ values, target }: Input) {
         pointers: { L, R },
         ranges: window(),
         vars: { L, R, s, target },
+        readouts: [{ id: 'sum', text: `${a} + ${b} = ${s} < ${target} → move L` }],
       });
       L++;
     } else {
@@ -78,6 +83,7 @@ function* run({ values, target }: Input) {
         pointers: { L, R },
         ranges: window(),
         vars: { L, R, s, target },
+        readouts: [{ id: 'sum', text: `${a} + ${b} = ${s} > ${target} → move R` }],
       });
       R--;
     }

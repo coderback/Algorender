@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useId, useState, type FormEvent, type ReactNode } from 'react';
-import { FiAlertTriangle, FiArrowRight, FiCheckCircle } from 'react-icons/fi';
+import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { FiAlertTriangle, FiArrowRight, FiCheck, FiCheckCircle } from 'react-icons/fi';
+import { cx } from '@/components/ui/cx';
+import { TRACK_CLASSES, type TrackColour } from '@/data/tracks';
+import { useProgressSnapshot } from '@/progress/hooks';
 import { recordGame } from '@/play/record';
 import {
   AMOUNT_MAX,
@@ -34,7 +37,7 @@ import {
  */
 export function BreakIt() {
   return (
-    <div className="space-y-8">
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
       <QuicksortChallenge />
       <CoinsChallenge />
       <FloodChallenge />
@@ -42,13 +45,48 @@ export function BreakIt() {
   );
 }
 
+/** Each challenge's place, colour and short name. */
+const CARD: Record<ChallengeId, { n: string; colour: TrackColour; topic: string }> = {
+  'quicksort-worst': { n: '01', colour: 'peach', topic: 'Quicksort' },
+  'greedy-coins': { n: '02', colour: 'butter', topic: 'Greedy' },
+  'hash-flood': { n: '03', colour: 'sky', topic: 'Hashing' },
+};
+
+/** Whether the learner has ever broken a challenge (a won `game.played` round of it). */
+function useBroken(id: ChallengeId): boolean | null {
+  const { ready, events } = useProgressSnapshot();
+  return useMemo(
+    () => (ready ? events.some((e) => e.kind === 'game.played' && e.data.game === 'break-it' && e.data.item === id && e.data.won) : null),
+    [ready, events, id],
+  );
+}
+
 const submit = (id: ChallengeId, attempt: { score: number; max: number; won: boolean }) =>
   recordGame('break-it', id, { score: attempt.score, max: attempt.max, won: attempt.won });
 
 function Challenge({ id, title, children }: { id: ChallengeId; title: string; children: ReactNode }) {
+  const card = CARD[id];
+  const c = TRACK_CLASSES[card.colour];
+  const broken = useBroken(id);
   return (
-    <section aria-labelledby={`challenge-${id}`} className="space-y-4 rounded-2xl border border-line-soft bg-surface p-5 shadow-xs">
-      <h2 id={`challenge-${id}`} className="text-xl font-semibold text-ink">
+    <section aria-labelledby={`challenge-${id}`} className={cx('flex min-w-0 flex-col gap-4 rounded-card p-5 sm:p-6', c.bg, c.ink)}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[13px]">
+          {card.n} · {card.topic}
+        </span>
+        {broken != null && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface/70 px-2.5 py-1 text-xs font-semibold">
+            {broken ? (
+              <>
+                Broken <FiCheck aria-hidden strokeWidth={3} />
+              </>
+            ) : (
+              'Not broken yet'
+            )}
+          </span>
+        )}
+      </div>
+      <h2 id={`challenge-${id}`} className={cx('font-display text-[26px] leading-tight font-bold tracking-[-0.02em]', c.title)}>
         {title}
       </h2>
       {children}
@@ -82,16 +120,16 @@ function AttemptForm({
     onSubmit();
   };
   return (
-    <form onSubmit={go} className="space-y-3" noValidate>
+    <form onSubmit={go} className="flex flex-col gap-3" noValidate>
       {children}
       <div>
-        <label htmlFor={id} className="block text-sm font-medium text-ink">
+        <label htmlFor={id} className="block text-sm font-semibold">
           {label}
         </label>
-        <p id={`${id}-hint`} className="text-xs text-ink-muted">
+        <p id={`${id}-hint`} className="text-xs">
           {hint}
         </p>
-        <div className="mt-1.5 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           <input
             id={id}
             type="text"
@@ -103,14 +141,14 @@ function AttemptForm({
             onChange={(e) => onChange(e.target.value)}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
-            className="min-w-0 flex-1 rounded-lg border border-line-strong bg-page px-3 py-2 font-mono text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+            className="h-12 min-w-0 flex-1 rounded-[16px] bg-surface px-4 font-mono text-[15px] text-ink placeholder:text-ink-muted aria-invalid:ring-[1.5px] aria-invalid:ring-bad-ink aria-invalid:ring-inset"
           />
-          <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
+          <button type="submit" className="h-12 rounded-full bg-primary px-5 text-sm font-semibold text-on-primary transition-colors duration-150 ease-standard hover:bg-primary-hover">
             Try it
           </button>
         </div>
         {error && (
-          <p id={`${id}-error`} className="mt-1.5 text-sm text-bad-ink">
+          <p id={`${id}-error`} className="mt-2 rounded-[14px] bg-bad-soft px-3.5 py-2.5 text-sm font-semibold text-bad-ink">
             {error}
           </p>
         )}
@@ -122,10 +160,10 @@ function AttemptForm({
 /** The outcome of an attempt: broken (with a tick) or not yet (with a warning sign), never colour alone. */
 function Verdict({ won, children }: { won: boolean; children: ReactNode }) {
   return (
-    <p className={`flex gap-2 rounded-lg border px-3 py-2 text-sm text-ink ${won ? 'border-good-line bg-good-soft' : 'border-warn-line bg-warn-soft'}`}>
-      {won ? <FiCheckCircle aria-hidden className="mt-0.5 shrink-0 text-good-ink" /> : <FiAlertTriangle aria-hidden className="mt-0.5 shrink-0 text-warn-ink" />}
+    <p className="flex gap-2 text-sm leading-relaxed">
+      {won ? <FiCheckCircle aria-hidden className="mt-1 shrink-0" /> : <FiAlertTriangle aria-hidden className="mt-1 shrink-0" />}
       <span>
-        <span className={`font-semibold ${won ? 'text-good-ink' : 'text-warn-ink'}`}>{won ? 'Broken! ' : 'Not broken yet. '}</span>
+        <span className="font-bold">{won ? 'Broken! ' : 'Not broken yet. '}</span>
         {children}
       </span>
     </p>
@@ -150,9 +188,9 @@ function useAttempt<T>(parse: (text: string) => Parsed<T>) {
 
 function Hint({ children }: { children: ReactNode }) {
   return (
-    <details className="text-sm text-ink-soft">
-      <summary className="cursor-pointer text-accent-ink">Need a hint?</summary>
-      <p className="mt-1">{children}</p>
+    <details className="rounded-well bg-surface px-4 py-3 text-sm text-ink-soft">
+      <summary className="cursor-pointer font-semibold text-ink">Need a hint?</summary>
+      <p className="mt-1.5">{children}</p>
     </details>
   );
 }
@@ -174,8 +212,8 @@ function QuicksortChallenge() {
 
   return (
     <Challenge id="quicksort-worst" title="Make quicksort slow">
-      <p className="text-ink-soft">
-        This quicksort always takes the <strong className="text-ink">last</strong> value as its pivot. On a random order of {QUICK_N} values it makes about{' '}
+      <p className="text-[15px] leading-relaxed">
+        This quicksort always takes the <strong>last</strong> value as its pivot. On a random order of {QUICK_N} values it makes about{' '}
         {average} comparisons. Give it {QUICK_N} values that make it do the most work it ever can: {worst} comparisons.
       </p>
       <AttemptForm
@@ -211,9 +249,12 @@ function QuicksortChallenge() {
 function Meter({ value, max, average }: { value: number; max: number; average: number }) {
   const pct = (v: number) => `${Math.min(100, (v / max) * 100)}%`;
   return (
-    <div>
-      <p className="mb-1 text-sm text-ink">
-        <span className="font-mono font-semibold tabular-nums">{value}</span> of {max} comparisons
+    <div className="rounded-well bg-surface px-4 py-3.5">
+      <p className="mb-2 flex justify-between text-sm font-semibold text-ink">
+        <span>Comparisons</span>
+        <span className="font-mono tabular-nums">
+          {value} of {max}
+        </span>
       </p>
       <div className="relative h-3 rounded-full bg-sunken" aria-hidden>
         <div className="h-3 rounded-full bg-accent" style={{ width: pct(value) }} />
@@ -248,7 +289,7 @@ function CoinsChallenge() {
 
   return (
     <Challenge id="greedy-coins" title="Fool the greedy cashier">
-      <p className="text-ink-soft">
+      <p className="text-[15px] leading-relaxed">
         A greedy cashier makes change by always taking the largest coin that still fits. With real coins that gives the fewest coins. Find an
         amount where it doesn’t.
       </p>
@@ -262,10 +303,10 @@ function CoinsChallenge() {
         onSubmit={go}
       >
         <fieldset>
-          <legend className="text-sm font-medium text-ink">Coins</legend>
+          <legend className="text-sm font-semibold">Coins</legend>
           <div className="mt-1 flex flex-wrap gap-3">
             {COIN_SETS.map((cs, i) => (
-              <label key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 font-mono text-sm text-ink hover:bg-subtle">
+              <label key={i} className="inline-flex h-11 items-center gap-2 rounded-full bg-surface/70 px-4 font-mono text-sm font-semibold text-ink has-[:checked]:bg-surface">
                 <input
                   type="radio"
                   name="coin-set"
@@ -284,15 +325,19 @@ function CoinsChallenge() {
       </AttemptForm>
       <Hint>Try amounts just above a big coin. Taking it might leave a remainder that only small coins can make, when two middle-sized coins would have done.</Hint>
       {result && (
-          <dl className="grid gap-1 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-4">
-            <dt className="font-medium text-ink">Greedy</dt>
-            <dd className="font-mono text-ink-soft">
+          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+            <div className="rounded-well bg-surface px-3.5 py-2.5">
+            <dt className="text-xs text-ink-muted">Greedy</dt>
+            <dd className="font-mono font-semibold text-ink">
               {sum(result.greedy.coins)} → {result.greedy.count} {result.greedy.count === 1 ? 'coin' : 'coins'}
             </dd>
-            <dt className="font-medium text-ink">Fewest</dt>
-            <dd className="font-mono text-ink-soft">
+            </div>
+            <div className="rounded-well bg-surface px-3.5 py-2.5">
+            <dt className="text-xs text-ink-muted">Fewest</dt>
+            <dd className="font-mono font-semibold text-ink">
               {sum(result.optimal.coins)} → {result.optimal.count} {result.optimal.count === 1 ? 'coin' : 'coins'}
             </dd>
+            </div>
           </dl>
       )}
       <div role="status" aria-live="polite">
@@ -323,8 +368,8 @@ function FloodChallenge() {
 
   return (
     <Challenge id="hash-flood" title="Flood the hash table">
-      <p className="text-ink-soft">
-        This hash table has {BUCKETS} buckets and puts key k in bucket <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[0.9em] text-ink">k mod {BUCKETS}</code>.
+      <p className="text-[15px] leading-relaxed">
+        This hash table has {BUCKETS} buckets and puts key k in bucket <code className="rounded-md bg-surface/70 px-1.5 py-0.5 font-mono text-[0.9em] text-ink">k mod {BUCKETS}</code>.
         Keys that land in the same bucket form a chain, and a lookup walks the chain. Choose {KEY_COUNT} keys that make one chain as long as it can be.
       </p>
       <AttemptForm
@@ -338,12 +383,14 @@ function FloodChallenge() {
       />
       <Hint>Two keys share a bucket when they leave the same remainder after dividing by {BUCKETS}.</Hint>
       {result && (
-          <ol className="space-y-1" aria-label="Buckets">
+          <ol className="flex flex-col gap-1 rounded-well bg-surface p-2.5" aria-label="Buckets">
             {result.chains.map((chain, b) => {
               const longest = chain.length === result.score && chain.length > 1;
               return (
-                <li key={b} className={`flex items-center gap-2 rounded-lg border px-2 py-1 text-sm ${longest ? 'border-warn-line bg-warn-soft' : 'border-line-soft'}`}>
-                  <span className="w-20 shrink-0 font-mono text-xs text-ink-muted">bucket {b}</span>
+                <li key={b} className={`flex items-center gap-2 rounded-[12px] px-2 py-1 text-sm ${longest ? 'bg-warn-soft' : ''}`}>
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary font-mono text-xs font-semibold text-on-primary" aria-label={`bucket ${b}`}>
+                    {b}
+                  </span>
                   <span className="flex flex-wrap items-center gap-1 font-mono text-ink">
                     {chain.length === 0 ? (
                       <span className="text-ink-muted">empty</span>
@@ -351,7 +398,7 @@ function FloodChallenge() {
                       chain.map((k, i) => (
                         <span key={k} className="inline-flex items-center gap-1">
                           {i > 0 && <span aria-hidden className="text-ink-muted">→</span>}
-                          <span className="rounded bg-sunken px-1.5">{k}</span>
+                          <span className="rounded-md bg-sunken px-1.5">{k}</span>
                         </span>
                       ))
                     )}
@@ -371,7 +418,7 @@ function FloodChallenge() {
           </Verdict>
         )}
       </div>
-      <p className="text-sm text-ink-soft">
+      <p className="text-sm">
         Attackers do this to real servers: send keys that all collide and every lookup slows to a scan. That is why real hash tables pick a random,
         secret (salted) hash function when they start, so nobody can predict which keys collide.
       </p>

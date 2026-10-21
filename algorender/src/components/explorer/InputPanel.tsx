@@ -40,11 +40,11 @@ export function InputPanel<I>({
   };
 
   return (
-    <div className="@container rounded-xl border border-line-soft bg-surface p-4 shadow-xs">
+    <div className="@container rounded-card bg-surface p-5">
       {/* Lays out by the panel's own width, so it also fits inside a lesson's narrower column. It wraps, so many examples push the custom input onto its own line instead of squeezing it. */}
       <div className="flex flex-col gap-4 @4xl:flex-row @4xl:flex-wrap @4xl:items-end @4xl:gap-6">
       <fieldset className="min-w-0">
-        <legend className="mb-1.5 text-xs font-medium text-ink-muted">Input</legend>
+        <legend className="mb-2 text-[13px] font-semibold text-ink">Input</legend>
         <div className="flex flex-wrap gap-1.5">
           {spec.examples.map((example) => (
             <button
@@ -52,10 +52,8 @@ export function InputPanel<I>({
               type="button"
               aria-pressed={activeExample === example.id}
               onClick={() => onChange({ kind: 'example', example: example.id, size, seed: keepSeed() })}
-              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                activeExample === example.id
-                  ? 'border-accent bg-accent text-white'
-                  : 'border-line text-ink-soft hover:border-accent-line hover:bg-accent-soft'
+              className={`h-9 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-150 ease-standard ${
+                activeExample === example.id ? 'bg-primary text-on-primary' : 'bg-sunken text-ink hover:bg-line-soft'
               }`}
             >
               {example.label}
@@ -66,7 +64,7 @@ export function InputPanel<I>({
             onClick={() =>
               onChange({ kind: 'example', example: activeExample ?? spec.examples[0].id, size, seed: randomSeed() })
             }
-            className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-sm text-ink-soft hover:border-accent-line hover:bg-accent-soft"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold text-ink ring-[1.5px] ring-line ring-inset transition-shadow duration-150 ease-standard hover:ring-line-strong"
           >
             <FiShuffle aria-hidden /> New values
           </button>
@@ -74,7 +72,7 @@ export function InputPanel<I>({
       </fieldset>
 
       {spec.size && showSize && (
-        <label className="flex shrink-0 flex-col gap-1.5 text-xs font-medium text-ink-muted">
+        <label className="flex shrink-0 flex-col gap-2 text-[13px] font-semibold text-ink">
           <span>
             {spec.size.label} <span className="font-mono text-ink">{size}</span>
           </span>
@@ -98,7 +96,7 @@ export function InputPanel<I>({
 
       {spec.custom && (
         <form onSubmit={apply} className="flex min-w-0 flex-1 flex-col gap-1.5 @4xl:min-w-80">
-          <label htmlFor="custom-input" className="text-xs font-medium text-ink-muted">
+          <label htmlFor="custom-input" className="text-[13px] font-semibold text-ink">
             {spec.custom.label}
           </label>
           <div className="flex gap-2">
@@ -109,9 +107,9 @@ export function InputPanel<I>({
               placeholder={spec.custom.placeholder}
               aria-invalid={error != null}
               aria-describedby={error ? 'custom-input-error' : undefined}
-              className="min-w-0 flex-1 rounded-md border border-line px-3 py-1.5 font-mono text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line"
+              className="h-11 min-w-0 flex-1 rounded-[16px] bg-sunken px-4 font-mono text-sm text-ink placeholder:text-ink-muted aria-invalid:ring-[1.5px] aria-invalid:ring-bad-ink aria-invalid:ring-inset"
             />
-            <button type="submit" className="rounded-md bg-ink px-3 py-1.5 text-sm text-surface hover:bg-ink-soft">
+            <button type="submit" className="h-11 shrink-0 rounded-full bg-accent px-[18px] text-sm font-semibold text-on-accent transition-colors duration-150 ease-standard hover:bg-accent-strong">
               Run
             </button>
           </div>

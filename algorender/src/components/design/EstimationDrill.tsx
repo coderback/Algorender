@@ -6,9 +6,9 @@ import { randomSeed } from '@/engine/random';
 import { drillRound, formatQuantity, judge, makeDrill, parseEstimate, type Drill, type DrillKind, type Verdict } from '@/systems/design/estimation';
 
 const VERDICT: Record<Verdict, { title: string; box: string; ink: string }> = {
-  'spot-on': { title: 'Spot on', box: 'border-good-line bg-good-soft', ink: 'text-good-ink' },
-  close: { title: 'Right order of magnitude', box: 'border-warn-line bg-warn-soft', ink: 'text-warn-ink' },
-  off: { title: 'Off by more than 10×', box: 'border-bad-line bg-bad-soft', ink: 'text-bad-ink' },
+  'spot-on': { title: 'Spot on', box: 'bg-good-soft text-good-ink', ink: 'text-good-title' },
+  close: { title: 'Right order of magnitude', box: 'bg-warn-soft text-warn-ink', ink: 'text-warn-title' },
+  off: { title: 'Off by more than 10×', box: 'bg-bad-soft text-bad-ink', ink: 'text-bad-title' },
 };
 
 const PLACEHOLDER: Record<Drill['unit'], string> = { count: 'e.g. 3000, 3k or 3e3', bytes: 'e.g. 40 GB or 4e10', 'bytes/s': 'e.g. 100 MB/s' };
@@ -62,26 +62,26 @@ export function EstimationDrill({ kind = 'qps', seed = 1, drill: given, headingL
   };
 
   return (
-    <div className="not-prose my-6 rounded-xl border border-line bg-surface p-4 sm:p-5" role="group" aria-labelledby={`${id}-title`}>
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <Heading id={`${id}-title`} className="flex items-center gap-2 text-base font-semibold text-ink">
+    <div className="not-prose my-4 flex flex-col gap-3 rounded-card bg-surface p-5 sm:p-6" role="group" aria-labelledby={`${id}-title`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <Heading id={`${id}-title`} className="flex items-center gap-2 font-display text-title-card text-ink">
           <FiTarget aria-hidden className="text-accent-ink" />
           Estimate: {drill.title}
         </Heading>
         <span className="text-xs text-ink-muted">Practice, not recorded</span>
       </div>
-      <p className="leading-relaxed text-ink-soft">{drill.question}</p>
+      <p className="text-[15px] leading-relaxed text-ink-soft">{drill.question}</p>
 
-      <dl className="mt-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+      <dl className="grid gap-2 text-sm sm:grid-cols-2">
         {drill.facts.map((f) => (
-          <div key={f.id} className="flex justify-between gap-3 border-b border-line-soft py-1">
+          <div key={f.id} className="flex justify-between gap-3 rounded-[14px] bg-sunken px-3.5 py-2.5">
             <dt className="text-ink-muted">{f.label}</dt>
             <dd className="font-mono text-ink">{f.text}</dd>
           </div>
         ))}
       </dl>
 
-      <form onSubmit={check} className="mt-4 flex flex-wrap items-end gap-2">
+      <form onSubmit={check} className="mt-1 flex flex-wrap items-end gap-2">
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm" htmlFor={`${id}-input`}>
           <span className="font-medium text-ink">
             Your estimate{drill.unitLabel ? ` (${drill.unit === 'count' ? drill.unitLabel : drill.unit === 'bytes' ? 'bytes' : 'bytes a second'})` : ''}
@@ -95,14 +95,14 @@ export function EstimationDrill({ kind = 'qps', seed = 1, drill: given, headingL
             inputMode="text"
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? `${id}-error` : undefined}
-            className="w-full min-w-40 rounded-lg border border-line-strong bg-page px-3 py-2 font-mono text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+            className="h-12 w-full min-w-40 rounded-[16px] bg-sunken px-4 font-mono text-ink placeholder:text-ink-muted aria-invalid:ring-[1.5px] aria-invalid:ring-bad-ink aria-invalid:ring-inset"
           />
         </label>
-        <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
+        <button type="submit" className="h-12 rounded-full bg-primary px-5 text-sm font-semibold text-on-primary hover:bg-primary-hover">
           Check
         </button>
         {!shown && (
-          <button type="button" onClick={() => setShown(true)} className="rounded-lg px-3 py-2 text-sm text-accent-ink hover:bg-accent-soft">
+          <button type="button" onClick={() => setShown(true)} className="h-12 rounded-full px-4 text-sm font-semibold text-accent-ink hover:bg-accent-soft">
             Show the working
           </button>
         )}
@@ -115,7 +115,7 @@ export function EstimationDrill({ kind = 'qps', seed = 1, drill: given, headingL
           </p>
         )}
         {result && style && (
-          <p className={`mt-3 flex gap-2 rounded-lg border px-3 py-2 text-sm text-ink ${style.box}`}>
+          <p className={`mt-1 flex gap-2 rounded-well px-4 py-3 text-sm ${style.box}`}>
             {result.verdict === 'off' ? <FiXCircle aria-hidden className={`mt-0.5 shrink-0 ${style.ink}`} /> : <FiCheckCircle aria-hidden className={`mt-0.5 shrink-0 ${style.ink}`} />}
             <span>
               <span className={`font-semibold ${style.ink}`}>{style.title}. </span>
@@ -126,7 +126,7 @@ export function EstimationDrill({ kind = 'qps', seed = 1, drill: given, headingL
       </div>
 
       {shown && (
-        <div className="mt-3 rounded-lg bg-subtle px-3 py-2 text-sm">
+        <div className="rounded-well bg-subtle px-4 py-3.5 text-sm">
           <p className="mb-1 font-medium text-ink">The working</p>
           <ol className="list-decimal space-y-1 pl-5 text-ink-soft">
             {drill.steps.map((s) => (
@@ -139,7 +139,7 @@ export function EstimationDrill({ kind = 'qps', seed = 1, drill: given, headingL
             <span className="font-medium text-ink">Rule of thumb: </span>
             {drill.tip}
           </p>
-          <button type="button" onClick={reset} className="mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-accent-ink hover:bg-accent-soft">
+          <button type="button" onClick={reset} className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-full bg-sunken px-3.5 font-semibold text-ink hover:bg-line-soft">
             <FiRefreshCw aria-hidden /> Clear and try again
           </button>
         </div>
@@ -164,7 +164,7 @@ export function EstimationRound({ initialSeed = 1 }: { initialSeed?: number }) {
         <button
           type="button"
           onClick={() => setSeed(randomSeed())}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:border-accent-line hover:bg-accent-soft"
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold text-ink transition-colors duration-150 ease-standard hover:bg-subtle"
         >
           <FiRefreshCw aria-hidden /> New drills
         </button>

@@ -24,6 +24,7 @@ const pseudocode = [
 
 type Op = 'keep' | 'replace' | 'delete' | 'insert';
 const LIST = 'edits';
+const RULE = 'rule';
 const OP_CHOICES = ['Keep (the letters match)', 'Replace', 'Delete', 'Insert'] as const;
 const OP_INDEX: Record<Op, number> = { keep: 0, replace: 1, delete: 2, insert: 3 };
 
@@ -45,6 +46,10 @@ function* run({ a, b }: StringPair): Generator<Frame<GridState>> {
     rows: [{ label: 'ε', sub: '0' }, ...[...a].map((ch, i) => ({ label: ch, sub: String(i + 1) }))],
     cols: [{ label: 'ε', sub: '0' }, ...[...b].map((ch, j) => ({ label: ch, sub: String(j + 1) }))],
   });
+  // The recurrence's cases as a "Rule used" chip row (V6); a cell's decision frame marks the one it used.
+  t.addList({ id: RULE, label: 'Rule used', empty: '' });
+  t.addItem(RULE, { id: 'same', text: 'same letter → diagonal' });
+  t.addItem(RULE, { id: 'edit', text: 'else 1 + min(↑ delete, ← insert, ↖ replace)' });
   t.addList({ id: LIST, label: `Edits turning "${a}" into "${b}"`, empty: 'Read off during the traceback' });
   const D = (r: number, c: number) => t.num([r, c]);
 
@@ -109,7 +114,7 @@ function* run({ a, b }: StringPair): Generator<Frame<GridState>> {
         note: match
           ? `'${x}' = '${y}': no edit needed, so D[${i},${j}] copies D[${i - 1},${j - 1}] = ${diag}.`
           : `'${x}' ≠ '${y}': D[${i},${j}] = 1 + min(↑ ${up}, ← ${left}, ↖ ${diag}) = ${value}, by ${why}.`,
-        marks: { key: [here], compare: [from, ...headers] },
+        marks: { key: [here, { list: RULE, item: match ? 'same' : 'edit' }], compare: [from, ...headers] },
         arrows: [{ from, to: here, mark: 'compare' }],
         vars: { ...vars, [`D[${i},${j}]`]: value },
       });

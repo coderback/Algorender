@@ -4,7 +4,8 @@ import { LayoutGroup, motion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { RANGE_TONES } from '@/viz/array/marks';
 import { MARKS, type MarkKey } from '@/viz/marks';
-import type { TextCell, TextRow, TextState } from './types';
+import { EMPTY_SLOT, fillFor, PLAIN_CELL, Pointer, RULED_OUT } from '@/viz/parts';
+import type { HistoryEntry, Skip, TextCell, TextRow, TextState } from './types';
 
 /** Widest a column gets, so short strings don't turn into slabs. */
 const CELL_MAX_PX = 44;
@@ -17,6 +18,8 @@ type Sizes = { char: string; number: string; small: string };
  * current shift: cells are keyed by id and animate their position, so the
  * learner sees the pattern move rather than be redrawn.
  */
+// TODO(redesign): V7 also draws Manacher's mirror bars and the Z-algorithm's "comparisons saved"; neither
+// module records the mirror or the savings yet.
 export function TextView({ state }: { state: TextState }) {
   const groupId = useId();
   const cols = Math.max(1, state.columns);
@@ -39,6 +42,7 @@ export function TextView({ state }: { state: TextState }) {
             <RowView key={row.id} row={row} state={state} cols={cols} grid={grid} gap={gap} sizes={sizes} />
           ))}
           <Results results={state.results} />
+          {state.history && <History title={state.history.title} entries={state.history.entries} />}
         </div>
       </div>
     </LayoutGroup>
@@ -69,7 +73,7 @@ function RowView({
 
   return (
     <div>
-      <div className="mb-0.5 truncate text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{row.label}</div>
+      <div className="mb-1 truncate text-xs font-medium text-ink-muted">{row.label}</div>
       <div className="relative">
         <div className={`pointer-events-none absolute inset-0 grid ${gap}`} style={grid}>
           {ranges.map((r, k) => (
@@ -77,7 +81,7 @@ function RowView({
               key={`${r.tone}:${r.label ?? k}`}
               layout
               initial={false}
-              className={`-mx-px rounded-md ${RANGE_TONES[r.tone].tint}`}
+              className={`-mx-0.5 rounded-[10px] ${RANGE_TONES[r.tone].tint}`}
               style={{ gridColumn: span(r.from, r.to), gridRow: 1 }}
             />
           ))}
@@ -92,25 +96,27 @@ function RowView({
       </div>
 
       {row.pointers && (
-        <div className={`mt-0.5 grid h-4 ${gap}`} style={grid}>
+        <div className={`mt-1 grid h-[18px] ${gap}`} style={grid}>
           {[...pointerLabels].map(([index, labels]) =>
             row.offset + index >= cols ? null : (
               <motion.div
                 key={labels.join(',')}
                 layout="position"
                 initial={false}
-                className="justify-self-center font-mono leading-4 font-semibold whitespace-nowrap text-ink-soft"
-                style={{ gridColumn: row.offset + index + 1, gridRow: 1, fontSize: sizes.small }}
+                className="justify-self-center"
+                style={{ gridColumn: row.offset + index + 1, gridRow: 1 }}
               >
-                ▲{labels.join(',')}
+                <Pointer>{labels.join(',')}</Pointer>
               </motion.div>
             ),
           )}
         </div>
       )}
 
+      {state.skip?.row === row.id && <SkipArrow skip={state.skip} cols={cols} grid={grid} gap={gap} />}
+
       {row.rangeLabels && (
-        <div className={`mt-0.5 grid h-4 ${gap}`} style={grid}>
+        <div className={`mt-1 grid h-5 ${gap}`} style={grid}>
           {ranges
             .filter((r) => r.label)
             .map((r) => (
@@ -118,7 +124,7 @@ function RowView({
                 key={`${r.tone}:${r.label}`}
                 layout
                 initial={false}
-                className={`truncate border-t-2 text-center text-[10px] leading-3.5 ${RANGE_TONES[r.tone].bracket} ${RANGE_TONES[r.tone].text}`}
+                className={`truncate rounded-full text-center text-[11px] leading-5 font-semibold ${RANGE_TONES[r.tone].tint} ${RANGE_TONES[r.tone].text}`}
                 style={{ gridColumn: span(r.from, r.to), gridRow: 1 }}
               >
                 {r.label}
@@ -126,6 +132,46 @@ function RowView({
             ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** A slide drawn under its row (V7): a dashed arc from the old offset to the new one, and why it can skip. */
+function SkipArrow({ skip, cols, grid, gap }: { skip: Skip; cols: number; grid: CSSProperties; gap: string }) {
+  const from = Math.max(0, Math.min(cols - 1, skip.from));
+  const to = Math.max(from, Math.min(cols - 1, skip.to));
+  const span = to - from + 1;
+  const inset = `calc(${50 / span}% - 1px)`;
+  return (
+    <div className={`mt-1 grid ${gap}`} style={grid}>
+      {to > from && (
+        <div className="relative h-4" style={{ gridColumn: `${from + 1} / ${to + 2}`, gridRow: 1 }}>
+          <div className="absolute top-0 h-3 rounded-b-xl border-x-2 border-b-2 border-dashed border-mark-done" style={{ left: inset, right: inset }} />
+          <span className="absolute -top-1.5 -translate-x-1/2 text-[10px] leading-none text-mark-done-ink" style={{ right: inset, transform: 'translateX(50%)' }}>
+            ▲
+          </span>
+        </div>
+      )}
+      <p className="text-xs font-semibold text-mark-done-ink" style={{ gridColumn: `${from + 1} / ${cols + 1}`, gridRow: 2 }}>
+        {skip.label}
+      </p>
+    </div>
+  );
+}
+
+/** A history under the rows (V7), oldest first: Rabin–Karp's windows, each with its hash and what became of it. */
+function History({ title, entries }: { title: string; entries: readonly HistoryEntry[] }) {
+  return (
+    <div>
+      <div className="mb-1 text-xs font-medium text-ink-muted">{title}</div>
+      <ol className="flex flex-wrap gap-1.5">
+        {entries.map((e) => (
+          <li key={e.id} className={`flex items-baseline gap-1.5 rounded-[10px] px-2.5 py-1 text-xs ${e.mark ? fillFor(e.mark) : PLAIN_CELL}`}>
+            <span className="font-mono font-semibold">{e.text}</span>
+            <span className={e.mark ? '' : 'text-ink-muted'}>{e.detail}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -146,20 +192,7 @@ function Cell({
   sizes: Sizes;
 }) {
   const meta = mark ? MARKS[mark] : null;
-  // Dark text reads on every mark colour except the deep blue of "compare".
-  const ink = mark === 'compare' ? 'text-white' : 'text-on-mark';
-  let box: string;
-  if (kind === 'chars') {
-    box = meta
-      ? `${meta.bg} ${ink} ring-black/10`
-      : cell.faint
-        ? 'bg-surface text-ink-muted ring-line'
-        : 'bg-bar/30 text-ink ring-black/5';
-  } else if (cell.text === '') {
-    box = 'border border-dashed border-line-strong bg-surface';
-  } else {
-    box = meta ? `${meta.bg} ${ink} ring-black/10` : 'bg-surface text-ink ring-line';
-  }
+  const box = meta ? fillFor(mark) : kind === 'chars' && cell.faint ? RULED_OUT : kind !== 'chars' && cell.text === '' ? EMPTY_SLOT : PLAIN_CELL;
 
   return (
     <motion.div
@@ -170,15 +203,15 @@ function Cell({
     >
       <span className={`h-3.5 shrink-0 text-[10px] leading-3.5 font-bold ${meta?.text ?? ''}`}>{meta?.glyph ?? ''}</span>
       <div
-        className={`flex w-full items-center justify-center rounded-[3px] font-mono leading-none tabular-nums ring-1 ring-inset transition-colors ${
-          kind === 'chars' ? 'aspect-[4/5] font-semibold' : 'aspect-square'
+        className={`flex aspect-square w-full items-center justify-center rounded-[8px] font-mono leading-none tabular-nums transition-colors ${
+          kind === 'chars' ? 'font-semibold' : ''
         } ${box}`}
         style={{ fontSize: kind === 'chars' ? sizes.char : sizes.number, transitionDuration: 'var(--tween, 300ms)' }}
       >
         {cell.text}
       </div>
       {kind === 'chars' && (
-        <span className="mt-px leading-none text-ink-muted tabular-nums" style={{ fontSize: sizes.small }}>
+        <span className="mt-0.5 font-mono leading-none text-ink-muted tabular-nums" style={{ fontSize: sizes.small }}>
           {index}
         </span>
       )}
@@ -194,9 +227,7 @@ function Readouts({ state }: { state: TextState }) {
         return (
           <div
             key={r.id}
-            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs ring-1 ring-inset transition-colors ${
-              meta ? `${meta.bg} ring-black/10 ${r.mark === 'compare' ? 'text-white' : 'text-on-mark'}` : 'bg-surface text-ink-soft ring-line'
-            }`}
+            className={`inline-flex items-center gap-1.5 rounded-[10px] px-2.5 py-1 text-xs transition-colors ${meta ? fillFor(r.mark) : PLAIN_CELL}`}
             style={{ transitionDuration: 'var(--tween, 300ms)' }}
           >
             {meta && <span className="font-bold">{meta.glyph}</span>}
@@ -212,12 +243,12 @@ function Readouts({ state }: { state: TextState }) {
 function Results({ results }: { results: TextState['results'] }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-      <span className="text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{results.label}</span>
+      <span className="text-xs font-medium text-ink-muted">{results.label}</span>
       {results.items.length === 0 ? (
         <span className="text-ink-muted">{results.empty}</span>
       ) : (
         results.items.map((item, k) => (
-          <span key={k} className={`rounded-md px-1.5 py-0.5 font-mono text-on-mark ${MARKS.found.bg}`}>
+          <span key={k} className={`rounded-[10px] px-2 py-0.5 font-mono font-semibold text-on-mark ${MARKS.found.bg}`}>
             {MARKS.found.glyph} {item}
           </span>
         ))

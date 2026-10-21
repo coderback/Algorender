@@ -4,7 +4,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useId, type CSSProperties } from 'react';
 import { useWidth } from '@/viz/linear/useWidth';
 import { MARKS, type MarkKey } from '@/viz/marks';
+import { EDGE_ACTIVE, EDGE_IDLE, fillFor, NODE_IDLE_SVG, NODE_RING, PLAIN_CELL } from '@/viz/parts';
 import { labelWidth, layoutTree, rootsOf, type Box, type Metrics, type TreeLayout } from './layout';
+import { decisionTrail, type TrailStep } from './trail';
 import { linkId, type NodeId, type TableRow, type TreeNode, type TreeState } from './types';
 
 /** Room around the tree for glyphs above the root and the probe beside a node. */
@@ -75,17 +77,50 @@ function frameOf(state: TreeState, layout: TreeLayout) {
  * the left, leaves in a column), where a phone has room. Other trees always
  * grow downwards.
  */
-function chooseLayout(state: TreeState, width: number): TreeLayout {
+/**
+ * A search tree too wide for the stage first drops its long node labels (the
+ * subsets on a decision tree, which the results list also holds), then turns
+ * sideways if that is still too small. Returns the layout and the state to draw.
+ */
+function chooseLayout(state: TreeState, width: number): { layout: TreeLayout; state: TreeState } {
   const down = layoutTree(state);
-  if (!state.search || width <= 0) return down;
-  const scale = (layout: TreeLayout) => {
-    const { W, H } = frameOf(state, layout);
+  if (!state.search || width <= 0) return { layout: down, state };
+  const scale = (layout: TreeLayout, s: TreeState) => {
+    const { W, H } = frameOf(s, layout);
     return Math.min(MAX_SCALE, width / W, MAX_HEIGHT / H);
   };
-  const downScale = scale(down);
-  if (downScale >= MIN_SEARCH_SCALE) return down;
-  const side = layoutTree(state, { sideways: true });
-  return scale(side) > downScale ? side : down;
+  if (scale(down, state) >= MIN_SEARCH_SCALE) return { layout: down, state };
+  const plain = withoutLongLabels(state);
+  const plainDown = layoutTree(plain);
+  const plainScale = scale(plainDown, plain);
+  if (plainScale >= MIN_SEARCH_SCALE) return { layout: plainDown, state: plain };
+  const side = layoutTree(plain, { sideways: true });
+  return scale(side, plain) > plainScale ? { layout: side, state: plain } : { layout: plainDown, state: plain };
+}
+
+/** The same tree with labels longer than a circle holds taken off its round nodes. */
+function withoutLongLabels(state: TreeState): TreeState {
+  const nodes = Object.fromEntries(
+    Object.entries(state.nodes).map(([id, n]) => [id, n.shape === 'round' && [...(n.cells[0]?.label ?? '')].length > 2 ? { ...n, cells: [] } : n]),
+  );
+  return { ...state, nodes };
+}
+
+/** From this stage width the decision trail floats at the top right, as the board draws it; narrower, it sits above the tree. */
+const TRAIL_OVERLAY_PX = 560;
+
+/** The decisions on the way down, newest last; the comparison in hand is filled like a compare mark. */
+function Trail({ steps, overlay }: { steps: readonly TrailStep[]; overlay: boolean }) {
+  return (
+    <ol aria-hidden className={`flex flex-col gap-1 ${overlay ? 'pointer-events-none absolute top-0 right-0 z-10 items-end' : 'items-start'}`}>
+      {steps.map((step) => (
+        <li key={step.id} className={`rounded-[10px] px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap ${step.current ? fillFor('compare') : PLAIN_CELL}`}>
+          {step.text}
+          {step.current && ` ${MARKS.compare.glyph}`}
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 /**
@@ -100,12 +135,18 @@ function chooseLayout(state: TreeState, width: number): TreeLayout {
  * the parent, the arrays as a table underneath) and search trees (every call
  * laid out up front, revealed as the search reaches it, each new call growing
  * out of its parent).
+ *
+ * A search walk (a probe on a binary search tree, AVL tree or B-tree) gets a
+ * decision trail beside it, read from the frame (`decisionTrail`). Rotations
+ * and splits animate in place rather than as the board's before and after,
+ * so the nodes the learner was following keep moving instead of jumping to a
+ * second copy of the tree.
  */
-export function TreeView({ state }: { state: TreeState }) {
+export function TreeView({ state: given }: { state: TreeState }) {
   const reduce = useReducedMotion();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [ref, width] = useWidth<HTMLDivElement>();
-  const layout = chooseLayout(state, width);
+  const { layout, state } = chooseLayout(given, width);
   const m = layout.metrics;
   const { W, H, padTop, stripTop, stripCell, tableTop, table, hasTree } = frameOf(state, layout);
   const strip = state.strip;
@@ -179,13 +220,15 @@ export function TreeView({ state }: { state: TreeState }) {
 
   const probeAt = state.probe ? at.get(state.probe.at) : undefined;
   const probe = probeAt && state.probe ? probeSpot(probeAt, placed, state.probe.label, W) : null;
+  const trail = decisionTrail(state);
   const glyphR = search ? 5 : 7.5;
 
   return (
-    <div ref={ref} role="group" aria-label="Tree" className="flex flex-col gap-3">
+    <div ref={ref} role="group" aria-label="Tree" className="relative flex flex-col gap-3">
       <p className="sr-only">{state.description}</p>
+      {trail && <Trail steps={trail} overlay={width >= TRAIL_OVERLAY_PX} />}
       {!hasTree && (
-        <p className="rounded-lg border border-dashed border-line py-10 text-center text-sm text-ink-muted" aria-hidden>
+        <p className="rounded-tile border-2 border-dashed border-edge py-10 text-center text-sm text-ink-muted" aria-hidden>
           {state.emptyLabel}
         </p>
       )}
@@ -215,7 +258,7 @@ export function TreeView({ state }: { state: TreeState }) {
                   <motion.line
                     key={`k:${l.id}`}
                     initial={{ opacity: 0, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2 }}
-                    animate={{ opacity: 1, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, strokeWidth: l.mark ? 3 : 1.5 }}
+                    animate={{ opacity: 1, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, strokeWidth: l.mark ? 3 : 2 }}
                     exit={{ opacity: 0 }}
                     transition={instant}
                     strokeLinecap="round"
@@ -237,12 +280,12 @@ export function TreeView({ state }: { state: TreeState }) {
                   <motion.line
                     key={`e:${e.child.id}`}
                     initial={{ opacity: 0, ...start }}
-                    animate={{ opacity: 1, x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, strokeWidth: hot ? 3.5 : search ? 1.5 : 2 }}
+                    animate={{ opacity: 1, x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, strokeWidth: hot ? (search ? 3.5 : EDGE_ACTIVE) : search ? 2 : EDGE_IDLE }}
                     exit={{ opacity: 0 }}
                     transition={instant}
                     strokeLinecap="round"
                     markerEnd={state.parentArrows ? `url(#${uid}-${hot ? 'up-hot' : 'up'})` : undefined}
-                    className={`transition-colors ${hot ? 'stroke-mark-done' : state.parentArrows ? 'stroke-ink-faint' : 'stroke-line-strong'}`}
+                    className={`transition-colors ${hot ? 'stroke-mark-done' : state.parentArrows ? 'stroke-ink-faint' : 'stroke-edge'}`}
                     style={TWEEN}
                   />
                 );
@@ -300,13 +343,13 @@ export function TreeView({ state }: { state: TreeState }) {
       )}
       {state.output && (
         <div className="flex flex-wrap items-center gap-1.5 text-sm" aria-label={state.output.label}>
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{state.output.label}</span>
+          <span className="mr-1 text-xs font-medium text-ink-muted">{state.output.label}</span>
           {state.output.items.length === 0 ? (
             <span className="text-xs text-ink-muted">none yet</span>
           ) : (
             state.output.items.map((item, i) => (
               // The list only grows at the end, so positions are stable keys.
-              <span key={i} className="rounded-full bg-good-soft px-2 py-0.5 font-mono text-xs text-good-ink ring-1 ring-good-line">
+              <span key={i} className="rounded-[10px] bg-mark-done px-2 py-0.5 font-mono text-xs font-semibold text-on-mark">
                 {item}
               </span>
             ))
@@ -397,7 +440,10 @@ function Arrowhead({ id, className }: { id: string; className: string }) {
 }
 
 function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: number; mark: MarkKey | undefined }) {
-  const r = p.box.h / 2;
+  // The box swaps width and height when the tree is drawn sideways, so the circle is its shorter side.
+  const r = Math.min(p.box.h, 2 * p.box.left) / 2;
+  // Half the width beyond the circle: a pill when the label is too long for a circle.
+  const stretch = Math.max(p.box.h, 2 * p.box.left) / 2 - r;
   const meta = mark ? MARKS[mark] : null;
   const badges = p.node.badges;
   // A glyph sits on the node's top-left; a small node's glyph overlaps it less. A
@@ -407,12 +453,20 @@ function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: 
   return (
     <motion.g initial={{ opacity: 0, x: from.x, y: from.y }} animate={{ opacity: 1, x: p.x, y: p.y }} exit={{ opacity: 0 }}>
       {p.node.terminal && <circle r={r + 4} fill="none" strokeWidth={2} className="stroke-ink-soft" />}
-      <circle
-        r={r}
-        strokeWidth={meta ? 2.5 : 2}
-        className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-bar'}`}
-        style={TWEEN}
-      />
+      {stretch > 0.5 ? (
+        <rect
+          x={-r - stretch}
+          y={-r}
+          width={2 * (r + stretch)}
+          height={2 * r}
+          rx={r}
+          strokeWidth={NODE_RING}
+          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : NODE_IDLE_SVG}`}
+          style={TWEEN}
+        />
+      ) : (
+        <circle r={r} strokeWidth={NODE_RING} className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : NODE_IDLE_SVG}`} style={TWEEN} />
+      )}
       {badges?.top && (
         <text
           x={r + 2}
@@ -434,7 +488,7 @@ function RoundNode({ p, from, glyphR, mark }: { p: Placed; from: Point; glyphR: 
           {meta!.glyph}
         </text>
       )}
-      {mark && !inside && <Glyph mark={mark} x={-g} y={-g} r={glyphR} />}
+      {mark && !inside && <Glyph mark={mark} x={-g - stretch} y={-g} r={glyphR} />}
     </motion.g>
   );
 }
@@ -450,9 +504,9 @@ function BoxNode({ p, mark, instant }: { p: Placed; mark: MarkKey | undefined; i
         animate={{ width: p.box.w }}
         transition={instant}
         height={p.box.h}
-        rx={6}
-        strokeWidth={meta ? 3 : 1.5}
-        className={`fill-surface transition-colors ${meta ? meta.stroke : 'stroke-ink-faint'}`}
+        rx={12}
+        strokeWidth={meta ? 3 : NODE_RING}
+        className={`fill-surface transition-colors ${meta ? meta.stroke : 'stroke-edge'}`}
         style={TWEEN}
       />
       {mark && <Glyph mark={mark} x={-3} y={-3} />}
@@ -488,9 +542,9 @@ function KeyCell({
           y={-m.cellH / 2}
           width={m.cellW - 3}
           height={m.cellH}
-          rx={4}
+          rx={8}
           strokeWidth={1}
-          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
+          className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-soft'}`}
           style={TWEEN}
         />
       )}
@@ -536,9 +590,9 @@ function EdgeLabel({
         y={-h / 2}
         width={width}
         height={h}
-        rx={4}
-        strokeWidth={hot ? 2 : 1}
-        className={`fill-surface transition-colors ${hot ? 'stroke-mark-done' : 'stroke-line-strong'}`}
+        rx={h / 2}
+        strokeWidth={hot ? 2 : 1.5}
+        className={`fill-surface transition-colors ${hot ? 'stroke-mark-done' : 'stroke-edge'}`}
         style={TWEEN}
       />
       <text textAnchor="middle" dominantBaseline="central" fontSize={font} className={`font-mono font-bold ${hot ? 'fill-mark-done-ink' : 'fill-ink-soft'}`}>
@@ -589,7 +643,7 @@ function Strip({ state, ids, label, top, cell }: { state: TreeState; ids: readon
   const labelOf = (id: NodeId) => state.nodes[id]?.cells[0]?.label ?? '';
   return (
     <g>
-      <text x={left} y={top - 8} fontSize={10} className="fill-ink-muted font-semibold uppercase" letterSpacing={1}>
+      <text x={left} y={top - 8} fontSize={11} className="fill-ink-muted font-medium">
         {label}
       </text>
       <AnimatePresence initial={false}>
@@ -605,9 +659,9 @@ function Strip({ state, ids, label, top, cell }: { state: TreeState; ids: readon
                 y={-cell / 2}
                 width={cell - 2}
                 height={cell}
-                rx={4}
+                rx={8}
                 strokeWidth={meta ? 2 : 1}
-                className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
+                className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line'}`}
                 style={TWEEN}
               />
               <text textAnchor="middle" dominantBaseline="central" fontSize={12} className={`font-mono font-semibold ${ink(mark)}`}>
@@ -660,10 +714,10 @@ function Table({ state, rows, top, geometry }: { state: TreeState; rows: readonl
                       y={-TABLE_CELL / 2}
                       width={TABLE_CELL - 2}
                       height={TABLE_CELL}
-                      rx={4}
+                      rx={8}
                       strokeWidth={meta ? 2 : 1}
                       strokeDasharray={empty && !meta ? '3 2' : undefined}
-                      className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line-strong'}`}
+                      className={`transition-colors ${meta ? `${meta.fill} ${meta.stroke}` : 'fill-surface stroke-line'}`}
                       style={TWEEN}
                     />
                     <text textAnchor="middle" dominantBaseline="central" fontSize={12} className={`font-mono font-semibold ${ink(mark)}`}>

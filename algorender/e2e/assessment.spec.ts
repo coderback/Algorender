@@ -44,7 +44,8 @@ test('a quiz answer that comes from a common mistake names it, lists it on the m
   // The quiz question itself is due too; answer it to reach the mistake's card.
   if (!(await card.getByText(/a mistake you made before/).isVisible())) {
     await card.getByRole('group', { name: 'Choices' }).getByRole('button').first().click();
-    await card.getByRole('group', { name: 'Rate your recall' }).getByRole('button').first().click();
+    // The grades sit under the card.
+    await tomorrow.getByRole('group', { name: 'Rate your recall' }).getByRole('button').first().click();
   }
   await expect(card.getByText(/a mistake you made before/)).toBeVisible();
   await expect(card.getByText('The mistake this checks')).toHaveCount(0);

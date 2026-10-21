@@ -9,7 +9,9 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
 
 const pages = [
   '/',
-  '/?tab=algorithms',
+  '/start',
+  '/explore',
+  '/explore?kind=algorithms',
   '/learn',
   '/learn/placement',
   '/plan',
@@ -23,6 +25,7 @@ const pages = [
   '/design/url-shortener',
   ...lessons.map((l) => `/learn/${l.slug}`),
   '/compare',
+  '/embed',
   '/design/estimate',
   '/code',
   '/account',
@@ -57,7 +60,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
 test('the theme toggle cycles system → light → dark and is remembered', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
-  await page.goto('/');
+  await page.goto('/explore');
   const html = page.locator('html');
   const toggle = page.getByRole('button', { name: /^Theme:/ });
   await expect(toggle).toHaveAccessibleName('Theme: System. Switch to Light');
@@ -65,7 +68,7 @@ test('the theme toggle cycles system → light → dark and is remembered', asyn
   await expect(html).toHaveAttribute('data-theme', 'light');
   await toggle.click();
   await expect(html).toHaveAttribute('data-theme', 'dark');
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(14, 17, 22)');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(18, 17, 22)');
   await page.reload();
   await expect(html).toHaveAttribute('data-theme', 'dark'); // applied before paint, from storage
   await page.getByRole('button', { name: /^Theme:/ }).click();

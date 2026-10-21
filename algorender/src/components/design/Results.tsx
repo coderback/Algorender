@@ -38,16 +38,16 @@ export function Results({
   const shown = showFault && faultResult ? faultResult : result;
 
   return (
-    <div role="group" aria-labelledby={`${idPrefix}results-title`} className="space-y-5 rounded-xl border border-line-soft bg-surface p-4 shadow-xs sm:p-5">
+    <div role="group" aria-labelledby={`${idPrefix}results-title`} className="flex flex-col gap-5 rounded-card bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id={`${idPrefix}results-title`} className="text-lg font-semibold text-ink">
+        <h2 id={`${idPrefix}results-title`} className="font-display text-title-card">
           Results
         </h2>
         {stale && <p className="text-sm text-warn-ink">The design has changed since this run. Run again to update.</p>}
       </div>
 
       {checks && (
-        <div role="group" aria-labelledby={`${idPrefix}checks-title`} className={`rounded-lg border p-3 ${passed ? 'border-good-line bg-good-soft' : 'border-bad-line bg-bad-soft'}`}>
+        <div role="group" aria-labelledby={`${idPrefix}checks-title`} className={`rounded-well p-4 ${passed ? 'bg-good-soft' : 'bg-bad-soft'}`}>
           <h3 id={`${idPrefix}checks-title`} className="font-semibold text-ink">
             {passed ? 'Every target is met.' : `${checks.filter((c) => !c.ok).length} of ${checks.length} targets missed.`}
           </h3>
@@ -66,7 +66,7 @@ export function Results({
       )}
 
       {faultResult && (
-        <div role="radiogroup" aria-label="Which run to show" className="inline-flex rounded-lg border border-line p-0.5 text-sm">
+        <div role="radiogroup" aria-label="Which run to show" className="inline-flex gap-0.5 rounded-full bg-sunken p-[3px] text-[13px]">
           {[
             [false, 'Normal traffic'],
             [true, faultLabel ?? 'With faults'],
@@ -77,7 +77,7 @@ export function Results({
               role="radio"
               aria-checked={showFault === fault}
               onClick={() => setShowFault(fault as boolean)}
-              className={`rounded-md px-3 py-1 ${showFault === fault ? 'bg-ink text-surface' : 'text-ink-soft hover:bg-subtle'}`}
+              className={`rounded-full px-3 py-1.5 ${showFault === fault ? 'bg-segment font-semibold text-ink shadow-segment' : 'font-medium text-ink-soft hover:text-ink'}`}
             >
               {label as string}
             </button>
@@ -164,9 +164,9 @@ export function Results({
 
 function Stat({ label, value, sub, bad = false }: { label: string; value: string; sub?: string; bad?: boolean }) {
   return (
-    <div className="rounded-lg border border-line-soft bg-subtle px-3 py-2">
+    <div className="rounded-well bg-sunken px-3.5 py-3">
       <dt className="text-xs text-ink-muted">{label}</dt>
-      <dd className={`text-lg font-semibold tabular-nums ${bad ? 'text-bad-ink' : 'text-ink'}`}>{value}</dd>
+      <dd className={`font-display text-[22px] font-bold tabular-nums ${bad ? 'text-bad-ink' : 'text-ink'}`}>{value}</dd>
       {sub && <dd className="text-xs text-ink-muted">{sub}</dd>}
     </div>
   );

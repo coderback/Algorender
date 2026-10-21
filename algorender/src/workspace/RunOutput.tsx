@@ -41,7 +41,7 @@ export function RunOutput({
   return (
     <div className="space-y-4">
       {stale && (
-        <p className="rounded-lg border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn-ink">
+        <p className="rounded-well bg-warn-soft px-4 py-3 text-sm text-warn-ink">
           You’ve changed the code since this run. Run it again to update the picture and the tests.
         </p>
       )}
@@ -107,26 +107,24 @@ function Results({ outcome, exercise }: { outcome: Outcome; exercise: Exercise }
     <div className="space-y-3" aria-live="polite">
       {result.error && <ErrorCard error={result.error} />}
       {verdicts && (
-        <div role="group" aria-label="Tests" className="rounded-xl border border-line-soft bg-surface shadow-xs">
+        <div role="group" aria-label="Tests" className="flex flex-col gap-3 rounded-card bg-surface p-5">
           <div
-            className={`flex items-center gap-2 border-b border-line-soft px-4 py-2.5 text-sm font-semibold ${
-              allPass ? 'text-good-ink' : 'text-ink'
-            }`}
+            className={`flex flex-wrap items-center gap-2 font-display text-title-card ${allPass ? 'text-good-ink' : 'text-ink'}`}
           >
             {allPass ? <FiCheck aria-hidden /> : null}
             {allPass ? `All ${total} tests pass.` : `${passed} of ${total} tests pass.`}
             {allPass && (
               <Link
                 href={`/visualisers/${exercise.visualiser}`}
-                className="ml-auto inline-flex items-center gap-1 text-xs font-normal text-accent-ink hover:underline"
+                className="ml-auto inline-flex items-center gap-1 font-sans text-[13px] font-semibold text-accent-ink hover:underline"
               >
                 Compare with the built-in visualiser <FiArrowRight aria-hidden />
               </Link>
             )}
           </div>
-          <ul className="divide-y divide-line-soft text-sm">
+          <ul className="flex flex-col gap-1.5 text-sm">
             {verdicts.map(({ name, verdict }) => (
-              <li key={name} className="flex gap-3 px-4 py-2">
+              <li key={name} className="flex gap-3 rounded-[14px] bg-sunken px-3.5 py-2.5">
                 <span className={`mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${verdict.pass ? 'text-good-ink' : 'text-bad-ink'}`}>
                   {verdict.pass ? <FiCheck aria-hidden /> : <FiX aria-hidden />}
                   {verdict.pass ? 'Pass' : 'Fail'}
@@ -138,15 +136,15 @@ function Results({ outcome, exercise }: { outcome: Outcome; exercise: Exercise }
               </li>
             ))}
           </ul>
-          <p className="border-t border-line-soft px-4 py-2 text-xs text-ink-muted">
+          <p className="text-xs text-ink-muted">
             Checked in your browser, as practice: passing here isn’t a proof your code is correct.
           </p>
         </div>
       )}
       {output.length > 0 && (
-        <div role="group" aria-label="Output" className="rounded-xl border border-line-soft bg-surface shadow-xs">
-          <div className="border-b border-line-soft px-4 py-2 text-sm font-semibold text-ink">Output</div>
-          <pre className="max-h-48 overflow-auto px-4 py-2 font-mono text-[13px] whitespace-pre-wrap text-ink-soft">{output.join('\n')}</pre>
+        <div role="group" aria-label="Output" className="flex flex-col gap-2 rounded-card bg-surface p-5">
+          <div className="text-[13px] font-semibold tracking-[0.06em] text-ink-muted uppercase">Output</div>
+          <pre className="max-h-48 overflow-auto rounded-well bg-code px-4 py-3 font-mono text-[13px] whitespace-pre-wrap text-code-ink">{output.join('\n')}</pre>
         </div>
       )}
     </div>
@@ -164,16 +162,16 @@ const ERROR_TITLE: Record<RunError['kind'], string> = {
 
 export function ErrorCard({ error }: { error: RunError }) {
   return (
-    <div role="alert" className="flex gap-3 rounded-xl border border-bad-line bg-bad-soft px-4 py-3 text-sm">
+    <div role="alert" className="flex gap-3 rounded-well bg-bad-soft px-4 py-3.5 text-sm">
       <FiAlertTriangle aria-hidden className="mt-0.5 shrink-0 text-bad-ink" />
       <div className="min-w-0">
-        <p className="font-semibold text-bad-ink">
+        <p className="font-semibold text-bad-title">
           {ERROR_TITLE[error.kind]}
           {error.line != null && ` on line ${error.line}`}
         </p>
-        <p className="font-mono text-[13px] break-words whitespace-pre-wrap text-ink">{error.message}</p>
+        <p className="font-mono text-[13px] break-words whitespace-pre-wrap text-bad-title">{error.message}</p>
         {error.kind !== 'syntax' && error.kind !== 'compile' && error.kind !== 'internal' && (
-          <p className="mt-1 text-ink-soft">The picture below shows everything up to that point.</p>
+          <p className="mt-1 text-bad-ink">The picture below shows everything up to that point.</p>
         )}
       </div>
     </div>

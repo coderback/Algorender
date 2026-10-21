@@ -1,4 +1,5 @@
 import createMDX from '@next/mdx';
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -11,6 +12,18 @@ const nextConfig = {
   // and common mistakes from the MDX at run time.
   serverExternalPackages: ['@electric-sql/pglite'],
   outputFileTracingIncludes: { '/api/**/*': ['./drizzle/**/*'], '/api/explain': ['./src/content/lessons/*.mdx'] },
+  // The catalogue moved from / to /explore; old ?tab= links land on its kind.
+  async redirects() {
+    return [
+      {
+        source: '/',
+        has: [{ type: 'query', key: 'tab', value: '(?<kind>data-structures|algorithms|math|systems)' }],
+        destination: '/explore?kind=:kind',
+        permanent: true,
+      },
+      { source: '/', has: [{ type: 'query', key: 'tab' }], destination: '/explore', permanent: true },
+    ];
+  },
 };
 
 // Lessons are MDX (src/content/lessons). Plugins are named as strings so
@@ -22,4 +35,12 @@ const withMDX = createMDX({
   },
 });
 
-export default withMDX(nextConfig);
+// Development-only pages are named page.dev.tsx (the /dev/ui sheet of the
+// design system), so production builds leave them out.
+const config = (phase) =>
+  withMDX({
+    ...nextConfig,
+    pageExtensions: phase === PHASE_DEVELOPMENT_SERVER ? ['dev.tsx', 'tsx', 'ts', 'jsx', 'js'] : ['tsx', 'ts', 'jsx', 'js'],
+  });
+
+export default config;

@@ -1,5 +1,5 @@
 import type { StatSpec } from '@/engine/module';
-import type { Chip, Graph, Mark, NodeId } from '@/viz/graph/types';
+import type { Chip, Graph, Mark, NodeId, Region, RegionTone } from '@/viz/graph/types';
 import { adjacency } from './model';
 
 /**
@@ -90,4 +90,19 @@ export function nodeChips(
     ...(opts.sub?.(id) != null && { sub: opts.sub(id) }),
     ...(opts.mark?.(id, i) && { mark: opts.mark(id, i) }),
   }));
+}
+
+/** Tints for neighbouring regions, in turn, so two next to each other differ. */
+const REGION_TONES: readonly RegionTone[] = ['sky', 'mint', 'butter', 'lilac', 'peach', 'teal', 'rose'];
+
+/** BFS levels as regions behind the graph (V4): every node at one distance from the start in one soft band. */
+export function levelRegions(level: ReadonlyMap<NodeId, number>): Region[] {
+  const byLevel = new Map<number, NodeId[]>();
+  for (const [id, k] of level) byLevel.set(k, [...(byLevel.get(k) ?? []), id]);
+  return [...byLevel].sort(([a], [b]) => a - b).map(([k, members]) => ({ id: `level-${k}`, label: `level ${k}`, members, tone: REGION_TONES[k % REGION_TONES.length] }));
+}
+
+/** Strongly connected components as regions, named S1, S2… as in the components panel. */
+export function componentRegions(components: readonly (readonly NodeId[])[]): Region[] {
+  return components.map((members, i) => ({ id: `S${i + 1}`, label: `S${i + 1}`, members, tone: REGION_TONES[i % REGION_TONES.length] }));
 }

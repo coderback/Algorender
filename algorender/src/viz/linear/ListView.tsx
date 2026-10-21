@@ -2,24 +2,25 @@
 
 import { AnimatePresence, motion } from 'motion/react';
 import { useId } from 'react';
+import { cx } from '@/components/ui/cx';
 import { MARKS, type MarkKey } from '@/viz/marks';
+import { fillFor, MarkBadge, Pointer, STAGE_CAPTION } from '@/viz/parts';
 import type { ListNode, ListState } from './types';
 import { useWidth } from './useWidth';
-import { MarkSkin } from './ValueBox';
 
 // Geometry in CSS pixels. Nodes are [value | next] boxes; rows wrap to the width.
-const NODE_W = 76;
-const VALUE_W = 46;
-const NODE_H = 40;
+const NODE_W = 82;
+const VALUE_W = 50;
+const NODE_H = 44;
 const GAP = 36;
 /** Room above a row for pointer labels (head, cur…), stacked upwards. */
-const LABELS_H = 34;
+const LABELS_H = 40;
 /** Room below a row for detached nodes (being linked in or just unlinked) and their labels. */
 const BELOW_H = 84;
 const ROW_H = LABELS_H + NODE_H + BELOW_H;
 /** How far below its row a detached node sits. */
 const DROP = NODE_H + 26;
-const LABEL_STEP = 14;
+const LABEL_STEP = 21;
 
 type Pos = { x: number; y: number; lowered: boolean };
 
@@ -61,7 +62,7 @@ export function ListView({ state }: { state: ListState }) {
     const k = stacked.get(p.target) ?? 0;
     stacked.set(p.target, k + 1);
     const at = pos.get(p.target)!;
-    return [{ label: p.label, x: at.x, y: at.lowered ? at.y + NODE_H + 2 + k * LABEL_STEP : at.y - 16 - k * LABEL_STEP, below: at.lowered }];
+    return [{ label: p.label, x: at.x, y: at.lowered ? at.y + NODE_H + 4 + k * LABEL_STEP : at.y - 22 - k * LABEL_STEP, below: at.lowered }];
   });
   const nullPointers = state.pointers.filter((p) => p.target == null);
 
@@ -71,11 +72,11 @@ export function ListView({ state }: { state: ListState }) {
       {/* Drawn once the width is known (before the first paint), so nodes don't animate in from a provisional layout. */}
       {width > 0 && (
         <div aria-hidden>
-          <p className="text-center font-mono text-xs text-ink-soft">{state.summary}</p>
-          <div className="flex h-6 flex-wrap items-center gap-x-4 font-mono text-[11px] text-ink-muted">
+          <p className={STAGE_CAPTION}>{state.summary}</p>
+          <div className="flex h-7 flex-wrap items-center gap-x-4 font-mono text-[11px] text-ink-muted">
             {nullPointers.map((p) => (
               <span key={p.label}>
-                <span className="font-semibold text-ink-soft">{p.label}</span> = null
+                <Pointer>{p.label}</Pointer> = null
               </span>
             ))}
           </div>
@@ -87,7 +88,7 @@ export function ListView({ state }: { state: ListState }) {
             )}
             <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
               <defs>
-                <Arrowhead id={`${uid}-neutral`} className="fill-ink-muted" />
+                <Arrowhead id={`${uid}-neutral`} className="fill-ink-faint" />
                 {linkMarks.map((m) => (
                   <Arrowhead key={m} id={`${uid}-${m}`} className={MARKS[m].fill} />
                 ))}
@@ -102,10 +103,10 @@ export function ListView({ state }: { state: ListState }) {
                       animate={{ opacity: 1, d: a.d }}
                       exit={{ opacity: 0 }}
                       fill="none"
-                      strokeWidth={mark ? 2.5 : 1.5}
+                      strokeWidth={mark ? 3.5 : 2.5}
                       strokeLinejoin="round"
                       markerEnd={`url(#${uid}-${mark ?? 'neutral'})`}
-                      className={`transition-colors ${mark ? MARKS[mark].stroke : 'stroke-ink-muted'}`}
+                      className={`transition-colors ${mark ? MARKS[mark].stroke : 'stroke-ink-faint'}`}
                     />
                   );
                 })}
@@ -129,13 +130,13 @@ export function ListView({ state }: { state: ListState }) {
               {labels.map((l) => (
                 <motion.div
                   key={`ptr-${l.label}`}
-                  className="absolute top-0 left-0 text-center font-mono text-[11px] leading-[14px] font-semibold whitespace-nowrap text-ink-soft"
+                  className="absolute top-0 left-0 flex justify-center"
                   style={{ width: VALUE_W }}
                   initial={{ opacity: 0, x: l.x, y: l.y }}
                   animate={{ opacity: 1, x: l.x, y: l.y }}
                   exit={{ opacity: 0 }}
                 >
-                  {l.below ? `↑${l.label}` : `${l.label}↓`}
+                  <Pointer>{l.below ? `↑ ${l.label}` : `${l.label} ↓`}</Pointer>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -148,22 +149,19 @@ export function ListView({ state }: { state: ListState }) {
 
 function NodeBox({ node, mark, linkMark }: { node: ListNode; mark: MarkKey | undefined; linkMark: MarkKey | undefined }) {
   return (
-    <div
-      className={`relative flex rounded-md bg-surface font-mono text-ink shadow-xs ring-1 ring-inset ${mark ? 'ring-ink-faint' : 'ring-line-strong'}`}
-      style={{ width: NODE_W, height: NODE_H }}
-    >
-      <MarkSkin mark={mark}>
-        <span className="relative grid place-items-center text-sm font-semibold tabular-nums" style={{ width: VALUE_W }}>
-          {node.value}
-        </span>
-        <span className="relative grid flex-1 place-items-center border-l border-line-strong">
-          {node.next ? (
-            <span className={`h-2 w-2 rounded-full ${linkMark ? MARKS[linkMark].bg : 'bg-ink-soft'}`} />
-          ) : (
-            <span className="text-xs text-ink-muted">∅</span>
-          )}
-        </span>
-      </MarkSkin>
+    // A node is its value (filled in its mark) and its next pointer (white, with a dot where the arrow leaves).
+    <div className="relative flex font-mono" style={{ width: NODE_W, height: NODE_H }}>
+      <span className={cx('grid place-items-center rounded-l-[12px] text-sm font-semibold tabular-nums transition-colors', fillFor(mark))} style={{ width: VALUE_W }}>
+        {node.value}
+      </span>
+      <span className="grid flex-1 place-items-center rounded-r-[12px] bg-surface ring-1 ring-line ring-inset">
+        {node.next ? (
+          <span className={`h-2 w-2 rounded-full ${linkMark ? MARKS[linkMark].bg : 'bg-ink-muted'}`} />
+        ) : (
+          <span className="text-xs text-ink-muted">∅</span>
+        )}
+      </span>
+      <MarkBadge mark={mark} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import type { Tone } from '@/viz/marks';
 import { askInOrder, numbersIn, plain, plotFrame } from '@/viz/plot/frame';
 import { fmt, fmtVec, round } from '@/viz/plot/geometry';
 import type { PlanePart, PlotPart, PlotState, Shape, Vec } from '@/viz/plot/types';
-import { contourShape, parseSurface, SURFACES, type Surface, type SurfaceId } from './surfaces';
+import { contourShape, parseSurface, SURFACES, washShape, type Surface, type SurfaceId } from './surfaces';
 
 export const RACE_STEPS = 60;
 /** Within this of the lowest value counts as "at the bottom". */
@@ -91,7 +91,7 @@ function* run({ surface, start }: RaceInput): Generator<Frame<PlotState>> {
   const leader = (k: number) => OPTIMIZERS[paths.map((p) => gap(p, k)).reduce((best, g, i, all) => (g < all[best] - 1e-12 ? i : best), 0)];
 
   const parts = (k: number): PlotPart[] => {
-    const shapes: Shape[] = [contourShape(s), ...s.minima.map((m, i): Shape => ({ kind: 'point', id: `min${i}`, at: m, mark: 'found', size: 'sm' }))];
+    const shapes: Shape[] = [washShape(s), contourShape(s), ...s.minima.map((m, i): Shape => ({ kind: 'point', id: `min${i}`, at: m, mark: 'found', size: 'sm' }))];
     OPTIMIZERS.forEach((o, i) => shapes.push({ kind: 'path', id: `trail-${o.id}`, points: paths[i].xs.slice(0, at(paths[i], k) + 1), tone: o.tone }));
     OPTIMIZERS.forEach((o, i) => shapes.push({ kind: 'point', id: `x-${o.id}`, at: paths[i].xs[at(paths[i], k)], tone: o.tone, label: o.short }));
     const plane: PlanePart = {

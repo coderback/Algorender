@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { FiCornerDownRight, FiCrosshair, FiHelpCircle, FiLoader, FiMessageCircle, FiX } from 'react-icons/fi';
+import { FiCornerDownRight, FiEye, FiLoader, FiX, FiZap } from 'react-icons/fi';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import { authClient } from '@/lib/auth-client';
 import { LEVEL_NAMES, unlockedLevel, type Level } from '@/lib/tutor-ladder';
 import type { ProblemLanguage } from '@/problems/languages';
@@ -56,12 +56,11 @@ export function TutorPanel({
   if (session.isPending) return null;
   if (!session.data) {
     return (
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line-soft bg-surface px-4 py-3 text-sm text-ink-soft">
-        <FiHelpCircle aria-hidden className="text-accent-ink" />
-        Stuck? The tutor gives hints that point the way, never the answer.
-        <Link href={`/account?next=${encodeURIComponent(`/${item.kind === 'problem' ? 'practice' : 'code'}/${item.slug}`)}`} className="font-medium text-accent-ink hover:underline">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-tile bg-surface px-5 py-4 text-sm text-ink-soft">
+        <span className="max-w-xs">Stuck? The tutor gives hints that point the way, never the answer.</span>
+        <ButtonLink href={`/account?next=${encodeURIComponent(`/${item.kind === 'problem' ? 'practice' : 'code'}/${item.slug}`)}`} size="s">
           Sign in to ask it
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -84,13 +83,10 @@ export function TutorPanel({
       <button
         type="button"
         onClick={() => void openPanel()}
-        className="flex w-full items-center gap-3 rounded-xl border border-line-soft bg-surface px-4 py-3 text-left text-sm hover:border-accent-line hover:bg-accent-soft"
+        className="flex w-full flex-col gap-1.5 rounded-tile bg-feature px-6 py-5 text-left text-on-feature transition-transform duration-150 ease-standard hover:-translate-y-0.5"
       >
-        <FiMessageCircle aria-hidden className="shrink-0 text-accent-ink" />
-        <span>
-          <span className="font-medium text-ink">Stuck? Ask the tutor.</span>{' '}
-          <span className="text-ink-soft">Hints that point the way, one step at a time, never the answer.</span>
-        </span>
+        <span className="font-display text-[24px] leading-tight font-bold">Stuck? Ask the tutor.</span>
+        <span className="text-sm text-feature-muted">Hints that point the way, one step at a time, never the answer.</span>
       </button>
     );
   }
@@ -135,34 +131,42 @@ export function TutorPanel({
 
   const lastTutor = [...turns].reverse().find((t) => t.role === 'tutor');
   return (
-    <section aria-labelledby="tutor-title" className="space-y-3 rounded-xl border border-accent-line bg-surface p-4 shadow-xs">
+    <section aria-labelledby="tutor-title" className="flex flex-col gap-3 rounded-[28px] bg-track-lilac p-5 text-track-lilac-ink">
       <div className="flex items-center justify-between gap-2">
-        <h2 id="tutor-title" className="flex items-center gap-2 font-semibold text-ink">
-          <FiMessageCircle aria-hidden className="text-accent-ink" /> Tutor
+        <h2 id="tutor-title" className="font-display text-[22px] font-bold text-track-lilac-title">
+          Tutor
         </h2>
-        <span className="flex items-center gap-3 text-xs text-ink-muted">
-          {status && `${status.turnsLeft} ${status.turnsLeft === 1 ? 'turn' : 'turns'} left today`}
-          <button type="button" onClick={() => setOpen(false)} aria-label="Close the tutor" className="rounded p-1 hover:bg-sunken">
+        <span className="flex items-center gap-2">
+          {status && (
+            <span className="rounded-full bg-chip-on-track px-3 py-1 text-xs font-semibold">
+              {status.turnsLeft} {status.turnsLeft === 1 ? 'turn' : 'turns'} left today
+            </span>
+          )}
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close the tutor" className="inline-flex size-9 items-center justify-center rounded-full bg-surface text-ink hover:bg-subtle">
             <FiX aria-hidden />
           </button>
         </span>
       </div>
 
       {turns.length > 0 && (
-        <ol className="space-y-2" aria-live="polite">
+        <ol className="flex flex-col gap-2" aria-live="polite">
           {turns.map((t, i) =>
             t.role === 'tutor' ? (
-              <li key={i} className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-ink">
-                {t.level && <div className="mb-1 text-xs font-medium text-accent-ink">{LEVEL_NAMES[t.level]}</div>}
+              <li key={i} className="rounded-[18px] bg-surface px-4 py-3 text-sm text-ink">
+                {t.level && (
+                  <div className="mb-1 text-xs font-bold tracking-[0.04em] text-accent-ink uppercase">
+                    {t.level} · {LEVEL_NAMES[t.level]}
+                  </div>
+                )}
                 <Reply text={t.text} />
                 {t.line != null && (
-                  <button type="button" onClick={() => onPoint(t.line!)} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-accent-ink hover:underline">
-                    <FiCrosshair aria-hidden /> Show line {t.line}
+                  <button type="button" onClick={() => onPoint(t.line!)} className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-ink hover:bg-sunken">
+                    <FiEye aria-hidden /> Show line {t.line}
                   </button>
                 )}
               </li>
             ) : (
-              <li key={i} className="ml-8 rounded-lg bg-sunken px-3 py-2 text-sm text-ink-soft">
+              <li key={i} className="ml-8 rounded-[18px] bg-primary px-4 py-3 text-sm text-on-primary">
                 {t.text}
               </li>
             ),
@@ -172,7 +176,7 @@ export function TutorPanel({
 
       {(first || failedRun) && (
         <div>
-          <label htmlFor="tutor-explain" className="mb-1 block text-sm font-medium text-ink">
+          <label htmlFor="tutor-explain" className="mb-1.5 block text-sm font-semibold">
             {first ? 'First, in a sentence: what do you think is happening?' : 'What do you think is wrong now? (a review needs this)'}
           </label>
           <textarea
@@ -181,7 +185,7 @@ export function TutorPanel({
             onChange={(e) => setExplanation(e.target.value)}
             rows={2}
             maxLength={600}
-            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink"
+            className="w-full rounded-[18px] bg-surface px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
             placeholder="e.g. It works on the first example but returns the same index twice on the second."
           />
         </div>
@@ -189,48 +193,52 @@ export function TutorPanel({
 
       {lastTutor && (
         <div>
-          <label htmlFor="tutor-reflect" className="mb-1 flex items-center gap-1.5 text-sm text-ink-soft">
-            <FiCornerDownRight aria-hidden /> What will you try? <span className="text-ink-muted">(optional, sent with your next turn)</span>
+          <label htmlFor="tutor-reflect" className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+            <FiCornerDownRight aria-hidden /> What will you try? <span className="font-normal">(optional, sent with your next turn)</span>
           </label>
           <input
             id="tutor-reflect"
             value={reflection}
             onChange={(e) => setReflection(e.target.value)}
             maxLength={300}
-            className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-ink"
+            className="h-11 w-full rounded-[18px] bg-surface px-4 text-sm text-ink"
           />
         </div>
       )}
 
+      {outOfTurns && (
+        <p className="rounded-[18px] bg-track-peach px-4 py-3 text-sm text-track-peach-title">
+          <strong>You’ve used today’s turns,</strong> so they come back tomorrow. The hints so far stay here.
+        </p>
+      )}
+
       {error && (
-        <p role="alert" className="rounded-lg border border-warn-line bg-warn-soft px-3 py-2 text-sm text-warn-ink">
+        <p role="alert" className="rounded-[18px] bg-warn-soft px-4 py-3 text-sm text-warn-title">
           {error}
         </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
+        <Button
           disabled={busy || !status || outOfTurns || (first && explanation.trim().length < 5)}
           onClick={() => void send('hint')}
-          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-50"
+          icon={busy ? <FiLoader aria-hidden className="animate-spin" /> : first ? <FiZap aria-hidden /> : undefined}
+          block={first}
         >
-          {busy && <FiLoader aria-hidden className="animate-spin" />}
           {first ? 'Get a nudge' : unlocked > top ? `Next hint: ${LEVEL_NAMES[unlocked]}` : `Another hint: ${LEVEL_NAMES[unlocked]}`}
-        </button>
+        </Button>
         {!first && (
-          <button
-            type="button"
+          <Button
+            kind="onTrack"
             disabled={busy || !status || outOfTurns || !failedRun || explanation.trim().length < 5}
             onClick={() => void send('review')}
             title={failedRun ? undefined : 'Run the tests first, so the review has something to explain'}
-            className="rounded-full border border-line px-4 py-1.5 text-sm text-ink hover:bg-subtle disabled:opacity-50"
           >
             Review my code
-          </button>
+          </Button>
         )}
       </div>
-      {!first && top >= 3 && unlocked < 4 && <p className="text-xs text-ink-muted">A partial fix unlocks after a failed run and two hints on this problem.</p>}
+      {!first && top >= 3 && unlocked < 4 && <p className="text-xs">A partial fix unlocks after a failed run and two hints on this problem.</p>}
 
       {!first && (
         <form
@@ -249,14 +257,14 @@ export function TutorPanel({
             onChange={(e) => setQuestion(e.target.value)}
             maxLength={600}
             placeholder="Ask a follow-up question"
-            className="min-w-0 grow rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-ink"
+            className="h-11 min-w-0 grow rounded-[18px] bg-surface px-4 text-sm text-ink placeholder:text-ink-muted"
           />
-          <button type="submit" disabled={busy || outOfTurns || question.trim().length < 3} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink hover:bg-subtle disabled:opacity-50">
+          <Button type="submit" kind="onTrack" disabled={busy || outOfTurns || question.trim().length < 3}>
             Ask
-          </button>
+          </Button>
         </form>
       )}
-      <p className="text-xs text-ink-muted">The tutor is an AI and can be wrong. It never writes the whole solution: working it out is what makes it stick.</p>
+      <p className="text-xs">The tutor is an AI and can be wrong. It never writes the whole solution: working it out is what makes it stick.</p>
     </section>
   );
 }
@@ -264,7 +272,7 @@ export function TutorPanel({
 /** A reply as Markdown, with no links, images or HTML: it comes from a model. */
 function Reply({ text }: { text: string }) {
   return (
-    <div className="space-y-1.5 [&_code]:rounded [&_code]:bg-surface [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em] [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-surface [&_pre]:p-2">
+    <div className="space-y-1.5 leading-relaxed [&_code]:rounded [&_code]:bg-sunken [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em] [&_pre]:overflow-x-auto [&_pre]:rounded-[12px] [&_pre]:bg-sunken [&_pre]:p-3">
       <ReactMarkdown allowedElements={['p', 'ul', 'ol', 'li', 'strong', 'em', 'code', 'pre', 'br']} unwrapDisallowed skipHtml>
         {text}
       </ReactMarkdown>

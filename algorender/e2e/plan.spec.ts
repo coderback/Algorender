@@ -19,15 +19,16 @@ test('a study plan schedules a goal and moves on as concepts become known', asyn
 
   await expect(page.getByRole('heading', { name: 'Coding interviews' })).toBeVisible();
   await expect(page.getByText('On track.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'This week' })).toBeVisible();
-  const upNext = page.locator('section', { has: page.getByRole('heading', { name: 'Up next' }) });
+  await expect(page.getByRole('heading', { name: /Week \d+ · now/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What’s left this week' })).toBeVisible();
+  const upNext = page.locator('article', { has: page.getByText('Up next', { exact: true }) });
   await expect(upNext.getByRole('heading', { level: 3 })).toHaveText('Big-O and growth');
   await expectAccessible(page);
 
   await upNext.getByRole('button', { name: 'I already know this' }).click();
   await expect(upNext.getByRole('heading', { level: 3 })).toHaveText('Arrays');
-  await expect(page.getByText('1 of 27 concepts')).toBeVisible();
-  await expect(upNext.getByRole('link', { name: /Practise:/ }).first()).toBeVisible();
+  await expect(page.getByRole('img', { name: '1 of 27 concepts known' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Practise:/ }).first()).toBeVisible();
 
   // The concept map links to the plan, and the plan survives a reload (it lives in the event log).
   await page.goto('/learn');

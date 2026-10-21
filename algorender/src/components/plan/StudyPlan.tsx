@@ -1,11 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState, type ReactNode } from 'react';
-import { FiArrowRight, FiBookOpen, FiCheck, FiClock, FiCode, FiPlayCircle, FiRefreshCw, FiTarget } from 'react-icons/fi';
-import { StatusChip } from '@/components/learn/Mastery';
+import { useMemo, useState } from 'react';
+import { FiArrowRight, FiCheck } from 'react-icons/fi';
+import { Button, ButtonLink } from '@/components/ui/Button';
+import { Card, FeatureCard, TrackCard, trackTitle } from '@/components/ui/Card';
+import { Chip, DifficultyChip, displayStatus, StatusChip } from '@/components/ui/Chip';
+import { cx } from '@/components/ui/cx';
 import type { ConceptCatalogEntry } from '@/content/mastery';
 import type { Goal } from '@/content/goals';
+import { TRACK_CLASSES, trackColour } from '@/data/tracks';
 import { record, useMastery, useProblemProgress, useProgressSnapshot, useReviewCards } from '@/progress/hooks';
 import { KNOWN, isReady, type MasteryGraph } from '@/progress/mastery';
 import { goalConcepts, HOUR_CHOICES, planView, REVIEW_SHARE, type PlanSettings, type PlanView, type PlanWeek } from '@/progress/plan';
@@ -13,12 +17,12 @@ import { dueToday } from '@/progress/review';
 
 type Props = { graph: MasteryGraph; goals: readonly Goal[]; catalog: Record<string, ConceptCatalogEntry> };
 
-const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
-const hoursOf = (minutes: number) => (minutes < 60 ? `${minutes} min` : `${Math.round((minutes / 60) * 10) / 10} h`);
+const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const hoursOf = (minutes: number) => (minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60}` : ''}`);
 
 /**
- * A study plan: pick a goal and hours a week, then see what to do next and
- * week by week. Everything is computed from the learner's events
+ * A study plan: pick a goal and hours a week, then see the goal, the weeks
+ * and what's left this week. Everything is computed from the learner's events
  * (src/progress/plan.ts), so it re-plans itself as concepts become known.
  */
 export function StudyPlan({ graph, goals, catalog }: Props) {
@@ -60,248 +64,282 @@ function PlanSetup({
     onDone();
   };
   return (
-    <form
-      className="space-y-6 rounded-2xl border border-line-soft bg-surface p-6 shadow-xs"
-      onSubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
+    <Card
+      as="div"
+      className="gap-6 p-6 sm:p-8"
     >
-      {!placed && (
-        <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm text-accent-ink">
-          Tip: take the <Link href="/learn/placement" className="font-medium underline underline-offset-2">placement check</Link> first, so the plan
-          skips what you already know.
-        </p>
-      )}
-      <fieldset>
-        <legend className="mb-3 font-semibold text-ink">Your goal</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {goals.map((g) => {
-            const rest = left(g);
-            const total = rest.reduce((s, id) => s + (minutes[id] ?? 20), 0);
-            return (
-              <label
-                key={g.id}
-                className={`flex cursor-pointer flex-col rounded-xl border p-4 text-sm ${goal === g.id ? 'border-accent-line bg-accent-soft' : 'border-line hover:bg-subtle'}`}
-              >
-                <span className="flex items-center gap-2 font-medium text-ink">
-                  <input type="radio" name="goal" value={g.id} checked={goal === g.id} onChange={() => setGoal(g.id)} className="accent-[var(--color-accent)]" />
-                  {g.title}
-                </span>
-                <span className="mt-1 text-ink-soft">{g.summary}</span>
-                <span className="mt-2 text-xs text-ink-muted">
-                  {rest.length} {rest.length === 1 ? 'concept' : 'concepts'} to go · about {Math.round(total / 60)} hours
-                </span>
-              </label>
-            );
-          })}
+      <form
+        className="flex flex-col gap-7"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save();
+        }}
+      >
+        <div className="flex flex-col gap-2">
+          <h2 className="font-display text-title-section">{current ? 'Change your plan' : 'Make a study plan'}</h2>
+          <p className="max-w-2xl text-[15px] text-ink-soft">
+            A goal and a few hours a week become a schedule over the concept map, in the order the ideas build on each other. It skips what you already know and re-plans as you learn.
+          </p>
         </div>
-      </fieldset>
-      <fieldset>
-        <legend className="mb-3 font-semibold text-ink">Hours a week</legend>
-        <div className="flex flex-wrap gap-2">
-          {HOUR_CHOICES.map((h) => (
-            <label key={h} className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm ${hours === h ? 'border-accent-line bg-accent-soft text-accent-ink' : 'border-line text-ink-soft hover:bg-subtle'}`}>
-              <input type="radio" name="hours" value={h} checked={hours === h} onChange={() => setHours(h)} className="sr-only" />
-              {h} h
-            </label>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-ink-muted">About {Math.round(REVIEW_SHARE * 100)}% of it is kept for the daily review queue.</p>
-      </fieldset>
-      <div>
-        <label htmlFor="target" className="mb-1 block font-semibold text-ink">
-          Target date <span className="font-normal text-ink-muted">(optional)</span>
-        </label>
-        <input
-          id="target"
-          type="date"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          className="rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink"
-        />
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <button type="submit" className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-strong">
-          {current ? 'Update the plan' : 'Make my plan'} <FiArrowRight aria-hidden />
-        </button>
-        {current && (
-          <button type="button" onClick={onDone} className="rounded-full px-4 py-2 text-sm text-ink-soft hover:bg-subtle">
-            Cancel
-          </button>
+        {!placed && (
+          <p className="rounded-well bg-accent-soft px-4 py-3 text-sm text-accent-ink">
+            Tip: take the{' '}
+            <Link href="/learn/placement" className="font-semibold underline underline-offset-2">
+              placement check
+            </Link>{' '}
+            first, so the plan skips what you already know.
+          </p>
         )}
-      </div>
-    </form>
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-3 text-[15px] font-semibold">Your goal</legend>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {goals.map((g) => {
+              const rest = left(g);
+              const total = rest.reduce((s, id) => s + (minutes[id] ?? 20), 0);
+              const on = goal === g.id;
+              return (
+                <label
+                  key={g.id}
+                  className={cx(
+                    'flex cursor-pointer gap-3 rounded-tile p-4 text-sm ring-[1.5px] ring-inset transition-colors duration-150 ease-standard',
+                    on ? 'bg-sunken ring-2 ring-primary' : 'ring-line hover:ring-line-strong',
+                  )}
+                >
+                  <input type="radio" name="goal" value={g.id} checked={on} onChange={() => setGoal(g.id)} className="mt-0.5 size-4 accent-[var(--color-accent)]" />
+                  <span className="flex flex-col gap-1">
+                    <span className="text-[15px] font-semibold text-ink">{g.title}</span>
+                    <span className="text-ink-soft">{g.summary}</span>
+                    <span className="text-xs text-ink-muted">
+                      {rest.length} {rest.length === 1 ? 'concept' : 'concepts'} to go · about {Math.round(total / 60)} hours
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend className="mb-3 text-[15px] font-semibold">Hours a week</legend>
+          <div className="inline-flex flex-wrap gap-1 rounded-full bg-sunken p-1">
+            {HOUR_CHOICES.map((h) => (
+              <label
+                key={h}
+                className={cx(
+                  'cursor-pointer rounded-full px-4 py-2 text-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+                  hours === h ? 'bg-segment font-semibold text-ink shadow-segment' : 'text-ink-soft hover:text-ink',
+                )}
+              >
+                <input type="radio" name="hours" value={h} checked={hours === h} onChange={() => setHours(h)} className="sr-only" />
+                {h} h
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-ink-muted">About {Math.round(REVIEW_SHARE * 100)}% of it is kept for the daily review queue.</p>
+        </fieldset>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="target" className="text-[15px] font-semibold">
+            Target date <span className="font-normal text-ink-muted">(optional)</span>
+          </label>
+          <input id="target" type="date" value={target} onChange={(e) => setTarget(e.target.value)} className="h-12 w-fit rounded-[16px] bg-sunken px-4 text-[15px] text-ink" />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit" size="l" trailing={<FiArrowRight aria-hidden />}>
+            {current ? 'Update the plan' : 'Make my plan'}
+          </Button>
+          {current && (
+            <Button kind="ghost" size="l" onClick={onDone}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+function Ring({ known, learning, total }: { known: number; learning: number; total: number }) {
+  const r = 56;
+  const c = 2 * Math.PI * r;
+  const share = (n: number) => (total ? (n / total) * c : 0);
+  return (
+    <svg viewBox="0 0 140 140" className="size-36 shrink-0 -rotate-90" aria-hidden>
+      <circle cx="70" cy="70" r={r} fill="none" strokeWidth="14" className="stroke-on-feature/12" />
+      <circle cx="70" cy="70" r={r} fill="none" strokeWidth="14" strokeLinecap="round" className="stroke-feature-accent" strokeDasharray={`${share(known)} ${c}`} />
+      {learning > 0 && (
+        <circle cx="70" cy="70" r={r} fill="none" strokeWidth="14" strokeLinecap="round" className="stroke-track-peach-bar" strokeDasharray={`${share(learning)} ${c}`} strokeDashoffset={-share(known)} />
+      )}
+    </svg>
   );
 }
 
 function PlanBoard({ view, graph, catalog, now, onEdit }: { view: PlanView; graph: MasteryGraph; catalog: Record<string, ConceptCatalogEntry>; now: Date; onEdit: () => void }) {
-  const titleOf = useMemo(() => new Map(graph.concepts.map((c) => [c.id, c.title])), [graph]);
+  const byId = useMemo(() => new Map(graph.concepts.map((c) => [c.id, c])), [graph]);
   const cards = useReviewCards();
   const reviews = dueToday(cards, now).length;
   const total = view.concepts.length;
-  const next = view.weeks[0]?.items[0];
+  const known = view.done.length;
+  const learning = view.concepts.filter((id) => view.mastery.get(id)?.status === 'learning').length;
+  const reviewHours = Math.round(view.settings.hours * REVIEW_SHARE * 10) / 10;
   const status =
     view.weeks.length === 0
-      ? { text: 'Goal reached: everything in it is known. Keep up the reviews to make it stick.', tone: 'text-good-ink' }
+      ? { text: 'Goal reached: everything in it is known. Keep up the reviews to make it stick.', tone: 'good' as const }
       : view.behind > 0
-        ? { text: `${view.behind} ${view.behind === 1 ? 'concept' : 'concepts'} behind the schedule you set.`, tone: 'text-warn-ink' }
-        : { text: 'On track.', tone: 'text-good-ink' };
+        ? { text: `${view.behind} ${view.behind === 1 ? 'concept' : 'concepts'} behind the schedule you set.`, tone: 'warn' as const }
+        : { text: 'On track.', tone: 'good' as const };
+  const thisWeek = view.weeks.find((w) => w.index === view.week);
 
   return (
-    <div className="space-y-8">
-      <section aria-labelledby="plan-goal" className="rounded-2xl border border-line-soft bg-surface p-6 shadow-xs">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-accent-ink">Your goal</div>
-            <h2 id="plan-goal" className="text-2xl font-bold text-ink">
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <FeatureCard aria-labelledby="plan-goal" className="gap-6 rounded-[36px] p-6 sm:p-8">
+          <div className="flex flex-col gap-3">
+            <span className="text-eyebrow text-feature-accent uppercase">Your goal</span>
+            <h2 id="plan-goal" className="font-display text-[clamp(32px,3.6vw,44px)] leading-none font-bold tracking-[-0.03em]">
               {view.goal.title}
             </h2>
+            <p className="max-w-xl text-[15px] leading-relaxed text-feature-muted">
+              {view.goal.summary} {view.settings.hours} hours a week, about {reviewHours} of them for review.
+            </p>
           </div>
-          <div className="flex gap-2 text-sm">
-            <button type="button" onClick={onEdit} className="rounded-full border border-line px-3 py-1.5 text-ink-soft hover:bg-subtle">
-              Change plan
-            </button>
-            <button type="button" onClick={() => record('plan.set', { goal: null, hours: view.settings.hours })} className="rounded-full px-3 py-1.5 text-ink-muted hover:bg-subtle">
+          <div className="flex flex-wrap gap-2">
+            <Button kind="onFeature" onClick={onEdit}>
+              Change goal or hours
+            </Button>
+            <ButtonLink href="/learn/placement" className="bg-on-feature/10 text-on-feature hover:bg-on-feature/15">
+              Retake placement
+            </ButtonLink>
+            <Button kind="ghost" className="text-feature-muted hover:bg-on-feature/10" onClick={() => record('plan.set', { goal: null, hours: view.settings.hours })}>
               Stop plan
-            </button>
+            </Button>
           </div>
-        </div>
-        <div className="mt-4" aria-label={`${view.done.length} of ${total} concepts known`} role="img">
-          <div className="h-2 overflow-hidden rounded-full bg-sunken">
-            <div className="h-full rounded-full bg-good" style={{ width: `${total ? (100 * view.done.length) / total : 0}%` }} />
-          </div>
-        </div>
-        <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-          <div className="flex gap-1.5">
-            <dt className="text-ink-muted">Known</dt>
-            <dd className="font-medium text-ink">
-              {view.done.length} of {total} concepts
-            </dd>
-          </div>
-          <div className="flex gap-1.5">
-            <dt className="text-ink-muted">Pace</dt>
-            <dd className="font-medium text-ink">{view.settings.hours} h a week</dd>
-          </div>
-          {view.finish && (
-            <div className="flex gap-1.5">
-              <dt className="text-ink-muted">Projected finish</dt>
-              <dd className="font-medium text-ink">{day(view.finish)}</dd>
-            </div>
-          )}
-          {view.settings.target && (
-            <div className="flex gap-1.5">
-              <dt className="text-ink-muted">Target</dt>
-              <dd className="font-medium text-ink">{day(`${view.settings.target}T12:00:00`)}</dd>
-            </div>
-          )}
-        </dl>
-        <p className={`mt-3 text-sm font-medium ${status.tone}`}>{status.text}</p>
-        {view.hoursNeeded !== null && (
-          <p className="mt-1 text-sm text-ink-soft">
-            To finish by your target date you would need {view.hoursNeeded} hours a week, or a later date.
-          </p>
-        )}
-        {view.targetOutOfReach && <p className="mt-1 text-sm text-ink-soft">Your target date is too close to make at any pace: pick a later one.</p>}
-      </section>
-
-      {(next || reviews > 0) && (
-        <section aria-labelledby="up-next">
-          <h2 id="up-next" className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-muted">
-            Up next
-          </h2>
-          <div className="grid gap-3 lg:grid-cols-3">
-            {next && <NextItem id={next.concept} title={titleOf.get(next.concept) ?? next.concept} entry={catalog[next.concept]} view={view} graph={graph} />}
-            {reviews > 0 && (
-              <Link href="/review" className="flex flex-col rounded-2xl border border-line-soft bg-surface p-5 shadow-xs hover:border-accent-line">
-                <span className="flex items-center gap-2 font-semibold text-ink">
-                  <FiRefreshCw aria-hidden className="text-accent-ink" /> {reviews} {reviews === 1 ? 'review' : 'reviews'} due today
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="relative" role="img" aria-label={`${known} of ${total} concepts known`}>
+              <Ring known={known} learning={learning} total={total} />
+              <span className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-display text-[32px] leading-none font-bold">
+                  {known}/{total}
                 </span>
-                <span className="mt-1 text-sm text-ink-soft">A few minutes of recall keeps what you have learned from fading.</span>
-              </Link>
-            )}
+                <span className="text-xs text-feature-muted">known</span>
+              </span>
+            </div>
+            <dl className="grid grid-cols-[auto_auto] gap-x-8 gap-y-2 text-sm">
+              <dt className="flex items-center gap-2 text-feature-muted">
+                <span aria-hidden className="size-2.5 rounded-full bg-feature-accent" /> Known
+              </dt>
+              <dd className="text-right font-semibold">{known}</dd>
+              <dt className="flex items-center gap-2 text-feature-muted">
+                <span aria-hidden className="size-2.5 rounded-full bg-track-peach-bar" /> Learning
+              </dt>
+              <dd className="text-right font-semibold">{learning}</dd>
+              <dt className="flex items-center gap-2 text-feature-muted">
+                <span aria-hidden className="size-2.5 rounded-full bg-on-feature/20" /> To go
+              </dt>
+              <dd className="text-right font-semibold">{total - known - learning}</dd>
+              <dt className="pt-2 text-feature-muted">Weeks left</dt>
+              <dd className="pt-2 text-right font-semibold">{view.weeks.length === 0 ? 'None' : `About ${view.weeks.length}`}</dd>
+            </dl>
           </div>
-        </section>
-      )}
+          <Chip tone={status.tone} className="self-start text-[13px]">
+            {status.text}
+          </Chip>
+        </FeatureCard>
+
+        <Card className="gap-4 rounded-[36px] p-6 sm:p-7">
+          <h2 className="text-base font-semibold">Skipped, because you know them</h2>
+          {known > 0 ? (
+            <ul className="flex flex-wrap gap-2">
+              {view.done.map((id) => (
+                <li key={id}>
+                  <Chip className="px-3 py-1.5 text-[13px]">{byId.get(id)?.title ?? id}</Chip>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-ink-muted">Nothing yet: as your answers show you know a concept, it drops off the plan.</p>
+          )}
+          <p className="text-sm leading-relaxed text-ink-soft">The plan re-orders itself as you learn. A concept drops off once your answers show you know it, and anything it needs comes just before it.</p>
+          {view.settings.target && (
+            <div className="rounded-tile bg-warn-soft px-5 py-4 text-warn-title">
+              <p className="text-[15px] font-semibold">
+                Target {day(`${view.settings.target}T12:00:00`)}
+                {view.behind > 0 && ` · ${view.behind} ${view.behind === 1 ? 'concept' : 'concepts'} behind`}
+              </p>
+              <p className="mt-1 text-sm">
+                {view.targetOutOfReach
+                  ? 'Your target date is too close to make at any pace: pick a later one.'
+                  : view.hoursNeeded !== null
+                    ? `About ${view.hoursNeeded} hours a week would get you there. Or move the date: the plan works either way.`
+                    : view.finish
+                      ? `On course to finish by ${day(view.finish)}.`
+                      : 'Everything in it is known.'}
+              </p>
+            </div>
+          )}
+          {reviews > 0 && (
+            <div className="flex items-center gap-4 rounded-tile bg-sunken px-5 py-4">
+              <span className="font-display text-[32px] leading-none font-bold">{reviews}</span>
+              <span className="flex-1 text-sm text-ink-soft">
+                {reviews === 1 ? 'review' : 'reviews'} due today, inside the {Math.round(REVIEW_SHARE * 100)}% of your hours kept for review
+              </span>
+              <ButtonLink href="/review" size="s">
+                Review
+              </ButtonLink>
+            </div>
+          )}
+        </Card>
+      </div>
 
       {view.weeks.length > 0 && (
-        <section aria-labelledby="schedule">
-          <h2 id="schedule" className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-muted">
-            Schedule
-          </h2>
-          <ol className="space-y-3">
-            {view.weeks.slice(0, 4).map((w) => (
-              <Week key={w.index} week={w} current={view.week} titleOf={titleOf} catalog={catalog} view={view} graph={graph} />
+        <section aria-labelledby="schedule" className="flex flex-col gap-3.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="schedule" className="font-display text-title-section">
+              Week by week
+            </h2>
+            {view.weeks.length > 1 && <span className="text-sm text-ink-muted">Scroll for later weeks</span>}
+          </div>
+          <ol tabIndex={0} aria-labelledby="schedule" className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+            {view.weeks.map((w) => (
+              <Week key={w.index} week={w} now={w.index === view.week} byId={byId} view={view} />
             ))}
           </ol>
-          {view.weeks.length > 4 && (
-            <details className="mt-3">
-              <summary className="cursor-pointer text-sm text-accent-ink">
-                {view.weeks.length - 4} more {view.weeks.length - 4 === 1 ? 'week' : 'weeks'}
-              </summary>
-              <ol className="mt-3 space-y-3">
-                {view.weeks.slice(4).map((w) => (
-                  <Week key={w.index} week={w} current={view.week} titleOf={titleOf} catalog={catalog} view={view} graph={graph} />
-                ))}
-              </ol>
-            </details>
-          )}
         </section>
       )}
 
-      {view.done.length > 0 && (
-        <details>
-          <summary className="cursor-pointer text-sm text-ink-soft">Known so far ({view.done.length})</summary>
-          <ul className="mt-3 flex flex-wrap gap-1.5">
-            {view.done.map((id) => (
-              <li key={id} className="inline-flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-0.5 text-xs text-ink-soft">
-                {titleOf.get(id)} <StatusChip mastery={view.mastery.get(id)} ready={false} />
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      {thisWeek && <ThisWeek week={thisWeek} view={view} graph={graph} catalog={catalog} byId={byId} />}
     </div>
   );
 }
 
-function Week({
-  week,
-  current,
-  titleOf,
-  catalog,
-  view,
-  graph,
-}: {
-  week: PlanWeek;
-  current: number;
-  titleOf: Map<string, string>;
-  catalog: Record<string, ConceptCatalogEntry>;
-  view: PlanView;
-  graph: MasteryGraph;
-}) {
-  const label = week.index === current ? 'This week' : week.index === current + 1 ? 'Next week' : `Week of ${day(week.start)}`;
+function Week({ week, now, byId, view }: { week: PlanWeek; now: boolean; byId: Map<string, { title: string; track: string }>; view: PlanView }) {
+  const end = new Date(new Date(week.end).getTime() - 1);
   return (
-    <li className="rounded-xl border border-line-soft bg-surface p-4">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-semibold text-ink">{label}</h3>
-        <span className="text-xs text-ink-muted">
-          <FiClock aria-hidden className="mr-1 inline" />
-          {hoursOf(week.minutes)}
-        </span>
+    <li className={cx('flex w-[260px] shrink-0 snap-start flex-col gap-3 rounded-tile bg-surface p-5', now && 'ring-2 ring-primary ring-inset')}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-[15px] font-semibold">
+          Week {week.index + 1}
+          {now && ' · now'}
+        </h3>
+        {now && (
+          <Chip tone="warn">
+            {week.items.length} left
+          </Chip>
+        )}
       </div>
-      <ul className="divide-y divide-line-soft">
-        {week.items.map((item) => (
-          <li key={item.concept} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-            <Link href={whereToLearn(item.concept, catalog[item.concept])} className="text-ink hover:text-accent-ink hover:underline">
-              {titleOf.get(item.concept)}
-            </Link>
-            <span className="flex items-center gap-2">
-              <StatusChip mastery={view.mastery.get(item.concept)} ready={isReady(item.concept, view.mastery, graph)} />
-              <span className="text-xs text-ink-muted">{hoursOf(item.minutes)}</span>
-            </span>
-          </li>
-        ))}
+      <p className="text-[13px] text-ink-muted">
+        {day(week.start)} – {day(end.toISOString())} · {hoursOf(week.minutes)}
+      </p>
+      <ul className="flex flex-col gap-2">
+        {week.items.map((item) => {
+          const c = byId.get(item.concept);
+          const t = TRACK_CLASSES[trackColour(c?.track ?? '')];
+          const learning = view.mastery.get(item.concept)?.status === 'learning';
+          return (
+            <li key={item.concept} className={cx('rounded-[14px] px-3 py-2 text-[13px] font-semibold', t.bg, t.ink)}>
+              {c?.title ?? item.concept}
+              {learning && <span className="font-medium"> · learning</span>}
+            </li>
+          );
+        })}
       </ul>
     </li>
   );
@@ -310,58 +348,104 @@ function Week({
 const whereToLearn = (id: string, entry: ConceptCatalogEntry | undefined) =>
   entry?.lesson ? `/learn/${entry.lesson.slug}` : entry?.visualisers[0] ? `/visualisers/${entry.visualisers[0].slug}` : `/learn#${id}`;
 
-/** The next concept in the plan, with its steps: learn it, practise it, or say you know it. */
-function NextItem({ id, title, entry, view, graph }: { id: string; title: string; entry: ConceptCatalogEntry | undefined; view: PlanView; graph: MasteryGraph }) {
+/** What's left this week: the concept in hand, practice for this week's concepts, and the next new concept. */
+function ThisWeek({
+  week,
+  view,
+  graph,
+  catalog,
+  byId,
+}: {
+  week: PlanWeek;
+  view: PlanView;
+  graph: MasteryGraph;
+  catalog: Record<string, ConceptCatalogEntry>;
+  byId: Map<string, { title: string; track: string }>;
+}) {
   const solved = useProblemProgress();
-  const practice = (entry?.problems ?? []).filter((p) => !solved[p.slug]?.solved).slice(0, 2);
+  const [first, second] = week.items;
+  const practice = week.items
+    .flatMap((i) => catalog[i.concept]?.problems ?? [])
+    .filter((p) => !solved[p.slug]?.solved)
+    .slice(0, 3);
   return (
-    <div className="rounded-2xl border border-accent-line bg-surface p-5 shadow-xs lg:col-span-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-lg font-semibold text-ink">
-          <FiTarget aria-hidden className="text-accent-ink" /> {title}
-        </h3>
-        <StatusChip mastery={view.mastery.get(id)} ready={isReady(id, view.mastery, graph)} />
+    <Card aria-labelledby="this-week" className="gap-5 rounded-[36px] p-6 sm:p-7">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 id="this-week" className="font-display text-title-section">
+          What’s left this week
+        </h2>
+        <span className="text-sm text-ink-muted">{hoursOf(week.minutes)} of work · do it in any order</span>
       </div>
-      <ol className="mt-3 space-y-2 text-sm">
-        {entry?.lesson ? (
-          <Step href={`/learn/${entry.lesson.slug}`} icon={<FiBookOpen aria-hidden />} text={`Lesson: ${entry.lesson.title}`} note={`${entry.lesson.minutes} min`} />
-        ) : (
-          entry?.visualisers.slice(0, 2).map((v) => <Step key={v.slug} href={`/visualisers/${v.slug}`} icon={<FiPlayCircle aria-hidden />} text={`Explore: ${v.name}`} />)
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {first && <ConceptCard id={first.concept} entry={catalog[first.concept]} view={view} graph={graph} byId={byId} lead />}
+        {practice.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-tile bg-sunken p-5">
+            <div className="flex items-center justify-between gap-2 text-[13px]">
+              <span className="font-semibold text-ink-soft">
+                Practise · {practice.length} {practice.length === 1 ? 'problem' : 'problems'}
+              </span>
+            </div>
+            <ul className="flex flex-col gap-1.5">
+              {practice.map((p) => (
+                <li key={p.slug}>
+                  <Link href={`/practice/${p.slug}`} className="flex items-center justify-between gap-3 rounded-[12px] py-1 text-sm hover:text-accent-ink" aria-label={`Practise: ${p.title}`}>
+                    <span className="min-w-0 truncate">{p.title}</span>
+                    <DifficultyChip level={p.difficulty} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
-        {practice.map((p) => (
-          <Step key={p.slug} href={`/practice/${p.slug}`} icon={<FiCode aria-hidden />} text={`Practise: ${p.title}`} note={p.difficulty} />
-        ))}
-        {practice.length === 0 &&
-          entry?.exercises.slice(0, 1).map((e) => <Step key={e.slug} href={`/code/${e.slug}`} icon={<FiCode aria-hidden />} text={`Code it: ${e.title}`} />)}
-        {!entry?.lesson &&
-          entry?.links.filter((l) => !l.href.startsWith('/code/')).map((l) => <Step key={l.href} href={l.href} icon={<FiPlayCircle aria-hidden />} text={l.label} />)}
-      </ol>
-      <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-        It counts as done once your answers show you know it.
-        <button
-          type="button"
-          onClick={() => record('concept.marked', { concept: id, known: true })}
-          className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-0.5 text-ink-soft hover:bg-subtle"
-        >
-          <FiCheck aria-hidden /> I already know this
-        </button>
-      </p>
-    </div>
+        {second && <ConceptCard id={second.concept} entry={catalog[second.concept]} view={view} graph={graph} byId={byId} />}
+      </div>
+    </Card>
   );
 }
 
-function Step({ href, icon, text, note }: { href: string; icon: ReactNode; text: string; note?: string }) {
+/** One concept of the week: where to learn it, and a way to say you know it already. */
+function ConceptCard({
+  id,
+  entry,
+  view,
+  graph,
+  byId,
+  lead = false,
+}: {
+  id: string;
+  entry: ConceptCatalogEntry | undefined;
+  view: PlanView;
+  graph: MasteryGraph;
+  byId: Map<string, { title: string; track: string }>;
+  lead?: boolean;
+}) {
+  const c = byId.get(id);
+  const m = view.mastery.get(id);
+  const s = displayStatus(m?.status ?? 'new', isReady(id, view.mastery, graph));
+  const started = m?.status === 'learning';
+  const label = lead ? (started ? 'Finish' : 'Up next') : 'New concept';
+  const action = entry?.lesson ? (started ? 'Resume' : 'Start lesson') : 'Explore';
+  const extra = entry?.lesson ? `${entry.lesson.minutes} min` : entry?.visualisers.length ? 'Visualiser' : '';
   return (
-    <li>
-      <Link href={href} className="group flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 hover:border-accent-line hover:bg-accent-soft">
-        <span className="flex items-center gap-2 text-ink">
-          <span className="text-accent-ink">{icon}</span> {text}
-        </span>
-        <span className="flex items-center gap-2 text-xs text-ink-muted">
-          {note}
-          <FiArrowRight aria-hidden className="text-accent-ink transition-transform group-hover:translate-x-0.5" />
-        </span>
-      </Link>
-    </li>
+    <TrackCard track={c?.track ?? 'foundations'} as="article" aria-labelledby={`concept-${id}`} dense className="gap-3 rounded-tile">
+      <div className="flex items-center justify-between gap-2 text-[13px] font-semibold">
+        <span>{label}</span>
+        <span>{extra}</span>
+      </div>
+      <h3 id={`concept-${id}`} className={cx('font-display text-[22px] leading-tight font-bold', trackTitle(c?.track ?? 'foundations'))}>
+        {c?.title ?? id}
+      </h3>
+      <StatusChip status={s} className="self-start bg-chip-on-track" />
+      <ButtonLink href={whereToLearn(id, entry)} kind={lead ? 'primary' : 'onTrack'} block className="mt-auto">
+        {action}
+      </ButtonLink>
+      <button
+        type="button"
+        onClick={() => record('concept.marked', { concept: id, known: true })}
+        className="inline-flex items-center justify-center gap-1.5 self-center rounded-full px-3 py-1 text-[13px] font-semibold hover:bg-chip-on-track"
+      >
+        <FiCheck aria-hidden /> I already know this
+      </button>
+    </TrackCard>
   );
 }

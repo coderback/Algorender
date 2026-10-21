@@ -1,19 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import { FiArrowRight, FiAward, FiCheckCircle, FiCircle, FiLoader, FiZap } from 'react-icons/fi';
+import { useState } from 'react';
+import { FiAward, FiCheck, FiChevronRight } from 'react-icons/fi';
+import { ButtonLink } from '@/components/ui/Button';
+import { Card, FeatureCard, TrackCardLink, trackTitle } from '@/components/ui/Card';
+import { cx } from '@/components/ui/cx';
+import { TRACK_CLASSES, type TrackColour } from '@/data/tracks';
 import { useMinute } from '@/lib/now';
-import { GAMES } from '@/play/games';
+import { MAX_CARDS, MIN_CARDS } from '@/play/comparison-budget/budget';
+import { SUPPORTED } from '@/play/be-the-algorithm/moves';
+import { GAMES, type GameId } from '@/play/games';
 import { useMastery, usePlay, useProgressSnapshot, useReviewCards } from '@/progress/hooks';
-import { nextSteps, type MasteryGraph } from '@/progress/mastery';
-import { BADGES, didToday, LEVELS, xpTotals } from '@/progress/play';
-import { dueToday } from '@/progress/review';
+import type { MasteryGraph } from '@/progress/mastery';
+import { BADGES, LEVELS, xpTotals } from '@/progress/play';
 import { conceptHref } from '../learn/Mastery';
+import { dailyChallenge } from './challenge';
+
+/** Each game's tile: its colour, a chip and a count. */
+const TILE: Record<GameId, { colour: TrackColour; chip: string; count: string; line: string }> = {
+  'be-the-algorithm': { colour: 'peach', chip: 'Sorting', count: `${SUPPORTED.length} algorithms`, line: 'Pick the swap it makes next' },
+  'comparison-budget': { colour: 'sky', chip: 'Comparisons', count: `${MIN_CARDS} to ${MAX_CARDS} cards`, line: 'Sort face-down cards within the bound' },
+  'break-it': { colour: 'rose', chip: 'Worst cases', count: '3 challenges', line: 'Find the input that makes it fail' },
+};
+
+/** Earned badges take a pastel each, in turn. */
+const BADGE_COLOURS: TrackColour[] = ['butter', 'mint', 'peach', 'lilac', 'sky', 'rose', 'teal'];
+
+const LEVELS_SHOWN = 6;
 
 /**
- * The Play hub: XP, today's challenge, the games, levels per concept and
- * badges. Everything comes from the learner's own events and waits for the
- * progress store, so the server render shows only the games.
+ * The Play hub: today's challenge, Mastery XP, the three games, levels per
+ * concept and badges. Everything about the learner comes from their events and
+ * waits for the progress store, so the server render shows the games alone.
  */
 export function PlayHub({ graph }: { graph: MasteryGraph }) {
   const { ready, events } = useProgressSnapshot();
@@ -22,40 +41,101 @@ export function PlayHub({ graph }: { graph: MasteryGraph }) {
   const m = useMastery(graph);
   const cards = useReviewCards();
   const loaded = ready && !!now;
+  const { total, today } = loaded ? xpTotals(play.ledger, now) : { total: 0, today: 0 };
+  const items = loaded ? dailyChallenge({ events, cards, mastery: m, graph, now }) : [];
 
   return (
-    <div className="space-y-10">
-      {loaded ? <Today graph={graph} play={play} m={m} cards={cards} events={events} now={now} /> : (
-        <p className="flex items-center gap-2 text-ink-soft" role="status">
-          <FiLoader aria-hidden className="animate-spin" /> Loading your progress…
-        </p>
-      )}
-
-      <section aria-labelledby="games">
-        <h2 id="games" className="mb-3 text-xl font-semibold text-ink">
-          Games
-        </h2>
-        <ul className="grid gap-3 sm:grid-cols-3">
-          {GAMES.map((g) => (
-            <li key={g.id}>
-              <Link href={g.href} className="group flex h-full flex-col rounded-xl border border-line-soft bg-surface p-4 shadow-xs hover:border-accent-line">
-                <span className="font-semibold text-ink">{g.title}</span>
-                <span className="mt-1 text-sm text-ink-soft">{g.summary}</span>
-                <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-accent-ink">
-                  Play <FiArrowRight aria-hidden className="transition-transform group-hover:translate-x-0.5" />
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <section aria-labelledby="daily" className="flex flex-col gap-3 rounded-card bg-track-butter p-5 text-track-butter-ink sm:p-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="daily" className="font-semibold text-track-butter-title">
+                Today’s challenge
+              </h2>
+              {loaded && (
+                <span className="text-[13px] font-semibold">
+                  {items.filter((i) => i.done).length} of {items.length} done
                 </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+              )}
+            </div>
+            {loaded ? (
+              <ul className="flex flex-col gap-2">
+                {items.map((it) => (
+                  <li key={it.text} className="flex items-center gap-3 rounded-well bg-surface px-3.5 py-3 text-ink">
+                    {it.done ? (
+                      <span role="img" aria-label="done" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent">
+                        <FiCheck aria-hidden strokeWidth={3} className="size-3.5" />
+                      </span>
+                    ) : (
+                      <span role="img" aria-label="to do" className="size-7 shrink-0 rounded-full border-2 border-dashed border-line-strong" />
+                    )}
+                    <span className={cx('min-w-0 flex-1 text-[15px] font-semibold', it.done && 'text-ink-muted line-through')}>{it.text}</span>
+                    {!it.done && (
+                      <ButtonLink href={it.href} size="s">
+                        {it.cta}
+                      </ButtonLink>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p role="status" className="text-sm">
+                Loading your progress…
+              </p>
+            )}
+          </section>
 
-      {loaded && <Levels graph={graph} levels={play.levels} />}
+          <ul aria-label="Games" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {GAMES.map((g) => {
+              const t = TILE[g.id];
+              return (
+                <li key={g.id} className="flex">
+                  <TrackCardLink track={t.colour} href={g.href} dense className="min-h-[200px] w-full gap-3">
+                    <span className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold">
+                      <span className="rounded-full bg-surface/70 px-2.5 py-1">{t.chip}</span>
+                      <span>{t.count}</span>
+                    </span>
+                    <strong className={cx('mt-auto font-display text-[24px] leading-[1.1] font-bold', trackTitle(t.colour))}>{g.title}</strong>
+                    <span className="text-sm">{t.line}</span>
+                  </TrackCardLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <FeatureCard aria-labelledby="xp" className="gap-3">
+            <h2 id="xp" className="text-[13px] font-semibold tracking-[0.06em] text-feature-muted uppercase">
+              Mastery XP
+            </h2>
+            <p className="flex items-baseline gap-2">
+              <span className="font-display text-[72px] leading-none font-bold tracking-[-0.03em] tabular-nums">{loaded ? total.toLocaleString() : '–'}</span>
+              <span className="text-lg font-bold">XP</span>
+            </p>
+            {loaded && (
+              <p className="flex flex-wrap gap-2 text-[13px] font-semibold">
+                <span className={cx('rounded-full px-2.5 py-1', today > 0 ? 'bg-good-soft text-good-ink' : 'bg-on-feature/10')}>{today > 0 ? `+${today} today` : 'None yet today'}</span>
+                <span className="rounded-full bg-on-feature/10 px-2.5 py-1">
+                  {play.badges.size} of {BADGES.length} badges
+                </span>
+              </p>
+            )}
+            <p className="text-sm text-feature-muted">XP counts what you can do and remember, not how long you spent. No streaks to lose, nothing to buy.</p>
+          </FeatureCard>
+          {loaded && <Levels graph={graph} levels={play.levels} />}
+        </div>
+      </div>
+
       {loaded && <Badges earned={play.badges} />}
 
-      <details className="rounded-xl border border-line-soft bg-surface p-4 text-sm text-ink-soft">
-        <summary className="cursor-pointer font-medium text-ink">How XP works</summary>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
+      <details className="group rounded-card bg-surface px-6 py-4 text-sm text-ink-soft">
+        <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-[15px] font-semibold text-ink [&::-webkit-details-marker]:hidden">
+          <FiChevronRight aria-hidden className="transition-transform duration-150 ease-standard group-open:rotate-90" />
+          How XP works
+        </summary>
+        <ul className="mt-3 mb-2 flex list-disc flex-col gap-1.5 pl-9 leading-relaxed">
           <li>XP is for learning that sticks: questions right first time, cards remembered a day, a week and a month later, first solves, explanations that cover their key points, and mistakes you clear.</li>
           <li>Games earn XP for moves and wins, less for replaying the same thing on the same day, and a broken challenge pays once.</li>
           <li>Watching, reading, marking lessons done and time spent earn nothing. There are no streaks to lose and nothing to buy.</li>
@@ -67,98 +147,44 @@ export function PlayHub({ graph }: { graph: MasteryGraph }) {
 
 type Play = ReturnType<typeof usePlay>;
 
-function Today({
-  graph,
-  play,
-  m,
-  cards,
-  events,
-  now,
-}: {
-  graph: MasteryGraph;
-  play: Play;
-  m: ReturnType<typeof useMastery>;
-  cards: ReturnType<typeof useReviewCards>;
-  events: ReturnType<typeof useProgressSnapshot>['events'];
-  now: Date;
-}) {
-  const { total, today } = xpTotals(play.ledger, now);
-  const due = dueToday(cards, now).length;
-  const did = didToday(events, now);
-  const next = nextSteps(m, graph, { limit: 1 })[0]?.concept;
-  const learnedNew = !!next?.lesson && did.learned.has(next.lesson);
-  const items = [
-    {
-      done: due === 0,
-      text: due === 0 ? (did.reviewed ? 'Reviews done for today' : 'No reviews due today') : `Clear your ${due} due ${due === 1 ? 'review' : 'reviews'}`,
-      href: '/review',
-      cta: 'Review',
-    },
-    ...(next ? [{ done: learnedNew, text: `Something new: ${next.title}`, href: conceptHref(next), cta: 'Start' }] : []),
-    { done: did.played, text: 'A round of a game', href: '/play/be-the-algorithm', cta: 'Play' },
-  ];
-  return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-      <section aria-labelledby="xp" className="rounded-2xl border border-line-soft bg-surface p-5 shadow-xs">
-        <h2 id="xp" className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-ink-muted">
-          <FiZap aria-hidden className="text-accent-ink" /> Mastery XP
-        </h2>
-        <p className="mt-2 text-4xl font-bold text-ink tabular-nums">{total.toLocaleString()}</p>
-        <p className="mt-1 text-sm text-ink-soft">
-          {today > 0 ? `+${today} today` : 'None yet today'} · {play.badges.size} of {BADGES.length} badges
-        </p>
-      </section>
-      <section aria-labelledby="daily" className="rounded-2xl border border-line-soft bg-surface p-5 shadow-xs">
-        <h2 id="daily" className="text-lg font-semibold text-ink">
-          Today’s challenge
-        </h2>
-        <ul className="mt-3 space-y-2">
-          {items.map((it) => (
-            <li key={it.text} className="flex items-center gap-3 text-sm">
-              {it.done ? <FiCheckCircle aria-label="done" className="shrink-0 text-good-ink" /> : <FiCircle aria-label="to do" className="shrink-0 text-ink-muted" />}
-              <span className={it.done ? 'text-ink-soft' : 'text-ink'}>{it.text}</span>
-              {!it.done && (
-                <Link href={it.href} className="ml-auto inline-flex items-center gap-1 font-medium text-accent-ink hover:underline">
-                  {it.cta} <FiArrowRight aria-hidden />
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
-}
-
 function Levels({ graph, levels }: { graph: MasteryGraph; levels: Play['levels'] }) {
+  const [all, setAll] = useState(false);
   const started = graph.concepts.filter((c) => (levels.get(c.id)?.size ?? 0) > 0);
+  const shown = all ? started : started.slice(0, LEVELS_SHOWN);
   return (
-    <section aria-labelledby="levels">
-      <h2 id="levels" className="text-xl font-semibold text-ink">
-        Levels
-      </h2>
-      <p className="mt-1 mb-3 text-sm text-ink-soft">
-        Each concept has four levels: {LEVELS.map((l) => l.label.toLowerCase()).join(', ')}. Not every concept has all four: there is nothing to implement in Bayes’ rule.
-      </p>
+    <Card aria-labelledby="levels" className="gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="levels" className="font-semibold">
+          Levels
+        </h2>
+        <span className="text-xs text-ink-muted">{LEVELS.map((l) => l.label).join(' · ')}</span>
+      </div>
       {started.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-4 text-sm text-ink-soft">
-          Levels appear as you answer questions, play rounds, write code and explain ideas. <Link href="/learn" className="text-accent-ink underline underline-offset-2">Start on the concept map</Link>.
+        <p className="text-sm text-ink-soft">
+          Levels appear as you answer questions, play rounds, write code and explain ideas.{' '}
+          <Link href="/learn" className="font-semibold text-accent-ink underline underline-offset-2">
+            Start on the path
+          </Link>
+          .
         </p>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {started.map((c) => {
+        <ul className="flex flex-col gap-2.5">
+          {shown.map((c) => {
             const reached = levels.get(c.id)!;
             return (
-              <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-line-soft bg-surface px-4 py-3">
-                <Link href={conceptHref(c)} className="font-medium text-ink hover:text-accent-ink">
+              <li key={c.id} className="flex items-center justify-between gap-3">
+                <Link href={conceptHref(c)} className="min-w-0 truncate text-[15px] font-semibold text-ink hover:text-accent-ink">
                   {c.title}
                 </Link>
-                <span className="flex gap-1" role="img" aria-label={`${c.title}: ${LEVELS.filter((l) => reached.has(l.id)).map((l) => l.label).join(', ')}`}>
+                <span className="flex shrink-0 gap-1.5" role="img" aria-label={`${c.title}: ${LEVELS.filter((l) => reached.has(l.id)).map((l) => l.label).join(', ') || 'no levels yet'}`}>
                   {LEVELS.map((l) => (
                     <span
                       key={l.id}
                       title={`${l.label}${reached.has(l.id) ? '' : `: ${l.hint}`}`}
-                      className={`grid size-6 place-items-center rounded-full text-[10px] font-bold ${reached.has(l.id) ? 'bg-accent text-white' : 'border border-line text-ink-muted'}`}
+                      className={cx(
+                        'grid size-8 place-items-center rounded-full font-mono text-xs font-bold',
+                        reached.has(l.id) ? 'bg-track-lilac-ink text-track-lilac' : 'border-[1.5px] border-dashed border-track-lilac-ink text-track-lilac-ink',
+                      )}
                     >
                       {l.label[0]}
                     </span>
@@ -169,27 +195,43 @@ function Levels({ graph, levels }: { graph: MasteryGraph; levels: Play['levels']
           })}
         </ul>
       )}
-    </section>
+      {started.length > LEVELS_SHOWN && (
+        <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all} className="w-fit text-sm font-semibold text-accent-ink hover:underline">
+          {all ? 'Show fewer' : `Show all ${started.length}`}
+        </button>
+      )}
+      <p className="text-xs text-ink-muted">Levels come in any order: there is nothing to implement in Bayes’ rule.</p>
+    </Card>
   );
 }
 
 function Badges({ earned }: { earned: Play['badges'] }) {
+  const colour = new Map(BADGES.filter((b) => earned.has(b.id)).map((b, i) => [b.id, BADGE_COLOURS[i % BADGE_COLOURS.length]]));
   return (
-    <section aria-labelledby="badges">
-      <h2 id="badges" className="text-xl font-semibold text-ink">
-        Badges
-      </h2>
-      <p className="mt-1 mb-3 text-sm text-ink-soft">They mark good learning habits. None is required for anything.</p>
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-labelledby="badges" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="badges" className="font-display text-title-section">
+          Badges
+        </h2>
+        <p className="text-[13px] text-ink-muted">They mark good learning habits. None is required for anything.</p>
+      </div>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
         {BADGES.map((b) => {
           const at = earned.get(b.id);
+          const c = at ? TRACK_CLASSES[colour.get(b.id)!] : null;
           return (
-            <li key={b.id} data-badge={b.id} data-earned={!!at} className={`rounded-xl border p-3 ${at ? 'border-accent-line bg-accent-soft' : 'border-dashed border-line bg-surface'}`}>
-              <p className={`flex items-center gap-1.5 font-medium ${at ? 'text-ink' : 'text-ink-soft'}`}>
-                <FiAward aria-hidden className={at ? 'text-accent-ink' : 'text-ink-muted'} /> {b.title}
-              </p>
-              <p className="mt-1 text-xs text-ink-soft">{b.how}</p>
-              <p className="mt-1 text-xs text-ink-muted">{at ? `Earned ${new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Not yet'}</p>
+            <li
+              key={b.id}
+              data-badge={b.id}
+              data-earned={!!at}
+              className={cx('flex flex-col gap-1.5 rounded-tile p-4', c ? cx(c.bg, c.ink) : 'bg-surface text-ink-muted')}
+            >
+              <span aria-hidden className={cx('mb-1.5 flex size-10 items-center justify-center rounded-full', c ? 'bg-surface/70' : 'bg-sunken')}>
+                <FiAward className="size-5" />
+              </span>
+              <p className={cx('font-bold', c ? c.title : 'text-ink')}>{b.title}</p>
+              <p className="text-xs leading-snug">{b.how}</p>
+              <p className={cx('text-xs', at && 'font-semibold')}>{at ? `Earned ${new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : 'Not yet'}</p>
             </li>
           );
         })}

@@ -50,14 +50,21 @@ export type TracePlayer = {
  */
 export function useTracePlayer(
   frameCount: number,
-  { initialIndex = 0, gate, autoPlay = false }: { initialIndex?: number; gate?: (index: number) => boolean; autoPlay?: boolean } = {},
+  {
+    initialIndex = 0,
+    gate,
+    autoPlay = false,
+    startSpeed = DEFAULT_SPEED,
+  }: { initialIndex?: number; gate?: (index: number) => boolean; autoPlay?: boolean; startSpeed?: number } = {},
 ): TracePlayer {
   const last = Math.max(0, frameCount - 1);
   const [stored, setIndex] = useState(() => clamp(initialIndex, 0, last));
   // A trace recorded again in place (the learner dragged the input) may be shorter.
   const index = Math.min(stored, last);
   const [playing, setPlaying] = useState(() => autoPlay && last > 0 && !gate?.(clamp(initialIndex, 0, last)));
-  const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
+  // The starting speed (the device's preference) holds until the learner picks one.
+  const [chosenSpeed, setSpeed] = useState<number | null>(null);
+  const speed = chosenSpeed ?? startSpeed;
   const [instant, setInstant] = useState(false);
 
   // Mirrors for the playback loop and callbacks, which must not restart every step.

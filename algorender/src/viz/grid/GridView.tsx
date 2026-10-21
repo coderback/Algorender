@@ -3,6 +3,8 @@
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { MARKS, NEUTRAL, type MarkKey } from '@/viz/marks';
+import { cx } from '@/components/ui/cx';
+import { CELL_RADIUS, EMPTY_SLOT, fillFor, PLAIN_CELL } from '@/viz/parts';
 import { describeList, describeMeter, describeTable, formatAmount } from './describe';
 import { arrowGeometry } from './geometry';
 import { cellKey, type Arrow, type CellStyle, type GridState, type ListPart, type Look, type MeterPart, type Row, type TablePart } from './types';
@@ -55,7 +57,7 @@ export function GridView({ state }: { state: GridState }) {
 }
 
 function PartLabel({ children }: { children: ReactNode }) {
-  return <div className="mb-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{children}</div>;
+  return <div className="mb-1.5 text-xs font-medium text-ink-muted">{children}</div>;
 }
 
 // ───────────────────────────── tables ─────────────────────────────
@@ -225,11 +227,12 @@ function RowHeader({ row, mark, width }: { row: Row; mark: MarkKey | undefined; 
 }
 
 /**
- * One square cell. A mark draws a coloured frame, a pale wash of the same
- * colour and the mark's glyph in the corner (when the cell is big enough), so
- * the value inside stays readable and colour is never the only cue. In a bar
- * row (`fill` set) the wash rises from the bottom to the value's height; a
- * `block` cell is a solid wall.
+ * One square cell (V6). A mark fills it solid in the mark's colour, with the
+ * mark's glyph in the corner when the cell is big enough, so colour is never
+ * the only cue. A value sits in a white cell, a cell not reached yet is a
+ * dashed outline, a given (input) cell takes a track tint and a `block` cell
+ * is a solid wall. In a bar row (`fill` set) the colour rises from the bottom
+ * to the value's height instead; a row or column `tint` washes behind.
  */
 function Cell({
   text,
@@ -251,40 +254,49 @@ function Cell({
   const meta = mark ? MARKS[mark] : null;
   const board = look === 'board';
   const bar = fill != null;
-  const frame = meta ? `p-[2px] ${meta.bg}` : board ? 'p-px bg-line' : 'p-[2px] bg-sunken';
-  const wash = meta
-    ? `${meta.bg} ${bar ? 'opacity-40' : 'opacity-25'}`
+  const solid = meta != null && !bar;
+  const empty = !board && !bar && text === '' && !tint && style !== 'shade' && style !== 'block';
+  const face = solid
+    ? fillFor(mark)
     : style === 'block'
-      ? NEUTRAL.bg
-      : bar
-        ? `${NEUTRAL.bg} opacity-45`
-        : tint
-          ? `${MARKS[tint].bg} opacity-15`
-          : style === 'shade'
-            ? `${NEUTRAL.bg} opacity-45`
-            : style === 'given'
-              ? `${NEUTRAL.bg} opacity-30`
-              : text !== '' && style !== 'plain' && !board
-                ? `${NEUTRAL.bg} opacity-20`
-                : 'opacity-0';
-  const weight = style === 'given' ? 'font-bold text-ink' : style === 'plain' ? 'font-medium text-ink-soft' : 'font-semibold text-ink';
+      ? 'bg-primary text-on-primary'
+      : style === 'given'
+        ? 'bg-track-butter text-track-butter-title'
+        : empty
+          ? EMPTY_SLOT
+          : board
+            ? dark
+              ? 'bg-sunken text-ink'
+              : 'bg-surface text-ink'
+            : PLAIN_CELL;
+  // Washes under the value: a bar's height, a tinted row or column, a shaded square.
+  const wash = bar
+    ? `${meta ? meta.bg : NEUTRAL.bg} opacity-60`
+    : !solid && tint
+      ? `${MARKS[tint].bg} opacity-20`
+      : !solid && style === 'shade'
+        ? `${NEUTRAL.bg} opacity-50`
+        : null;
+  const weight = style === 'given' ? 'font-bold' : style === 'plain' ? 'font-medium text-ink-soft' : 'font-semibold';
   const tween = { transitionDuration: 'var(--tween, 300ms)' };
   return (
-    <div className={`@container aspect-square min-w-0 ${board ? '' : 'p-px'}`}>
-      <div className={`h-full transition ${board ? 'rounded-none' : 'rounded-md'} ${frame}`} style={tween}>
-        <div className={`relative flex h-full items-center justify-center overflow-hidden ${board ? '' : 'rounded-[4px]'} ${dark ? 'bg-sunken' : 'bg-surface'}`}>
-          {bar ? (
+    <div className={`@container aspect-square min-w-0 ${board ? '' : 'p-[2px]'}`}>
+      <div
+        className={cx('relative flex h-full items-center justify-center overflow-hidden transition', board ? 'rounded-none ring-1 ring-line ring-inset' : CELL_RADIUS, face)}
+        style={tween}
+      >
+        {wash &&
+          (bar ? (
             <div className={`absolute inset-x-0 bottom-0 transition ${wash}`} style={{ ...tween, height: `${fill * 100}%` }} />
           ) : (
             <div className={`absolute inset-0 transition ${wash}`} style={tween} />
-          )}
-          <span className={`relative font-mono leading-none tabular-nums ${weight} ${TEXT_BY_LENGTH[Math.min(text.length, 4)]}`}>{text}</span>
-          {meta && (
-            <span className={`absolute top-px right-0.5 hidden text-[clamp(7px,22cqw,11px)] leading-none font-bold @min-[30px]:block ${meta.text}`}>
-              {meta.glyph}
-            </span>
-          )}
-        </div>
+          ))}
+        <span className={`relative font-mono leading-none tabular-nums ${weight} ${TEXT_BY_LENGTH[Math.min(text.length, 4)]}`}>{text}</span>
+        {meta && (
+          <span className={`absolute top-0.5 right-1 hidden text-[clamp(7px,22cqw,11px)] leading-none font-bold @min-[30px]:block ${solid ? '' : meta.text}`}>
+            {meta.glyph}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -306,7 +318,7 @@ function TimelineRow({ table, row, template }: { table: TablePart; row: Row; tem
           return (
             <div
               key={b.id}
-              className={`absolute top-[20%] bottom-[20%] rounded-md ring-1 ring-black/10 transition ring-inset ${meta ? meta.bg : NEUTRAL.bg}`}
+              className={`absolute top-[20%] bottom-[20%] rounded-full transition ${meta ? meta.bg : NEUTRAL.bg}`}
               style={{ left: `${(b.from / cols) * 100}%`, width: `${((b.to - b.from) / cols) * 100}%`, transitionDuration: 'var(--tween, 300ms)' }}
             />
           );
@@ -433,12 +445,14 @@ function ListView({ list }: { list: ListPart }) {
         {list.items.map((it) => {
           const meta = it.mark ? MARKS[it.mark] : null;
           return (
-            <motion.li key={it.id} layout="position" initial={false} className={`rounded-md transition ${meta ? `p-[2px] ${meta.bg}` : 'p-px bg-line'}`}>
-              <span className="relative flex items-center gap-1 rounded-[4px] bg-surface px-2 py-0.5">
-                <span className={`absolute inset-0 rounded-[4px] ${meta ? `${meta.bg} opacity-25` : `${NEUTRAL.bg} opacity-15`}`} />
-                {meta && <span className={`relative text-[10px] font-bold ${meta.text}`}>{meta.glyph}</span>}
-                <span className="relative font-mono text-sm whitespace-nowrap text-ink">{it.text}</span>
-              </span>
+            <motion.li
+              key={it.id}
+              layout="position"
+              initial={false}
+              className={cx('flex items-center gap-1 rounded-[10px] px-2 py-0.5 transition', meta ? fillFor(it.mark) : PLAIN_CELL)}
+            >
+              {meta && <span className="text-[10px] font-bold">{meta.glyph}</span>}
+              <span className="font-mono text-sm font-semibold whitespace-nowrap">{it.text}</span>
             </motion.li>
           );
         })}
@@ -458,19 +472,17 @@ function MeterView({ meter }: { meter: MeterPart }) {
         </span>
       </div>
       <p className="sr-only">{describeMeter(meter)}</p>
-      <div className="flex h-9 w-full overflow-hidden rounded-md border border-line bg-surface" aria-hidden>
+      <div className="flex h-9 w-full gap-0.5 overflow-hidden rounded-[12px] bg-sunken p-0.5" aria-hidden>
         {meter.segments.map((s) => {
-          const meta = s.mark ? MARKS[s.mark] : null;
           return (
             <motion.div
               key={s.id}
               initial={false}
               animate={{ width: `${(s.amount / meter.total) * 100}%` }}
-              className={`@container h-full min-w-0 shrink-0 transition ${meta ? `p-[2px] ${meta.bg}` : 'p-px bg-line'}`}
+              className="@container h-full min-w-0 shrink-0"
             >
-              <div className="relative flex h-full items-center justify-center overflow-hidden rounded-[3px] bg-surface">
-                <div className={`absolute inset-0 ${meta ? `${meta.bg} opacity-25` : `${NEUTRAL.bg} opacity-20`}`} />
-                <span className="relative hidden truncate px-1 font-mono text-xs text-ink @min-[24px]:block">{s.label}</span>
+              <div className={cx('flex h-full items-center justify-center overflow-hidden rounded-[10px] transition', fillFor(s.mark))}>
+                <span className="hidden truncate px-1 font-mono text-xs font-semibold @min-[24px]:block">{s.label}</span>
               </div>
             </motion.div>
           );

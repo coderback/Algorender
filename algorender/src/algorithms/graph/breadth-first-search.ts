@@ -3,7 +3,7 @@ import { askAhead, GraphTracer, type GraphFrame } from '@/viz/graph/tracer';
 import type { GraphState, NodeId } from '@/viz/graph/types';
 import { COMPONENTS_AT, COMPONENTS_EDGES, NETWORK_AT, NETWORK_EDGES, ONE_WAY_AT, ONE_WAY_EDGES } from './examples';
 import { adjacency, arrow, authored, choose, fixedExample, graphInput, list, nodeIds, randomGraph, type GraphInput, type GraphRules } from './model';
-import { EDGES, nodeChips, VISITED } from './shared';
+import { EDGES, levelRegions, nodeChips, VISITED } from './shared';
 
 const rules: GraphRules = { direction: 'either', weighted: false, start: true, name: 'Breadth-first search' };
 
@@ -50,6 +50,7 @@ function* trace(g: GraphInput): Generator<GraphFrame> {
       columns: ['node', 'level', 'parent'],
       rows: nodeIds(g).map((id) => ({ id, cells: [id, level.has(id) ? String(level.get(id)) : '–', parent.get(id) ?? '–'] })),
     });
+    t.setRegions(levelRegions(level));
   };
 
   t.setAnnotationLabel('level');

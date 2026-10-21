@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { collectErrors } from './errors';
 
 const narration = (page: Page) => page.getByTestId('narration');
-const stepCounter = (page: Page) => page.getByText(/^\d+\/\d+$/);
+const stepCounter = (page: Page) => page.getByText(/^\d+ \/ \d+$/);
 
 async function open(page: Page, path: string) {
   await page.goto(path);
@@ -12,7 +12,7 @@ async function open(page: Page, path: string) {
 test('dragging a handle records the trace again on the same frame', async ({ page }) => {
   const errors = collectErrors(page);
   await open(page, '/visualisers/linear-transformations?preset=stretch-shear&step=8');
-  await expect(stepCounter(page)).toHaveText('9/9');
+  await expect(stepCounter(page)).toHaveText('9 / 9');
   const i = page.getByRole('button', { name: /^Where î lands at \(2, 0\)/ });
   const box = (await i.boundingBox())!;
   const x = box.x + box.width / 2;
@@ -25,7 +25,7 @@ test('dragging a handle records the trace again on the same frame', async ({ pag
 
   const moved = page.getByRole('button', { name: /^Where î lands at/ });
   await expect(moved).not.toHaveAccessibleName(/\(2, 0\)/);
-  await expect(stepCounter(page)).toHaveText('9/9');
+  await expect(stepCounter(page)).toHaveText('9 / 9');
   await expect(page).toHaveURL(/input=/);
   await expect(page.locator('#custom-input')).not.toHaveValue('');
   expect(errors).toEqual([]);
@@ -37,7 +37,7 @@ test('arrow keys move a focused handle instead of stepping the trace', async ({ 
   await j.focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('button', { name: /^Where ĵ lands at \(1\.5, 1\)/ })).toBeFocused();
-  await expect(stepCounter(page)).toHaveText('9/9');
+  await expect(stepCounter(page)).toHaveText('9 / 9');
   await expect(page.locator('#custom-input')).toHaveValue('[[1, 1.5], [0, 1]], v = (1, 2)');
   await expect(narration(page)).toContainText('1.5');
 });
@@ -61,8 +61,10 @@ test('moving the query arrow re-scores every key', async ({ page }) => {
   await expect(page).toHaveURL(/input=/);
 });
 
-test('the home page lists math and ML topics', async ({ page }) => {
-  await page.goto('/?tab=math');
-  await expect(page.getByRole('heading', { name: 'Linear Algebra' })).toBeVisible();
+test('Explore lists math and ML topics', async ({ page }) => {
+  await page.goto('/explore?kind=math');
+  await expect(page.getByRole('group', { name: 'Kind' }).getByRole('button', { name: /Math & ML/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: /Linear Algebra.*Linear Transformations/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Gradient Descent/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Bubble Sort/ })).toHaveCount(0);
 });

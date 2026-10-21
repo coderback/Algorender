@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
+import { FiArrowUpRight } from 'react-icons/fi';
 import { Visualiser } from '@/components/explorer/Visualiser';
 import { getVisualiserBySlug } from '@/data/visualisers';
 import { getModule, modules } from '@/registry';
@@ -26,19 +27,15 @@ export default async function EmbedPage({ params }: Props) {
   if (!getModule(slug) || !meta) notFound();
 
   return (
-    <main className="min-h-screen bg-subtle p-3 sm:p-4">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h1 className="text-base font-semibold text-ink">{meta.name}</h1>
-        <a
-          href={`/visualisers/${slug}`}
-          target="_blank"
-          rel="noopener"
-          className="text-xs text-accent-ink hover:underline"
-        >
-          Open in Algorender ↗
+    // Named, so it stays a distinct landmark when a page shows the embed in a frame (the embed page's preview).
+    <main aria-label={meta.name} className="flex min-h-screen flex-col gap-4 bg-page p-3 text-ink sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-display text-[22px] leading-tight font-bold tracking-[-0.02em] sm:text-[26px]">{meta.name}</h1>
+        <a href={`/visualisers/${slug}`} target="_blank" rel="noopener" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-accent-ink hover:underline">
+          Open in Algorender <FiArrowUpRight aria-hidden />
         </a>
       </div>
-      <Suspense fallback={<div className="h-[520px] animate-pulse rounded-xl bg-surface" aria-label="Loading visualiser" />}>
+      <Suspense fallback={<div className="h-[520px] animate-pulse rounded-card bg-surface" aria-label="Loading visualiser" />}>
         <Visualiser slug={slug} variant="embed" />
       </Suspense>
     </main>

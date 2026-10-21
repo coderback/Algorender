@@ -11,6 +11,8 @@ import { SITE_URL } from '@/lib/site';
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: SITE_URL, changeFrequency: 'weekly', priority: 1 },
+    { url: `${SITE_URL}/explore`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/start`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/learn`, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${SITE_URL}/learn/placement`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/plan`, changeFrequency: 'monthly', priority: 0.7 },
@@ -27,6 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/practice/drills`, changeFrequency: 'monthly', priority: 0.7 },
     ...loadProblems().map((p) => ({ url: `${SITE_URL}/practice/${p.slug}`, changeFrequency: 'monthly' as const, priority: 0.8 })),
     { url: `${SITE_URL}/compare`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/embed`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/design/estimate`, changeFrequency: 'monthly', priority: 0.7 },
     ...visualisers
       .filter((v) => !v.hidden)

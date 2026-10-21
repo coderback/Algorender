@@ -61,7 +61,7 @@ export function Diagram({
   return (
     <div
       ref={boxRef}
-      className="overflow-x-auto rounded-xl border border-line-soft bg-sunken"
+      className="overflow-x-auto rounded-tile bg-subtle"
       tabIndex={overflowing ? 0 : undefined}
       role={overflowing ? 'region' : undefined}
       aria-label={overflowing ? 'Design diagram (scrolls sideways)' : undefined}
@@ -86,7 +86,7 @@ export function Diagram({
                   y={label.y}
                   dy="-0.4em"
                   textAnchor="middle"
-                  className="fill-ink-soft stroke-sunken text-[11px]"
+                  className="fill-ink-soft stroke-subtle text-[11px] font-medium"
                   strokeWidth={4}
                   style={{ paintOrder: 'stroke' }}
                 >
@@ -134,14 +134,14 @@ function Node({
       onClick={() => onSelect(c.id)}
       aria-pressed={selected}
       aria-label={nodeName(c, stats, crashed, problem)}
-      className={`flex h-full w-full flex-col gap-1 overflow-hidden rounded-lg border bg-surface p-2 text-left shadow-xs transition hover:border-accent-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-        selected ? 'border-accent ring-2 ring-accent-line' : problem ? 'border-dashed border-bad-line' : saturated ? 'border-bad-line' : 'border-line'
+      className={`flex h-full w-full flex-col gap-1 overflow-hidden rounded-[14px] border-[1.5px] bg-surface p-2 text-left transition-colors duration-150 ease-standard hover:border-line-strong ${
+        selected ? 'border-accent ring-2 ring-accent' : problem ? 'border-dashed border-bad-ink' : saturated ? 'border-bad-ink' : 'border-line'
       }`}
     >
       <span className="flex items-center gap-1.5">
         <Icon aria-hidden className="h-4 w-4 shrink-0 text-accent-ink" />
         <span className="truncate text-sm font-semibold text-ink">{c.label}</span>
-        {cost > 0 && <span className="ml-auto shrink-0 text-[11px] text-ink-muted tabular-nums">{dollars(cost)}/mo</span>}
+        <span className="ml-auto shrink-0 rounded-full bg-sunken px-1.5 py-px font-mono text-[10px] font-semibold text-ink tabular-nums">{cost > 0 ? `${dollars(cost)}/mo` : 'free'}</span>
       </span>
       <span className="truncate text-xs text-ink-soft">{configSummary(c)}</span>
       {stats ? (

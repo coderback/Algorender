@@ -1,7 +1,7 @@
 import { defineAlgorithm } from '@/engine/module';
 import { TextTracer, type CellRef } from '@/viz/text/tracer';
 import type { TextState } from '@/viz/text/types';
-import { COMPARISONS, HASH_BASE, HASH_MOD, hashOf, letterValue, matchInput, quote, type MatchInput } from './shared';
+import { COMPARISONS, HASH_BASE, HASH_MOD, hashOf, letterValue, matchInput, type MatchInput, naiveComparisons, quote } from './shared';
 
 const pseudocode = [
   'rabinKarp(T, P):',
@@ -47,6 +47,10 @@ function* run({ text, pattern }: MatchInput) {
   for (let k = 1; k < m; k++) top = (top * HASH_BASE) % HASH_MOD;
   t.setReadout('hp', 'Pattern hash', hp);
   t.setReadout('h', 'Window hash', h);
+  t.setReadout('naive', 'Naive search, same text', `${naiveComparisons(text, pattern)} comparisons`);
+  // Each window joins the history once its fate is known, never while a question about it is open.
+  const seen = (s: number, h: number, detail: string, mark?: 'found' | 'reject') =>
+    t.addHistory('Windows', { id: `w${s}`, text: text.slice(s, s + m), detail: `hash ${h} · ${detail}`, ...(mark && { mark }) });
   yield t.frame({
     line: 1,
     note: `Hash the pattern and the first window the same way: each letter is a digit (a = 1 … z = 26), the word is read as a base-${HASH_BASE} number, and only the remainder mod ${HASH_MOD} is kept. hash(${quote(pattern)}) = ${hp}; hash(${quote(text.slice(0, m))}) = ${h}.`,
@@ -77,6 +81,7 @@ function* run({ text, pattern }: MatchInput) {
             answer: 1,
           },
         });
+        seen(s, h, 'skip');
         yield t.frame({
           line: 3,
           note: `${h} ≠ ${hp}. Equal words always get equal hashes, so different hashes prove this window is not a match: skip it without reading a single character.`,
@@ -85,6 +90,7 @@ function* run({ text, pattern }: MatchInput) {
           vars,
         });
       } else {
+        seen(s, h, 'skip');
         yield t.frame({
           line: 3,
           note: `Window ${s} (${quote(win)}): hash ${h} ≠ ${hp}, so it can't match. Skip it.`,
@@ -116,6 +122,7 @@ function* run({ text, pattern }: MatchInput) {
         t.mark('found', ...Array.from({ length: m }, (_, k): CellRef => [TEXT, s + k]));
         t.addResult(String(s));
         found.push(s);
+        seen(s, h, 'letters match', 'found');
         yield t.frame({
           line: 4,
           note: `Check the letters one by one: all ${m} agree, so P occurs at position ${s}.`,
@@ -126,6 +133,7 @@ function* run({ text, pattern }: MatchInput) {
         });
       } else {
         t.count('spurious');
+        seen(s, h, 'same hash, letters differ', 'reject');
         yield t.frame({
           line: 4,
           note: `Check the letters one by one: T[${s + j}] = '${text[s + j]}' but P[${j}] = '${pattern[j]}'. A spurious hit: different words can share a hash, so equal hashes only mean "maybe", and this check is what keeps Rabin–Karp correct.`,

@@ -93,6 +93,12 @@ export function metricsFor(count: number, depth: number, hasEdgeLabels: boolean,
   };
 }
 
+/** Width a round node's label needs, drawn as the key cell draws it (smaller type past two characters); 0 for short labels. */
+export function roundLabelWidth(node: TreeNode, m: Metrics): number {
+  const label = node.cells[0]?.label ?? '';
+  return [...label].length > 2 ? labelWidth(label, m.font - 3) + 8 : 0;
+}
+
 /** Half-widths of a node: how far it reaches left and right of its centre, and its height. */
 export function extent(node: TreeNode, m: Metrics): { l: number; r: number; h: number } {
   if (node.shape === 'box') {
@@ -101,7 +107,9 @@ export function extent(node: TreeNode, m: Metrics): { l: number; r: number; h: n
   }
   const d = node.cells.length ? m.round : m.dot;
   const badge = node.badges && (node.badges.top || node.badges.bottom) ? m.badge : 0;
-  return { l: d / 2, r: d / 2 + badge, h: d };
+  // A label too long for the circle (a subset on a decision tree, "{a,b}") makes the node a pill that fits it.
+  const w = Math.max(d, roundLabelWidth(node, m));
+  return { l: w / 2, r: w / 2 + badge, h: d };
 }
 
 /** The root of every tree: a forest's roots, or the single root. */
@@ -199,7 +207,10 @@ export function layoutTree(
   const base = metricsFor(depthOf.size, maxDepth, edgeLabels, kind, longest);
   // Sideways, siblings stack down a phone's long side: pack them a little closer.
   // Linked siblings (a B+ tree's leaves) need room between them for the arrow.
-  const m = sideways && kind === 'search' ? { ...base, gap: 4 } : shape.links?.length ? { ...base, gap: Math.max(base.gap, LINK_GAP) } : base;
+  const packed = sideways && kind === 'search' ? { ...base, gap: 4 } : shape.links?.length ? { ...base, gap: Math.max(base.gap, LINK_GAP) } : base;
+  // Sideways, a level is a column: it must be wider than the widest pill-shaped node.
+  const widest = sideways ? Math.max(0, ...[...depthOf.keys()].map((id) => roundLabelWidth(nodes[id], packed))) : 0;
+  const m = widest ? { ...packed, sideLevel: Math.max(packed.sideLevel, widest + 18) } : packed;
   if (roots.length === 0) return { boxes: {}, parent, minX: 0, maxX: 0, minY: 0, maxY: 0, metrics: m, sideways };
 
   const place = (id: NodeId): Sub => {
