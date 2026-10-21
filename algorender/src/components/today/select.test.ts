@@ -18,6 +18,14 @@ describe('Today', () => {
     expect(lessonInProgress([], new Set())).toBeNull();
   });
 
+  it('counts a lesson only read so far as in progress', () => {
+    const events = [
+      ev('quiz.answered', { lesson: 'recursion', quiz: 'q', question: 0, correct: true }, '2026-10-01T10:00:00Z'),
+      ev('lesson.section', { lesson: 'heap', section: 'why-a-heap', index: 2, of: 8 }, '2026-10-03T10:00:00Z'),
+    ];
+    expect(lessonInProgress(events, new Set())).toBe('heap');
+  });
+
   it('shows this week from Monday, marking days with activity', () => {
     const sunday = new Date(2026, 9, 18, 20, 0);
     const events = [ev('review.rated', { card: 'quiz:a:b:0', rating: 3 }, new Date(2026, 9, 13, 9).toISOString())];

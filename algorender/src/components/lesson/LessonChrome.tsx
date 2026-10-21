@@ -1,10 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { FiCheck, FiX } from 'react-icons/fi';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { FiArrowDown, FiCheck, FiX } from 'react-icons/fi';
+import { Button } from '@/components/ui/Button';
 import { cx } from '@/components/ui/cx';
+import { record, useLessonProgress, useProgressSnapshot } from '@/progress/hooks';
+import { minutesLeft, readingByLesson } from '@/progress/reading';
 import { STEP_LABEL, type Step } from './steps';
+
+/** How long a section stays on screen before it counts as read. */
+const READ_AFTER_MS = 2000;
 
 export type ChromeSection = { id: string; step: string; title: string };
 
@@ -18,15 +24,19 @@ const label = (step: string) => STEP_LABEL[step as Step] ?? step;
 /**
  * A lesson's frame: a focus header (close, where you are, how far through,
  * time left) and an "In this lesson" list beside the content. Both follow the
- * section in view; nothing here is saved, it only tracks scrolling.
+ * section in view. A section that stays on screen for a couple of seconds and
+ * is further than any read before is recorded (`lesson.section`), and coming
+ * back to an unfinished lesson offers to continue from there.
  */
 export function LessonChrome({
+  lesson,
   trackTitle,
   title,
   minutes,
   sections,
   children,
 }: {
+  lesson: string;
   trackTitle: string;
   title: string;
   minutes: number;
@@ -34,6 +44,8 @@ export function LessonChrome({
   children: ReactNode;
 }) {
   const [current, setCurrent] = useState(0);
+  // The furthest section scrolled to on this visit: the resume offer goes once the learner moves on.
+  const [deepest, setDeepest] = useState(0);
   const [index] = useState(() => new Map(sections.map((s, i) => [s.id, i])));
 
   useEffect(() => {
@@ -49,6 +61,7 @@ export function LessonChrome({
       // At the very bottom, the last section is current even if it is short.
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) at = els.length - 1;
       setCurrent(at);
+      setDeepest((d) => Math.max(d, at));
     };
     pick();
     window.addEventListener('scroll', pick, { passive: true });
@@ -59,8 +72,22 @@ export function LessonChrome({
     };
   }, [sections]);
 
+  // How far this lesson has been read before, on any device.
+  const { ready, events } = useProgressSnapshot();
+  const reading = useMemo(() => readingByLesson(events).get(lesson), [events, lesson]);
+  const furthest = reading?.furthest ?? -1;
+  const recorded = useRef(new Set<number>());
+  useEffect(() => {
+    if (!ready || current <= furthest || recorded.current.has(current)) return;
+    const timer = setTimeout(() => {
+      recorded.current.add(current);
+      void record('lesson.section', { lesson, section: sections[current].id, index: current, of: sections.length });
+    }, READ_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [ready, current, furthest, lesson, sections]);
+
   const n = sections.length;
-  const left = Math.max(1, Math.round((minutes * (n - current - 0.5)) / Math.max(n, 1)));
+  const left = minutesLeft(minutes, current, n);
 
   return (
     <SectionIndex.Provider value={index}>
@@ -119,8 +146,48 @@ export function LessonChrome({
             </ol>
           </div>
         </nav>
-        <main className="flex min-w-0 flex-col gap-12">{children}</main>
+        <main className="flex min-w-0 flex-col gap-12">
+          {ready && deepest === 0 && <Resume lesson={lesson} sections={sections} minutes={minutes} furthest={furthest} />}
+          {children}
+        </main>
       </div>
     </SectionIndex.Provider>
+  );
+}
+
+/**
+ * Back in a lesson read part of the way and not finished: offer to continue
+ * from the furthest section reached, or to start from the top. Shown only
+ * while the page is at its top and was opened without a #section, so this
+ * visit can't have moved the furthest section yet; it goes once the learner
+ * scrolls on or picks either button.
+ */
+function Resume({ lesson, sections, minutes, furthest }: { lesson: string; sections: ChromeSection[]; minutes: number; furthest: number }) {
+  const { completed } = useLessonProgress();
+  const [dismissed, setDismissed] = useState(false);
+  const linked = typeof window !== 'undefined' && window.location.hash.length > 1;
+  if (dismissed || linked || furthest <= 0 || furthest >= sections.length || completed.includes(lesson)) return null;
+  const to = sections[furthest];
+  const go = () => {
+    setDismissed(true);
+    document.getElementById(to.id)?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
+  return (
+    <aside aria-label="Pick up where you left off" className="flex flex-wrap items-center gap-4 rounded-tile bg-accent-soft p-5">
+      <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-1">
+        <span className="text-[15px] font-semibold text-accent-ink">Pick up where you left off?</span>
+        <span className="text-sm text-ink-soft">
+          You’d reached section {furthest + 1} of {sections.length}, {label(to.step)}: “{to.title}”. About {minutesLeft(minutes, furthest, sections.length)} min left from there.
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button kind="accent" icon={<FiArrowDown aria-hidden />} onClick={go}>
+          Continue from {label(to.step)}
+        </Button>
+        <Button kind="ghost" onClick={() => setDismissed(true)}>
+          Start from the top
+        </Button>
+      </div>
+    </aside>
   );
 }

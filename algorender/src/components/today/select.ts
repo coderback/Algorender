@@ -6,12 +6,13 @@ import { KNOWN, type ConceptMastery, type MasteryGraph } from '@/progress/master
 
 /**
  * The lesson the learner was last working in and hasn't finished: the latest
- * lesson with a quiz answer, a score or an explanation, and not completed.
+ * lesson with a section read, a quiz answer, a score or an explanation, and not
+ * completed.
  */
 export function lessonInProgress(events: readonly ProgressEvent[], completed: ReadonlySet<string>): string | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
-    if (e.kind === 'quiz.answered' || e.kind === 'lesson.scored' || e.kind === 'explanation.scored') {
+    if (e.kind === 'lesson.section' || e.kind === 'quiz.answered' || e.kind === 'lesson.scored' || e.kind === 'explanation.scored') {
       if (!completed.has(e.data.lesson)) return e.data.lesson;
     }
   }

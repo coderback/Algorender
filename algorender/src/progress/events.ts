@@ -18,6 +18,14 @@ export const CARD_ID = /^[a-z]+(:[a-z0-9-]{1,80}){1,3}$/;
 export const EVENT_DATA = {
   /** A lesson marked done (or not done again). */
   'lesson.completed': z.object({ lesson: slug, done: z.boolean() }),
+  /**
+   * A lesson section read: on screen for a couple of seconds
+   * (LessonChrome). `index` is its place among the lesson's `of` sections.
+   * Only a section further than any read before is recorded. It says how far
+   * the learner has read, for resuming (src/progress/reading.ts); it is never
+   * evidence of mastery.
+   */
+  'lesson.section': z.object({ lesson: slug, section: slug, index: z.number().int().min(0).max(99), of: z.number().int().min(1).max(100) }),
   /** A quiz or a prediction challenge in a lesson, finished with this score. */
   'lesson.scored': z.object({ lesson: slug, key: slug, kind: z.enum(['quiz', 'prediction']), correct: count, total: count }),
   /** One quiz question answered (the first answer counts). `question` is its index in the quiz. */

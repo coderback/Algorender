@@ -10,8 +10,9 @@ import { ButtonLink } from '@/components/ui/Button';
 import { trackSurface, trackTitle } from '@/components/ui/Card';
 import { displayStatus, StatusChip } from '@/components/ui/Chip';
 import { Kbd } from '@/components/ui/CodeBlock';
+import { lessonInProgress } from '@/components/today/select';
 import type { PaletteEntry, PaletteKind } from '@/content/palette';
-import { useMastery } from '@/progress/hooks';
+import { useLessonProgress, useMastery, useProgressSnapshot } from '@/progress/hooks';
 import { KNOWN, type MasteryGraph } from '@/progress/mastery';
 import { useDueCount } from './hooks';
 import { search } from './search';
@@ -164,6 +165,12 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  // Continue learning: back to the lesson in progress (its page offers to pick up where the learner left off), else the concept map.
+  const { events } = useProgressSnapshot();
+  const { completed } = useLessonProgress();
+  const inProgress = useMemo(() => lessonInProgress(events, new Set(completed)), [events, completed]);
+  const resume = inProgress ? index?.entries.find((e) => e.id === `lesson:${inProgress}`) : undefined;
+
   const actions: Item[] = useMemo(
     () => [
       {
@@ -183,17 +190,11 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         icon: next === 'dark' ? FiMoon : next === 'light' ? FiSun : FiMonitor,
         run: () => applyTheme(next),
       },
-      {
-        // TODO(redesign): resume the lesson in progress once lesson steps are recorded; until then, the concept map.
-        id: 'action:continue',
-        kind: 'action',
-        title: 'Continue learning',
-        subtitle: 'Your next steps on the concept map',
-        icon: FiMap,
-        href: '/learn',
-      },
+      resume
+        ? { id: 'action:continue', kind: 'action', title: 'Continue learning', subtitle: `Back to ${resume.title}`, icon: FiBookOpen, href: resume.href }
+        : { id: 'action:continue', kind: 'action', title: 'Continue learning', subtitle: 'Your next steps on the concept map', icon: FiMap, href: '/learn' },
     ],
-    [due, theme, next],
+    [due, theme, next, resume],
   );
 
   const groups = useMemo(() => {

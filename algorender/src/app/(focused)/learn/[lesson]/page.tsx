@@ -47,7 +47,7 @@ export default async function LessonPage({ params }: Props) {
   const nextLesson = nextConcept?.lesson ? getLesson(nextConcept.lesson) : undefined;
 
   return (
-    <LessonChrome trackTitle={track?.title ?? ''} title={concept.title} minutes={lesson.minutes} sections={lessonSections(slug)}>
+    <LessonChrome lesson={slug} trackTitle={track?.title ?? ''} title={concept.title} minutes={lesson.minutes} sections={lessonSections(slug)}>
       <TrackCard track={concept.track} as="div" className="gap-5 rounded-[36px] p-7 sm:p-9">
         <p className="text-eyebrow uppercase">
           {track?.title} · {lesson.minutes} min

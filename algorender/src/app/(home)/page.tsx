@@ -8,6 +8,7 @@ import { loadConcepts } from '@/content/concepts';
 import { goals } from '@/content/goals';
 import { getLesson } from '@/content/lessons';
 import { lessonMisconceptions } from '@/content/lessons/assessment';
+import { lessonSections } from '@/content/lessons/sections';
 import { masteryGraph, planCatalog } from '@/content/mastery';
 import { loadProblems } from '@/problems/load';
 import { PATTERNS } from '@/problems/patterns';
@@ -39,7 +40,8 @@ function todayData(): TodayData {
             {
               summary: c.summary,
               minutes: entry?.minutes ?? 20,
-              ...(entry?.lesson && { lesson: entry.lesson }),
+              // The lesson's sections, for the step pills on Today's Continue card.
+              ...(entry?.lesson && { lesson: { ...entry.lesson, sections: lessonSections(entry.lesson.slug).map(({ id, step }) => ({ id, step })) } }),
               visualisers: entry?.visualisers.length ?? 0,
               links: c.links,
               problems: (entry?.problems ?? []).map((p) => ({ ...p, pattern: pattern.get(p.slug) ?? '' })),

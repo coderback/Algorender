@@ -5,6 +5,7 @@ import { clsx } from 'clsx';
 import { useMemo, type ReactNode } from 'react';
 import { FiArrowRight, FiBookOpen, FiCheck, FiCode, FiFlag, FiPlay } from 'react-icons/fi';
 import { mistakeAnchor } from '@/components/lesson/anchors';
+import { STEP_LABEL, type Step } from '@/components/lesson/steps';
 import { conceptHref } from '@/components/learn/Mastery';
 import { dailyChallenge } from '@/components/play/challenge';
 import { useLearner, useXp } from '@/components/shell/hooks';
@@ -20,6 +21,7 @@ import { isReady, nextSteps, type ConceptMastery, type MasteryConcept, type Mast
 import { CLEAR_AFTER } from '@/progress/misconceptions';
 import { BADGES, badges } from '@/progress/play';
 import { planView, WEEK_MS, type PlanView } from '@/progress/plan';
+import { minutesLeft, readingByLesson, type Reading } from '@/progress/reading';
 import { dueToday, nextDue, type ReviewCard } from '@/progress/review';
 import { firstUnsolved, greeting, lessonInProgress, trackMastery, weekActivity, type WeekDay } from './select';
 
@@ -29,7 +31,7 @@ import { firstUnsolved, greeting, lessonInProgress, trackMastery, weekActivity, 
 export type TodayConcept = {
   summary: string;
   minutes: number;
-  lesson?: { slug: string; title: string; minutes: number };
+  lesson?: { slug: string; title: string; minutes: number; sections?: { id: string; step: string }[] };
   visualisers: number;
   /** Other pages that teach it (Big-O's growth chart, say). */
   links: { href: string; label: string }[];
@@ -85,6 +87,7 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
   // Continue: the lesson in progress, else the next step with a lesson.
   const inProgress = lessonInProgress(events, new Set(lessons.completed));
   const resume = inProgress ? byId.get(graph.lessons[inProgress]) : undefined;
+  const reading = useMemo(() => (inProgress ? readingByLesson(events).get(inProgress) : undefined), [events, inProgress]);
   const mode: ContinueMode = resume ? 'resume' : events.length === 0 ? 'first' : 'next';
   // A new learner starts at the top of the map (Big-O's visualiser), lesson or not.
   const upNext = resume ?? (mode === 'first' ? steps[0]?.concept : (steps.find((s) => s.concept.lesson)?.concept ?? steps[0]?.concept));
@@ -142,7 +145,7 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
-          {upNext ? <ContinueCard concept={upNext} info={concepts[upNext.id]} mode={mode} /> : null}
+          {upNext ? <ContinueCard concept={upNext} info={concepts[upNext.id]} mode={mode} reading={reading} /> : null}
           <PhoneTiles due={due.length} xp={xp?.total ?? 0} week={week} />
           <PlanCard plan={plan} m={m} graph={graph} concepts={concepts} byId={byId} now={now} />
           {ready.length > 0 && <ReadyFor steps={ready.map((s) => s.concept)} concepts={concepts} />}
@@ -211,8 +214,11 @@ function WeekStrip({ week }: { week: WeekDay[] }) {
 
 type ContinueMode = 'resume' | 'next' | 'first';
 
-function ContinueCard({ concept, info, mode }: { concept: MasteryConcept; info: TodayConcept | undefined; mode: ContinueMode }) {
+function ContinueCard({ concept, info, mode, reading }: { concept: MasteryConcept; info: TodayConcept | undefined; mode: ContinueMode; reading?: Reading }) {
   const lesson = info?.lesson;
+  // Resuming a lesson read part of the way: its sections as pills, read ones ticked, and the minutes left.
+  const sections = mode === 'resume' && reading && lesson?.sections?.length === reading.of ? lesson.sections : null;
+  const left = sections && reading ? minutesLeft(lesson!.minutes, reading.furthest, reading.of) : null;
   const chip = mode === 'resume' ? 'Continue' : mode === 'first' ? 'Start here' : 'Up next';
   const action = lesson ? (mode === 'resume' ? 'Resume the lesson' : mode === 'first' ? 'Start your first lesson' : 'Start the lesson') : 'Open the visualiser';
   const n = info?.problems.length ?? 0;
@@ -226,13 +232,33 @@ function ContinueCard({ concept, info, mode }: { concept: MasteryConcept; info: 
         <h2 id="continue-title" className={clsx('font-display text-[32px] leading-[1.04] font-bold tracking-[-0.03em] sm:text-[40px]', trackTitle('lilac'))}>
           {lesson?.title ?? concept.title}
         </h2>
-        {/* TODO(redesign): the board's step pills (Hook ✓ … Predict) and "about 8 minutes left" need lesson progress step by step, which isn't recorded yet. */}
+        {sections && reading && (
+          <ol aria-label={`Read up to section ${reading.furthest + 1} of ${reading.of}`} className="flex flex-wrap gap-1.5">
+            {sections.map((s, i) => {
+              const state = i < reading.furthest ? 'done' : i === reading.furthest ? 'now' : 'next';
+              return (
+                <li
+                  key={s.id}
+                  className={clsx(
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold',
+                    state === 'done' && 'bg-accent text-on-accent',
+                    state === 'now' && 'bg-primary text-on-primary',
+                    state === 'next' && 'bg-surface text-ink-soft',
+                  )}
+                >
+                  {state === 'done' && <FiCheck aria-label="read" className="size-3" strokeWidth={3} />}
+                  {STEP_LABEL[s.step as Step] ?? s.step}
+                </li>
+              );
+            })}
+          </ol>
+        )}
         {info && <p className="max-w-xl text-[15px] leading-relaxed">{info.summary}</p>}
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <ButtonLink href={!lesson && !concept.visualisers.length && info?.links[0] ? info.links[0].href : conceptHref(concept)} size="l" trailing={<FiArrowRight aria-hidden />}>
             {action}
           </ButtonLink>
-          {lesson && <span className="text-sm">About {lesson.minutes} minutes</span>}
+          {lesson && <span className="text-sm">{left != null ? `About ${left} ${plural(left, 'minute')} left` : `About ${lesson.minutes} minutes`}</span>}
         </div>
       </div>
       <div className="hidden min-w-[240px] flex-[0_1_300px] self-stretch sm:flex">

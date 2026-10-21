@@ -75,3 +75,30 @@ for (const colorScheme of ['light', 'dark'] as const) {
     }
   });
 }
+
+test('a lesson read part of the way comes back on Today, and offers to continue from there', async ({ page }) => {
+  await page.goto('/learn/binary-search');
+  await page.waitForLoadState('networkidle');
+  // The first section counts once it has been on screen for a couple of seconds; then read on to the third.
+  await page.waitForTimeout(2500);
+  const third = await page.locator('main section[id]').nth(2).getAttribute('id');
+  await page.evaluate((id) => document.getElementById(id!)!.scrollIntoView({ block: 'start' }), third);
+  await page.waitForTimeout(2500);
+
+  await page.goto('/');
+  const card = page.getByRole('article', { name: /Binary search/ });
+  await expect(card.getByRole('list', { name: /^Read up to section 3 of \d+$/ })).toBeVisible();
+  await expect(card).toContainText(/About \d+ minutes? left/);
+
+  // The palette's Continue goes back to it too.
+  await page.keyboard.press('Control+k');
+  await expect(page.getByRole('option', { name: /Continue learning/ })).toContainText('Back to');
+  await page.keyboard.press('Escape');
+
+  await card.getByRole('link', { name: 'Resume the lesson' }).click();
+  const offer = page.getByRole('complementary', { name: 'Pick up where you left off' });
+  await expect(offer).toContainText('section 3 of');
+  await offer.getByRole('button', { name: /^Continue from / }).click();
+  await expect(offer).toHaveCount(0);
+  await expect(page.locator(`#${third}`)).toBeInViewport();
+});
