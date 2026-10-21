@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
-import { FiAward, FiCheck, FiCheckCircle, FiCloud, FiCloudOff, FiCode, FiGithub, FiGlobe, FiHelpCircle, FiLoader, FiMap, FiRefreshCw, FiTarget } from 'react-icons/fi';
+import { FiAward, FiCheck, FiCheckCircle, FiCloud, FiCloudOff, FiCode, FiDownload, FiGithub, FiGlobe, FiHelpCircle, FiLoader, FiMap, FiRefreshCw, FiTarget } from 'react-icons/fi';
 import { ConceptBubbles } from '@/components/learn/ConceptBubbles';
 import { applyTheme, THEME_LABEL, useTheme, type Theme } from '@/components/ThemeToggle';
 import { Alert } from '@/components/ui/Alert';
@@ -14,8 +14,10 @@ import { cx } from '@/components/ui/cx';
 import { Field } from '@/components/ui/Field';
 import { Segmented } from '@/components/ui/Segmented';
 import { TRACK_CLASSES, type TrackColour } from '@/data/tracks';
+import { DEFAULT_SPEED, SPEEDS } from '@/engine/useTracePlayer';
 import { authClient } from '@/lib/auth-client';
 import { useMinute } from '@/lib/now';
+import { saveSpeed, saveStartInPredict, useStartInPredict, useStartSpeed } from '@/lib/preferences';
 import { useMastery, useProblemProgress, useProgressSnapshot } from '@/progress/hooks';
 import { KNOWN, type MasteryGraph } from '@/progress/mastery';
 import { badges, xpLedger, xpTotals } from '@/progress/play';
@@ -399,7 +401,8 @@ function Settings({ email, status }: { email: string; status: SyncStatus }) {
           ))}
         </select>
       </div>
-      {/* TODO(redesign): the board also has a default playback speed and switches for starting visualisers in Predict mode, reducing motion and a daily review reminder; none of these settings exist yet. */}
+      <VisualiserSettings />
+      {/* TODO(redesign): the board also has switches for reducing motion (the system setting already applies) and a daily review reminder (it needs push or email). */}
       <div className="flex flex-col gap-3 border-t border-line-soft pt-5">
         <p className="text-[13px] text-ink-soft">Signed in as {email}. Progress is saved on this device first, so it works offline.</p>
         <div className={cx('flex items-center justify-between gap-3 rounded-well py-2 pr-2 pl-4', status.state === 'idle' ? 'bg-good-soft text-good-title' : status.state === 'error' ? 'bg-bad-soft text-bad-title' : 'bg-sunken text-ink')}>
@@ -408,8 +411,8 @@ function Settings({ email, status }: { email: string; status: SyncStatus }) {
             Sync now
           </Button>
         </div>
-        {/* TODO(redesign): "Export my data" is on the board; there is no export yet. */}
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton />
           <Button kind="ghost" className="text-bad-ink hover:bg-bad-soft" onClick={() => void signOut()} disabled={leaving} icon={leaving ? <FiLoader aria-hidden className="animate-spin" /> : undefined}>
             Sign out
           </Button>
@@ -417,6 +420,67 @@ function Settings({ email, status }: { email: string; status: SyncStatus }) {
         <DeleteAccount />
       </div>
     </Card>
+  );
+}
+
+/** Visualiser preferences, kept on this device: the speed they start at, and Watch or Predict. */
+function VisualiserSettings() {
+  const speed = useStartSpeed();
+  const predict = useStartInPredict();
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor="start-speed" className="text-[15px] font-semibold">
+          Playback speed
+        </label>
+        <select
+          id="start-speed"
+          value={speed}
+          onChange={(e) => saveSpeed(Number(e.target.value))}
+          className="h-11 cursor-pointer rounded-full bg-sunken pr-3 pl-4 text-[15px] font-semibold text-ink"
+        >
+          {SPEEDS.map((s) => (
+            <option key={s} value={s}>
+              {s / DEFAULT_SPEED}×
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-[15px] font-semibold">Visualisers open in</span>
+        <Segmented<'watch' | 'predict'>
+          label="Visualisers open in"
+          size="m"
+          value={predict ? 'predict' : 'watch'}
+          onChange={(mode) => saveStartInPredict(mode === 'predict')}
+          className="w-full [&>button]:flex-1 [&>button]:justify-center"
+          options={[
+            { value: 'watch', label: 'Watch' },
+            { value: 'predict', label: 'Predict' },
+          ]}
+        />
+        <p className="text-[13px] text-ink-muted">Saved on this device. A link that names a mode still opens in it.</p>
+      </div>
+    </>
+  );
+}
+
+/** Downloads every progress event on this device as JSON: the whole history, which every view is worked out from. */
+function ExportButton() {
+  const { events } = useProgressSnapshot();
+  const download = () => {
+    const file = JSON.stringify({ app: 'algorender', format: 1, exportedAt: new Date().toISOString(), events }, null, 2);
+    const url = URL.createObjectURL(new Blob([file], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `algorender-progress-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <Button kind="secondary" icon={<FiDownload aria-hidden />} onClick={download} disabled={events.length === 0}>
+      Export my data
+    </Button>
   );
 }
 

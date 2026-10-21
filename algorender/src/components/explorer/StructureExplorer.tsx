@@ -10,8 +10,9 @@ import { argError, blockedReason, describeCall, parseArg, parseArgs, parseOps, r
 import { Experiments } from './Experiments';
 import type { ExplorerOptions } from './options';
 import { DEFAULT_SEED } from './source';
+import { useStartMode } from './startMode';
 import { TraceStage, type Density, type Mode } from './TraceStage';
-import { modeFromParams, writeUrl } from './url';
+import { writeUrl } from './url';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- a structure's model type is opaque to the explorer */
 type Model = any;
@@ -47,7 +48,7 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
     const { model, applied } = replay(ds, start.make(seed), parseOps(p.get('ops') ?? '', ds));
     return { start: start.id, seed, model, history: applied, trace: idle(ds, model, READY), pseudocode: [], id: 0, animate: false };
   });
-  const [mode, setMode] = useState<Mode>(() => modeFromParams(options.params));
+  const [mode, setMode] = useStartMode(options);
   const [density, setDensity] = useState<Density>(options.density);
 
   const sync = (next: Session, nextMode = mode) => {

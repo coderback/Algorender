@@ -27,4 +27,6 @@ export type ExplorerOptions = {
   next?: { href: string; label: string };
   /** Shown between the controls and "Try it out next" (the page's explainer cards). */
   details?: ReactNode;
+  /** Follow the device's visualiser preferences when the link doesn't say (the full page; not lessons or embeds). */
+  devicePrefs: boolean;
 };

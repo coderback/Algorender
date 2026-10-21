@@ -11,8 +11,9 @@ import { Experiments } from './Experiments';
 import { InputPanel } from './InputPanel';
 import type { ExplorerOptions } from './options';
 import { inputFor, sourceFromParams, sourceToParams, type InputSource } from './source';
+import { useStartMode } from './startMode';
 import { TraceStage, type Density, type Mode } from './TraceStage';
-import { modeFromParams, stepFromParams, writeUrl } from './url';
+import { stepFromParams, writeUrl } from './url';
 
 /** Runs an algorithm on a chosen input and replays its trace. */
 export function AlgorithmExplorer({
@@ -27,10 +28,9 @@ export function AlgorithmExplorer({
   const [initial] = useState(() => ({
     source: sourceFromParams(options.params, algo.input),
     step: stepFromParams(options.params),
-    mode: modeFromParams(options.params),
   }));
   const [source, setSource] = useState<InputSource>(initial.source);
-  const [mode, setMode] = useState<Mode>(initial.mode);
+  const [mode, setMode] = useStartMode(options);
   const [density, setDensity] = useState<Density>(options.density);
   // A new input from the panel restarts the stage; a dragged one keeps its frame.
   const [run, setRun] = useState(0);

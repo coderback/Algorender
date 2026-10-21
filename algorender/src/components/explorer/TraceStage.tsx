@@ -9,6 +9,7 @@ import { Segmented } from '@/components/ui/Segmented';
 import type { LegendEntry, StatSpec, ViewKind } from '@/engine/module';
 import type { Trace } from '@/engine/types';
 import { usePlayerKeyboard, useTracePlayer } from '@/engine/useTracePlayer';
+import { useStartSpeed } from '@/lib/preferences';
 import { stageCaption } from '@/viz/captions';
 import { ViewEditContext, type ViewEdit } from '@/viz/edit';
 import { VIEWS } from '@/viz/views';
@@ -107,7 +108,8 @@ export function TraceStage<S>({
 
   const predicting = predict.mode === 'predict';
   const gate = useCallback((i: number) => predicting && asked.has(i) && !answers.has(i), [predicting, asked, answers]);
-  const player = useTracePlayer(trace.frames.length, { initialIndex, gate, autoPlay });
+  const startSpeed = useStartSpeed();
+  const player = useTracePlayer(trace.frames.length, { initialIndex, gate, autoPlay, startSpeed });
   const rootRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   usePlayerKeyboard(player, keyboard === 'local' ? rootRef : undefined);

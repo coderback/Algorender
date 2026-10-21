@@ -64,6 +64,7 @@ export function Visualiser({ slug, variant = 'page', settings, showInput = false
       details,
       // Lessons ask at every decision: the prediction is the exercise.
       density: lesson ? 'all' : 'some',
+      devicePrefs: variant === 'page',
       onPrediction,
     }),
     // The starting state is read once; later URL changes are the explorer's own writes.

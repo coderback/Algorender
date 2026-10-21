@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { collectErrors } from './errors';
@@ -213,3 +214,27 @@ for (const colorScheme of ['light', 'dark'] as const) {
     expect(violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
   });
 }
+
+test('visualiser settings apply on this device, a link still decides, and progress exports as JSON', async ({ page }) => {
+  await withCode(page.context(), 'two-sum', TWO_SUM_JS);
+  await signUp(page, freshEmail());
+  await page.getByLabel('Playback speed').selectOption({ label: '4×' });
+  await page.getByRole('group', { name: 'Visualisers open in' }).getByRole('button', { name: 'Predict' }).click();
+
+  await page.goto('/visualisers/bubble-sort');
+  await expect(page.getByRole('button', { name: 'Predict', pressed: true })).toBeVisible();
+  await expect(page.getByLabel('Speed')).toHaveValue('8');
+  // A link that names a mode opens in it.
+  await page.goto('/visualisers/bubble-sort?mode=watch');
+  await expect(page.getByRole('button', { name: 'Watch', pressed: true })).toBeVisible();
+
+  await solveTwoSum(page);
+  await page.goto('/account');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export my data' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^algorender-progress-\d{4}-\d{2}-\d{2}\.json$/);
+  const data = JSON.parse(await readFile((await file.path())!, 'utf8'));
+  expect(data).toMatchObject({ app: 'algorender', format: 1 });
+  expect(data.events.some((e: { kind: string }) => e.kind === 'problem.submitted')).toBe(true);
+});
