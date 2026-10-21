@@ -20,6 +20,16 @@ test('the growth chart has a legend, a keyboard-readable crosshair and a table v
   await expect(page.getByRole('table')).toContainText('64');
 });
 
+test('the race explains itself in the Big-O lesson', async ({ page }) => {
+  await page.goto('/compare');
+  await page.getByRole('link', { name: 'Why: Big-O and growth' }).click();
+  await expect(page).toHaveURL(/\/learn\/big-o$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Big-O: how the work grows with n' })).toBeVisible();
+  // Its charts are measured runs, readable at any n.
+  await expect(page.getByRole('group', { name: 'Comparisons against input size n, for Bubble Sort, Merge Sort' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Probes against input size n, for Linear Search, Binary Search' })).toBeVisible();
+});
+
 test('at most four algorithms can be compared at once', async ({ page }) => {
   await page.goto('/compare');
   await expect(page.getByRole('button', { name: 'Heap Sort' })).toBeDisabled();

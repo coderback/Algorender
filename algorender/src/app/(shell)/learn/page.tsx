@@ -72,12 +72,13 @@ function lessonGroups(): LessonGroup[] {
     .filter((g) => g.lessons.length > 0);
 }
 
-export default async function LearnPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
-  const lessonsTab = (await searchParams).tab === 'lessons';
+export default async function LearnPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[]; concept?: string | string[] }> }) {
+  const { tab, concept } = await searchParams;
+  const lessonsTab = tab === 'lessons';
   return (
     <main className="flex flex-col gap-6 px-4 pb-6 md:px-0 md:pt-2">
       <LearnHeader active={lessonsTab ? 'lessons' : 'path'} aside={lessonsTab ? undefined : <PathLegend />} />
-      {lessonsTab ? <LessonList groups={lessonGroups()} /> : <LearnPath data={pathData()} />}
+      {lessonsTab ? <LessonList groups={lessonGroups()} /> : <LearnPath data={pathData()} linked={typeof concept === 'string' ? concept : undefined} />}
     </main>
   );
 }

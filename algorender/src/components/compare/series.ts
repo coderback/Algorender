@@ -27,3 +27,10 @@ export function assignSlots(selected: readonly string[], previous: ReadonlyMap<s
 export function workOf(stats: Record<string, number>): number {
   return Object.values(stats).reduce((a, b) => a + b, 0);
 }
+
+/** Two significant figures, so "about" reads honestly: 1,984 → 2,000. */
+export function about(v: number): string {
+  if (v < 100) return String(Math.round(v));
+  const p = 10 ** (Math.floor(Math.log10(v)) - 1);
+  return (Math.round(v / p) * p).toLocaleString('en-GB');
+}

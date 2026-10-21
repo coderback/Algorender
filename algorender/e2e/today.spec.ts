@@ -12,9 +12,9 @@ test('a new learner who skips the onboarding gets a first lesson and nothing to 
   await page.goto('/start');
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await expect(page).toHaveURL(/\/$/);
-  // The top of the map: Big-O, which starts in its visualiser.
-  await expect(page.getByRole('heading', { name: 'Big-O and growth' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open the visualiser' })).toHaveAttribute('href', '/compare');
+  // The top of the map: Big-O, and its lesson.
+  await expect(page.getByRole('heading', { name: 'Big-O: how the work grows with n' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Start your first lesson' })).toHaveAttribute('href', '/learn/big-o');
   await expect(page.getByText('Nothing due, nice.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Set a goal' })).toBeVisible();
   // Mastery and mistakes wait until there is something to show.

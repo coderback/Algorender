@@ -98,7 +98,8 @@ export function PathLegend() {
   );
 }
 
-export function LearnPath({ data }: { data: PathData }) {
+/** `linked`: the concept named in the link (`/learn?concept=<id>`), selected until the learner picks another. */
+export function LearnPath({ data, linked }: { data: PathData; linked?: string }) {
   const { graph, goals, tracks, concepts } = data;
   const { ready, events } = useProgressSnapshot();
   const m = useMastery(graph);
@@ -114,19 +115,19 @@ export function LearnPath({ data }: { data: PathData }) {
     return displayStatus(m.get(id)?.status ?? 'new', isReady(id, m, graph));
   };
 
-  // The default selection: the lesson in progress, else the first next step.
+  // The default selection: the concept linked to, else the lesson in progress, else the first next step.
   const completed = useMemo(() => new Set(lessons.completed), [lessons.completed]);
   const resumeLesson = ready ? lessonInProgress(events, completed) : null;
   const resumeConcept = resumeLesson ? graph.lessons[resumeLesson] : undefined;
   const fallback = ready ? nextSteps(m, graph, { limit: 1 })[0]?.concept.id : undefined;
-  const selectedId = picked ?? resumeConcept ?? fallback ?? tracks[0]?.concepts[0];
+  const selectedId = picked ?? (linked && concepts[linked] ? linked : undefined) ?? resumeConcept ?? fallback ?? tracks[0]?.concepts[0];
   const selected = selectedId ? concepts[selectedId] : undefined;
 
   // Tracks outside the current goal fold into one bar.
   const plan = ready ? currentPlan(events) : null;
   const goal = plan ? goals.find((g) => g.id === plan.goal) : undefined;
   const inGoal = useMemo(() => (goal ? goalConcepts(goal, graph) : null), [goal, graph]);
-  const shown = (t: PathTrack) => showAll || (inGoal ? t.concepts.some((id) => inGoal.has(id)) || t.id === selected?.track : !t.planned);
+  const shown = (t: PathTrack) => showAll || t.id === selected?.track || (inGoal ? t.concepts.some((id) => inGoal.has(id)) : !t.planned);
   const visible = tracks.filter(shown);
   const folded = tracks.filter((t) => !shown(t));
 

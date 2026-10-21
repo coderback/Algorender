@@ -41,7 +41,7 @@ export default async function LessonPage({ params }: Props) {
   const { default: Body } = await import(`@/content/lessons/${slug}.mdx`);
   const track = loadConcepts().tracks.find((t) => t.id === concept.track);
   const prereqs = concept.prereqs.map((p) => getConcept(p)!);
-  const href = (c: { id: string; lesson?: string; visualisers?: string[] }) => (c.lesson ? `/learn/${c.lesson}` : c.visualisers?.[0] ? `/visualisers/${c.visualisers[0]}` : `/learn#${c.id}`);
+  const href = (c: { id: string; lesson?: string; visualisers?: string[] }) => (c.lesson ? `/learn/${c.lesson}` : c.visualisers?.[0] ? `/visualisers/${c.visualisers[0]}` : `/learn?concept=${c.id}`);
   // The next lesson: the first concept this one unlocks that has a lesson.
   const nextConcept = unlockedBy(concept.id).find((c) => !c.planned && c.lesson);
   const nextLesson = nextConcept?.lesson ? getLesson(nextConcept.lesson) : undefined;
