@@ -64,6 +64,8 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'viz-hash', path: '/visualisers/hash-table' },
   { name: 'viz-plot', path: '/visualisers/k-means?step=4' },
   { name: 'viz-ring', path: '/visualisers/queue' },
+  // Group 3: the embed page.
+  { name: 'embed-builder', path: '/embed' },
 ];
 
 const VIEWPORTS = [

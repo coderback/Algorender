@@ -238,7 +238,9 @@ export function Landing({ data }: { data: LandingData }) {
               {n.label}
             </Link>
           ))}
-          {/* TODO(redesign): the board links "Embed a visualiser"; there is no page that explains embeds yet. */}
+          <Link href="/embed" className="text-ink-soft underline underline-offset-2 hover:text-ink">
+            Embed a visualiser
+          </Link>
         </nav>
       </footer>
     </div>

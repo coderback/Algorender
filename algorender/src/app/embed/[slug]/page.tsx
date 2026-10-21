@@ -27,7 +27,8 @@ export default async function EmbedPage({ params }: Props) {
   if (!getModule(slug) || !meta) notFound();
 
   return (
-    <main className="flex min-h-screen flex-col gap-4 bg-page p-3 text-ink sm:p-6">
+    // Named, so it stays a distinct landmark when a page shows the embed in a frame (the embed page's preview).
+    <main aria-label={meta.name} className="flex min-h-screen flex-col gap-4 bg-page p-3 text-ink sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-[22px] leading-tight font-bold tracking-[-0.02em] sm:text-[26px]">{meta.name}</h1>
         <a href={`/visualisers/${slug}`} target="_blank" rel="noopener" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-accent-ink hover:underline">

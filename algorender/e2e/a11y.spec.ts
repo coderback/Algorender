@@ -25,6 +25,7 @@ const pages = [
   '/design/url-shortener',
   ...lessons.map((l) => `/learn/${l.slug}`),
   '/compare',
+  '/embed',
   '/design/estimate',
   '/code',
   '/account',

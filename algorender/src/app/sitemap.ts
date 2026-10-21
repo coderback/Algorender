@@ -29,6 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/practice/drills`, changeFrequency: 'monthly', priority: 0.7 },
     ...loadProblems().map((p) => ({ url: `${SITE_URL}/practice/${p.slug}`, changeFrequency: 'monthly' as const, priority: 0.8 })),
     { url: `${SITE_URL}/compare`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/embed`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/design/estimate`, changeFrequency: 'monthly', priority: 0.7 },
     ...visualisers
       .filter((v) => !v.hidden)
