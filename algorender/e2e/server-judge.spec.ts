@@ -86,7 +86,8 @@ test('a compile error shows the compiler’s message at its line, and passes axe
   await expect(error).toContainText('on line 7');
   await expect(error).toContainText("Solution.java:7: error: ';' expected");
   for (const colorScheme of ['light', 'dark'] as const) {
-    await page.emulateMedia({ colorScheme });
+    // Reduced motion turns off colour fades, so the scan never sees a button halfway between themes.
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
     expect(violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
   }
