@@ -49,6 +49,7 @@ concepts:
     track: foundations
     summary: Counting how the work an algorithm does grows as its input grows.
     links: [{ href: /compare, label: Race the sorts and chart their growth }]
+    lesson: big-o
   - id: recursion
     title: Recursion and the call tree
     track: foundations

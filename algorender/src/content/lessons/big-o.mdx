@@ -1,0 +1,253 @@
+<Section step="hook" title="Which one is faster?">
+
+You need to find a name in a sorted list of 1,000. One way checks each name in turn: up to 1,000 looks. Another opens the
+list in the middle, sees which half the name is in, and repeats: at most 10 looks. Make the list a million names long and
+the first way needs up to a million looks, the second about 20.
+
+A stopwatch can't settle which is faster: it depends on the machine, the language and the list you happened to try. What
+doesn't change is **how the number of steps grows as the input grows**. Big-O is the name for that growth.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="n">The size of the input: the items in a list, the nodes in a graph, the characters in a string.</Term>
+  <Term name="step">One basic operation the algorithm repeats, such as a comparison, a swap or a probe. We count these, not seconds.</Term>
+  <Term name="growth">How the step count changes as n grows. The quickest test: double n and see what happens to the count.</Term>
+  <Term name="O(f(n))">For large enough n, the steps are at most a constant times f(n). Constant factors and smaller terms are dropped.</Term>
+  <Term name="worst case">The input of size n that takes the most steps. A Big-O without a qualifier usually means this one.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Watch two sorts pull apart">
+
+Bubble sort compares neighbours and swaps them, pass after pass. Merge sort splits the list in halves, sorts each half
+and merges them. Here is how many comparisons each makes on random lists as n goes from 4 to 64.
+
+<Growth
+  algorithms={['bubble-sort', 'merge-sort']}
+  example="random"
+  stat="comparisons"
+  label="Comparisons"
+  max={64}
+  step={4}
+  curves={['n²/2', 'n log₂ n']}
+  caption="Each point is a real run on a random list. Move along the chart, or use the arrow keys, to read the counts at any n."
+/>
+
+At n = 8 the two are close. At n = 64, bubble sort makes about 2,000 comparisons and merge sort about 310. Now try the
+doubling test: from n = 32 to n = 64, bubble sort's count goes up about **four times**, and merge sort's only a little
+more than **twice**. Bubble sort compares about every pair, roughly n²/2 of them, so it is O(n²). Merge sort
+does about n comparisons on each of log₂ n levels of halving, so it is O(n log n).
+
+<KeyIdea>
+
+**Big-O keeps only the term that wins as n grows, and drops constant factors.** An algorithm taking 3n² + 50n + 1,000
+steps is O(n²): at n = 10,000 the n² term is 300,000,000 and the rest is about 500,000. Whatever the constants, an
+O(n log n) algorithm beats an O(n²) one once n is large enough.
+
+</KeyIdea>
+
+The classes you will meet most, from slowest-growing to fastest:
+
+- **O(1)**, constant: the same steps whatever n is, like reading A[i].
+- **O(log n)**, logarithmic: the problem halves every step, as in binary search. A million values take about 20 steps.
+- **O(n)**, linear: each item is looked at once, as in linear search or adding up a list.
+- **O(n log n)**: halve the problem, then do O(n) work at each of the log n levels, as merge sort does.
+- **O(n²)**, quadratic: every pair, as in bubble sort or two loops nested over the same list.
+
+</Section>
+
+<Section step="predict" title="Your turn: count the steps">
+
+This function counts how many times its inner line runs. The inner loop starts just after `i`, so it visits each pair of
+positions once.
+
+<TraceCode
+  snippet="count-pairs"
+  question="How many times does steps += 1 run when n = 4?"
+  choices={['4', '6', '8', '16']}
+  answer={1}
+  why="i = 0 pairs with 3 later positions, i = 1 with 2, i = 2 with 1 and i = 3 with none: 3 + 2 + 1 = 6, which is n(n − 1)/2. Double n to 8 and it runs 28 times, more than four times as often. Nested loops over the same list are O(n²)."
+/>
+
+</Section>
+
+<Section step="do" title="Test a claim: linear against binary search">
+
+Linear search checks each value in turn; binary search halves a sorted array with every probe. Both look for a value that
+isn't there, the worst case for each.
+
+<Growth
+  algorithms={['linear-search', 'binary-search']}
+  example="absent"
+  stat="probes"
+  label="Probes"
+  max={32}
+  step={2}
+  curves={['n', 'log₂ n']}
+/>
+
+Linear search's line is the n line itself: double n and its probes double. Binary search's barely rises: doubling n adds
+**one** probe, because one more halving undoes the doubling. Run it yourself: try n = 7 and then n = 15 and count the probes.
+
+<Explore slug="binary-search" settings={{ preset: 'absent', n: 15 }} input caption="Each probe rules out half of what is left, so 15 values take at most 4 probes, and 31 would take 5." />
+
+<Misconception
+  id="constants-count"
+  title="O(2n) is slower than O(n)"
+  probes={[
+    {
+      q: 'One function makes two passes over an array of n items; another makes one pass. In Big-O, how do they compare?',
+      choices: ['The two-pass one is O(2n), a slower class', 'Both are O(n)', 'The two-pass one is O(n²)'],
+      answer: 1,
+      trap: 0,
+      why: 'Two passes is 2n steps, and Big-O drops the constant: both grow linearly, so doubling n doubles both. The two-pass one may well be slower, but by a constant factor, which Big-O does not rank.',
+    },
+    {
+      q: 'An algorithm takes 5n + 3 steps. What is its Big-O?',
+      choices: ['O(5n + 3)', 'O(5n)', 'O(n)'],
+      answer: 2,
+      trap: 1,
+      why: 'Drop the smaller term (3) and the constant factor (5). What is left, n, says how the work grows.',
+    },
+  ]}
+>
+
+Big-O drops constant factors because they don't change how the work **grows**: 2n and n both double when n doubles, so
+both are O(n). Constants still matter when comparing two algorithms in the same class on a real machine, but that is a
+different question from Big-O's. Write O(n), never O(2n).
+
+</Misconception>
+
+<Misconception
+  id="exact-time"
+  title="Big-O tells you how long it takes"
+  probes={[
+    {
+      q: 'Algorithm A is O(n log n) and algorithm B is O(n²). On a list of 10 items, which is faster?',
+      choices: ['A, always', 'It depends on their constant factors: B can win on small inputs', 'B, always'],
+      answer: 1,
+      trap: 0,
+      why: 'Big-O describes growth for large n. On 10 items the constants and overheads decide, and a simple O(n²) sort often wins, which is why real sorting libraries switch to insertion sort for small pieces.',
+    },
+    {
+      q: 'An O(n) algorithm takes 2 seconds on a million items. What does Big-O tell you about two million?',
+      choices: ['Exactly 4 seconds, since Big-O gives the time', 'About twice as long, since the work grows in proportion to n', 'Nothing at all'],
+      answer: 1,
+      trap: 0,
+      why: 'Big-O gives the shape of the growth, not a time: linear work roughly doubles when n doubles. The real time also depends on caches, the machine and the constant factors.',
+    },
+  ]}
+>
+
+Big-O says how the count of steps **grows**, not how many seconds a run takes or even the exact count. An O(n²) algorithm
+can beat an O(n log n) one on small inputs, because constant factors decide there. What Big-O promises is who wins as n
+gets large, and that promise is the one that matters when inputs grow.
+
+</Misconception>
+
+<Misconception
+  id="two-loops"
+  title="Two loops always mean O(n²)"
+  probes={[
+    {
+      q: 'A function loops over an array once to find its largest value, then loops over it again to count how often that value appears. What is its Big-O?',
+      choices: ['O(n²), since there are two loops', 'O(n)', 'O(log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'The loops run one after the other, so their steps add: n + n = 2n, which is O(n). Only loops nested inside each other multiply.',
+    },
+    {
+      q: 'For each of n items, code runs a binary search over a sorted array of n values. What is its Big-O?',
+      choices: ['O(n²), a loop with a search inside', 'O(n log n)', 'O(n)'],
+      answer: 1,
+      trap: 0,
+      why: 'Nesting multiplies, but the inner work is a binary search, O(log n), not a full loop. n times log n is O(n log n).',
+    },
+  ]}
+>
+
+Count what each loop does, and how they are arranged. Loops **one after another** add: O(n) + O(n) is still O(n). Loops
+**nested** multiply: n repetitions of O(n) work is O(n²), but n repetitions of an O(log n) search is O(n log n).
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Double n and an algorithm’s step count goes up about four times. Which growth fits?',
+      choices: ['O(n)', 'O(n log n)', 'O(n²)', 'O(2ⁿ)'],
+      answer: 2,
+      why: '(2n)² = 4n², so quadratic work quadruples. Linear work would double, n log n a little more than double, and 2ⁿ would square.',
+    },
+    {
+      q: 'What is the Big-O of 3n² + 50n + 1,000?',
+      choices: ['O(3n²)', 'O(n²)', 'O(n² + n)', 'O(1,000)'],
+      answer: 1,
+      why: 'Keep the fastest-growing term and drop its constant: n². The 50n and the 1,000 are swamped once n is large.',
+      traps: { 0: 'constants-count' },
+    },
+    {
+      q: 'Binary search on a sorted array of 1,000,000 values needs at most about how many probes?',
+      choices: ['20', '1,000', '500,000', '1,000,000'],
+      answer: 0,
+      why: 'Each probe halves what is left, and 2²⁰ is about a million, so about 20 probes: O(log n).',
+    },
+    {
+      q: 'Merge sort is O(n log n) and insertion sort is O(n²). Which is true?',
+      choices: [
+        'Merge sort is faster on every input',
+        'Insertion sort can be faster on small inputs, and merge sort wins as n grows',
+        'They take the same time, since both sort',
+        'Insertion sort is faster on large inputs',
+      ],
+      answer: 1,
+      why: 'Big-O says who wins for large n. On small inputs the constant factors decide, and insertion sort’s are small.',
+      traps: { 0: 'exact-time' },
+    },
+    {
+      q: 'Code loops over n items, and after that loop ends, loops over the same n items again. What is its Big-O?',
+      choices: ['O(n²)', 'O(2n), slower than O(n)', 'O(n)', 'O(log n)'],
+      answer: 2,
+      why: 'Loops one after another add: n + n = 2n, and dropping the constant gives O(n).',
+      traps: { 0: 'two-loops', 1: 'constants-count' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="what-big-o-says"
+  prompt="What does it mean to say an algorithm is O(n²), and why does Big-O ignore constant factors and smaller terms?"
+  rubric={[
+    'It counts the basic steps an algorithm takes as a function of the input size n, not seconds.',
+    'O(n²) means that for large n the steps grow at most in proportion to n², so doubling n roughly quadruples them.',
+    'Constant factors and smaller terms are dropped because the fastest-growing term dominates as n gets large.',
+    'So an algorithm in a slower-growing class wins on large enough inputs, though it can lose on small ones.',
+  ]}
+  example="Big-O describes how the number of basic steps, like comparisons, grows with the input size n. Saying an algorithm is O(n²) means that for large n its steps grow at most in proportion to n², so doubling n roughly quadruples the work: bubble sort checks about n²/2 pairs. We drop constants and smaller terms because once n is large the biggest term swamps them: in 3n² + 50n, the 50n hardly matters at n = 10,000, and the 3 doesn't change how the work grows. That is why an O(n log n) sort beats an O(n²) one on big inputs, even if it is slower on a handful of items."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Count **steps** as a function of n, not seconds. Big-O names how that count grows.
+- Keep the fastest-growing term and drop constants: 3n² + 50n is O(n²).
+- The doubling test: constant stays put, O(log n) adds one step, O(n) doubles, O(n log n) a bit more than doubles, O(n²)
+  quadruples.
+- Loops one after another add; loops nested inside each other multiply.
+- Next: **recursion**, where counting the calls in the call tree gives the Big-O, and **arrays**, where O(1) indexing and
+  O(n) inserts come from. To race more sorts against each other, open [the sorting race](/compare).
+
+</Section>

@@ -346,7 +346,7 @@ function Week({ week, now, byId, view }: { week: PlanWeek; now: boolean; byId: M
 }
 
 const whereToLearn = (id: string, entry: ConceptCatalogEntry | undefined) =>
-  entry?.lesson ? `/learn/${entry.lesson.slug}` : entry?.visualisers[0] ? `/visualisers/${entry.visualisers[0].slug}` : `/learn#${id}`;
+  entry?.lesson ? `/learn/${entry.lesson.slug}` : entry?.visualisers[0] ? `/visualisers/${entry.visualisers[0].slug}` : `/learn?concept=${id}`;
 
 /** What's left this week: the concept in hand, practice for this week's concepts, and the next new concept. */
 function ThisWeek({

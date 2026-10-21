@@ -6,6 +6,7 @@ import { EstimationDrill } from '@/components/design/EstimationDrill';
 import { CodeExercise, PredictCode, TraceCode } from '@/components/lesson/CodeWidgets';
 import { ExplainBack } from '@/components/lesson/ExplainBack';
 import { Explore, PredictChallenge } from '@/components/lesson/Explore';
+import { Growth } from '@/components/lesson/Growth';
 import { Quiz } from '@/components/lesson/Quiz';
 import { KeyIdea, Misconception, Section, Term, Terms } from '@/components/lesson/Section';
 
@@ -37,6 +38,7 @@ const components: MDXComponents = {
   Misconception,
   Explore,
   PredictChallenge,
+  Growth,
   Quiz,
   ExplainBack,
   CodeExercise,

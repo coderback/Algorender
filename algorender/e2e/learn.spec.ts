@@ -28,6 +28,19 @@ test('the path and the lessons list lead into lessons', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
+test('a link to a concept opens the map with that concept selected, on any screen', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/learn?concept=sliding-window');
+  await expect(page.locator('#selected-title')).toHaveText('Sliding window', { timeout: 30_000 });
+  await expect(page.locator('#sliding-window').getByRole('button', { pressed: true })).toBeVisible();
+  // Picking another concept still works, and an unknown one falls back to the usual choice.
+  await page.locator('#two-pointers').getByRole('button').click();
+  await expect(page.locator('#selected-title')).toHaveText('Two pointers');
+  await page.goto('/learn?concept=nope');
+  await expect(page.locator('#selected-title')).toHaveText('Big-O and growth');
+  expect(errors).toEqual([]);
+});
+
 test('the placement check lets a beginner off early and says where to start', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/learn');

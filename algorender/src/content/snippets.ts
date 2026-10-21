@@ -14,6 +14,45 @@ export type Snippet = {
 
 export const snippets: Snippet[] = [
   {
+    id: 'count-pairs',
+    title: 'Counting the pairs two nested loops visit',
+    code: {
+      python: `def count_pairs(n):
+    steps = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            steps += 1
+    return steps
+
+print(count_pairs(4))
+`,
+      javascript: `function countPairs(n) {
+  let steps = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      steps += 1;
+    }
+  }
+  return steps;
+}
+
+console.log(countPairs(4));
+`,
+      typescript: `function countPairs(n: number): number {
+  let steps = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      steps += 1;
+    }
+  }
+  return steps;
+}
+
+console.log(countPairs(4));
+`,
+    },
+  },
+  {
     id: 'factorial',
     title: 'Factorial, recursively',
     code: {

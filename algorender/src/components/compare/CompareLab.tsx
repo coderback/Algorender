@@ -13,7 +13,7 @@ import { recordTrace } from '@/engine/trace';
 import type { ArrayState } from '@/viz/array/types';
 import { GrowthChart, type GrowthSeries } from './GrowthChart';
 import { Race } from './Race';
-import { MAX_SERIES, SERIES_COLORS, assignSlots, workOf } from './series';
+import { MAX_SERIES, SERIES_COLORS, about, assignSlots, workOf } from './series';
 
 const RANGE = { min: 1, max: 99 };
 const NS = Array.from({ length: 16 }, (_, i) => (i + 1) * 4); // 4, 8, …, 64
@@ -172,13 +172,6 @@ export function CompareLab() {
   );
 }
 
-/** Two significant figures, so "about" reads honestly: 1,984 → 2,000. */
-function about(v: number): string {
-  if (v < 100) return String(Math.round(v));
-  const p = 10 ** (Math.floor(Math.log10(v)) - 1);
-  return (Math.round(v / p) * p).toLocaleString('en-GB');
-}
-
 /** The feature card: what the chart says at the crosshair (or the largest n), from the series themselves. */
 function AtCursor({ series, index, unit }: { series: readonly GrowthSeries[]; index: number; unit: string }) {
   const n = NS[index];
@@ -205,7 +198,7 @@ function AtCursor({ series, index, unit }: { series: readonly GrowthSeries[]; in
           </p>
         )}
       </div>
-      <ButtonLink href="/learn#big-o" kind="onFeature" block>
+      <ButtonLink href="/learn/big-o" kind="onFeature" block>
         Why: Big-O and growth
       </ButtonLink>
     </FeatureCard>

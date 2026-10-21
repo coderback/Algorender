@@ -14,6 +14,13 @@ export type LessonMeta = {
 
 export const lessons: readonly LessonMeta[] = [
   {
+    slug: 'big-o',
+    title: 'Big-O: how the work grows with n',
+    concept: 'big-o',
+    summary: 'Count steps, not seconds: measure how two sorts and two searches grow, and read O(1), O(log n), O(n), O(n log n) and O(n²).',
+    minutes: 15,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',

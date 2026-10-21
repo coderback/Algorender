@@ -13,7 +13,7 @@ import { CLEAR_AFTER } from '@/progress/misconceptions';
 
 /** Where a concept is learned: its lesson, else its first visualiser, else its node on the path. */
 export function conceptHref(c: MasteryConcept): string {
-  return c.lesson ? `/learn/${c.lesson}` : c.visualisers[0] ? `/visualisers/${c.visualisers[0]}` : `/learn#${c.id}`;
+  return c.lesson ? `/learn/${c.lesson}` : c.visualisers[0] ? `/visualisers/${c.visualisers[0]}` : `/learn?concept=${c.id}`;
 }
 
 /**

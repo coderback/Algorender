@@ -9,6 +9,8 @@ export type Reference = { label: string; values: readonly number[] };
 const HEIGHT = 320;
 const MARGIN = { top: 16, right: 116, bottom: 40, left: 52 };
 const LABEL_GAP = 16;
+/** Pixels between x-axis labels' centres, so two- and three-digit sizes never touch. */
+const MIN_LABEL_SPACE = 28;
 
 /**
  * Operations vs input size, one 2px line per algorithm plus exact reference
@@ -111,7 +113,8 @@ export function GrowthChart({
                 </text>
               </g>
             ))}
-            {ns.filter((n, i) => i % Math.ceil(ns.length / 8) === 0 || n === nMax).map((n) => (
+            {/* Every few sizes and the last, leaving out one that would crowd the last on a narrow chart. */}
+            {ns.filter((n, i) => n === nMax || (i % Math.ceil(ns.length / 8) === 0 && x(nMax) - x(n) >= MIN_LABEL_SPACE)).map((n) => (
               <text key={n} x={x(n)} y={innerH + 18} textAnchor="middle" className="fill-ink-muted text-[11px] tabular-nums">
                 {n}
               </text>
