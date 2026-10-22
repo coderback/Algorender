@@ -65,6 +65,7 @@ concepts:
     summary: Contiguous cells with constant-time indexing, and the cost of growing and shifting.
     prereqs: [big-o]
     visualisers: [array]
+    lesson: arrays
   - id: stacks-queues
     title: Stacks and queues
     track: linear
