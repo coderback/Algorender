@@ -8,7 +8,7 @@ async function expectAccessible(page: Page) {
   expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 }
 
-const lessonPaths = ['binary-search', 'two-pointers', 'memoization', 'dijkstra'];
+const lessonPaths = ['arrays', 'binary-search', 'two-pointers', 'memoization', 'dijkstra'];
 
 async function openLesson(page: Page, slug: string) {
   await page.goto(`/learn/${slug}`);
@@ -115,6 +115,21 @@ test('the prediction challenge counts answers towards its goal', async ({ page }
   }
   // The banner that identified the challenge now reads "Done", so look page-wide.
   await expect(page.getByText(/Done: \d of 4 predictions right/)).toBeVisible();
+});
+
+test('a prediction challenge on a data structure asks before the operation plays', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openLesson(page, 'arrays');
+  const challenge = page.locator('[data-challenge="array"]');
+  const get = challenge.locator('form').filter({ has: page.getByRole('button', { name: 'Get', exact: true }) });
+  await get.locator('input').fill('3');
+  await get.getByRole('button', { name: 'Get', exact: true }).click();
+  const question = challenge.getByRole('group', { name: 'Predict the next step' });
+  await expect(question).toContainText('How many cells must be read to get A[3]?');
+  // Choices are sorted and named with their key, so "1 1" is key 1, one cell.
+  await question.getByRole('button', { name: '1 1', exact: true }).click();
+  await expect(challenge.getByText('1 of 4 made')).toBeAttached();
+  expect(errors).toEqual([]);
 });
 
 test('a quiz scores answers and completion is remembered', async ({ page }) => {

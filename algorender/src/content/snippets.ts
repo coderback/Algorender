@@ -53,6 +53,46 @@ console.log(countPairs(4));
     },
   },
   {
+    id: 'insert-front',
+    title: 'Inserting at the front of an array by shifting',
+    code: {
+      python: `def insert_front(a, x):
+    a.append(None)
+    for j in range(len(a) - 1, 0, -1):
+        a[j] = a[j - 1]
+    a[0] = x
+
+scores = [7, 23, 4, 42]
+insert_front(scores, 99)
+print(scores)
+`,
+      javascript: `function insertFront(a, x) {
+  a.push(null);
+  for (let j = a.length - 1; j > 0; j--) {
+    a[j] = a[j - 1];
+  }
+  a[0] = x;
+}
+
+const scores = [7, 23, 4, 42];
+insertFront(scores, 99);
+console.log(scores);
+`,
+      typescript: `function insertFront(a: (number | null)[], x: number): void {
+  a.push(null);
+  for (let j = a.length - 1; j > 0; j--) {
+    a[j] = a[j - 1];
+  }
+  a[0] = x;
+}
+
+const scores: (number | null)[] = [7, 23, 4, 42];
+insertFront(scores, 99);
+console.log(scores);
+`,
+    },
+  },
+  {
     id: 'factorial',
     title: 'Factorial, recursively',
     code: {

@@ -1,0 +1,241 @@
+<Section step="hook" title="Instant to read, slow to squeeze in">
+
+You keep a million scores in a list. Asking for score number 700,000 comes back at once, as fast as asking for the first.
+Putting a new score at the **front** of the list takes about a million moves. Adding one at the **end** is quick again,
+even though the list sometimes has to move house to fit it.
+
+All three come from one fact: an array keeps its elements side by side in a single block of memory. Once you can see that
+block, you can tell which operations are cheap and which are not, and why.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="index">An element's position, counted from 0. A[0] is the first element and A[n − 1] the last of n.</Term>
+  <Term name="contiguous">The cells sit next to each other in memory, all the same size, with no gaps between elements.</Term>
+  <Term name="length and capacity">Length is how many elements the array holds; capacity is how many cells its block has. The cells past the length are spare.</Term>
+  <Term name="dynamic array">An array that grows when it is full by moving to a bigger block, like a Python list, a Java ArrayList or a C++ vector.</Term>
+  <Term name="amortised cost">The cost per operation averaged over a long run of them, so a rare expensive step is shared by the many cheap ones.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One calculation to read, a shift to insert">
+
+This array holds 7, 23, 4, 42 and 15 in a block of 8 cells. Read an element, then insert one at the front, and watch how
+many cells each operation touches.
+
+<Explore slug="array" settings={{ start: 'example' }} caption="Try get with index 3, then insert at index 0. Get reads one cell. Insert moves all five elements one cell right before it can write the new value." />
+
+Reading is cheap because of where the cells are. Each cell is the same size, so cell i starts at **base + i × cellSize**.
+The array works out that address and reads that one cell, whether i is 3 or 3,000,000. Inserting is expensive for the
+same reason: the elements must stay side by side, so making room at index i means moving every element from i to the end.
+
+<KeyIdea>
+
+**Contiguous, equal-sized cells make get and set O(1) at any index, and make insert and delete O(n − i):** every element
+after the gap has to shift. The front is the worst place to change an array, and the end is the best.
+
+</KeyIdea>
+
+The end has one catch. When length reaches capacity there is no spare cell, and the memory just after the block may belong
+to something else, so the array can't simply stretch. It allocates a block twice the size, copies every element across
+and frees the old one.
+
+<Explore slug="array" settings={{ start: 'full' }} caption="This array is full: 4 elements in 4 cells. Append a value: it copies all four into a new block of 8 cells, then writes the new value into cell 4." />
+
+</Section>
+
+<Section step="predict" title="Your turn: count the cells">
+
+Before each operation, predict how much work it does: how many cells a get reads, how many elements an insert or delete
+shifts, and whether an append must grow the array first. Try a get, an insert near the front, a delete and an append.
+
+<PredictChallenge slug="array" settings={{ start: 'example' }} goal={4} />
+
+</Section>
+
+<Section step="do" title="The shift in code, and the cost of growing">
+
+Here is insert-at-the-front written out. It makes room with one spare cell at the end, then walks backwards, copying each
+element one place to the right, and finally writes the new value into cell 0.
+
+<TraceCode
+  snippet="insert-front"
+  question="How many times does the line a[j] = a[j - 1] run when scores holds 4 values?"
+  choices={['1', '4', '5', '0']}
+  answer={1}
+  why="It runs once for each existing element, j = 4, 3, 2 and 1, moving 42, 4, 23 and 7 one place right. For a list of n values that is n copies, so inserting at the front is O(n). Python’s list.insert(0, x) does the same shifting for you; it is still O(n)."
+/>
+
+Appending is different. Most appends drop the value into a spare cell, and only an append into a full array copies
+everything. Because the block **doubles**, each copy buys as many cheap appends as it moved elements.
+
+<Explore slug="array" settings={{ start: 'empty' }} input caption="Start empty and append nine values. The 5th append copies 4 elements and the 9th copies 8; the other seven copy nothing. The last step of each append keeps the tally: 12 copies over 9 appends, 1.33 each." />
+
+<Misconception
+  id="index-walks"
+  title="Reading a later index takes longer"
+  probes={[
+    {
+      q: 'An array holds 1,000,000 values. How does reading A[999999] compare with reading A[0]?',
+      choices: ['About a million times slower', 'The same: one address calculation and one read', 'About 20 times slower'],
+      answer: 1,
+      trap: 0,
+      why: 'The address of A[i] is base + i × cellSize, worked out in one step for any i. Only a linked list has to walk from the start.',
+    },
+    {
+      q: 'Why can an array jump straight to index i?',
+      choices: [
+        'Its cells are equal-sized and side by side, so cell i is at base + i × cellSize',
+        'It searches from the start, just very quickly',
+        'It keeps a hash map from each index to its cell',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Contiguous, equal-sized cells mean the address is arithmetic. Nothing is searched, so get and set are O(1) at every index.',
+    },
+  ]}
+>
+
+An array never walks to an element. Its cells are the same size and sit side by side, so the address of A[i] is
+base + i × cellSize, one multiplication and one addition whatever i is. Reading A[999999] costs the same as reading A[0].
+Walking from the start is what a **linked list** has to do, because its nodes can be anywhere in memory.
+
+</Misconception>
+
+<Misconception
+  id="front-is-cheap"
+  title="Inserting or removing at the front is as cheap as at the end"
+  probes={[
+    {
+      q: 'You call list.insert(0, x) on a Python list of 1,000,000 values. About how many elements move?',
+      choices: ['None: insert is O(1), like append', 'About 1,000,000', 'About 20'],
+      answer: 1,
+      trap: 0,
+      why: 'Every existing element shifts one cell right to open a gap at index 0, so it is O(n). Appending moves nothing, which is why the end is the cheap place.',
+    },
+    {
+      q: 'A program removes the first item of a list with pop(0), again and again, until a list of n items is empty. What is the total cost?',
+      choices: ['O(n): each pop(0) is O(1)', 'O(n²): each pop(0) shifts every remaining item', 'O(n log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'Each pop(0) shifts all the items after it left, so the pops cost about n + (n − 1) + … + 1, which is O(n²). A deque removes from the front in O(1).',
+    },
+  ]}
+>
+
+The front is the most expensive place to change an array: inserting or deleting at index i shifts every element after it,
+so index 0 shifts all n. Only the end is cheap. If a program adds or removes at the front a lot, use a structure built for
+it, such as a deque (collections.deque in Python), which does both ends in O(1).
+
+</Misconception>
+
+<Misconception
+  id="resize-makes-append-slow"
+  title="Growing makes append O(n)"
+  probes={[
+    {
+      q: 'A dynamic array starts with capacity 1 and doubles whenever it is full. In total, about how many elements are copied while appending 1,024 values?',
+      choices: ['About 1,000', 'About 500,000', 'None'],
+      answer: 0,
+      trap: 1,
+      why: 'Growing copies 1, then 2, 4, … up to 512 elements: 1,023 copies in all, less than one per append. Copying everything on every append would be about 500,000.',
+    },
+    {
+      q: 'What does one append to a doubling dynamic array cost, averaged over many appends?',
+      choices: ['O(1) amortised', 'O(n), since an append may copy every element', 'O(log n)'],
+      answer: 0,
+      trap: 1,
+      why: 'One append can cost O(n) when it grows the array, but doubling makes those appends rare: the copies add up to fewer than 2 per element, so the average is O(1).',
+    },
+  ]}
+>
+
+One append can be expensive: the one that finds the array full copies every element. But the block doubles, so after
+copying n elements there is room for n more appends that copy nothing. Over any run of appends the copies add up to fewer
+than two per element, so append is **O(1) amortised**. Real libraries grow by different factors (Java's ArrayList by
+1.5, CPython's list by about 1.125); any constant factor above 1 keeps the average O(1). Growing by a fixed number of cells
+does not: that makes n appends cost O(n²).
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'An array starts at address 1000 and each cell is 8 bytes. At what address does A[5] start?',
+      choices: ['1005', '1040', '1048', '1008'],
+      answer: 1,
+      why: 'base + i × cellSize = 1000 + 5 × 8 = 1040. 1048 would be A[6]: index 0 is at the base itself.',
+    },
+    {
+      q: 'Which of these is O(n) on an array of n elements?',
+      choices: ['Reading A[n − 1]', 'Overwriting A[0]', 'Inserting at index 0', 'Appending, averaged over many appends'],
+      answer: 2,
+      why: 'Inserting at index 0 shifts all n elements. Reading or writing any index is one address calculation, and appending is O(1) amortised.',
+      traps: { 0: 'index-walks', 3: 'resize-makes-append-slow' },
+    },
+    {
+      q: 'The array [4, 8, 15, 16, 23, 42] deletes the element at index 1. How many elements shift left?',
+      choices: ['1', '4', '5', '6'],
+      answer: 1,
+      why: 'The four elements after index 1 (15, 16, 23 and 42) each move one cell left to close the gap. In general, deleting at index i shifts n − 1 − i elements.',
+    },
+    {
+      q: 'A doubling array holds 8 elements in a block of 8 cells. You append one value. What happens?',
+      choices: [
+        'The 8 elements are copied to a new block of 16 cells, then the value is written into cell 8',
+        'The block stretches by one cell to make room',
+        'The value is written into cell 8 straight away',
+        'Every element shifts one cell right',
+      ],
+      answer: 0,
+      why: 'There is no spare cell, and the memory after the block may be in use, so the array moves to a block twice the size. The next 7 appends then copy nothing.',
+    },
+    {
+      q: 'A program repeatedly takes the first item off a Python list of a million items with pop(0). What is wrong with that?',
+      choices: [
+        'Nothing: pop(0) is O(1), like pop()',
+        'Each pop(0) shifts every remaining item left, so each one is O(n)',
+        'pop(0) sorts the list again each time',
+      ],
+      answer: 1,
+      why: 'Removing from the front closes the gap by shifting everything after it. collections.deque removes from either end in O(1).',
+      traps: { 0: 'front-is-cheap' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="array-costs"
+  prompt="Why can an array read any index in O(1), while inserting at the front is O(n)? And why is appending O(1) on average even though growing copies every element?"
+  rubric={[
+    'The cells are contiguous and equally sized, so the address of A[i] is base + i × cellSize, worked out in one step.',
+    'Inserting or deleting at index i shifts every later element to keep the cells contiguous, so the front costs O(n).',
+    'A full dynamic array moves to a block twice the size and copies every element, which costs O(n) for that one append.',
+    'Doubling makes those copies rare, fewer than two per element in total, so append is O(1) amortised.',
+  ]}
+  example="An array stores its elements side by side in equally sized cells, so the address of A[i] is base + i × cellSize. Working that out is one calculation for any index, which makes reading or writing A[i] O(1). The price is that the elements must stay contiguous: inserting at index i means shifting every element after it one cell right, so inserting at the front moves all n and is O(n). Appending usually writes into a spare cell. When the array is full it copies everything into a block twice the size, which is O(n) for that append, but then the next n appends copy nothing. Averaged out, that is fewer than two copies per element, so append is O(1) amortised."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- An array is one block of equal-sized, side-by-side cells, so A[i] lives at base + i × cellSize: get and set are O(1).
+- Inserting or deleting at index i shifts every later element: O(n − i). The front is the worst place, the end the best.
+- A full dynamic array grows by moving to a block twice the size. That append is O(n), but append is O(1) amortised.
+- Length is what you use; capacity is what you have. The spare cells are what make most appends cheap.
+- Next: **stacks and queues**, built on arrays and rings, and **linked lists**, which give up O(1) indexing so that
+  inserting next to a node you already hold is cheap. To try more operations yourself, open [the array visualiser](/visualisers/array).
+
+</Section>

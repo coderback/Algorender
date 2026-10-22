@@ -21,6 +21,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'arrays',
+    title: 'Arrays: one block of memory',
+    concept: 'arrays',
+    summary: 'Why reading any index is instant, why inserting at the front shifts everything, and how a growing array keeps appends cheap on average.',
+    minutes: 15,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',
