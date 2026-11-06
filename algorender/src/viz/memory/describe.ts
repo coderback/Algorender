@@ -1,3 +1,4 @@
+import { fieldKey } from '@/workspace/fields';
 import type { MemValue } from '@/workspace/protocol';
 import { extendOrder, NO_ORDER, orderHeap, type SeenOrder } from './order';
 import type { MemoryState } from './types';
@@ -76,7 +77,7 @@ export function describeObjects(state: MemoryState, seen?: SeenOrder): string {
     }
     if (o.kind === 'object') {
       if (o.fields.length === 0) return o.more > 0 ? `${name} has ${o.more} fields not shown.` : `${name} has no fields.`;
-      return `${name}: ${o.fields.map(([f, v]) => binding(f, v, names)).join(', ')}${more}.`;
+      return `${name}: ${o.fields.map(([f, v]) => binding(fieldKey(f), v, names)).join(', ')}${more}.`;
     }
     if (o.items.length === 0) return o.more > 0 ? `${name} holds ${o.more} items not shown.` : `${name} is empty.`;
     return `${name} holds ${o.items.map((v) => valueText(v, names)).join(', ')}${more}.`;

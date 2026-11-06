@@ -48,6 +48,21 @@ describe('describeMemory', () => {
     );
   });
 
+  it('quotes an object field whose name is not a name', () => {
+    const state: MemoryState = {
+      frames: [{ id: 'f0', fn: 'Global frame', locals: [{ name: 'pairs', value: { ref: 'o1' }, changed: false }], active: true }],
+      heap: [
+        {
+          object: { id: 'o1', kind: 'object', type: 'Object', fields: [[')', { prim: '"("', type: 'string' }], ['x', { prim: '1', type: 'number' }]], more: 0 },
+          changed: false,
+          fresh: false,
+        },
+      ],
+      output: [],
+    };
+    expect(describeObjects(state)).toBe('Object 1: ")" is "(", x is 1.');
+  });
+
   it('counts the items left out of a long list', () => {
     const said = describeMemory(fixture('long-list').state);
     expect(said).toContain('squares refers to Array 1, label is "squares", done is false (changed).');
