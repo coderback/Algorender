@@ -1,0 +1,282 @@
+<Section step="hook" title="Newest first, or oldest first">
+
+You press undo, and the last thing you typed disappears, then the thing before it. A printer works the other way round:
+the job sent first prints first, however many arrive after it.
+
+Those are the two simplest rules for what comes back out of a collection. A **stack** hands back the newest item and a
+**queue** the oldest. Both only ever touch their ends, so both can sit on an array without the shifting that makes an
+array's front expensive. For the queue that takes one trick: letting the array wrap around into a ring.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="stack (LIFO)">Last in, first out. **Push** puts a value on top, **pop** takes the top one off, and **peek** reads it without removing it.</Term>
+  <Term name="queue (FIFO)">First in, first out. **Enqueue** adds a value at the back and **dequeue** removes the one at the front.</Term>
+  <Term name="top, head and tail">Indices that mark the ends. A stack's top points at its newest value. A queue's head points at its front value, and its tail at the free slot where the next value joins.</Term>
+  <Term name="ring buffer">An array whose last slot is followed by slot 0 again. An index that steps past the end wraps around: next = (i + 1) mod capacity.</Term>
+  <Term name="deque">A double-ended queue, said "deck": values go in and come out at both the front and the back.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Move an index, not the values">
+
+This stack holds 7, 23 and 42 in an array of 8 slots. Slot 0 is the bottom, and the index **top** marks the newest
+value, so 42 is on top.
+
+<Explore slug="stack" settings={{ start: 'example' }} caption="Push 99, then pop twice. 99 goes into slot 3, just above 42. The first pop returns 99 and the second 42: the last value in is always the first out." />
+
+Push moves top up one and writes one slot; pop reads one slot and moves top down. Nothing below the top is touched, so
+both are O(1) whether the stack holds 3 values or 3 million. A stack only uses the end of its array, which is the cheap
+end, so a Python list or a JavaScript array is already a good stack: append and pop work on the last element.
+
+A queue is harder. Values join at the back and leave from the front, and the front is an array's expensive end:
+removing index 0 shifts every remaining value one cell left, so each dequeue would be O(n). A queue avoids that by
+moving the front instead of the values. An index, **head**, marks the front value, and dequeue reads that slot and steps
+head forward.
+
+<Explore slug="queue" settings={{ start: 'example' }} caption="Enqueue 99, then dequeue twice. 99 joins at the back in slot 3. Dequeue returns 7 and then 23, the values that have waited longest, and only head moves: the values stay in their slots." />
+
+As head steps forward it leaves free slots behind it, at the start of the array, while tail runs on towards the end.
+When tail steps past the last slot it wraps around to slot 0 and reuses them, so the array behaves like a ring. Both
+indices step with (i + 1) mod capacity, and the next free slot is always tail = (head + count) mod capacity.
+
+<Explore slug="queue" settings={{ start: 'about-to-wrap' }} caption="Head is at slot 4 and the values fill slots 4 to 6. Enqueue twice: the first value lands in slot 7 and tail wraps to 0, so the second lands in slot 0. The Ring and Line switch draws the same buffer as a circle or as a row with a wrap arrow." />
+
+<KeyIdea>
+
+**A stack changes only at its top and a queue only at its two ends, so an index for each end replaces all shifting:
+push, pop, enqueue and dequeue are O(1).** The ring lets the queue's indices wrap around and reuse the slots that
+values have left.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: follow head and tail">
+
+Before each step, predict which value comes out and where head or tail points next. Enqueue until tail wraps, then
+dequeue a few times and watch head follow it round.
+
+<PredictChallenge slug="queue" settings={{ start: 'about-to-wrap' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Stacks and queues at work">
+
+A stack fits whenever the most recent thing must be dealt with first. Matching brackets is the classic case: in `{[()]}`
+every closing bracket must match the most recently opened bracket that is still open, and in `([)]` the `)` comes too
+early. So push each opening bracket, and at each closing bracket pop one and check that the two match.
+
+<TraceCode
+  snippet="balanced-brackets"
+  question="When the loop reaches the first ), which bracket does the pop return?"
+  choices={['{', '[', '(', ')']}
+  answer={2}
+  why="The stack holds {, [ and ( from bottom to top, so pop returns (, the bracket opened last, and it matches. Brackets close in the reverse of the order they opened, which is last in, first out. In ([)] the ) pops [ instead, so the second call reports a mismatch."
+/>
+
+The same shape turns up everywhere. A program's **call stack** pushes a frame for each call and pops it on return, so
+the most recent call always finishes first (the [recursion lesson](/learn/recursion) shows it frame by frame). An
+editor's undo history is a stack, and so is the list of places a depth-first search still has to go back to.
+
+<Misconception
+  id="pop-returns-oldest"
+  title="Pop returns the oldest value"
+  probes={[
+    {
+      q: 'You push 4, then 8, then 15 onto an empty stack, then pop once. What does pop return?',
+      choices: ['4', '15', '8'],
+      answer: 1,
+      trap: 0,
+      why: 'Pop takes the top, the value pushed most recently: 15. Getting 4, the first value in, back first is what a queue does.',
+    },
+    {
+      q: 'An editor keeps its undo history on a stack. You type A, then B, then C, and press undo twice. What is left?',
+      choices: ['A', 'C', 'Nothing'],
+      answer: 0,
+      trap: 1,
+      why: 'Each undo pops the most recent change: first C, then B. Only A is left. If undo removed the oldest change first, C would be left instead.',
+    },
+  ]}
+>
+
+A stack never reaches below its top. Pop returns the value pushed **most recently** that is still there: push 1, 2 and
+3, and pop gives 3, then 2, then 1. Getting the oldest value back first is what a queue does, and a deque can do either.
+
+</Misconception>
+
+A queue fits whenever work must be handled in the order it arrived: print jobs, requests waiting for a server, messages
+passed between programs. A **breadth-first search** keeps the nodes it has found but not yet explored in a queue, and
+that is what makes it visit a graph level by level: the nodes found first are explored first. The
+[queueing lesson](/learn/queueing) follows requests through the queue in front of a busy server.
+
+The trap is building a queue on a plain list. Appending at the back is cheap, but taking from the front is not.
+
+<Misconception
+  id="list-pop-front-queue"
+  title="A list with pop(0) makes a fine queue"
+  probes={[
+    {
+      q: 'A queue holds a million items in a Python list, and a program takes them all off the front with pop(0). About how many times are items moved?',
+      choices: ['About a million: one per pop(0)', 'About 500 billion: each pop(0) shifts every item behind it', 'None: pop(0) only moves an index'],
+      answer: 1,
+      trap: 0,
+      why: 'Each pop(0) shifts every item after it one place left, so draining the list moves about 999,999 + 999,998 + … + 1 items, roughly n²/2. A deque’s popleft() moves none.',
+    },
+    {
+      q: 'Which of these removes the front of a Python queue in O(1)?',
+      choices: ['list.pop(0)', 'list.pop()', 'collections.deque’s popleft()'],
+      answer: 2,
+      trap: 0,
+      why: 'A deque is built to be cheap at both ends, so popleft() removes the front without moving the other items. list.pop(0) shifts all of them, and list.pop() takes from the back, which makes a stack, not a queue.',
+    },
+  ]}
+>
+
+A Python list, like a Java ArrayList, is an array: cheap at the end, expensive at the front. pop(0) closes the gap by
+moving every item after it, so a queue built that way costs O(n) per dequeue and O(n²) to drain. Use a structure that
+moves an index instead: collections.deque in Python (append and popleft), ArrayDeque in Java, or a ring buffer with a
+head and a tail.
+
+</Misconception>
+
+A **deque** lets values in and out at both ends. In a ring it is a queue with two more moves: push front steps head back
+one slot, wrapping from slot 0 to the last slot, and pop back steps tail back one slot.
+
+<Explore slug="deque" settings={{ start: 'example' }} caption="Push 5 at the front, then pop the back. head steps back from slot 2 to slot 1 for the 5; pop back steps tail back to slot 4 and returns 42. Use one end only and a deque is a stack; push at one end and pop at the other and it is a queue." />
+
+The ring raises one more question: how does a queue know it is full? An empty queue has tail = head. Enqueue until all 8
+slots are used and tail comes all the way round to head again. The two indices alone can't tell an empty ring from a
+full one, so the queue also keeps **count**. (Another common fix is to leave one slot always empty.)
+
+<Misconception
+  id="ring-full-at-zero"
+  title="The ring is full when tail wraps to 0"
+  probes={[
+    {
+      q: 'A ring queue of 8 slots has head = 4 and holds 3 values, in slots 4, 5 and 6. You enqueue once, and tail wraps to 0. How many slots are in use?',
+      choices: ['All 8: tail wrapped, so it is full', '4', '3'],
+      answer: 1,
+      trap: 0,
+      why: 'Slots 4 to 7 hold values and slots 0 to 3 are free. tail wrapped to 0 because it passed the end of the array, not because the ring is full; it is full only when count reaches 8.',
+    },
+    {
+      q: 'A ring queue of 8 slots has head = 0 and tail = 0. Is it full?',
+      choices: ['Yes: tail is 0', 'It depends on count: 0 means empty and 8 means full', 'No: a ring with tail at 0 is always empty'],
+      answer: 1,
+      trap: 0,
+      why: 'tail = head both when the ring is empty and when it is full, wherever head is. The queue keeps count to tell the two apart, and it is full when count equals the capacity.',
+    },
+  ]}
+>
+
+tail = 0 only says that the back has reached the end of the array and wrapped round. The ring is full when **count
+equals the capacity**, which is when tail catches up with head, wherever head happens to be. Since tail = head also when
+the ring is empty, the queue keeps count to tell the two apart.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'You push 3, 1 and 4 onto an empty stack, and enqueue 3, 1 and 4 into an empty queue. Then you pop once and dequeue once. What comes out?',
+      choices: ['Pop gives 4, dequeue gives 3', 'Pop gives 3, dequeue gives 4', 'Both give 3', 'Both give 4'],
+      answer: 0,
+      why: 'A stack is last in, first out, so pop returns 4, pushed most recently. A queue is first in, first out, so dequeue returns 3, which has waited longest.',
+      traps: { 1: 'pop-returns-oldest', 2: 'pop-returns-oldest' },
+    },
+    {
+      q: 'Why does a queue on a ring buffer dequeue faster than one that removes index 0 of a plain array?',
+      choices: [
+        'It keeps the values sorted, so the front is found faster',
+        'It doubles its size whenever it gets full',
+        'It moves head forward instead of shifting every remaining value, so dequeue is O(1)',
+        'It stores the values in reverse order',
+      ],
+      answer: 2,
+      why: 'Removing index 0 of a plain array shifts all the other values left: O(n). The ring reads the front slot and moves one index; the values never move.',
+    },
+    {
+      q: 'A ring queue of 8 slots has head = 6 and holds 3 values. Which slot does tail point to?',
+      choices: ['9', '1', '0', '6'],
+      answer: 1,
+      why: 'tail = (head + count) mod capacity = (6 + 3) mod 8 = 1. The values sit in slots 6, 7 and 0, and the next one goes into slot 1.',
+    },
+    {
+      q: 'A ring queue of 8 slots has head = 5, and tail has just wrapped to 0. Can it take another value?',
+      choices: ['No: tail is 0, so it is full', 'Yes: it holds 3 values, so 5 slots are free', 'Only after a dequeue'],
+      answer: 1,
+      why: 'tail = (5 + count) mod 8 = 0 means count is 3, in slots 5, 6 and 7. The ring is full only when count is 8, so the next value goes into slot 0.',
+      traps: { 0: 'ring-full-at-zero' },
+    },
+    {
+      q: 'A breadth-first search keeps its waiting nodes in a Python list, adding them with append and taking them with pop(0). What is wrong with that on a big graph?',
+      choices: [
+        'Nothing: append and pop(0) are both O(1)',
+        'Each pop(0) shifts every node still waiting, so the search can take O(n²) time',
+        'append becomes O(n) once the list is long',
+      ],
+      answer: 1,
+      why: 'pop(0) closes the gap at the front by moving everything after it. A collections.deque with popleft() takes the front in O(1), and append stays O(1) amortised either way.',
+      traps: { 0: 'list-pop-front-queue' },
+    },
+    {
+      q: 'Which of these needs a queue rather than a stack?',
+      choices: [
+        'Undoing the most recent edit first',
+        'Checking that brackets match',
+        'Printing jobs in the order they were sent',
+        'Returning from the most recent function call first',
+      ],
+      answer: 2,
+      why: 'Print jobs are first in, first out. The other three all handle the most recent item first: undo history, open brackets and the call stack are all stacks.',
+    },
+    {
+      q: 'A deque holds 7, 23 and 42 from front to back. You push 5 at the front, then pop the back, then pop the front. What do the two pops return?',
+      choices: ['5, then 42', '42, then 5', '7, then 42', '42, then 7'],
+      answer: 1,
+      why: 'Push front puts 5 before 7, so the deque is 5, 7, 23, 42. Pop back returns 42 and pop front returns 5, leaving 7 and 23.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="stack-queue-ends"
+  prompt="How do a stack and a queue differ in what they hand back? And how does a ring buffer let a queue on an array dequeue in O(1) instead of O(n)?"
+  rubric={[
+    'A stack is last in, first out: pop returns the value pushed most recently.',
+    'A queue is first in, first out: dequeue returns the value that has waited longest.',
+    'On a plain array, removing the front shifts every remaining value left, so each dequeue costs O(n).',
+    'A ring buffer moves a head index instead of the values, wrapping indices around with mod capacity, so dequeue is O(1).',
+  ]}
+  example="A stack hands back the newest value: pop returns whatever was pushed last, so it is last in, first out. A queue hands back the oldest: dequeue returns the value that has waited longest, so it is first in, first out. A stack is easy on an array because it only uses the end, which is cheap. A queue removes from the front, and on a plain array that means shifting every remaining value one slot left, which is O(n) per dequeue. A ring buffer avoids the shifting by keeping a head index at the front value. Dequeue reads that slot and moves head forward one step, and when head or tail passes the last slot it wraps around to slot 0 and reuses the freed slots. Only an index moves, so dequeue is O(1)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A stack is last in, first out. Push and pop only touch the top, which on an array is an index, so both are O(1).
+- A queue is first in, first out: enqueue at the back, dequeue at the front. Removing index 0 of a plain array shifts
+  everything, so a list with pop(0) is an O(n) queue.
+- A ring buffer moves head and tail instead of the values, wrapping with (i + 1) mod capacity, so enqueue and dequeue
+  are O(1). It is full when count reaches the capacity, not when tail wraps to 0.
+- A deque is O(1) at both ends, so it can be a stack or a queue. Stacks run the call stack, undo and bracket matching;
+  queues run breadth-first search, print jobs and request queues.
+- Next: **linked lists**, another way to get cheap ends, and [breadth-first search](/visualisers/breadth-first-search),
+  which explores a graph with a queue. Practise with [Valid Brackets](/practice/valid-parentheses) and
+  [Stack with Minimum](/practice/min-stack), or open the [stack](/visualisers/stack), [queue](/visualisers/queue) and
+  [deque](/visualisers/deque) visualisers to try more operations.
+
+</Section>
