@@ -316,6 +316,7 @@ concepts:
     summary: Manacher's algorithm reuses mirror images to find every palindrome in linear time.
     prereqs: [string-matching]
     visualisers: [manacher]
+    lesson: palindromes
 
   # ── Math ─────────────────────────────────────────────────────
   - id: vectors-matrices

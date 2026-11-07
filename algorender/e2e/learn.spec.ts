@@ -34,6 +34,7 @@ const lessonPaths = [
   'merge-sort',
   'quick-sort',
   'string-matching',
+  'palindromes',
 ];
 
 async function openLesson(page: Page, slug: string) {

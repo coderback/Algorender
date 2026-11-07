@@ -1618,6 +1618,62 @@ console.log(total);
 `,
     },
   },
+  {
+    id: 'expand-around-centre',
+    title: 'Expanding around every centre',
+    code: {
+      python: `def longest_palindrome(s):
+    best = ''
+    for centre in range(2 * len(s) - 1):
+        lo = centre // 2
+        hi = lo + centre % 2
+        while lo >= 0 and hi < len(s) and s[lo] == s[hi]:
+            lo -= 1
+            hi += 1
+        if hi - lo - 1 > len(best):
+            best = s[lo + 1:hi]
+    return best
+
+print(longest_palindrome('see'))
+`,
+      javascript: `function longestPalindrome(s) {
+  let best = '';
+  for (let centre = 0; centre < 2 * s.length - 1; centre++) {
+    let lo = Math.floor(centre / 2);
+    let hi = lo + (centre % 2);
+    while (lo >= 0 && hi < s.length && s[lo] === s[hi]) {
+      lo -= 1;
+      hi += 1;
+    }
+    if (hi - lo - 1 > best.length) {
+      best = s.slice(lo + 1, hi);
+    }
+  }
+  return best;
+}
+
+console.log(longestPalindrome('see'));
+`,
+      typescript: `function longestPalindrome(s: string): string {
+  let best = '';
+  for (let centre = 0; centre < 2 * s.length - 1; centre++) {
+    let lo = Math.floor(centre / 2);
+    let hi = lo + (centre % 2);
+    while (lo >= 0 && hi < s.length && s[lo] === s[hi]) {
+      lo -= 1;
+      hi += 1;
+    }
+    if (hi - lo - 1 > best.length) {
+      best = s.slice(lo + 1, hi);
+    }
+  }
+  return best;
+}
+
+console.log(longestPalindrome('see'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

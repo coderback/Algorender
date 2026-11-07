@@ -1,0 +1,274 @@
+<Section step="hook" title="The same both ways">
+
+Level, noon, racecar: a palindrome reads the same forwards and backwards. Checking whether a whole word is one is easy:
+compare its two ends and step inwards, the [two pointers](/learn/two-pointers) pattern. The harder question is finding
+the **longest palindrome inside** a string. In “bananas” it is “anana”.
+
+The obvious way checks every substring. A string of n letters has n(n + 1)/2 of them, and checking one can take up to
+n/2 comparisons, so the search is O(n³). On 1,000 letters that is 500,500 substrings, and if the letters are all a's,
+every check runs to the middle: about 83 million comparisons.
+
+This lesson cuts that twice. Growing each palindrome from its middle is O(n²). **Manacher's algorithm** is O(n): like
+KMP in [string matching](/learn/string-matching), it never pays twice for what it has already proved, and here the
+proof is a mirror.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="palindrome and substring">A substring is a run of consecutive letters; it is a palindrome when it reads the same both ways.</Term>
+  <Term name="centre">The middle of a palindrome: a letter when its length is odd (the c of “abcba”), the gap between two letters when it is even (between the b's of “abba”). n letters have 2n − 1 centres.</Term>
+  <Term name="radius">How far a palindrome reaches out from its centre. Manacher records P[i], the radius of the longest palindrome centred at cell i.</Term>
+  <Term name="separators">The string T puts # between and around the letters, so “aba” becomes #a#b#a#: 2n + 1 cells, and every centre, letter or gap, is a cell of its own.</Term>
+  <Term name="C, R and the mirror">C is the centre of the palindrome found so far that reaches furthest right, and R the cell where it ends. The mirror of cell i is 2C − i, its reflection in C.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Grow from the middle, then borrow from the mirror">
+
+A palindrome is symmetric about its centre, so grow it from there: put two pointers on the centre and step them
+outwards while the letters under them match. They stop just outside the longest palindrome with that centre. Try every
+centre and keep the longest.
+
+There are 2n − 1 centres, and one can grow for about n/2 steps, so this is O(n²). On ordinary text most centres stop
+after a comparison or two, and it needs no extra memory: the usual interview answer. On aaaa…a nothing stops early:
+every centre grows until it meets an end of the string, about 500,000 comparisons for 1,000 a's. A
+[dynamic programming](/learn/dynamic-programming) table, where s[i..j] is a palindrome when its ends match and
+s[i + 1..j − 1] is one, is O(n²) too, with O(n²) memory.
+
+Manacher's algorithm makes two changes. First, it works on T, with # between and around the letters. A gap is now a
+cell, so one loop over T's 2n + 1 cells tries every centre, odd and even. And the longest palindrome around any cell
+starts and ends on a #, so a radius of p holds exactly p letters of s: P[i] is simply its length.
+
+Second, it remembers the palindrome found so far that reaches furthest right: centred at C, ending at R. Take a centre
+i after C but before R. Its mirror, 2C − i, lies the same distance left of C, and the big palindrome makes the letters
+around i the reverse of those around the mirror. A palindrome reversed is the same palindrome, so the mirror's
+palindrome is around i too, at least as far as the big one reaches. The mirror's radius is already known, so i starts
+from min(R − i, P[2C − i]) instead of 0.
+
+<Explore slug="manacher" settings={{ input: 'abacaba' }} caption="T is #a#b#a#c#a#b#a#, 15 cells. The centre on c, cell 7, grows to radius 7, the whole word, so C = 7 and R = 14. Cells 8 to 13 lie inside that palindrome and start from their mirrors: cell 11 copies radius 3 (“aba”) from cell 3 and compares nothing. The run makes 19 comparisons and borrows 6 radius steps from mirrors." />
+
+<KeyIdea>
+
+**Inside the palindrome that reaches furthest right, centred at C and ending at R, the right side mirrors the left. So
+a centre i before R starts at radius min(R − i, P[2C − i]), what its mirror already proved, instead of 0. Every
+comparison that matches pushes R further right, R never moves back, and each centre has at most one mismatch: fewer
+than 2|T| comparisons for the whole string, O(n).**
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: how much can the mirror give?">
+
+Now “abababc”. Before each centre inside the rightmost palindrome, the run asks what radius it starts from, and after
+each palindrome is written, whether R moves. Watch for a mirror whose palindrome is longer than the room left before R.
+
+<PredictChallenge slug="manacher" settings={{ input: 'abababc' }} goal={10} />
+
+</Section>
+
+<Section step="do" title="Expanding in code, and why the mirror pays">
+
+Here is expanding around all 2n − 1 centres in one loop. An even `centre` is the letter at index centre / 2, so lo
+and hi both start on it; an odd one is the gap after the letter at (centre − 1) / 2, so they start on the letters
+either side. When the while loop stops, they sit one place outside the palindrome, so its length is hi − lo − 1. The
+program finds the longest palindrome in “see”.
+
+<TraceCode
+  snippet="expand-around-centre"
+  question="Centre 3 is the gap between the two e's. What are lo and hi when its while loop stops?"
+  choices={['lo = 1, hi = 2', 'lo = 0, hi = 3', 'lo = -1, hi = 4', 'lo = 0, hi = 2']}
+  answer={1}
+  why="lo = 1 and hi = 2 start on the two e's, which match, so both step out: lo = 0, hi = 3. hi is past the end of “see”, so the loop stops without reading s[3]. The palindrome runs from lo + 1 to hi − 1: “ee”, of length hi − lo − 1 = 2, and the program prints ee. A loop over the letters alone never tries this gap, and would print “s”."
+/>
+
+Forgetting the gaps is the classic bug here.
+
+<Misconception
+  id="letters-only-centres"
+  title="Expanding around each letter finds every palindrome"
+  probes={[
+    {
+      q: 'A program expands around each letter of “abba”, but never around the gaps between letters. What is the longest palindrome it finds?',
+      choices: ['“abba”', 'A single letter', '“bb”'],
+      answer: 1,
+      trap: 0,
+      why: '“abba” has even length, so its centre is the gap between the b’s. From either b the neighbours differ at once (a against b), so no letter centre grows past one letter.',
+    },
+    {
+      q: 'How many centres must expand-around-centre try on a string of 10 letters to be sure of the longest palindrome?',
+      choices: ['10', '19', '20'],
+      answer: 1,
+      trap: 0,
+      why: 'Each of the 10 letters can centre an odd-length palindrome, and each of the 9 gaps an even-length one: 2n − 1 = 19.',
+    },
+  ]}
+>
+
+An even-length palindrome has no middle letter: its centre is the gap between its two middle letters. Expanding only
+around letters finds “aba” but never “abba”, so try the n − 1 gaps as well, with lo and hi starting on the letters
+either side. Manacher's separators do the same job: every gap gets a # cell of its own.
+
+</Misconception>
+
+Manacher's start, min(R − i, P[2C − i]), comes in three cases, and in two of them it is already the final radius:
+
+- **The mirror's palindrome ends inside the big one**: i's is exactly as long, and its next comparison is bound to
+  fail. In “abacaba”, cell 9 copied radius 1 from cell 5, and c against b failed.
+- **It sticks out past the big one's left edge**: only R − i is mirrored, and that is exactly the radius, or the
+  palindrome around C would reach further too. In the challenge, cell 9's mirror, cell 5, had radius 5, but R − i was
+  3, so P[9] = 3.
+- **It ends exactly at the edge**: nothing past R has been compared, so comparing carries on. In the challenge, cell 7
+  borrowed 3 from cell 3 and grew to 5.
+
+The visualiser still makes the comparison that is bound to fail, and says so; a tuned version skips it.
+
+<Misconception
+  id="copy-mirror-radius"
+  title="A centre inside the palindrome copies its mirror's radius"
+  probes={[
+    {
+      q: 'The rightmost palindrome has C = 10 and R = 16. Centre 13’s mirror, cell 7, has radius 5. What radius does centre 13 start from without comparing?',
+      choices: ['5', '3', '0'],
+      answer: 1,
+      trap: 0,
+      why: 'min(R − i, P[7]) = min(3, 5) = 3. The mirror’s palindrome reaches cell 2, past the big palindrome’s left edge at 2C − R = 4, and only the part inside the big one is reflected around 13.',
+    },
+    {
+      q: 'Centre i’s mirror has radius 3, and R − i is also 3. What does Manacher do next at i?',
+      choices: ['Sets P[i] = 3 and moves to the next centre', 'Starts from radius 3 and compares the letters just past R', 'Starts from 0, since the mirror reaches the edge'],
+      answer: 1,
+      trap: 0,
+      why: 'Radius 3 takes i exactly to R, and nothing past R has been compared, so the palindrome around i may go further.',
+    },
+  ]}
+>
+
+The mirror only speaks for what lies inside the rightmost palindrome, because only there do the letters around i
+reflect those around 2C − i. So i starts from min(R − i, P[2C − i]). That copy is final when the mirror's palindrome
+ends inside the big one, or sticks out past its left edge, where i's stops exactly at R. Only when it ends exactly at
+the edge is the copy a starting point, and comparing carries on past R.
+
+</Misconception>
+
+So a comparison can only match past R, and each match pushes R right for good. One repeated letter, the slowest input
+for expanding from zero, shows it best.
+
+<Explore slug="manacher" settings={{ input: 'aaaaaaaaaaaaaaa' }} caption="Fifteen a's, so T has 31 cells. Cells 3 to 29 all borrow their mirror's radius. Up to the middle, each then makes 2 comparisons, pushing R two cells right; after it, R is at the end of T and nothing more is compared. 29 comparisons in all, and 196 radius steps borrowed. Expanding each centre from zero would make 225." />
+
+<Misconception
+  id="nested-loop-quadratic"
+  title="A while loop inside the for loop makes Manacher O(n²)"
+  probes={[
+    {
+      q: 'Manacher’s algorithm runs on a string of 1,000 a’s, where every centre’s palindrome reaches an end of the string. About how many comparisons does it make?',
+      choices: ['About 2,000', 'About 1,000,000', 'About 500,000'],
+      answer: 0,
+      trap: 1,
+      why: 'It makes 1,999, every one a match that pushes R further right; the other 998,001 radius steps come from mirrors. Expanding each of T’s 2,001 centres from zero would make 1,000,000.',
+    },
+    {
+      q: 'Which input makes Manacher’s algorithm compare about n² times?',
+      choices: ['One letter repeated, aaaa…a', 'None: it makes fewer than 2|T| comparisons on every input', 'A string with no repeated letters'],
+      answer: 1,
+      trap: 0,
+      why: 'Each match pushes R right for good, so there are fewer than |T| of them, and each centre adds at most one mismatch. aaaa…a is the worst case for expanding from zero, not for Manacher.',
+    },
+  ]}
+>
+
+The inner loop can run long at one centre, but not at many. Each comparison that matches pushes R right, R never
+moves back, and it stops at the end of T, so all the centres together make fewer than |T| matches. Each centre makes
+at most one comparison that fails. That is under 2|T| = 4n + 2 comparisons: O(n), counted the way KMP's are.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Expanding around centres, what is the longest palindrome in “noonday”, and where is its centre?',
+      choices: [
+        '“oo”, centred on the gap between the two o’s',
+        '“n”: nothing there is longer than one letter',
+        '“noon”, centred on the gap between the two o’s',
+        '“noon”, centred on the second o',
+      ],
+      answer: 2,
+      why: 'From the gap, o matches o and n matches n before the left side runs out. “noonday” has no odd palindrome longer than one letter, so expanding only around letters would report “n”.',
+      traps: { 1: 'letters-only-centres' },
+    },
+    {
+      q: 'For “abbac”, T is #a#b#b#a#c#. What is P at the # between the two b’s?',
+      choices: ['2, for “bb”', '4, for “abba”', '9, for #a#b#b#a#', '0: a # never centres a palindrome'],
+      answer: 1,
+      why: 'From that cell, b = b, # = #, a = a and # = #, and then the left side runs off T: radius 4, the length of “abba” itself.',
+    },
+    {
+      q: 'The rightmost palindrome has C = 12 and R = 20. Centre 14’s mirror has radius 2, centre 17’s has radius 7 and centre 19’s has radius 1. Which of the three could reach past R, depending on the letters there?',
+      choices: ['Only 17', '17 and 19', 'None: R limits every centre inside the palindrome', 'Only 19'],
+      answer: 3,
+      why: 'The big palindrome starts at 2C − R = 4. Centre 14’s mirror (cell 10) ends inside it, so P[14] = 2; 17’s (cell 7) reaches cell 0, past that edge, so P[17] = R − i = 3. Only 19’s (cell 5) ends exactly at 4, so the letters past R decide.',
+      traps: { 0: 'copy-mirror-radius', 1: 'copy-mirror-radius' },
+    },
+    {
+      q: 'The rightmost palindrome has C = 6 and R = 10. Centre 9 starts from its mirror’s radius, 1, keeps comparing past R and ends with radius 5. What are C and R now?',
+      choices: ['C = 6 and R = 10: a borrowed radius never moves R', 'C = 9 and R = 10', 'C = 9 and R = 14', 'C = 6 and R = 14'],
+      answer: 2,
+      why: 'i + P[i] = 9 + 5 = 14 passes R = 10, so the palindrome around 9 now reaches furthest right: C = 9 and R = 14.',
+    },
+    {
+      q: 'Manacher’s algorithm runs on 1,000 letters, so T has 2,001 cells, numbered 0 to 2,000. R has just reached cell 1,500. At most how many more comparisons can match, over all the centres still to come?',
+      choices: ['Up to 500 at every centre still to come', '500', '2,001'],
+      answer: 1,
+      why: 'Each match pushes R at least one cell further right, R never moves back, and it can’t pass cell 2,000. So the remaining centres share at most 500 matches, plus one mismatch each at most.',
+      traps: { 0: 'nested-loop-quadratic' },
+    },
+    {
+      q: 'The dynamic programming table marks s[i..j] as a palindrome when s[i] = s[j] and s[i + 1..j − 1] is one. Which entry does it read to decide “racecar”?',
+      choices: ['“aceca”', '“racec”', '“cec”', '“ecar”'],
+      answer: 0,
+      why: 'The ends, r and r, match, so the answer is the entry for the inside, s[1..5] = “aceca”. That entry read “cec” in turn, which is why the table is filled shortest first.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="mirror-radii"
+  prompt="Expanding around every centre can take O(n²) comparisons. How does Manacher’s algorithm reuse what it has already found to get every radius in O(n)?"
+  rubric={[
+    'Separators between and around the letters give every centre, letter or gap, a cell of its own, and the radius there is the palindrome’s length in s.',
+    'It keeps the palindrome that reaches furthest right, centred at C and ending at R; inside it, the letters around i mirror those around 2C − i.',
+    'So a centre i before R starts from min(R − i, P[2C − i]) instead of 0, and compares outwards from there.',
+    'Every comparison that matches pushes R further right, R never moves back, and each centre has at most one mismatch: fewer than 2|T| comparisons.',
+  ]}
+  example="Manacher's algorithm puts a # between and around the letters, so every centre, letter or gap, is a cell, and the radius around a cell is the palindrome's length. It remembers the palindrome that reaches furthest right, centred at C and ending at R. Inside it the right side mirrors the left, so the letters around a centre i before R mirror those around 2C − i, whose radius is already known. So i starts from min(R − i, P[2C − i]) instead of 0 and compares outwards from there. Every comparison that matches pushes R further right, R never moves back, and each centre has at most one mismatch, so the whole run makes fewer than 2|T| comparisons: O(n)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A palindrome is symmetric about its centre: a letter for odd length, a gap for even. n letters have 2n − 1 centres;
+  skip the gaps and every even-length palindrome is missed.
+- Checking every substring is O(n³). Expanding from each centre is O(n²) at worst (aaaa…a), fast on ordinary text and
+  O(1) in memory: the usual interview answer.
+- Manacher puts # between and around the letters, so every centre is a cell and P[i] is the palindrome's length in s.
+- It keeps C and R, the palindrome reaching furthest right. A centre i before R starts from min(R − i, P[2C − i]),
+  which is final unless the mirror's palindrome ends exactly at the edge.
+- Every match pushes R right for good, and each centre has at most one mismatch: under 2|T| comparisons, O(n).
+- Next: practise with [Longest Palindromic Substring](/practice/longest-palindromic-substring), where expanding around
+  centres is plenty, and [Palindrome, Ignoring Punctuation](/practice/valid-palindrome), two pointers moving inwards.
+  Or try your own words on [Manacher's visualiser](/visualisers/manacher).
+
+</Section>

@@ -210,6 +210,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'palindromes',
+    title: 'Palindromes: borrow from the mirror',
+    concept: 'palindromes',
+    summary: "Why checking every substring is O(n³), how expanding around the 2n − 1 centres makes it O(n²), and how Manacher's algorithm starts each centre from its mirror's radius to find every palindrome in O(n).",
+    minutes: 15,
+  },
+  {
     slug: 'linear-transformations',
     title: 'Matrices move space',
     concept: 'vectors-matrices',
