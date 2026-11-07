@@ -28,6 +28,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'stacks-queues',
+    title: 'Stacks and queues: work at the ends',
+    concept: 'stacks-queues',
+    summary: 'Last in, first out and first in, first out: why both are O(1) on an array, and how a ring buffer saves a queue from shifting.',
+    minutes: 15,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',

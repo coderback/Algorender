@@ -4,6 +4,7 @@ import { cell, stateProblems, table } from '@/viz/grid/testing';
 import type { GridState } from '@/viz/grid/types';
 import type { MemoryState } from '@/viz/memory/types';
 import { CONTRACT, entryFor } from './contract';
+import { fieldAccess, fieldKey } from './fields';
 import { runJs } from './js/runtime';
 import { type Arg, DEFAULT_LIMITS, type Limits, type RunEvent, type RunResult } from './protocol';
 import { GRID_STATS, LINE_STATS, printed, RUN_STATS, testedCondition, traceFor, traceLines, traceRun, type RunTrace } from './trace';
@@ -396,6 +397,26 @@ grid[0][1] = 8;
       'Line 7 sets grid to a new array [[…], […]].',
       'Line 8 sets grid[0][1] to 8.',
     ]);
+  });
+
+  it('quotes field names that are not names, and reads them with brackets', () => {
+    const said = notes(
+      lines(`const pairs = { ')': '(', x: 1 };
+pairs['}'] = '{';
+delete pairs[')'];
+const box = { 'my list': [1] };
+box['my list'].push(2);
+`),
+    );
+    expect(said.slice(1, -1)).toEqual([
+      'Line 1 sets pairs to a new object {")": "(", x: 1}.',
+      'Line 2 sets pairs["}"] to "{".',
+      'Line 3 deletes pairs[")"].',
+      'Line 4 sets box to a new object {"my list": […]}.',
+      'Line 5 appends 2 to box["my list"].',
+    ]);
+    expect([fieldKey('x'), fieldKey('café'), fieldKey('0'), fieldKey('01'), fieldKey(')')]).toEqual(['x', 'café', '0', '"01"', '")"']);
+    expect([fieldAccess('p', 'x'), fieldAccess('row', '0'), fieldAccess('pairs', ')')]).toEqual(['p.x', 'row[0]', 'pairs[")"]']);
   });
 
   it('stacks a frame per recursive call, marks the innermost active, and unwinds with returns', () => {

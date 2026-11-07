@@ -6,6 +6,7 @@
 
 import type { Frame, Trace, VarValue } from '@/engine/types';
 import type { MemoryState } from '@/viz/memory/types';
+import { fieldAccess, fieldKey } from './fields';
 import type { HeapObject, Json, MemValue, RunEvent, RunResult, StackFrame } from './protocol';
 
 export type Step = Extract<RunEvent, { kind: 'step' }>;
@@ -299,7 +300,7 @@ function nameOf(id: string, e: Step, now: StackFrame, heap: ReadonlyMap<string, 
         if (entry) return `${n}[${memText(entry[0], heap)}]`;
       } else if (o.kind === 'object') {
         const field = o.fields.find(([, x]) => isIt(x));
-        if (field) return `${n}.${field[0]}`;
+        if (field) return fieldAccess(n, field[0]);
       }
     }
   }
@@ -337,8 +338,8 @@ function mutation(old: HeapObject, now: HeapObject, name: string, heap: Readonly
   } else if (now.kind === 'object' && old.kind === 'object') {
     const set = now.fields.filter(([k, v]) => !old.fields.some(([k2, v2]) => k === k2 && sameValue(v, v2)));
     const removed = old.fields.filter(([k]) => !now.fields.some(([k2]) => k === k2));
-    if (set.length === 1 && removed.length === 0) return `sets ${name}.${set[0][0]} to ${text(set[0][1])}`;
-    if (removed.length === 1 && set.length === 0) return `deletes ${name}.${removed[0][0]}`;
+    if (set.length === 1 && removed.length === 0) return `sets ${fieldAccess(name, set[0][0])} to ${text(set[0][1])}`;
+    if (removed.length === 1 && set.length === 0) return `deletes ${fieldAccess(name, removed[0][0])}`;
   }
   return `changes ${name}`;
 }
@@ -394,7 +395,7 @@ function contents(obj: HeapObject, heap: ReadonlyMap<string, HeapObject>): strin
     parts = obj.entries.map(([k, v]) => `${inner(k)}: ${inner(v)}`);
     [open, close] = ['{', '}'];
   } else if (obj.kind === 'object') {
-    parts = obj.fields.map(([k, v]) => `${k}: ${inner(v)}`);
+    parts = obj.fields.map(([k, v]) => `${fieldKey(k)}: ${inner(v)}`);
     [open, close] = obj.type === 'Object' ? ['{', '}'] : ['(', ')'];
   } else {
     parts = obj.items.map(inner);

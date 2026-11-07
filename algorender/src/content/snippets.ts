@@ -93,6 +93,62 @@ console.log(scores);
     },
   },
   {
+    id: 'balanced-brackets',
+    title: 'Checking brackets match with a stack',
+    code: {
+      python: `def balanced(text):
+    pairs = {')': '(', ']': '[', '}': '{'}
+    stack = []
+    for ch in text:
+        if ch in '([{':
+            stack.append(ch)
+        elif ch in pairs:
+            if not stack or stack.pop() != pairs[ch]:
+                return False
+    return not stack
+
+print(balanced('{[()]}'))
+print(balanced('([)]'))
+`,
+      javascript: `function balanced(text) {
+  const pairs = { ')': '(', ']': '[', '}': '{' };
+  const stack = [];
+  for (const ch of text) {
+    if ('([{'.includes(ch)) {
+      stack.push(ch);
+    } else if (ch in pairs) {
+      if (stack.length === 0 || stack.pop() !== pairs[ch]) {
+        return false;
+      }
+    }
+  }
+  return stack.length === 0;
+}
+
+console.log(balanced('{[()]}'));
+console.log(balanced('([)]'));
+`,
+      typescript: `function balanced(text: string): boolean {
+  const pairs: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+  const stack: string[] = [];
+  for (const ch of text) {
+    if ('([{'.includes(ch)) {
+      stack.push(ch);
+    } else if (ch in pairs) {
+      if (stack.length === 0 || stack.pop() !== pairs[ch]) {
+        return false;
+      }
+    }
+  }
+  return stack.length === 0;
+}
+
+console.log(balanced('{[()]}'));
+console.log(balanced('([)]'));
+`,
+    },
+  },
+  {
     id: 'factorial',
     title: 'Factorial, recursively',
     code: {

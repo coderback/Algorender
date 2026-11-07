@@ -72,6 +72,7 @@ concepts:
     summary: Last in first out, and first in first out, on top of arrays and rings.
     prereqs: [arrays]
     visualisers: [stack, queue, deque]
+    lesson: stacks-queues
   - id: linked-lists
     title: Linked lists
     track: linear
