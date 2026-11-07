@@ -991,6 +991,74 @@ console.log(merged.join(' '));
 `,
     },
   },
+  {
+    id: 'bfs-distances',
+    title: 'Breadth-first search with a list and a head index as the queue',
+    code: {
+      python: `def bfs(graph, start):
+    dist = {start: 0}
+    queue = [start]
+    head = 0
+    while head < len(queue):
+        u = queue[head]
+        head += 1
+        for v in graph[u]:
+            if v not in dist:
+                dist[v] = dist[u] + 1
+                queue.append(v)
+    print(' '.join(queue))
+    return dist
+
+graph = {'A': ['B', 'D'], 'B': ['A', 'C'], 'C': ['B', 'D'], 'D': ['A', 'C']}
+hops = bfs(graph, 'A')
+print('C: ' + str(hops['C']))
+`,
+      javascript: `function bfs(graph, start) {
+  const dist = { [start]: 0 };
+  const queue = [start];
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of graph[u]) {
+      if (!(v in dist)) {
+        dist[v] = dist[u] + 1;
+        queue.push(v);
+      }
+    }
+  }
+  console.log(queue.join(' '));
+  return dist;
+}
+
+const graph = { A: ['B', 'D'], B: ['A', 'C'], C: ['B', 'D'], D: ['A', 'C'] };
+const hops = bfs(graph, 'A');
+console.log('C: ' + hops['C']);
+`,
+      typescript: `function bfs(graph: Record<string, string[]>, start: string): Record<string, number> {
+  const dist: Record<string, number> = { [start]: 0 };
+  const queue: string[] = [start];
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of graph[u]) {
+      if (!(v in dist)) {
+        dist[v] = dist[u] + 1;
+        queue.push(v);
+      }
+    }
+  }
+  console.log(queue.join(' '));
+  return dist;
+}
+
+const graph = { A: ['B', 'D'], B: ['A', 'C'], C: ['B', 'D'], D: ['A', 'C'] };
+const hops = bfs(graph, 'A');
+console.log('C: ' + hops['C']);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

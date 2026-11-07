@@ -228,6 +228,7 @@ concepts:
     summary: Exploring a graph with a queue or a stack, level by level or path by path.
     prereqs: [graph-representations, stacks-queues]
     visualisers: [breadth-first-search, depth-first-search]
+    lesson: bfs-dfs
   - id: topological-sort
     title: Topological sort
     track: graphs

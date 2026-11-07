@@ -22,6 +22,7 @@ const lessonPaths = [
   'memoization',
   'dynamic-programming',
   'graph-representations',
+  'bfs-dfs',
   'union-find',
   'dijkstra',
   'merge-sort',

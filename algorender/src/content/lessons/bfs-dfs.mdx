@@ -1,0 +1,283 @@
+<Section step="hook" title="Ripples, or a ball of string">
+
+Drop a stone in a pond and the ripple reaches everything one step out before anything two steps out. Explore a maze
+with a ball of string and you do the opposite: follow one passage to its end, and only then wind back to the last
+junction with a passage you haven't tried.
+
+Those are the two classic ways to visit every node a start can reach in a graph. **Breadth-first search** (BFS)
+spreads out in rings, so it finds the route with the fewest edges to each node. **Depth-first search** (DFS) dives down
+one path and backs up, the natural way to ask what can be reached, or whether the graph loops back on itself. What sets
+them apart is where they keep the nodes still waiting: BFS in a queue, DFS in a stack.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="reachable">v is reachable from s when some path of edges leads from s to v. A search from s visits exactly these nodes.</Term>
+  <Term name="discovered">A node is discovered the first time the search finds it, and marked at once, so no later edge adds it again.</Term>
+  <Term name="frontier">The nodes found but not yet finished with: a queue in BFS, a stack in DFS. Exploring a node means looking at its neighbours.</Term>
+  <Term name="level">The fewest edges on any path from the start: the start is level 0, its neighbours level 1, and so on.</Term>
+  <Term name="parent">The node a node was discovered from. Parent links form a tree; in BFS, following them back from a node traces a shortest path.</Term>
+  <Term name="backtrack">In DFS, stepping back along the current path when the node at its end has no undiscovered neighbours.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One graph, two orders">
+
+This network has 8 nodes and 10 edges, and neighbours are read in alphabetical order. Run BFS from A and watch the
+Queue panel: nodes join at the back and leave from the front.
+
+<Explore slug="breadth-first-search" settings={{ preset: 'network' }} caption="BFS from A visits A, then B and C at level 1, D and E at level 2, F at level 3, and G and H at level 4. Edges to nodes already discovered are skipped." />
+
+A's neighbours, B and C, join the queue first. B leaves and adds D behind C; then C leaves and adds E. So every level-1
+node leaves before any level-2 node, and the queue never holds more than two neighbouring levels. That makes the levels
+exact: when u, at level k, finds an undiscovered v, every node at a lower level has already been explored, and if v
+were next to any of them it would have been found then. So no path reaches v in fewer than k + 1 edges. The parents
+back from H in the Levels and parents table give H, F, D, B, A: four edges, and no path is shorter.
+
+Now DFS on the same graph. It is recursive: it calls DFS on a node as soon as it discovers it, and the Call stack panel
+holds the path from A to the current node.
+
+<Explore slug="depth-first-search" settings={{ preset: 'network' }} caption="DFS from A goes A, B, C, E, F, D. D has nothing new, so DFS backtracks to F and goes on to G, then H. It reaches D along A–B–C–E–F–D, five edges, though A–B–D takes two." />
+
+B's list does hold D, but C comes first, so by the time DFS returns to B, D is finished. On the way down, when C looks at
+A, A is still on the call stack: that edge closes the loop A–B–C–A. It is called a back edge, and it is how DFS finds
+cycles.
+
+In both runs Edges examined ends at 20: each list is read once, so each edge is read once from each end. Both take
+O(V + E) with adjacency lists, and O(V²) with a matrix, whose rows have V cells (see
+[representing graphs](/learn/graph-representations)). Extra memory is O(V): a mark per node, plus the queue or the call
+stack.
+
+<KeyIdea>
+
+**Both searches take a node from the frontier and look at its neighbours. With a queue, the oldest node
+comes out first, so BFS explores in order of distance and first reaches each node along a path with the fewest edges.
+With a stack, the newest comes out first, so DFS follows one path as deep as it goes before backing up.** Each node is
+handled once, and each edge once from each end: O(V + E).
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: empty the queue">
+
+Same network, but this time BFS starts from D, in the middle. Whenever more than one node is waiting, predict which
+leaves the queue next. The rule is first in, first out, whatever the nodes are called.
+
+<PredictChallenge slug="breadth-first-search" settings={{ preset: 'middle' }} goal={6} />
+
+From D nothing is more than two edges away. Within a level, nodes leave in the order they were found: A and C, found by
+B, go ahead of E, G and H, found by F.
+
+</Section>
+
+<Section step="do" title="BFS in code, and what each search is for">
+
+Here is BFS on a square, A–B, B–C, C–D and D–A. The queue is a list with a head index that steps past each node as it
+leaves, so nothing shifts (see [stacks and queues](/learn/stacks-queues)). The map dist holds each node's level and
+doubles as the mark: a node has an entry once it is discovered.
+
+<TraceCode
+  snippet="bfs-distances"
+  question="What does the first print show: the queue list once the loop has finished?"
+  choices={['A B C D', 'A B D C', 'A D C B', 'A B D C C']}
+  answer={1}
+  why="A’s list is B then D, so both join before anything two edges away. B finds C and gives it level 2. When D comes out, C already has a distance, so C joins only once. head never removed anything, so the list is the visit order, and the second line prints C: 2."
+/>
+
+C joins once only because dist[v] is set when v is found, not when it leaves.
+
+<Misconception
+  id="mark-when-dequeued"
+  title="Mark a node as visited when it leaves the queue"
+  probes={[
+    {
+      q: 'A is joined to B, C and D, and each of those to E. A BFS from A marks nodes only as they leave the queue. How many times does E join it?',
+      choices: ['Once', 'Three times: B, C and D each find it before it leaves', 'Five times'],
+      answer: 1,
+      trap: 0,
+      why: 'E is unmarked while B, C and D are explored, so each adds it. Marking E when B finds it keeps it to one entry.',
+    },
+    {
+      q: 'One BFS marks a node when it joins the queue, another when it leaves. Which is true?',
+      choices: ['Both queue every node exactly once', 'The second can queue a node once per edge that finds it before it leaves', 'The second visits in depth-first order'],
+      answer: 1,
+      trap: 0,
+      why: 'Until a node is marked, every edge into it looks like a new discovery, so the second queues it again each time: up to O(E) entries.',
+    },
+  ]}
+>
+
+Mark a node as it joins the queue, and every later edge into it is turned away. Marked only when it leaves, a node is
+queued again by every edge that reaches it before then: in the square, B and D would both queue C. On a dense graph
+that is O(E) entries instead of V, and unless each is checked as it comes out, the same node is explored over and over.
+
+</Misconception>
+
+DFS is simplest written recursively, as in its visualiser's code: mark u, then call DFS(v) for each unmarked neighbour
+v. The calls wait on the call stack (see [recursion](/learn/recursion)), so a path of 100,000 nodes nests 100,000
+calls, far past Python's default limit of 1,000. An explicit stack avoids that: pop a node, skip it if visited,
+otherwise mark it and push its unmarked neighbours, each list in reverse so the first is on top. A node can be pushed
+more than once, so the stack can hold O(E) entries, but only its first pop counts, which keeps the recursive order;
+push in list order and the route changes.
+
+Either way, DFS reaches every node it can, but not always by the shortest route.
+
+<Misconception
+  id="dfs-shortest-path"
+  title="Depth-first search finds shortest paths too"
+  probes={[
+    {
+      q: 'A square has edges A–B, B–C, C–D and D–A, lists in alphabetical order. Along which path does a recursive DFS from A first reach D?',
+      choices: ['A–D: it is one edge away', 'A–B–C–D', 'A–B–A–D'],
+      answer: 1,
+      trap: 0,
+      why: 'A’s list starts with B, so DFS dives to B, then C, and finds D from C before trying A’s second neighbour. BFS gives D level 1.',
+    },
+    {
+      q: 'Each position of a sliding puzzle is a node and each move an edge. Which search finds a solution in the fewest moves?',
+      choices: ['Depth-first search: it stops at the solved position', 'Breadth-first search', 'Either: both find the fewest moves'],
+      answer: 1,
+      trap: 2,
+      why: 'BFS reaches each position at its level, the fewest moves from the start. DFS follows whatever path it dives down first, which can be far longer.',
+    },
+  ]}
+>
+
+DFS reaches each node along the first path its neighbour order happens to lead down, and nothing makes that path short:
+on the network it took five edges to reach D, which is two from A. Its tree edges give **a** way to every reachable
+node, not necessarily the shortest. For the fewest edges, use BFS.
+
+</Misconception>
+
+Each search has its jobs. BFS answers "how few steps?": the fewest hops between two people, the fewest moves in a
+puzzle, how fast something spreads (several starts at level 0 give each node its distance to the nearest). DFS answers
+"can I get there?" and "is there a loop?": filling regions, finding cycles, and
+**topological sort**, ordering tasks so each comes after what it depends on. Neither goes beyond what its start can
+reach.
+
+<Explore slug="breadth-first-search" settings={{ preset: 'components' }} caption="BFS from A discovers B and C at level 1 and D at level 2, then the queue runs dry. E, F and G are never discovered: no edge joins them to A's group." />
+
+To visit a whole graph, start a new search from each node not yet discovered. In an undirected graph each start opens
+another **connected component**, and the total is still O(V + E).
+
+The last trap is weights.
+
+<Misconception
+  id="bfs-weighted"
+  title="BFS finds the shortest route in a weighted graph too"
+  probes={[
+    {
+      q: 'Roads: A–B is 5 km, A–C is 1 km and C–B is 1 km. A BFS from A puts B at level 1. What is the shortest distance from A to B?',
+      choices: ['5 km, along the road BFS found', '2 km, through C', '1 km'],
+      answer: 1,
+      trap: 0,
+      why: 'BFS counts roads, and one road to B beats two. But 1 + 1 = 2 km through C is shorter than the 5 km road.',
+    },
+    {
+      q: 'Which algorithm finds the shortest distances when roads have different lengths, none of them negative?',
+      choices: ['Breadth-first search', 'Dijkstra’s algorithm', 'Depth-first search'],
+      answer: 1,
+      trap: 0,
+      why: 'BFS treats every edge as one step, so it finds the fewest roads, not kilometres. Dijkstra takes nodes in order of total distance, using a priority queue.',
+    },
+  ]}
+>
+
+BFS never reads a weight. Its levels are the fewest edges, which is the shortest distance only when every edge costs the
+same. With different weights, more edges can cost less. [Dijkstra's algorithm](/learn/dijkstra) keeps the shape of BFS
+but swaps the queue for a priority queue, so nodes come out in order of total distance.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A BFS has finished exploring every level-2 node and hasn’t taken out any level-3 node yet. What does its queue hold?',
+      choices: ['Every level-3 node, and nothing else', 'Every node at levels 1 to 3', 'Some level-3 and some level-4 nodes'],
+      answer: 0,
+      why: 'Level-3 nodes are exactly the undiscovered neighbours of level-2 nodes, so exploring level 2 queued them all. Level 4 is found only once they come out.',
+    },
+    {
+      q: 'An undirected graph has edges A–B, A–C, B–D and C–E, read in alphabetical order. In what order do BFS and DFS from A visit the nodes?',
+      choices: ['BFS: A B C D E; DFS: A B D C E', 'BFS: A B D C E; DFS: A B C D E', 'Both: A B C D E'],
+      answer: 0,
+      why: 'BFS finishes B and C, at level 1, before D and E. DFS dives from B to D, backtracks, and only then tries C, then E.',
+    },
+    {
+      q: 'A DFS from S first reaches T along a path of 6 edges. What does that tell you about the shortest path from S to T?',
+      choices: ['It has 6 edges', 'It has at most 6 edges', 'It has at least 6 edges'],
+      answer: 1,
+      why: 'DFS found a real path, so the shortest can’t be longer, but DFS follows whichever path its neighbour order leads down first.',
+      traps: { 0: 'dfs-shortest-path' },
+    },
+    {
+      q: 'Roads on a delivery map have different lengths. A BFS from the depot puts the shop at level 2 and the warehouse at level 3. Which is true?',
+      choices: ['The shop is the shorter drive', 'The shop is fewer roads away, but the warehouse may be the shorter drive', 'Both are the same distance away'],
+      answer: 1,
+      why: 'BFS counts roads and ignores their lengths. Three short roads can add up to less than two long ones.',
+      traps: { 0: 'bfs-weighted' },
+    },
+    {
+      q: 'The BFS code appends v only when v has no distance yet. On a connected undirected graph with 1,000 nodes and 50,000 edges, how many appends are there?',
+      choices: ['999', '50,000', '100,000'],
+      answer: 0,
+      why: 'Every node except the start is appended once, when it is found. The other 99,001 of the 100,000 edge ends reach nodes that already have a distance.',
+      traps: { 1: 'mark-when-dequeued' },
+    },
+    {
+      q: 'You run BFS on a graph stored as an adjacency matrix. How long does it take?',
+      choices: ['O(V + E), as with lists', 'O(V²)', 'O(E log V)', 'O(V · E)'],
+      answer: 1,
+      why: 'Each node is explored once, and finding its neighbours reads its whole row of V cells, 0s included. Adjacency lists read only the entries that exist.',
+    },
+    {
+      q: 'A BFS from A on an undirected graph of 7 nodes ends with 4 of them discovered. What does that tell you?',
+      choices: ['The other 3 can’t be reached from A: they are in other components', 'The queue filled up before it reached them', 'A DFS from A would find them'],
+      answer: 0,
+      why: 'BFS stops only when nothing new is reachable, and DFS reaches exactly the same nodes. A new search from each undiscovered node finds the other components.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="bfs-dfs-frontier"
+  prompt="How do BFS and DFS choose the next node to explore? Why does BFS find paths with the fewest edges, and what is each search good for?"
+  rubric={[
+    'Both keep a frontier of discovered nodes and mark each when first found, so each node is handled once and each edge at most twice: O(V + E).',
+    'BFS takes the oldest node from a queue, so every node one edge away is explored before any node two edges away.',
+    'Because it goes level by level, BFS first reaches each node along a path with the fewest edges; with weighted edges that need not be the shortest.',
+    'DFS takes the newest node from a stack, often the call stack, following one path as deep as possible, then backing up to the latest node with undiscovered neighbours.',
+    'BFS suits fewest hops and levels; DFS suits reachability, components, cycle detection and topological order, but not shortest paths.',
+  ]}
+  example="Both keep found but unfinished nodes in a frontier and mark each node when it is discovered, so each node is handled once and each edge at most twice: O(V + E). BFS takes the oldest node from a queue, so it explores everything one edge away before anything two away. Going level by level, it first reaches each node by the fewest edges, which suits fewest-hop questions, though with weights that may not be the shortest route. DFS takes the newest from a stack, usually the call stack: it follows one path as deep as it goes and backs up when stuck. It suits reachability, components, cycles and topological order, not shortest paths."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- BFS keeps its frontier in a queue, so it explores every node one edge away before any two away. Its levels are the
+  fewest edges from the start, the shortest distance only when edges are unweighted.
+- DFS keeps a stack, usually the call stack: it dives down one path and backtracks when stuck. It finds a path, not
+  always the shortest, and an edge to a node still on the stack, other than the edge it came in on, closes a cycle.
+- In BFS, mark a node the moment it is discovered, so it joins the queue once. Both take O(V + E) with adjacency
+  lists, O(V²) with a matrix, and O(V) extra memory. Neighbour order decides the visit order.
+- A search reaches only what its start can reach; start again from each undiscovered node to cover every component.
+- Next: **topological sort**, [Dijkstra's algorithm](/learn/dijkstra) for weighted edges, **minimum spanning trees**
+  and **strongly connected components**. Write both searches in [Write breadth-first search](/code/bfs-levels) and
+  [Write depth-first search](/code/dfs-order), then practise with [Count the Islands](/practice/number-of-islands), a
+  search per island, and [Spreading Rot](/practice/rotting-oranges), a BFS from every rotten orange at once.
+
+</Section>

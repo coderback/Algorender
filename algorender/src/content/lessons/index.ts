@@ -119,6 +119,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'bfs-dfs',
+    title: 'Breadth-first and depth-first search: a queue or a stack',
+    concept: 'bfs-dfs',
+    summary: "Visit everything a start can reach with a queue or a stack: why BFS's levels are the fewest edges, why DFS finds cycles but not shortest paths, and why marking a node when it is found keeps both O(V + E).",
+    minutes: 15,
+  },
+  {
     slug: 'union-find',
     title: 'Union-find: same root, same group',
     concept: 'union-find',
