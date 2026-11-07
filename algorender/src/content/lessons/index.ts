@@ -175,6 +175,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'minimum-spanning-trees',
+    title: 'Minimum spanning trees: the cheapest safe edge',
+    concept: 'minimum-spanning-trees',
+    summary: "Connecting every node at the least total cost: why the lightest edge across any split is always safe, how Kruskal's merges components with union-find and Prim's grows one tree with a heap, and why the result is not a map of shortest routes.",
+    minutes: 15,
+  },
+  {
     slug: 'sorting-in-code',
     title: 'Bubble sort in code: read it, run it, change it',
     concept: 'quadratic-sorts',

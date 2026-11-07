@@ -30,6 +30,7 @@ const lessonPaths = [
   'strongly-connected-components',
   'union-find',
   'dijkstra',
+  'minimum-spanning-trees',
   'merge-sort',
   'quick-sort',
   'string-matching',

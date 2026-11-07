@@ -257,6 +257,7 @@ concepts:
     summary: Connecting every node at least cost, growing a tree (Prim) or merging forests (Kruskal).
     prereqs: [bfs-dfs, heaps, union-find]
     visualisers: [prims, kruskals]
+    lesson: minimum-spanning-trees
   - id: strongly-connected-components
     title: Strongly connected components
     track: graphs

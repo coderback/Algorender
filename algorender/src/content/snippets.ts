@@ -1550,6 +1550,74 @@ console.log(picked.join(' '));
 `,
     },
   },
+  {
+    id: 'kruskal-sorted-edges',
+    title: "Kruskal's algorithm on sorted edges, with a union-find parent list",
+    code: {
+      python: `edges = [[1, 0, 1], [2, 2, 3], [3, 1, 3], [4, 0, 2]]
+forest = [0, 1, 2, 3]
+total = 0
+for w, u, v in edges:
+    a = u
+    while forest[a] != a:
+        a = forest[a]
+    b = v
+    while forest[b] != b:
+        b = forest[b]
+    if a == b:
+        print('skip ' + str(u) + '-' + str(v))
+    else:
+        forest[b] = a
+        total += w
+        print('keep ' + str(u) + '-' + str(v))
+print(total)
+`,
+      javascript: `const edges = [[1, 0, 1], [2, 2, 3], [3, 1, 3], [4, 0, 2]];
+const forest = [0, 1, 2, 3];
+let total = 0;
+for (const [w, u, v] of edges) {
+  let a = u;
+  while (forest[a] !== a) {
+    a = forest[a];
+  }
+  let b = v;
+  while (forest[b] !== b) {
+    b = forest[b];
+  }
+  if (a === b) {
+    console.log('skip ' + u + '-' + v);
+  } else {
+    forest[b] = a;
+    total += w;
+    console.log('keep ' + u + '-' + v);
+  }
+}
+console.log(total);
+`,
+      typescript: `const edges: number[][] = [[1, 0, 1], [2, 2, 3], [3, 1, 3], [4, 0, 2]];
+const forest: number[] = [0, 1, 2, 3];
+let total = 0;
+for (const [w, u, v] of edges) {
+  let a = u;
+  while (forest[a] !== a) {
+    a = forest[a];
+  }
+  let b = v;
+  while (forest[b] !== b) {
+    b = forest[b];
+  }
+  if (a === b) {
+    console.log('skip ' + u + '-' + v);
+  } else {
+    forest[b] = a;
+    total += w;
+    console.log('keep ' + u + '-' + v);
+  }
+}
+console.log(total);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {
