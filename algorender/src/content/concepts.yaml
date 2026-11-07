@@ -219,6 +219,7 @@ concepts:
     summary: Adjacency lists versus adjacency matrices, and what each costs.
     prereqs: [arrays, linked-lists]
     visualisers: [graph, adjacency-list, adjacency-matrix]
+    lesson: graph-representations
   - id: bfs-dfs
     title: Breadth-first and depth-first search
     track: graphs

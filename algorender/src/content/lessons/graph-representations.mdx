@@ -1,0 +1,296 @@
+<Section step="hook" title="Who is next door, and are these two joined?">
+
+A map app knows a million junctions and the roads between them. To plan a route it asks one question again and again:
+which junctions can I reach from this one? A social network suggesting friends asks another: are these two people
+already connected?
+
+Both are questions about a **graph**: a set of things, and the connections between pairs of them. A program has to
+choose how to write a graph down, and each of the two classic ways makes one of those questions cheap. Keep a list of
+neighbours for every junction, and listing them costs only as many steps as there are neighbours. Keep a grid with a
+cell for every pair, and checking a pair is a single read, but for a million junctions the grid has a million million
+cells.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="vertex and edge">A vertex (also called a node) is one thing; an edge joins two vertices. V counts the vertices and E the edges.</Term>
+  <Term name="directed and undirected">An undirected edge works both ways, like a friendship. A directed edge u → v goes one way only, like a one-way street.</Term>
+  <Term name="weighted">Each edge carries a number, such as a distance or a price. In an unweighted graph an edge only says that two vertices are joined.</Term>
+  <Term name="neighbours and degree">v is a neighbour of u when an edge joins them (in a directed graph, an edge from u to v). The degree of u, deg(u), is how many neighbours it has; in a directed graph that is its out-degree.</Term>
+  <Term name="adjacency list">One list per vertex, holding its neighbours: adj[u] lists every v that u has an edge to.</Term>
+  <Term name="adjacency matrix">A V × V grid of 0s and 1s, with a row and a column for every vertex. M[u][v], in row u and column v, is 1 when there is an edge from u to v.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One graph, written down two ways">
+
+This undirected graph has 5 vertices and 6 edges, stored as adjacency lists. B has edges to A, C and D, so adj[B] holds
+those three. Ask for B's neighbours, then ask about two single edges, and watch the Entries scanned count.
+
+<Explore slug="adjacency-list" settings={{ start: 'undirected' }} caption="Run Neighbours of B, then Has edge? from B to D, then from A to E. Neighbours of B reads exactly 3 entries: A, C and D. The check for B–D reads A and C before it meets D, the third and last entry of adj[B]. The check for A–E reads both of A's entries, B and C, then answers false." />
+
+Listing neighbours reads only the entries that are there: deg(u) of them. Checking one edge has no such shortcut.
+Nothing says where v sits in adj[u], so the list is read until v turns up, or to the end: O(deg(u)), up to V − 1 reads.
+The Memory panel counts 12 entries, two for each of the 6 edges. Each list can be a dynamic array or a
+[linked list](/learn/linked-lists); either way, adding a neighbour is O(1): appended to an array (amortised) or linked
+in at a list's head.
+
+Now the same graph as a matrix. Row B has a 1 in columns A, C and D, and a 0 in the other two.
+
+<Explore slug="adjacency-matrix" settings={{ start: 'undirected' }} caption="Run the same three. Neighbours of B reads all 5 cells of row B, 0s included, to find the 1s at A, C and D. Has edge? from B to D reads one cell, M[B][D] = 1, and from A to E one cell, M[A][E] = 0." />
+
+With the vertices numbered 0 to V − 1, a matrix is an array of arrays, so M[u][v] is found by working out its address,
+as an [array](/learn/arrays) finds A[i]: checking or changing an edge is O(1), however big the graph. Listing neighbours
+is where the matrix pays: row u has a cell for every vertex, and each must be read, so it costs O(V) even for a vertex
+with one neighbour. Memory is the other price: V² = 25 cells, however few edges there are. 12 of them hold a 1, two per
+edge, because an undirected graph's matrix is symmetric.
+
+<KeyIdea>
+
+**An adjacency list stores only the edges that exist: O(V + E) memory, and listing u's neighbours costs deg(u), but
+checking one edge scans adj[u], O(deg(u)). An adjacency matrix stores a cell for every pair: O(V²) memory and O(V) to
+list a row, but checking or changing one edge is one cell, O(1).**
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: read the lists">
+
+Graph algorithms spend most of their time asking for neighbours. **Depth-first search**, the next topic, needs only one
+rule for now: it moves to the first vertex in the current vertex's list that it hasn't reached yet. When a list has
+none left, it goes back to the vertex it came from and carries on along that one's list.
+
+This network has 6 vertices and 8 edges (ignore the weights), and its lists are in alphabetical order: A: B, C;
+B: A, C, D; C: A, B, E; D: B, E, F; E: C, D, F; F: D, E. Run **DFS from** A, and each time it stops, predict which
+vertex it discovers next.
+
+<PredictChallenge slug="graph" settings={{ start: 'network' }} goal={4} />
+
+Every answer came from reading one list. A full search reads each vertex's list once, so with adjacency lists it costs
+O(V + E). With a matrix, each vertex's row costs V reads, O(V²) in all.
+
+</Section>
+
+<Section step="do" title="Build the lists, then choose">
+
+Graphs usually arrive as a list of edges: a file of roads, or the input to a practice problem. Building adjacency lists
+takes one pass, O(V + E): an empty list per vertex, then for each edge, add each end to the other's list. With vertices
+numbered 0 to V − 1, adj can be an array of lists; with names, a dictionary, as here.
+
+<TraceCode
+  snippet="adjacency-from-edges"
+  question="When build returns, how many entries do the four lists hold between them?"
+  choices={['4', '8', '16']}
+  answer={1}
+  why="Each road is appended twice, once to each end’s list: A: B C, B: A C, C: A B D and D: C. The degrees add up to 2 + 2 + 3 + 1 = 8, twice the 4 roads. A 4 × 4 matrix would have 16 cells, 8 of them 1s."
+/>
+
+A directed edge u → v goes only into adj[u], so a directed graph's lists hold E entries, and its matrix need not be
+symmetric. A weighted graph keeps (neighbour, weight) pairs in its lists, or each weight in its matrix cell, with a
+marker such as ∞ for "no edge".
+
+<Misconception
+  id="undirected-stored-once"
+  title="An undirected edge is stored once"
+  probes={[
+    {
+      q: 'An undirected graph has 5 vertices and 6 edges, stored as adjacency lists. How many entries do the lists hold in all?',
+      choices: ['6: one per edge', '12', '25'],
+      answer: 1,
+      trap: 0,
+      why: 'Each edge u–v is in adj[u] and in adj[v], so 6 edges make 12 entries: the degrees always add up to 2E.',
+    },
+    {
+      q: 'To add the undirected edge A–D to an adjacency matrix, a program sets M[A][D] to 1 and stops. What goes wrong?',
+      choices: [
+        'Nothing: one cell records the edge',
+        'Asking about D–A reads M[D][A], which is still 0, so the edge seems to be missing',
+        'The matrix grows by one row',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'An undirected matrix has to stay symmetric. M[D][A] must be set too, or anything that reads row D, such as listing D’s neighbours, misses A.',
+    },
+  ]}
+>
+
+An undirected edge has two ends, and each end has to be able to find it. So u–v goes into adj[u] and into adj[v], and
+the lists hold 2E entries; in a matrix, M[u][v] and M[v][u] both become 1. Store the edge once and the graph turns
+directed by accident: u can see v, but v can't see u.
+
+</Misconception>
+
+Every edge check in the first visualiser went straight to the right list, then read along it.
+
+<Misconception
+  id="list-edge-lookup-o1"
+  title="Checking an edge in an adjacency list is O(1)"
+  probes={[
+    {
+      q: 'In an adjacency list, adj[u] holds 500 neighbours. To check whether u–v is an edge, how many entries might be read?',
+      choices: ['One: adj[u] is found in one step', 'Up to 500', 'Up to V²'],
+      answer: 1,
+      trap: 0,
+      why: 'Finding adj[u] is one step, but v could sit anywhere in it, or be missing. The list is read until v turns up, so a check costs up to deg(u) reads.',
+    },
+    {
+      q: 'Which representation answers “is there an edge u–v?” with one read, whatever the graph?',
+      choices: ['Adjacency lists only', 'An adjacency matrix: it reads M[u][v]', 'Both: lists go straight to adj[u], a matrix to M[u][v]'],
+      answer: 1,
+      trap: 2,
+      why: 'The matrix finds the cell from its row and column. The lists find adj[u] at once, but then have to scan it: O(deg(u)).',
+    },
+  ]}
+>
+
+Jumping to adj[u] only finds the list. v could be anywhere in it, so a check reads entries until v turns up, and all of
+them when it is missing: O(deg(u)), up to O(V). If a program checks edges often, keep each vertex's neighbours in a hash
+set instead: a check is then O(1) on average, and memory stays O(V + E) (see [hash tables](/learn/hash-tables)).
+
+</Misconception>
+
+Changing the set of vertices is where the two differ most.
+
+<Explore slug="adjacency-matrix" settings={{ start: 'undirected' }} caption="Add vertex F: a matrix can't grow in place, so it copies its 25 cells into a new 6 × 6 matrix and fills F's row and column with 0s, 36 cells in all. Then remove C: its row and column go, and the 25 cells left shift into a 5 × 5 matrix." />
+
+Adjacency lists are the other way round. Adding a vertex adds one empty list, O(1). Removing one is their slow
+operation: the vertex's own list goes at once, but other lists still mention it, so the list visualiser checks every
+one, O(V + E). In a directed graph nothing records which lists those are; in an undirected one, its own list names them.
+
+So the choice comes down to how many edges there are. A simple undirected graph has at most V(V − 1)/2, one per pair,
+but most real graphs have far fewer: a junction joins three or four roads, and a person has hundreds of friends among
+billions of people. Such **sparse** graphs, with E much closer to V than to V², suit lists. A **dense** graph, where most
+pairs are joined, wastes little of a matrix, and a matrix also suits small graphs and work that checks pairs over and
+over, such as [Floyd–Warshall](/visualisers/floyd-warshall).
+
+<Misconception
+  id="matrix-always-better"
+  title="A matrix is better, because its edge checks are O(1)"
+  probes={[
+    {
+      q: 'A road map has 1,000,000 junctions and about 1,500,000 roads. Which representation should a route planner use?',
+      choices: [
+        'An adjacency matrix: checking a road is O(1)',
+        'Adjacency lists: about 3,000,000 entries, where a matrix needs a million million cells',
+        'Either: they take about the same memory',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'A matrix has V² = 10¹² cells whatever the number of roads: 125 gigabytes even at one bit each. The lists hold 2E = 3,000,000 entries.',
+    },
+    {
+      q: 'A search reads every vertex’s neighbours once. On an undirected graph with 10,000 vertices and 20,000 edges, roughly how many reads does that take?',
+      choices: [
+        'About 50,000 with lists, and 100,000,000 with a matrix',
+        'About 10,000 with either: the matrix finds each edge in O(1)',
+        'About 100,000,000 with either',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'With lists the search reads each list once: V + 2E = 50,000. With a matrix, every vertex’s row has 10,000 cells, so it reads V² = 100,000,000, almost all of them 0s.',
+    },
+  ]}
+>
+
+O(1) edge checks are only one cost. A matrix always takes V² cells, nearly all 0s for a sparse graph: a million
+junctions need 125 gigabytes even at one bit per cell. And what most graph algorithms repeat is listing
+neighbours, which a matrix does in O(V) per vertex, so a full search costs O(V²) instead of O(V + E). Pick a matrix for
+small or dense graphs, or when the work really is checking pairs; otherwise, use lists.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'An undirected graph has 6 vertices and 7 edges. How many entries do its adjacency lists hold, and how many cells does its adjacency matrix have?',
+      choices: ['14 entries and 36 cells', '7 entries and 36 cells', '14 entries and 14 cells', '7 entries and 49 cells'],
+      answer: 0,
+      why: 'Each undirected edge is in both endpoints’ lists: 2 × 7 = 14. The matrix has a cell for every pair, 6 × 6 = 36, however many edges there are; 14 of its cells are 1s.',
+      traps: { 1: 'undirected-stored-once', 3: 'undirected-stored-once' },
+    },
+    {
+      q: 'adj[u] holds 40 neighbours, and v is not one of them. How many entries does checking for the edge u–v read?',
+      choices: ['1: it goes straight to the answer', 'About 20, on average', '40'],
+      answer: 2,
+      why: 'Finding adj[u] is one step, but only reading all 40 entries shows that v is not among them. An adjacency matrix would read the single cell M[u][v].',
+      traps: { 0: 'list-edge-lookup-o1' },
+    },
+    {
+      q: 'A road map has 100,000 junctions and about 150,000 roads, and a route planner mostly asks for each junction’s neighbours. Which representation fits?',
+      choices: [
+        'An adjacency matrix: checking a road is O(1)',
+        'Adjacency lists: about 300,000 entries, against 10 billion cells for a matrix',
+        'Either: both need O(V + E) memory',
+      ],
+      answer: 1,
+      why: '100,000² is 10,000,000,000 cells, nearly all 0s. The lists hold 2E = 300,000 entries and give a junction’s neighbours in deg(u) reads, where a matrix row takes 100,000.',
+      traps: { 0: 'matrix-always-better' },
+    },
+    {
+      q: 'A directed graph has the edge C → B but not B → C. Which is true?',
+      choices: [
+        'C is in adj[B], and M[B][C] = 1',
+        'B is in adj[C] but C is not in adj[B], and M[B][C] = 0',
+        'B is in adj[C] and C is in adj[B]: every edge is stored twice',
+      ],
+      answer: 1,
+      why: 'A directed edge is stored once, under the vertex it leaves: B goes in adj[C], and M[C][B] = 1. Only an undirected graph stores both directions, which is what makes its matrix symmetric.',
+    },
+    {
+      q: 'Which graph suits an adjacency matrix best?',
+      choices: [
+        'A billion web pages, each linking to about 10 others',
+        'The flights between 30 airports, where most pairs are linked',
+        'A country’s road map',
+        'A social network of two billion people',
+      ],
+      answer: 1,
+      why: 'With 30 vertices the matrix has only 900 cells, and with most pairs linked, few of them are wasted. The other three are huge and sparse, so their matrices would be almost all 0s.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="graph-representations"
+  prompt="How do an adjacency list and an adjacency matrix store a graph, and what does each make cheap and expensive? When would you pick each one?"
+  rubric={[
+    'An adjacency list keeps one list of neighbours per vertex, using O(V + E) memory; an undirected edge appears in both endpoints’ lists.',
+    'With lists, listing u’s neighbours costs deg(u), but checking one edge u–v scans adj[u]: O(deg(u)).',
+    'An adjacency matrix is a V × V grid with M[u][v] = 1 for each edge: O(V²) memory, and symmetric when the graph is undirected.',
+    'With a matrix, checking or changing one edge reads one cell, O(1), but listing neighbours reads the whole row, O(V).',
+    'Sparse graphs, with E far below V², suit lists; small or dense graphs, or work that mostly checks pairs, suit a matrix.',
+  ]}
+  example="An adjacency list keeps a list of neighbours for each vertex, so it stores only the edges that exist: O(V + E) memory, with each undirected edge in both endpoints’ lists. Listing u’s neighbours reads deg(u) entries, but checking one edge u–v scans adj[u], O(deg(u)). An adjacency matrix is a V × V grid where M[u][v] is 1 for an edge, symmetric for an undirected graph. Checking or changing an edge is one cell, O(1), but listing neighbours reads a whole row, O(V), and the grid takes V² cells however few edges there are. Most real graphs are sparse, so lists suit them; a matrix suits small or dense graphs."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- An adjacency list keeps each vertex's neighbours: O(V + E) memory, and listing u's neighbours costs deg(u), but
+  checking one edge scans adj[u]: O(deg(u)), not O(1).
+- An adjacency matrix keeps a V × V grid: O(V²) memory, and checking or changing an edge is one cell, O(1). Listing
+  neighbours reads a whole row, O(V), and adding a vertex copies the grid.
+- An undirected edge is stored twice: in both lists, 2E entries in all, or as M[u][v] and M[v][u]. A directed edge is
+  stored once, under the vertex it leaves.
+- Most real graphs are sparse, so lists are the default; a matrix suits small or dense graphs and work that checks pairs.
+- Next: **breadth-first and depth-first search**, which walk a graph through its lists in O(V + E), then **topological
+  sort**, shortest paths with [Dijkstra's algorithm](/learn/dijkstra), and **minimum spanning trees**. Once you have met
+  traversal, try [Count Connected Groups](/practice/connected-components) and
+  [Can Every Course Be Taken?](/practice/course-schedule): both hand you a list of edges to turn into adjacency lists
+  first. Or open the [graph](/visualisers/graph), [adjacency list](/visualisers/adjacency-list)
+  and [adjacency matrix](/visualisers/adjacency-matrix) visualisers to try more operations.
+
+</Section>

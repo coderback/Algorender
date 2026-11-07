@@ -763,6 +763,65 @@ console.log(root.left!.key + ' < ' + root.key + ' < ' + root.right!.key);
 `,
     },
   },
+  {
+    id: 'adjacency-from-edges',
+    title: 'Building adjacency lists from a list of edges',
+    code: {
+      python: `def build(vertices, edges):
+    adj = {}
+    for v in vertices:
+        adj[v] = []
+    for u, v in edges:
+        adj[u].append(v)
+        adj[v].append(u)
+    return adj
+
+stops = ['A', 'B', 'C', 'D']
+roads = [['A', 'B'], ['A', 'C'], ['B', 'C'], ['C', 'D']]
+graph = build(stops, roads)
+for v in stops:
+    print(v + ': ' + ' '.join(graph[v]))
+`,
+      javascript: `function build(vertices, edges) {
+  const adj = {};
+  for (const v of vertices) {
+    adj[v] = [];
+  }
+  for (const [u, v] of edges) {
+    adj[u].push(v);
+    adj[v].push(u);
+  }
+  return adj;
+}
+
+const stops = ['A', 'B', 'C', 'D'];
+const roads = [['A', 'B'], ['A', 'C'], ['B', 'C'], ['C', 'D']];
+const graph = build(stops, roads);
+for (const v of stops) {
+  console.log(v + ': ' + graph[v].join(' '));
+}
+`,
+      typescript: `function build(vertices: string[], edges: string[][]): Record<string, string[]> {
+  const adj: Record<string, string[]> = {};
+  for (const v of vertices) {
+    adj[v] = [];
+  }
+  for (const [u, v] of edges) {
+    adj[u].push(v);
+    adj[v].push(u);
+  }
+  return adj;
+}
+
+const stops: string[] = ['A', 'B', 'C', 'D'];
+const roads: string[][] = [['A', 'B'], ['A', 'C'], ['B', 'C'], ['C', 'D']];
+const graph = build(stops, roads);
+for (const v of stops) {
+  console.log(v + ': ' + graph[v].join(' '));
+}
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

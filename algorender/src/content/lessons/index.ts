@@ -112,6 +112,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'graph-representations',
+    title: 'Representing graphs: a list per vertex or a cell per pair',
+    concept: 'graph-representations',
+    summary: "Adjacency lists or an adjacency matrix: why one lists a vertex's neighbours in deg(u) steps and the other checks an edge in one read, why an undirected edge is stored twice, and which suits a sparse graph.",
+    minutes: 15,
+  },
+  {
     slug: 'dijkstra',
     title: "Dijkstra's algorithm: settle the closest node first",
     concept: 'shortest-paths',

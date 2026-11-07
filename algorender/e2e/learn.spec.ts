@@ -21,6 +21,7 @@ const lessonPaths = [
   'sliding-window',
   'memoization',
   'dynamic-programming',
+  'graph-representations',
   'dijkstra',
 ];
 
