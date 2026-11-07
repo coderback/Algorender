@@ -12,6 +12,7 @@ const lessonPaths = [
   'arrays',
   'stacks-queues',
   'linked-lists',
+  'hash-tables',
   'binary-search',
   'binary-search-trees',
   'heaps',

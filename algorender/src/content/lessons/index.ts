@@ -42,6 +42,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'hash-tables',
+    title: 'Hash tables: work out the bucket, look only there',
+    concept: 'hash-tables',
+    summary: 'Why hashing a key to one bucket makes put, get and delete O(1) on average, why collisions come long before the table is full, and why resizing rehashes every key yet stays O(1) amortised.',
+    minutes: 15,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',

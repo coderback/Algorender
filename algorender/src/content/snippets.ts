@@ -593,6 +593,106 @@ console.log(fewestCoins([1, 3, 4], 6));
 `,
     },
   },
+  {
+    id: 'chained-map',
+    title: 'Putting and getting keys in a hash map with chained buckets',
+    code: {
+      python: `def bucket_of(key, m):
+    total = 0
+    for ch in key:
+        total += ord(ch)
+    return total % m
+
+def put(buckets, key, value):
+    chain = buckets[bucket_of(key, len(buckets))]
+    for pair in chain:
+        if pair[0] == key:
+            pair[1] = value
+            return
+    chain.append([key, value])
+
+def get(buckets, key):
+    chain = buckets[bucket_of(key, len(buckets))]
+    for pair in chain:
+        if pair[0] == key:
+            return pair[1]
+    return -1
+
+buckets = [[], [], [], [], []]
+put(buckets, 'no', 4)
+put(buckets, 'on', 9)
+print(get(buckets, 'on'))
+`,
+      javascript: `function bucketOf(key, m) {
+  let total = 0;
+  for (const ch of key) {
+    total += ch.charCodeAt(0);
+  }
+  return total % m;
+}
+
+function put(buckets, key, value) {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      pair[1] = value;
+      return;
+    }
+  }
+  chain.push([key, value]);
+}
+
+function get(buckets, key) {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      return pair[1];
+    }
+  }
+  return -1;
+}
+
+const buckets = [[], [], [], [], []];
+put(buckets, 'no', 4);
+put(buckets, 'on', 9);
+console.log(get(buckets, 'on'));
+`,
+      typescript: `function bucketOf(key: string, m: number): number {
+  let total = 0;
+  for (const ch of key) {
+    total += ch.charCodeAt(0);
+  }
+  return total % m;
+}
+
+function put(buckets: [string, number][][], key: string, value: number): void {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      pair[1] = value;
+      return;
+    }
+  }
+  chain.push([key, value]);
+}
+
+function get(buckets: [string, number][][], key: string): number {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      return pair[1];
+    }
+  }
+  return -1;
+}
+
+const buckets: [string, number][][] = [[], [], [], [], []];
+put(buckets, 'no', 4);
+put(buckets, 'on', 9);
+console.log(get(buckets, 'on'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

@@ -1,0 +1,287 @@
+<Section step="hook" title="Work out where it is, then look there">
+
+You are signing up to a site with ten million accounts, and as you type a username it tells you at once whether the
+name is taken. Checking the names one by one would take up to ten million comparisons. Keeping them sorted and using
+[binary search](/learn/binary-search) cuts that to about 24. A **hash table** usually needs one or two, however many
+names there are.
+
+It borrows the trick that makes an array fast. An array never searches for index i: it works out where cell i is. A
+hash table works out where a *key* belongs, from the key itself, and looks only there.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="hash function">Turns a key into a whole number, its hash. The same key always gives the same number; a good hash gives different keys unrelated-looking numbers.</Term>
+  <Term name="bucket">The table is an array of m buckets, numbered 0 to m − 1. A key goes in bucket hash(key) mod m, the remainder when its hash is divided by m.</Term>
+  <Term name="collision and chaining">A collision is two different keys landing in the same bucket. With chaining, each bucket keeps a list, its chain, of every key that landed there.</Term>
+  <Term name="load factor">Keys per bucket: n keys divided by m buckets. With chaining it is the average chain length, and it can go above 1.</Term>
+  <Term name="map and set">A map stores a value with each key, like a Python dict or a JavaScript Map. A set stores keys alone and says whether a key is there.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Work out the bucket, search only there">
+
+This table maps “cat” to 3, “dog” to 7 and “owl” to 5, in 7 buckets. Look up a stored key and a missing one, and count
+the keys each lookup compares.
+
+<Explore slug="hash-table" settings={{ start: 'example' }} caption="Get “owl”, then get “emu”. “owl” hashes to 110468, and 110468 mod 7 = 1, so the lookup goes to bucket 1 and finds it with 1 comparison. “emu” lands in bucket 2, which is empty, so the answer is “not found” without comparing a single key." />
+
+Neither lookup touched another bucket. The table's hash function reads the character codes as the digits of a number
+in base 31: for “cat”, codes 99, 97 and 116, that is 99 × 31² + 97 × 31 + 116 = 98262. Then **mod 7**, the remainder
+after dividing by 7, turns any number into a bucket from 0 to 6: 98262 mod 7 = 3, so “cat” lives in bucket 3. put and
+get both work this out the same way, so they always agree.
+
+Different keys can leave the same remainder: seven buckets can't give a million words one each, and even a handful of
+keys often clash. So each bucket holds a **chain** of its keys, and a lookup walks it, comparing keys, until it finds
+the one it wants or reaches the end.
+
+<Explore slug="hash-table" settings={{ start: 'collisions' }} caption="“cat”, “ant” and “yak” all hash to bucket 3. Get “yak”: the lookup goes straight to bucket 3 and compares “cat”, “ant” and “yak”, 3 comparisons. “dog”, in bucket 6, is never looked at." />
+
+<KeyIdea>
+
+**A hash table computes a key's bucket, hash(key) mod m, so put, get and delete only ever search one bucket's chain.
+With a hash function that spreads keys evenly, a chain holds n/m keys on average, the load factor. Keep that below a
+fixed limit and each operation is O(1) on average, however many keys the table holds.**
+
+</KeyIdea>
+
+Keeping the load factor down is the table's own job. This one, like Java's HashMap, lets it reach 0.75 and no more.
+A put that pushes past that moves the table to more buckets: here the first prime above twice the old count, so 7
+buckets become 17 (Java's HashMap doubles instead). A key's bucket depends on m, so every key's bucket is worked out
+again: a **rehash**.
+
+<Explore slug="hash-table" settings={{ start: 'nearly-full' }} caption="This table holds 5 keys in 7 buckets, a load factor of 0.71. Put “eel” with any value: it lands in the empty bucket 4, and 6/7 = 0.86 is over 0.75, so the table allocates 17 buckets and rehashes all 6 keys. “cat” moves from bucket 3 to bucket 2, and “gnu” and “eel” end up sharing bucket 0." />
+
+</Section>
+
+<Section step="predict" title="Your turn: buckets in your head">
+
+A **set** is the same table with keys alone, like Python's set and JavaScript's Set. For whole numbers the hash can
+simply be the number itself, so with 7 buckets, 20 goes in bucket 20 mod 7 = 6, easy to work out in your head.
+
+This set holds 3, 10, 17 and 9. Before each step, predict the bucket, whether it is a collision, whether the table will
+resize, and whether a value is there. Add 24, run Contains on 31, then add 5.
+
+<PredictChallenge slug="hash-set" settings={{ start: 'collisions' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="A map in code, and where it slows down">
+
+Here is a whole chained map: buckets is a list of 5 chains of `[key, value]` pairs, and the hash is the sum of the key's
+character codes. put updates the pair holding its key or appends one, and get walks the same chain for the value. The
+program puts “no” and “on”, then gets “on”.
+
+<TraceCode
+  snippet="chained-map"
+  question="When get looks for “on”, which key does it compare first?"
+  choices={['“on”', '“no”', 'No key: its bucket is empty']}
+  answer={1}
+  why="The code for n is 110 and for o is 111, so both words sum to 221, and 221 mod 5 = 1: “no” and “on” collide in bucket 1. “no” was put first, so its pair comes first in the chain. get compares “no”, moves on, and finds “on” second, returning 9."
+/>
+
+Summing the codes is a weak hash. It ignores letter order, so anagrams always collide, and it bunches short keys
+together: every three-letter lowercase word sums to between 291 and 366, so they land in at most 76 buckets however big
+the table. The visualiser's hash multiplies by 31 at each character, so position counts, and “cat” and “act” land in
+buckets 3 and 5 of 7.
+
+Even the best general-purpose hash can't prevent collisions, and they come sooner than most people expect.
+
+<Misconception
+  id="collisions-are-rare"
+  title="Collisions only happen when the table is nearly full"
+  probes={[
+    {
+      q: 'You put 23 keys into a table of 365 buckets with a good hash function. How likely is it that two of them share a bucket?',
+      choices: ['About 6%: 342 buckets are still empty', 'Just over 50%', 'Impossible: there are more buckets than keys'],
+      answer: 1,
+      trap: 0,
+      why: 'It is the birthday problem: 23 keys make 253 pairs, each with a 1 in 365 chance of sharing a bucket, so a clash is more likely than not.',
+    },
+    {
+      q: 'A chained table with a good hash function has 7 buckets and holds 4 keys. Can two of them be in the same bucket?',
+      choices: ['No: with more buckets than keys, each key gets a bucket to itself', 'Yes: with 4 keys in 7 buckets, two share a bucket about 65% of the time'],
+      answer: 1,
+      trap: 0,
+      why: 'Each key’s bucket is its own hash mod 7, whatever the other buckets hold. In the hash table visualiser’s “With collisions” example, three keys share bucket 3 while five buckets sit empty.',
+    },
+  ]}
+>
+
+A good hash scatters keys like random throws, and random throws pile up early. It is the birthday problem: 23 people
+are enough for two to share a birthday more often than not, though the year has 365 days, and 23 keys in 365 buckets
+collide just as often. A million buckets reach even odds at about 1,200 keys. So a hash table plans for collisions:
+every bucket is a chain, and the load factor, not luck, keeps the chains short.
+
+</Misconception>
+
+Short on average is not short always. Bad luck, a poor hash, or an attacker sending keys built to collide can pile many
+keys into one bucket (try it on [Break it](/play/break-it)). That is why Python salts its string hash with a random seed
+each time it starts, and why Java's HashMap turns a very long chain into a balanced tree.
+
+<Misconception
+  id="lookup-always-constant"
+  title="A hash table lookup is always O(1)"
+  probes={[
+    {
+      q: 'An attacker sends a server 100,000 keys that all land in the same bucket of its chained hash table. What does looking one of them up cost?',
+      choices: ['O(1): hashing goes straight to the key', 'Up to 100,000 comparisons: they all sit in one chain', 'One comparison per bucket in the table'],
+      answer: 1,
+      trap: 0,
+      why: 'The hash leads to a bucket, not to a key. With every key in one chain, a lookup compares them one by one, which is why some languages salt their string hash with a random seed.',
+    },
+    {
+      q: 'Hash table lookups are usually quoted as O(1). What does that rely on?',
+      choices: ['Nothing: the hash goes straight to the key every time', 'A hash function that spreads keys evenly, and a load factor kept below a limit', 'The keys being sorted first'],
+      answer: 1,
+      trap: 0,
+      why: 'O(1) is the average when chains are short, and short chains need a good hash function and resizing.',
+    },
+  ]}
+>
+
+The O(1) is an average, and it rests on two things: a hash that spreads keys evenly, and a load factor kept under a
+limit. Take either away and chains grow. If every key lands in one bucket, get compares all n of them one by one: O(n),
+no better than a plain list. Expected O(1) and worst-case O(n) are both true of the same table.
+
+</Misconception>
+
+The limit is kept by resizing, and resizing has a trap of its own.
+
+<Misconception
+  id="resize-keeps-buckets"
+  title="Growing the table leaves keys in their buckets"
+  probes={[
+    {
+      q: '“cat” hashes to 98262 and sits in bucket 3 of a 7-bucket table, since 98262 mod 7 = 3. The table grows to 17 buckets. Which bucket is “cat” in now?',
+      choices: ['Bucket 3: growing only adds empty buckets', 'Bucket 2, since 98262 mod 17 = 2', 'Bucket 13: 3 plus the 10 new buckets'],
+      answer: 1,
+      trap: 0,
+      why: 'Its bucket is its hash mod m, and m is now 17. Left in bucket 3, “cat” would never be found: get looks in bucket 2.',
+    },
+    {
+      q: 'Why does a resize visit every key, and not only the keys in crowded buckets?',
+      choices: [
+        'It doesn’t: keys stay where they are, and only new keys use the extra buckets',
+        'Every key’s bucket is its hash mod m, and m has changed, so any key may now belong elsewhere',
+        'The keys have to be sorted again',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'get always looks in hash mod the current m, so after m changes a key is found only if it was moved to the bucket that formula now gives.',
+    },
+  ]}
+>
+
+A key's bucket is hash(key) mod m, so it depends on m as much as on the key: in the set above, adding 5 after 24 grows
+the table to 17 buckets and spreads the chain 3, 10, 17, 24 over buckets 3, 10, 0 and 7. Keys left in place would be
+looked for in the wrong bucket, so a resize rehashes them all: O(n) for that put. Inserting is still **O(1) amortised**,
+as with [a growing array's append](/learn/arrays): the table at least doubles, so after moving n keys it takes about n
+more puts to need another resize. It is also why hash mod N reshuffles almost every key when a server joins, which
+[consistent hashing](/learn/consistent-hashing) avoids.
+
+</Misconception>
+
+One thing a hash table can't do is sorted order: buckets scatter keys with no regard to which is smaller, so it can't
+list its keys in order or find the smallest quickly. That is a job for a [binary search tree](/learn/binary-search-trees).
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A set of whole numbers has 7 buckets, and each number is its own hash. Which bucket does 30 go in?',
+      choices: ['0', '2', '4', '30'],
+      answer: 1,
+      why: '30 = 4 × 7 + 2, so 30 mod 7 = 2. 4 is the quotient, not the remainder, and mod 7 always gives 0 to 6.',
+    },
+    {
+      q: 'A table has 1,000,000 buckets and a good hash function. About how many keys make a shared bucket more likely than not?',
+      choices: ['About 1,200', 'About 500,000: once half the buckets are used', '1,000,001: only when every bucket is taken'],
+      answer: 0,
+      why: 'It is the birthday problem: what counts is the number of pairs, about n²/2. 1,178 keys make about 690,000 pairs, enough to push the chance of a shared bucket past 50%.',
+      traps: { 1: 'collisions-are-rare', 2: 'collisions-are-rare' },
+    },
+    {
+      q: 'A buggy hash function returns 42 for every key. Once the chained table holds n keys, what does a get cost?',
+      choices: ['O(1): the hash leads straight to the key', 'O(log n)', 'O(n): one chain holds all n keys, compared one by one'],
+      answer: 2,
+      why: 'The hash leads to a bucket, not to a key. With the same hash, every key shares one bucket whatever m is, and a lookup compares up to n keys.',
+      traps: { 0: 'lookup-always-constant' },
+    },
+    {
+      q: 'A table grows from 7 buckets to 17. What happens to the keys already in it?',
+      choices: [
+        'They stay in their buckets, and only new keys use buckets 7 to 16',
+        'Each one is rehashed: its new bucket is its hash mod 17',
+        'Each moves to the bucket 10 places along',
+      ],
+      answer: 1,
+      why: 'A key’s bucket is its hash mod m, and m has changed, so every key’s bucket is worked out again: “cat” goes from bucket 3 (98262 mod 7) to bucket 2 (98262 mod 17).',
+      traps: { 0: 'resize-keeps-buckets' },
+    },
+    {
+      q: 'A resize moves every key, which is O(n). Why is put still O(1) on average?',
+      choices: [
+        'Each resize at least doubles the buckets, so after moving n keys there is room for about n more puts',
+        'A resize only moves the keys that collided',
+        'It isn’t: put is O(n) on average',
+      ],
+      answer: 0,
+      why: 'Spread over the puts that filled the table, the moves add up to a few per key, as with a doubling array’s append. Growing by a fixed number of buckets would make n puts cost O(n²).',
+      traps: { 1: 'resize-keeps-buckets' },
+    },
+    {
+      q: 'Which of these needs a hash set rather than a hash map?',
+      choices: [
+        'Counting how many times each word appears in a book',
+        'Remembering which nodes a graph search has already visited',
+        'Looking up a phone number by name',
+      ],
+      answer: 1,
+      why: 'A visited set only asks “have I seen this node?”, so it stores keys alone. Word counts and a phone book keep a value with each key: both are maps.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="hash-table-costs"
+  prompt="How does a hash table find a key without searching all of them? Why is that O(1) only on average, and what keeps it that way as keys arrive?"
+  rubric={[
+    'The key is hashed to a number, and hash mod m picks one of m buckets, so a lookup searches only that bucket.',
+    'Different keys can share a bucket, so each bucket keeps a chain that a lookup walks, comparing keys.',
+    'With an even hash, chains hold n/m keys on average, so a load factor kept below a limit gives O(1) on average.',
+    'If many keys collide, one chain holds them all and a lookup is O(n) in the worst case.',
+    'Past the limit, the table grows by a constant factor and rehashes every key: O(n) once, O(1) amortised.',
+  ]}
+  example="A hash table hashes the key and takes it mod m, the number of buckets, which says which bucket the key must be in, so only that bucket is searched. Different keys can share a bucket, so each bucket keeps a chain that the lookup compares key by key. With an even hash, a chain holds n/m keys on average, so keeping that load factor below a limit makes lookups O(1) on average. If many keys collide, one chain holds them all and a lookup is O(n). Past the limit, the table grows by a constant factor and rehashes every key, since buckets depend on m. That is O(n) once, but rare enough that inserting is O(1) amortised."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A key lives in bucket hash(key) mod m, so put, get and delete search one bucket's chain, not every key.
+- Collisions come early, long before the table is full. Chaining keeps each bucket's keys in a list.
+- The load factor n/m is the average chain length. Kept below a limit, with an even hash, every operation is O(1) on
+  average; if everything collides, it is O(n).
+- Passing the limit grows the table by a constant factor and rehashes every key, because buckets depend on m: O(n) for
+  that put, O(1) amortised.
+- A set is the same table without values. Neither keeps its keys in sorted order.
+- Next: **Bloom filters**, which hash each item to a few bits ([the Bloom filter visualiser](/visualisers/bloom-filter)),
+  and **string matching**, where [Rabin–Karp](/visualisers/rabin-karp) hashes a sliding window of text. Hash maps also
+  sit inside [caches](/learn/caching), and [consistent hashing](/learn/consistent-hashing) replaces mod N across
+  servers. Practise with [Two Sum](/practice/two-sum),
+  [Spot a Repeated Number](/practice/contains-duplicate) and [Group Anagrams](/practice/group-anagrams), or open the
+  [hash table](/visualisers/hash-table) and [hash set](/visualisers/hash-set) visualisers to try more operations.
+
+</Section>

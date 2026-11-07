@@ -135,6 +135,7 @@ concepts:
     summary: Hash a key to a bucket, chain collisions, and resize before chains grow long.
     prereqs: [arrays, linked-lists]
     visualisers: [hash-table, hash-set]
+    lesson: hash-tables
   - id: bloom-filters
     title: Bloom filters
     track: hashing
