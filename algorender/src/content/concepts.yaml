@@ -116,6 +116,7 @@ concepts:
     summary: Partition around a pivot, then sort each side; fast on average, fragile on bad pivots.
     prereqs: [quadratic-sorts, recursion]
     visualisers: [quick-sort]
+    lesson: quick-sort
   - id: heap-sort
     title: Heap sort
     track: searching-sorting

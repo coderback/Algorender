@@ -154,6 +154,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'quick-sort',
+    title: 'Quick sort: place the pivot, then sort each side',
+    concept: 'quick-sort',
+    summary: 'Why a partition puts its pivot in its final place for m − 1 comparisons, why that makes quick sort O(n log n) on average but O(n²) when every pivot is the largest value left, and what sorting in place still costs.',
+    minutes: 15,
+  },
+  {
     slug: 'linear-transformations',
     title: 'Matrices move space',
     concept: 'vectors-matrices',

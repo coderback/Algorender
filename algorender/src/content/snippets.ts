@@ -1059,6 +1059,63 @@ console.log('C: ' + hops['C']);
 `,
     },
   },
+  {
+    id: 'partition-last-pivot',
+    title: 'One Lomuto partition, last value as pivot',
+    code: {
+      python: `def partition(a, lo, hi):
+    pivot = a[hi]
+    i = lo
+    for j in range(lo, hi):
+        if a[j] < pivot:
+            a[i], a[j] = a[j], a[i]
+            i += 1
+    a[i], a[hi] = a[hi], a[i]
+    return i
+
+nums = [7, 2, 9, 4, 1, 6]
+p = partition(nums, 0, len(nums) - 1)
+print('pivot at ' + str(p))
+print(*nums)
+`,
+      javascript: `function partition(a, lo, hi) {
+  const pivot = a[hi];
+  let i = lo;
+  for (let j = lo; j < hi; j++) {
+    if (a[j] < pivot) {
+      [a[i], a[j]] = [a[j], a[i]];
+      i += 1;
+    }
+  }
+  [a[i], a[hi]] = [a[hi], a[i]];
+  return i;
+}
+
+const nums = [7, 2, 9, 4, 1, 6];
+const p = partition(nums, 0, nums.length - 1);
+console.log('pivot at ' + p);
+console.log(nums.join(' '));
+`,
+      typescript: `function partition(a: number[], lo: number, hi: number): number {
+  const pivot = a[hi];
+  let i = lo;
+  for (let j = lo; j < hi; j++) {
+    if (a[j] < pivot) {
+      [a[i], a[j]] = [a[j], a[i]];
+      i += 1;
+    }
+  }
+  [a[i], a[hi]] = [a[hi], a[i]];
+  return i;
+}
+
+const nums: number[] = [7, 2, 9, 4, 1, 6];
+const p = partition(nums, 0, nums.length - 1);
+console.log('pivot at ' + p);
+console.log(nums.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

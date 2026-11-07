@@ -26,6 +26,7 @@ const lessonPaths = [
   'union-find',
   'dijkstra',
   'merge-sort',
+  'quick-sort',
 ];
 
 async function openLesson(page: Page, slug: string) {

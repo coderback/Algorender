@@ -1,0 +1,303 @@
+<Section step="hook" title="Put one value in its place, then split">
+
+[Merge sort](/learn/merge-sort) sorts a million values in at most about 20 million comparisons, whatever their order,
+but it needs a buffer as long as the array. The sorts in [sorting in code](/learn/sorting-in-code) need no buffer, but
+make up to about n²/2 comparisons: 500 billion for a million values.
+
+**Quick sort** usually gets the best of both. Pick one value, the pivot, and move every smaller value to its left and
+every other value to its right. The pivot is now exactly where it belongs, and no value will ever cross it again. Sort
+each side the same way and the array is sorted, with nothing to merge and no buffer.
+
+"Usually" is the catch: the speed depends on how evenly the pivots split the values, and the simplest rule, taking the
+last value, is at its worst on an already sorted list.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="pivot">The value a partition compares every other value with. This version takes the last value of the part.</Term>
+  <Term name="partition">One pass over a part that moves the values smaller than the pivot before it and the rest after it. The pivot ends in its final place.</Term>
+  <Term name="boundary i">During a partition, the position where the next smaller value goes. Everything before i is smaller than the pivot.</Term>
+  <Term name="in place">Sorting inside the array itself, with a few variables and the call stack as the only extra memory.</Term>
+  <Term name="average and worst case">The average is the mean cost over every order of the input; the worst case is the most any input can cost.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Partition first, then recurse">
+
+Here are 8 values. Play the run and watch the boundary i and the two sides grow.
+
+<Explore slug="quick-sort" settings={{ input: '52, 18, 77, 31, 9, 64, 26, 45' }} caption="The pivot is 45, the last value. Each other value is compared with it once: 18, 31, 9 and 26 are smaller and swap to the left, so 45 swaps into position 4, its final place, though neither side is sorted yet. Then each side is partitioned the same way: around 26, then 9, on the left, and 77, then 52, on the right. 14 comparisons in all." />
+
+A partition walks j along the part once and keeps one boundary, i: values before i are smaller than the pivot, values
+from i to j − 1 are at least the pivot, and the rest are unseen. A smaller A[j] swaps into position i and the boundary
+moves up one; otherwise j just moves on. Finally the pivot swaps into position i, between the two sides. This is
+**Lomuto's partition**; Tony Hoare's original walks two indices in from both ends and swaps less often.
+
+Merge sort splits by position for free and compares afterwards, in the merges. Quick sort does all its comparing
+**before** its recursive calls, and afterwards there is nothing left to do: two sorted sides around a pivot already in
+place make a sorted part.
+
+A partition of m values compares the other m − 1 with the pivot, once each. If pivots split parts roughly in half, as
+45 split 8 values into 4 and 3, each level costs fewer than n comparisons, and there are about log₂ n levels.
+
+<KeyIdea>
+
+**A partition puts the pivot in its final place for m − 1 comparisons. Even splits give about log₂ n levels of fewer
+than n comparisons each: O(n log n). If every pivot is the smallest or largest value left, each partition removes only
+the pivot, and the comparisons add up to (n − 1) + (n − 2) + … + 1 = n(n − 1)/2: O(n²).**
+
+</KeyIdea>
+
+Pivots don't need to be perfect. A random order mixes good and bad ones, and they average out to O(n log n): about 25
+million comparisons for a million values, a third more than merge sort makes. Quick sort usually runs faster anyway:
+its inner loop is tiny, and it works within one array, which suits a computer's cache.
+
+<Growth
+  algorithms={['quick-sort', 'merge-sort']}
+  example="random"
+  stat="comparisons"
+  label="Comparisons"
+  max={64}
+  step={8}
+  curves={['n²/2', 'n log₂ n']}
+  caption="Each point is a real run on a random list. Move along the chart, or use the arrow keys, to read the counts at any n."
+/>
+
+At n = 64 quick sort makes about 360 comparisons and merge sort about 310, far below n²/2. Doubling n from 32
+multiplies their counts by about 2.4 and 2.5, the mark of n log n.
+
+</Section>
+
+<Section step="predict" title="Your turn: which side?">
+
+Before each comparison, predict which side of the pivot the value goes to. Smaller values go left. A value equal to the
+pivot goes right, because the test in the code panel is `A[j] < pivot`. This list holds two 45s, and one of them is
+the first pivot.
+
+<PredictChallenge slug="quick-sort" settings={{ input: '57, 24, 81, 36, 93, 45, 12, 45' }} goal={8} />
+
+</Section>
+
+<Section step="do" title="The partition in code, and what it costs">
+
+Here is one partition on its own, as the visualiser runs it, on [7, 2, 9, 4, 1, 6] with 6 as the pivot. It returns
+the pivot's final index.
+
+<TraceCode
+  snippet="partition-last-pivot"
+  question="Which index does partition return: where does the pivot, 6, end up?"
+  choices={['5', '3', '2', '0']}
+  answer={1}
+  why="Three values are smaller than 6 (2, 4 and 1), and each moves the boundary i up one, so the last swap puts 6 at index 3, its place in the sorted list, behind exactly three smaller values."
+/>
+
+The rest of quick sort is a few lines: if the part holds two or more values, partition it, then sort lo to p − 1 and
+p + 1 to hi. But look at the second line printed: 2 4 1 6 9 7.
+
+<Misconception
+  id="partition-sorts"
+  title="Partitioning sorts each side"
+  probes={[
+    {
+      q: 'One Lomuto partition, with the last value as pivot, runs on [8, 3, 6, 1, 5]. What is the list afterwards?',
+      choices: ['[1, 3, 5, 6, 8]', '[3, 1, 5, 8, 6]', '[5, 8, 3, 6, 1]'],
+      answer: 1,
+      trap: 0,
+      why: '3 and 1 are smaller than 5 and go left in the order they were found, 8 and 6 end on the right in the order the swaps left them, and 5 swaps in between. Only 5 is in its final place.',
+    },
+    {
+      q: 'After one partition of 9 different values, how many are certain to be in their final positions?',
+      choices: ['All 9', 'Just the pivot', 'None: nothing is final until the sort ends'],
+      answer: 1,
+      trap: 0,
+      why: 'A partition only promises that values left of the pivot are smaller and values right of it are at least as large. That fixes the pivot’s position; the others are only on the correct side.',
+    },
+  ]}
+>
+
+A partition sorts nothing but the pivot. It puts each value on the correct side, in whatever order the swaps leave it:
+2 4 1 to the left of 6, and 9 7 to its right. So quick sort recurses into both sides until every part holds one value
+or none. The pivot's place is final because the values before it are exactly the smaller ones, in any order.
+
+</Misconception>
+
+Those swaps have another side effect: quick sort is not **stable**, since a long swap can carry a value past others
+equal to it. In the Predict run, the 45 that started last was the first pivot and landed in position 3, ahead of the
+45 that started in position 5. Equal plain numbers can't be told apart, so for them that's harmless: Java sorts arrays
+of numbers with a dual-pivot quick sort, but objects with a stable merge sort.
+
+The cost rides on where the pivots land. Here is this version's worst input.
+
+<Explore slug="quick-sort" settings={{ preset: 'sorted', n: 12, seed: 7 }} input caption="12 values in sorted order. Each pivot is the largest value left, so every other value stays on its left and the pivot doesn't move: 11 + 10 + … + 1 = 66 comparisons, no swaps, and depth climbs to 11. Switch the input to Random: the same 12 values, shuffled, take 35 comparisons." />
+
+Reversed input is as bad, with the pivots alternating between the smallest and largest value left, and so is one value
+repeated, since values equal to the pivot all go right. A million sorted values would take about 500 billion
+comparisons. The first challenge in [Break it](/play/break-it) runs this quick sort on 10 values you choose: make it
+reach its worst, 45 comparisons, where a random order takes about 24.
+
+<Misconception
+  id="always-n-log-n"
+  title="Quick sort is O(n log n) on every input"
+  probes={[
+    {
+      q: 'A quick sort that takes the last value as pivot sorts 1,000 different values already in order. About how many comparisons does it make?',
+      choices: ['About 11,000', 'About 500,000', 'About 1,000'],
+      answer: 1,
+      trap: 0,
+      why: 'Every pivot is the largest value left, so each partition removes one value: 999 + 998 + … + 1 = 499,500 comparisons. About 11,000 is the average over random orders.',
+    },
+    {
+      q: 'A quick sort picks each pivot at random. What can you say about its cost on n different values?',
+      choices: [
+        'O(n log n) comparisons on every run, guaranteed',
+        'O(n log n) expected whatever the input order, though unlucky picks could still cost O(n²)',
+        'Still O(n²) on sorted input',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'No input order is bad for random pivots, so the expected cost is O(n log n) on any order. But the picks themselves can be unlucky: smallest or largest every time still costs n(n − 1)/2, just very rarely.',
+    },
+  ]}
+>
+
+O(n log n) is quick sort's average, not a promise: sorted, reversed and all-equal inputs cost this version about n²/2
+comparisons. Real implementations guard against that. A **random pivot** makes the expected cost O(n log n) for any
+order of different values, since a long run of unlucky picks is vanishingly rare. **Median-of-three** uses the median
+of the first, middle and last values, which splits sorted input evenly, though inputs can still be built to defeat
+it. A **three-way partition** gathers values equal to the pivot in the middle and never sorts them again.
+**Introsort**, behind std::sort in the common C++ libraries, switches to heap sort wherever the recursion gets too
+deep, so its worst case is O(n log n).
+
+</Misconception>
+
+Every move is a swap inside the array, so there is no buffer. But watch depth among the variables: it reaches 11 on
+the sorted run and 5 on the Random one.
+
+<Misconception
+  id="in-place-no-memory"
+  title="In place means quick sort needs no extra memory"
+  probes={[
+    {
+      q: 'A quick sort that takes the last value as pivot sorts 10,000 different values already in order. How deep does its recursion go?',
+      choices: ['About 13 calls deep', 'About 10,000 calls deep', 'Not at all: it sorts in place'],
+      answer: 1,
+      trap: 2,
+      why: 'Each partition peels off only the pivot, so each call makes another on a part one value smaller: about 10,000 frames on the call stack at once. Recursive Python code would stop at its default limit of 1,000.',
+    },
+    {
+      q: 'How can a quick sort keep its call stack at O(log n), even when its pivots are bad?',
+      choices: ['Recurse into the smaller side, and handle the larger side with a loop', 'Sort in place, which needs no stack', 'Recurse into the larger side first'],
+      answer: 0,
+      trap: 1,
+      why: 'The smaller side holds at most half the values, so each recursive call at least halves its part: at most about log₂ n frames. The loop handles the larger side in the same frame. The time can still be O(n²).',
+    },
+  ]}
+>
+
+In place means no buffer, not no memory: every unfinished call keeps a frame on the call stack. Good pivots make the
+recursion O(log n) deep; the worst make it n deep, which can overflow the stack before the O(n²) time even matters. The
+fix is to recurse into the **smaller** side and loop on the larger: each recursive call then gets at most half its
+caller's values, so the stack holds at most about log₂ n frames.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'The visualiser’s quick sort partitions [70, 45, 12, 60, 33] around its last value, 33, leaving 12 33 70 60 45. What does it do with 70, 60 and 45?',
+      choices: [
+        'Partitions them around 45, their last value',
+        'Nothing: values right of a pivot are already in order',
+        'Merges them with 12 and 33',
+        'Sorts them with insertion sort',
+      ],
+      answer: 0,
+      why: 'Partition only puts values on the correct side of the pivot, in whatever order its swaps left them. 70, 60 and 45 are partitioned around 45, which lands in position 2, then 60 and 70 around 70.',
+      traps: { 1: 'partition-sorts' },
+    },
+    {
+      q: 'Most library quick sorts don’t take the last value as the pivot. Why not?',
+      choices: [
+        'On sorted or reversed input, every partition would peel off one value: O(n²)',
+        'The last value makes the sort unstable',
+        'The last value needs an extra buffer',
+        'No reason: any pivot rule gives O(n log n) on every input',
+      ],
+      answer: 0,
+      why: 'Sorted data is common, and with the last value as pivot it makes every pivot the largest value left. A random pivot or a median of three avoids that.',
+      traps: { 3: 'always-n-log-n' },
+    },
+    {
+      q: 'Beyond the array itself, how much memory does quick sort need on a random order of n values?',
+      choices: ['None: it sorts in place', 'O(log n), for the call stack', 'O(n), for a buffer like merge sort’s', 'O(n²)'],
+      answer: 1,
+      why: 'There is no buffer, but every unfinished call keeps a frame on the call stack, and on a random order the recursion is O(log n) deep. Bad pivots make it O(n).',
+      traps: { 0: 'in-place-no-memory' },
+    },
+    {
+      q: 'Which of these does the quick sort in the visualiser not guarantee?',
+      choices: [
+        'Equal values keep their original order',
+        'It sorts inside the array, with no buffer',
+        'Each pivot ends in its final place',
+        'O(n log n) comparisons on average over random orders',
+      ],
+      answer: 0,
+      why: 'A long swap can carry a value past an equal one: in the Predict run, the 45 that started last ended first. Quick sort is not stable.',
+    },
+    {
+      q: 'Merge sort and quick sort both divide and conquer. Where does each one compare values?',
+      choices: [
+        'Quick sort before its recursive calls, when it partitions; merge sort after them, when it merges',
+        'Both before their recursive calls',
+        'Quick sort after its recursive calls, when it joins the sides',
+        'Neither: they only split and join',
+      ],
+      answer: 0,
+      why: 'Merge sort splits for free and compares while merging. Quick sort compares while partitioning; afterwards there is nothing to join, since the pivot is already in place.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="quick-sort-cost"
+  prompt="How does quick sort put an array in order? Why is it O(n log n) on average but O(n²) at worst, and what does it need in memory?"
+  rubric={[
+    'It picks a pivot and partitions the part so smaller values sit left of it and the rest right; the pivot is then in its final place.',
+    'It sorts each side the same way, and nothing is left to combine afterwards.',
+    'A partition of m values makes m − 1 comparisons, so even splits give about log₂ n levels of fewer than n comparisons: O(n log n).',
+    'When every pivot is the smallest or largest value left, as on sorted input with a last-value pivot, each partition peels off one value: about n²/2 comparisons.',
+    'It needs no buffer, but its call stack is O(log n) deep with good pivots and up to n deep with bad ones.',
+  ]}
+  example="Quick sort picks a pivot and partitions: it compares every other value with the pivot once, swaps the smaller ones to the left, then swaps the pivot in between, into its final place. Then it sorts each side the same way, with nothing to merge afterwards. Even splits give about log₂ n levels of fewer than n comparisons each: O(n log n). If every pivot is the largest or smallest value left, as on a sorted list with the last value as pivot, each partition removes one value and the comparisons add up to about n²/2. It needs no buffer, but its recursion takes O(log n) stack with good pivots and O(n) with bad ones."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A partition puts smaller values left of the pivot and the rest right, so the pivot lands in its final place; then
+  each side is sorted the same way, with all the comparing before the recursive calls.
+- A partition of m values costs m − 1 comparisons. Even splits give about log₂ n levels: O(n log n) on average.
+- If every pivot is the smallest or largest value left, as with the last value of a sorted list, the cost is
+  n(n − 1)/2 comparisons. Random pivots and median-of-three make that rare; introsort rules it out.
+- It sorts in place, but its call stack is O(log n) deep on average and up to n deep at worst; recursing into the
+  smaller side caps it at O(log n). It is not stable.
+- Next: **heap sort**, which uses a [heap](/learn/heaps) to sort in place in O(n log n) even at worst
+  ([its visualiser](/visualisers/heap-sort)), and **quickselect**, which partitions and goes into only the side holding
+  the k-th position: O(n) on average. Practise with [Kth Largest Number in a List](/practice/kth-largest-element)
+  and [Closest Points to the Origin](/practice/k-closest-points), or make the swaps yourself in
+  [Be the algorithm](/play/be-the-algorithm/quick-sort).
+
+</Section>
