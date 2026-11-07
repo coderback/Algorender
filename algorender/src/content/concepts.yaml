@@ -295,6 +295,7 @@ concepts:
     summary: Build a solution one choice at a time and undo choices that lead nowhere.
     prereqs: [recursion]
     visualisers: [subsets, permutations, n-queens, sudoku-solver]
+    lesson: backtracking
 
   # ── Strings ──────────────────────────────────────────────────
   - id: string-matching

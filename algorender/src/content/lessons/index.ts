@@ -112,6 +112,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'backtracking',
+    title: 'Backtracking: choose, explore, un-choose',
+    concept: 'backtracking',
+    summary: 'Make one choice, explore everything after it, then undo it: why subsets give 2ⁿ leaves and orderings n!, why every choice must be undone and every answer copied, and how pruning cuts N-Queens and Sudoku down without beating the exponential worst case.',
+    minutes: 15,
+  },
+  {
     slug: 'graph-representations',
     title: 'Representing graphs: a list per vertex or a cell per pair',
     concept: 'graph-representations',

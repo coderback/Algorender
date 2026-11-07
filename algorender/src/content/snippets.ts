@@ -1185,6 +1185,55 @@ console.log(lpsTable.join(' '));
 `,
     },
   },
+  {
+    id: 'subsets-backtracking',
+    title: 'Listing every subset by choosing, exploring and un-choosing',
+    code: {
+      python: `def subsets(items, i, path):
+    if i == len(items):
+        print('{' + ', '.join(path) + '}')
+        return
+    path.append(items[i])
+    subsets(items, i + 1, path)
+    path.pop()
+    subsets(items, i + 1, path)
+
+letters = ['a', 'b']
+path = []
+subsets(letters, 0, path)
+`,
+      javascript: `function subsets(items, i, path) {
+  if (i === items.length) {
+    console.log('{' + path.join(', ') + '}');
+    return;
+  }
+  path.push(items[i]);
+  subsets(items, i + 1, path);
+  path.pop();
+  subsets(items, i + 1, path);
+}
+
+const letters = ['a', 'b'];
+const path = [];
+subsets(letters, 0, path);
+`,
+      typescript: `function subsets(items: string[], i: number, path: string[]): void {
+  if (i === items.length) {
+    console.log('{' + path.join(', ') + '}');
+    return;
+  }
+  path.push(items[i]);
+  subsets(items, i + 1, path);
+  path.pop();
+  subsets(items, i + 1, path);
+}
+
+const letters: string[] = ['a', 'b'];
+const path: string[] = [];
+subsets(letters, 0, path);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

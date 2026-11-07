@@ -21,6 +21,7 @@ const lessonPaths = [
   'sliding-window',
   'memoization',
   'dynamic-programming',
+  'backtracking',
   'graph-representations',
   'bfs-dfs',
   'union-find',
