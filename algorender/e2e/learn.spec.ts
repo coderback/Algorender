@@ -16,15 +16,20 @@ const lessonPaths = [
   'binary-search',
   'binary-search-trees',
   'balanced-trees',
+  'tries',
   'heaps',
   'two-pointers',
   'sliding-window',
   'memoization',
   'dynamic-programming',
+  'backtracking',
   'graph-representations',
+  'bfs-dfs',
   'union-find',
   'dijkstra',
   'merge-sort',
+  'quick-sort',
+  'string-matching',
 ];
 
 async function openLesson(page: Page, slug: string) {

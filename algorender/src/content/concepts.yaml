@@ -116,6 +116,7 @@ concepts:
     summary: Partition around a pivot, then sort each side; fast on average, fragile on bad pivots.
     prereqs: [quadratic-sorts, recursion]
     visualisers: [quick-sort]
+    lesson: quick-sort
   - id: heap-sort
     title: Heap sort
     track: searching-sorting
@@ -178,6 +179,7 @@ concepts:
     summary: One letter per edge, so every path from the root spells a prefix.
     prereqs: [linked-lists]
     visualisers: [trie]
+    lesson: tries
   - id: union-find
     title: Union-find
     track: trees
@@ -228,6 +230,7 @@ concepts:
     summary: Exploring a graph with a queue or a stack, level by level or path by path.
     prereqs: [graph-representations, stacks-queues]
     visualisers: [breadth-first-search, depth-first-search]
+    lesson: bfs-dfs
   - id: topological-sort
     title: Topological sort
     track: graphs
@@ -293,6 +296,7 @@ concepts:
     summary: Build a solution one choice at a time and undo choices that lead nowhere.
     prereqs: [recursion]
     visualisers: [subsets, permutations, n-queens, sudoku-solver]
+    lesson: backtracking
 
   # ── Strings ──────────────────────────────────────────────────
   - id: string-matching
@@ -301,6 +305,7 @@ concepts:
     summary: Finding a pattern in text without restarting from scratch after each mismatch.
     prereqs: [arrays, hash-tables]
     visualisers: [kmp, rabin-karp, z-algorithm]
+    lesson: string-matching
   - id: palindromes
     title: Palindromes
     track: strings

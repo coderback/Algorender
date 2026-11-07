@@ -991,6 +991,349 @@ console.log(merged.join(' '));
 `,
     },
   },
+  {
+    id: 'bfs-distances',
+    title: 'Breadth-first search with a list and a head index as the queue',
+    code: {
+      python: `def bfs(graph, start):
+    dist = {start: 0}
+    queue = [start]
+    head = 0
+    while head < len(queue):
+        u = queue[head]
+        head += 1
+        for v in graph[u]:
+            if v not in dist:
+                dist[v] = dist[u] + 1
+                queue.append(v)
+    print(' '.join(queue))
+    return dist
+
+graph = {'A': ['B', 'D'], 'B': ['A', 'C'], 'C': ['B', 'D'], 'D': ['A', 'C']}
+hops = bfs(graph, 'A')
+print('C: ' + str(hops['C']))
+`,
+      javascript: `function bfs(graph, start) {
+  const dist = { [start]: 0 };
+  const queue = [start];
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of graph[u]) {
+      if (!(v in dist)) {
+        dist[v] = dist[u] + 1;
+        queue.push(v);
+      }
+    }
+  }
+  console.log(queue.join(' '));
+  return dist;
+}
+
+const graph = { A: ['B', 'D'], B: ['A', 'C'], C: ['B', 'D'], D: ['A', 'C'] };
+const hops = bfs(graph, 'A');
+console.log('C: ' + hops['C']);
+`,
+      typescript: `function bfs(graph: Record<string, string[]>, start: string): Record<string, number> {
+  const dist: Record<string, number> = { [start]: 0 };
+  const queue: string[] = [start];
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of graph[u]) {
+      if (!(v in dist)) {
+        dist[v] = dist[u] + 1;
+        queue.push(v);
+      }
+    }
+  }
+  console.log(queue.join(' '));
+  return dist;
+}
+
+const graph = { A: ['B', 'D'], B: ['A', 'C'], C: ['B', 'D'], D: ['A', 'C'] };
+const hops = bfs(graph, 'A');
+console.log('C: ' + hops['C']);
+`,
+    },
+  },
+  {
+    id: 'partition-last-pivot',
+    title: 'One Lomuto partition, last value as pivot',
+    code: {
+      python: `def partition(a, lo, hi):
+    pivot = a[hi]
+    i = lo
+    for j in range(lo, hi):
+        if a[j] < pivot:
+            a[i], a[j] = a[j], a[i]
+            i += 1
+    a[i], a[hi] = a[hi], a[i]
+    return i
+
+nums = [7, 2, 9, 4, 1, 6]
+p = partition(nums, 0, len(nums) - 1)
+print('pivot at ' + str(p))
+print(*nums)
+`,
+      javascript: `function partition(a, lo, hi) {
+  const pivot = a[hi];
+  let i = lo;
+  for (let j = lo; j < hi; j++) {
+    if (a[j] < pivot) {
+      [a[i], a[j]] = [a[j], a[i]];
+      i += 1;
+    }
+  }
+  [a[i], a[hi]] = [a[hi], a[i]];
+  return i;
+}
+
+const nums = [7, 2, 9, 4, 1, 6];
+const p = partition(nums, 0, nums.length - 1);
+console.log('pivot at ' + p);
+console.log(nums.join(' '));
+`,
+      typescript: `function partition(a: number[], lo: number, hi: number): number {
+  const pivot = a[hi];
+  let i = lo;
+  for (let j = lo; j < hi; j++) {
+    if (a[j] < pivot) {
+      [a[i], a[j]] = [a[j], a[i]];
+      i += 1;
+    }
+  }
+  [a[i], a[hi]] = [a[hi], a[i]];
+  return i;
+}
+
+const nums: number[] = [7, 2, 9, 4, 1, 6];
+const p = partition(nums, 0, nums.length - 1);
+console.log('pivot at ' + p);
+console.log(nums.join(' '));
+`,
+    },
+  },
+  {
+    id: 'kmp-lps-table',
+    title: 'Building the KMP lps table',
+    code: {
+      python: `def build_lps(p):
+    lps = [0] * len(p)
+    border = 0
+    i = 1
+    while i < len(p):
+        if p[i] == p[border]:
+            border += 1
+            lps[i] = border
+            i += 1
+        elif border > 0:
+            border = lps[border - 1]
+        else:
+            lps[i] = 0
+            i += 1
+    return lps
+
+lps_table = build_lps('aabaaab')
+print(*lps_table)
+`,
+      javascript: `function buildLps(p) {
+  const lps = new Array(p.length).fill(0);
+  let border = 0;
+  let i = 1;
+  while (i < p.length) {
+    if (p[i] === p[border]) {
+      border += 1;
+      lps[i] = border;
+      i += 1;
+    } else if (border > 0) {
+      border = lps[border - 1];
+    } else {
+      lps[i] = 0;
+      i += 1;
+    }
+  }
+  return lps;
+}
+
+const lpsTable = buildLps('aabaaab');
+console.log(lpsTable.join(' '));
+`,
+      typescript: `function buildLps(p: string): number[] {
+  const lps: number[] = new Array(p.length).fill(0);
+  let border = 0;
+  let i = 1;
+  while (i < p.length) {
+    if (p[i] === p[border]) {
+      border += 1;
+      lps[i] = border;
+      i += 1;
+    } else if (border > 0) {
+      border = lps[border - 1];
+    } else {
+      lps[i] = 0;
+      i += 1;
+    }
+  }
+  return lps;
+}
+
+const lpsTable: number[] = buildLps('aabaaab');
+console.log(lpsTable.join(' '));
+`,
+    },
+  },
+  {
+    id: 'subsets-backtracking',
+    title: 'Listing every subset by choosing, exploring and un-choosing',
+    code: {
+      python: `def subsets(items, i, path):
+    if i == len(items):
+        print('{' + ', '.join(path) + '}')
+        return
+    path.append(items[i])
+    subsets(items, i + 1, path)
+    path.pop()
+    subsets(items, i + 1, path)
+
+letters = ['a', 'b']
+path = []
+subsets(letters, 0, path)
+`,
+      javascript: `function subsets(items, i, path) {
+  if (i === items.length) {
+    console.log('{' + path.join(', ') + '}');
+    return;
+  }
+  path.push(items[i]);
+  subsets(items, i + 1, path);
+  path.pop();
+  subsets(items, i + 1, path);
+}
+
+const letters = ['a', 'b'];
+const path = [];
+subsets(letters, 0, path);
+`,
+      typescript: `function subsets(items: string[], i: number, path: string[]): void {
+  if (i === items.length) {
+    console.log('{' + path.join(', ') + '}');
+    return;
+  }
+  path.push(items[i]);
+  subsets(items, i + 1, path);
+  path.pop();
+  subsets(items, i + 1, path);
+}
+
+const letters: string[] = ['a', 'b'];
+const path: string[] = [];
+subsets(letters, 0, path);
+`,
+    },
+  },
+  {
+    id: 'trie-insert-search',
+    title: 'Inserting words into a trie and searching for a prefix',
+    code: {
+      python: `def insert(node, word):
+    added = 0
+    for ch in word:
+        if ch not in node:
+            node[ch] = {}
+            added += 1
+        node = node[ch]
+    node['$'] = 1
+    return added
+
+def search(node, word):
+    for ch in word:
+        if ch not in node:
+            return 'no'
+        node = node[ch]
+    if '$' in node:
+        return 'yes'
+    return 'no'
+
+root = {}
+nodes = 1
+nodes += insert(root, 'car')
+nodes += insert(root, 'cat')
+print(nodes)
+print(search(root, 'ca'))
+`,
+      javascript: `function insert(node, word) {
+  let added = 0;
+  for (const ch of word) {
+    if (!(ch in node)) {
+      node[ch] = {};
+      added += 1;
+    }
+    node = node[ch];
+  }
+  node['$'] = 1;
+  return added;
+}
+
+function search(node, word) {
+  for (const ch of word) {
+    if (!(ch in node)) {
+      return 'no';
+    }
+    node = node[ch];
+  }
+  if ('$' in node) {
+    return 'yes';
+  }
+  return 'no';
+}
+
+const root = {};
+let nodes = 1;
+nodes += insert(root, 'car');
+nodes += insert(root, 'cat');
+console.log(nodes);
+console.log(search(root, 'ca'));
+`,
+      typescript: `type Trie = { [key: string]: Trie | number };
+
+function insert(node: Trie, word: string): number {
+  let added = 0;
+  for (const ch of word) {
+    if (!(ch in node)) {
+      node[ch] = {};
+      added += 1;
+    }
+    node = node[ch] as Trie;
+  }
+  node['$'] = 1;
+  return added;
+}
+
+function search(node: Trie, word: string): string {
+  for (const ch of word) {
+    if (!(ch in node)) {
+      return 'no';
+    }
+    node = node[ch] as Trie;
+  }
+  if ('$' in node) {
+    return 'yes';
+  }
+  return 'no';
+}
+
+const root: Trie = {};
+let nodes = 1;
+nodes += insert(root, 'car');
+nodes += insert(root, 'cat');
+console.log(nodes);
+console.log(search(root, 'ca'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

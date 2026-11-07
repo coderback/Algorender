@@ -77,6 +77,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'tries',
+    title: 'Tries: one letter per edge',
+    concept: 'tries',
+    summary: 'Why a trie spells each word along a path from the root, why insert, search and starts-with take one step per letter however many words are stored, why a path is not a word without its end mark, and what all those nodes cost in memory.',
+    minutes: 15,
+  },
+  {
     slug: 'heaps',
     title: 'Heaps and priority queues: the most urgent first',
     concept: 'heaps',
@@ -112,10 +119,24 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'backtracking',
+    title: 'Backtracking: choose, explore, un-choose',
+    concept: 'backtracking',
+    summary: 'Make one choice, explore everything after it, then undo it: why subsets give 2ⁿ leaves and orderings n!, why every choice must be undone and every answer copied, and how pruning cuts N-Queens and Sudoku down without beating the exponential worst case.',
+    minutes: 15,
+  },
+  {
     slug: 'graph-representations',
     title: 'Representing graphs: a list per vertex or a cell per pair',
     concept: 'graph-representations',
     summary: "Adjacency lists or an adjacency matrix: why one lists a vertex's neighbours in deg(u) steps and the other checks an edge in one read, why an undirected edge is stored twice, and which suits a sparse graph.",
+    minutes: 15,
+  },
+  {
+    slug: 'bfs-dfs',
+    title: 'Breadth-first and depth-first search: a queue or a stack',
+    concept: 'bfs-dfs',
+    summary: "Visit everything a start can reach with a queue or a stack: why BFS's levels are the fewest edges, why DFS finds cycles but not shortest paths, and why marking a node when it is found keeps both O(V + E).",
     minutes: 15,
   },
   {
@@ -144,6 +165,20 @@ export const lessons: readonly LessonMeta[] = [
     title: 'Merge sort: two sorted halves make a sorted whole',
     concept: 'merge-sort',
     summary: 'Why merging two sorted halves takes one comparison per value, why that makes merge sort O(n log n) on every input, and what its buffer and its tie rule buy.',
+    minutes: 15,
+  },
+  {
+    slug: 'quick-sort',
+    title: 'Quick sort: place the pivot, then sort each side',
+    concept: 'quick-sort',
+    summary: 'Why a partition puts its pivot in its final place for m − 1 comparisons, why that makes quick sort O(n log n) on average but O(n²) when every pivot is the largest value left, and what sorting in place still costs.',
+    minutes: 15,
+  },
+  {
+    slug: 'string-matching',
+    title: 'String matching: never start over',
+    concept: 'string-matching',
+    summary: "Why the naive search can take n·m comparisons, how KMP's table of borders slides the pattern without ever moving back in the text, and how Rabin–Karp's rolling hash skips most windows without reading a letter.",
     minutes: 15,
   },
   {

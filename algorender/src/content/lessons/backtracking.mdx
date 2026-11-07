@@ -1,0 +1,295 @@
+<Section step="hook" title="Back to the last junction">
+
+You are in a hedge maze with no map. At each junction you pick a path you haven't tried and walk on. At a dead end you
+don't go back to the entrance: you retrace your steps to the most recent junction with an untried path, and take it.
+Remember what you have tried and you never explore the same dead end twice.
+
+**Backtracking** builds answers the same way. Make one choice, carry on, and when that branch is finished, with an
+answer or at a dead end, undo the choice and try the next. That lists every subset or ordering of a few items, places
+queens on a chessboard and fills in a Sudoku. Each choice is a recursive call, and undoing it is the walk back to the
+junction.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="partial solution">The choices made so far: cur in the subset and ordering visualisers, path in the code, the board in N-Queens.</Term>
+  <Term name="choose, explore, un-choose">Add a choice, recurse to make the rest, then remove it so the next choice starts from the same state.</Term>
+  <Term name="decision tree">The calls drawn as a tree: each edge is one choice, and each leaf a complete answer or a dead end.</Term>
+  <Term name="dead end">A partial solution with no valid next choice: the search backs up to the latest choice with options left.</Term>
+  <Term name="pruning">Abandoning a partial solution as soon as it breaks a rule, so nothing below it is ever built.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One choice per level, undone on the way back">
+
+Here is every subset of a, b and c. Each level of the tree decides one item: take it (+) or leave it out (−), and the
+search always tries taking first. The cur row holds the partial solution, and a call that has decided all three items
+records it.
+
+<Explore slug="subsets" settings={{ preset: 'three' }} caption="The first leaf takes everything, {a, b, c}. Then the call deciding c pops c and leaves it out, recording {a, b}. The empty set, ∅, comes last, once every item has been left out: 8 subsets from 15 calls." />
+
+Watch cur on the un-choose steps: a call that has finished its take branch pops the item it pushed, so the
+leave-it-out branch starts from cur exactly as the call found it. The search is depth first: all of
+take-a is done before a is ever left out. Each item doubles the leaves, so n items give 2ⁿ subsets.
+
+Orderings make a wider tree. Position 1 can hold any of the n items, position 2 any of the n − 1 still unused, and so on
+down to 1, so there are n × (n − 1) × … × 1 = n! leaves. The step is the same: choose an unused item (mark it used and
+push it), explore, then un-choose it (pop it and free it) and try the next.
+
+<Explore slug="permutations" settings={{ preset: 'three' }} caption="6 orders from 16 calls: the start, 3 choices for position 1, then 6 calls for position 2 and 6 for position 3. After abc, popping c and then b frees them both, so the loop for position 2 moves on to c, and the next order is acb." />
+
+n! soon outgrows 2ⁿ: 4 items have 16 subsets but 24 orders, and 10 items have 1,024 subsets but 3,628,800 orders.
+
+<KeyIdea>
+
+**Backtracking builds an answer one choice at a time: choose, explore everything that follows, then un-choose, so the
+next choice starts from exactly the same state.** The calls form a decision tree with a leaf for every complete answer,
+2ⁿ for subsets and n! for orderings. Because every choice is undone, one working list of at most n items and a call
+stack about n deep serve the whole search.
+
+</KeyIdea>
+
+This is not [memoization](/learn/memoization): each call here carries a different partial solution, so no question
+comes back for a memo to answer. When the same smaller problem does come back, as in counting the subsets with a given
+total instead of listing them, use [dynamic programming](/learn/dynamic-programming).
+
+</Section>
+
+<Section step="predict" title="Your turn: what is recorded, what is undone">
+
+Four items now, a to d. Before each leaf, predict which subset is recorded; after it, predict which choice is undone
+next. Climb back to the nearest call that took its item: a call that left its item out has nothing to pop, so it just
+returns.
+
+<PredictChallenge slug="subsets" settings={{ preset: 'four' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Undo it in code, then prune what can't work">
+
+Here is the subset search in code, on just a and b to keep the trace short. A call that has decided every item prints
+`path`; any other call appends `items[i]`, recurses, pops it, and recurses again without it.
+
+<TraceCode
+  snippet="subsets-backtracking"
+  question="Just after path.pop() runs for the first time, what does path hold?"
+  choices={['Nothing', 'Just a', 'Just b', 'a and b']}
+  answer={1}
+  why="The first pop runs in the call deciding b, just after {a, b} is printed. It removes only b, that call's own choice, so path is back to just a, as it was when the call began, and the call's second branch prints {a}. a stays until the call that chose it finishes its take branch."
+/>
+
+Each call's frame has its own `i`, but every `path` arrow points at one list: passing a list passes a reference, as the
+[recursion lesson](/learn/recursion) showed. Nothing but the pop puts it back. Try it: delete the `path.pop()` line and
+run again, or add 'c' to `letters` and watch 8 subsets come out.
+
+<Misconception
+  id="return-undoes-choice"
+  title="Returning from the call undoes the choice"
+  probes={[
+    {
+      q: 'The subsets code on a and b loses its path.pop() line: each call appends items[i], recurses, then recurses again straight away. What does it print?',
+      choices: ['{a, b}, {a}, {b}, {}', '{a, b}, {a, b}, {a, b, b}, {a, b, b}', 'Only {a, b}'],
+      answer: 1,
+      trap: 0,
+      why: 'Nothing removes b, so the leave-b-out branch prints {a, b} again. Back at the top a is still there, and the next call pushes a second b. A return ends a call, but the list belongs to every call.',
+    },
+    {
+      q: 'A permutation search on a, b and c pops each item after exploring it, but forgets to mark it free again. What does it record?',
+      choices: ['All 6 orders: the pop is enough', 'Only abc', 'abc, then every other order twice'],
+      answer: 1,
+      trap: 0,
+      why: 'The used marks are shared too. After abc, b and c stay marked used, so every later loop skips them. Un-choosing means undoing everything the choice changed.',
+    },
+  ]}
+>
+
+A return discards the callee's frame, with its own `i`, and nothing else. `path` is one list that every frame points to,
+so whatever a call appends stays until a line removes it, and every later branch sees it. Undo every change a choice
+made, right after the call that explored it, the used mark included. (Or pass each call a new list, `path + [x]`:
+nothing needs undoing, but every call pays for a copy.)
+
+</Misconception>
+
+Sharing one list also catches out code that saves its answers instead of printing them.
+
+<Misconception
+  id="record-shared-list"
+  title="Saving path saves the answer"
+  probes={[
+    {
+      q: 'The subsets code on a and b keeps each answer with out.append(path) instead of printing it, and prints out at the end. What does it show?',
+      choices: ['The four subsets: {a, b}, {a}, {b} and {}', 'Four empty lists', 'Four copies of {a, b}'],
+      answer: 1,
+      trap: 0,
+      why: 'out holds four references to the one list path, and every choice has been undone by the end, so all four show an empty list. Appending path[:] would keep each subset as it was.',
+    },
+    {
+      q: 'A permutation search saves each full order with out.append(cur), then carries on. Just after it saves its second order, acb, what do the two saved entries hold?',
+      choices: ['abc and acb', 'acb and acb', 'Nothing yet: they are filled in at the end'],
+      answer: 1,
+      trap: 0,
+      why: 'Both entries are the same list as cur, so both show what cur holds now: a, c, b. Every later push and pop changes them too.',
+    },
+  ]}
+>
+
+Appending `path` stores a reference to the working list, not what it holds right now, so every saved entry is that one
+list and changes whenever it does. Save a copy when the answer is complete:
+`path[:]` or `list(path)` in Python, `[...path]` or `path.slice()` in JavaScript. Printing a string, as the snippet
+does, already makes one.
+
+</Misconception>
+
+In subsets and orderings every leaf is an answer. Most searches aren't like that. Put 4 queens on a 4 × 4 board so that
+no two share a row, column or diagonal: of the 4⁴ = 256 boards with one queen per row, only 2 work. A backtracking
+solver checks each square before it puts a queen there and rejects any square an earlier queen attacks, so no board
+that starts that way is ever built. That is **pruning**.
+
+<Explore slug="n-queens" settings={{ preset: 'four' }} caption="Row 1's queen starts in column 1 and row 2's lands in column 3. Every square of row 3 is then attacked, so the search backs up: row 2's queen slides to column 4. Row 3's queen fits in column 2, but row 4 has no safe square, so row 1's queen moves to column 2. The first solution, columns 2, 4, 1 and 3, comes after 26 squares checked, 8 queens placed and 4 backtracks." />
+
+On the 8 × 8 board, with 8⁸ = 16,777,216 one-per-row boards, the first solution takes 113 placements and 105
+backtracks.
+
+Sudoku works the same way: write the smallest digit that fits the first empty cell's row, column and box, and recurse.
+When a later cell has no digit left, come back, erase and try the next digit up.
+
+<Explore slug="sudoku-solver" settings={{ preset: 'mini-backtrack' }} caption="12 empty cells. The first dead end comes at row 3, column 4, after 8 digits are written: 1, 2 and 3 are in its row and 4 is in its column. The solver erases back along row 3: column 3 has no other digit, and column 2's next digit, 3, dead-ends too. Only when row 3, column 1 swaps its 1 for a 4 does every later cell fit: 16 digits written and 4 backtracks." />
+
+Pruning is why these finish in a blink. Don't read too much into that.
+
+<Misconception
+  id="pruning-beats-exponential"
+  title="Pruning makes backtracking polynomial"
+  probes={[
+    {
+      q: 'A Sudoku solver prunes every clash. One 9 × 9 puzzle takes it 50 cell visits; another takes over 2,500. What explains the gap?',
+      choices: [
+        'There shouldn’t be one: with pruning, puzzles of one size cost about the same',
+        'Pruning cuts a branch only once a clash shows up, and in the second puzzle the clashes show up late',
+        'The second puzzle must have no solution',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'How much pruning saves depends on the input, so the worst case stays exponential. A solvable puzzle can be slow too, like the classic puzzle in the visualiser.',
+    },
+    {
+      q: 'You add pruning to a search that lists every subset of n items. How many leaves does its tree keep?',
+      choices: ['All 2ⁿ: every leaf is an answer, so there is nothing to prune', 'About n²', 'About n'],
+      answer: 0,
+      trap: 1,
+      why: 'Pruning only removes branches that hold no answers. When every leaf is an answer, the output alone has 2ⁿ subsets.',
+    },
+  ]}
+>
+
+Pruning skips subtrees that cannot hold an answer, and in a constraint search that is often most of the tree. It
+doesn't shrink the tree an input can force. Listing every subset prunes nothing, and a constraint search meets inputs where the rules
+bite late: the Sudoku visualiser's classic puzzle runs past its budget of 2,500 cell visits. The worst case stays
+exponential. Real solvers prune earlier, say by filling the most constrained cell first, which speeds up typical runs
+but leaves that bound alone.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'How many subsets do 5 items have, and how many orderings?',
+      choices: ['32 and 120', '25 and 120', '32 and 25', '120 and 32'],
+      answer: 0,
+      why: 'Each item is in or out, which doubles the count 5 times: 2⁵ = 32. An ordering has 5 choices for position 1, 4 for position 2 and so on: 5! = 120.',
+    },
+    {
+      q: 'The permutation search on a, b, c and d has just recorded abcd. Which order does it record next?',
+      choices: ['abdc', 'acbd', 'bacd', 'dcba'],
+      answer: 0,
+      why: 'The latest choices are undone first. Popping d, then c, lets the loop for position 3 move on to d, and c is all that is left for position 4. Positions 1 and 2 change only after every order starting ab.',
+    },
+    {
+      q: 'In the subsets code, the call deciding b has finished exploring with b taken. What removes b from path before it tries leaving b out?',
+      choices: [
+        'Returning from the recursive call, which discards that call’s frame',
+        'The path.pop() line after the call',
+        'Nothing: each call works on its own copy of path',
+        'The base case, when it prints',
+      ],
+      answer: 1,
+      why: 'Each frame has its own i, but path is one list shared by all of them. A return discards only the callee’s frame, so b stays in the list until the caller pops it.',
+      traps: { 0: 'return-undoes-choice', 2: 'return-undoes-choice' },
+    },
+    {
+      q: 'A subsets search keeps every answer in a list called out. Which line belongs at the leaf?',
+      choices: [
+        'out.append(path), since path holds the finished subset at that moment',
+        'out.append(path[:]), a copy of path as it is now',
+        'out.append(path[-1]), the last item chosen',
+      ],
+      answer: 1,
+      why: 'Appending path saves the one working list, not what it holds now, and the search keeps changing that list. A copy keeps the subset as it was when it was complete.',
+      traps: { 0: 'record-shared-list' },
+    },
+    {
+      q: 'A Sudoku solver has filled empty cells 1 to 6, and cell 7 has no digit left. No larger digit fits cell 6, but one fits cell 5. What does the solver do next?',
+      choices: [
+        'Erases cell 6, gives cell 5 its next digit that fits, then fills cell 6 again',
+        'Gives cell 5 its next digit and keeps cell 6 as it is',
+        'Erases every cell and tries the next digit in cell 1',
+        'Writes a clashing digit in cell 7 and checks the grid at the end',
+      ],
+      answer: 0,
+      why: 'A dead end sends the search back to the most recent choice with options left. Cell 6 has none, so it is erased; cell 5 moves on, and cell 6 is chosen again from scratch, since its old digit was only tested under cell 5’s old one.',
+    },
+    {
+      q: 'With pruning, the 8 × 8 queens solver finds its first solution after 113 placements, out of 16,777,216 one-per-row boards. What has pruning changed?',
+      choices: [
+        'The worst case: backtracking is now polynomial',
+        'How much of the tree this board builds; the worst case of backtracking is still exponential',
+        'Nothing: it still builds every board, just faster',
+      ],
+      answer: 1,
+      why: 'Each rejected square removes everything below it, almost the whole tree on this board. But the saving depends on the input: pruning makes typical runs fast, not the bound smaller.',
+      traps: { 0: 'pruning-beats-exponential' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="backtracking-undo"
+  prompt="How does backtracking list every subset or every ordering, and why must each choice be undone and each answer copied? What does pruning add, and what doesn't it change?"
+  rubric={[
+    'It builds an answer one choice at a time, recursing after each, so the calls form a decision tree whose leaves are complete answers.',
+    'Subsets take or leave each item, giving 2ⁿ leaves; orderings have n choices, then n − 1 and so on, giving n! leaves.',
+    'Every call shares one working list, so after exploring a choice the code must undo it, or the next branch starts from the wrong state.',
+    'A complete answer must be saved as a copy, because the working list keeps changing as the search goes on.',
+    'Pruning abandons a partial solution once it breaks a rule, skipping its subtree; typical runs get faster, but the worst case stays exponential.',
+  ]}
+  example="Backtracking makes one choice, recurses to make the rest, then undoes the choice and tries the next. Taking or leaving each item gives 2ⁿ leaves for subsets; filling each position from the unused items gives n! orderings. Every call shares one working list, so a return doesn't remove an item: the code must pop it, or the next branch sees it. For the same reason a finished answer is saved as a copy. Pruning, as in N-Queens, rejects a partial board as soon as two queens attack, so its subtree is never built. Typical runs get fast, but the worst case is still exponential."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Backtracking builds an answer one choice at a time: choose, explore by recursing, then un-choose, so the next choice
+  starts from the same state. The calls form a decision tree, explored depth first.
+- Subsets take or leave each item: 2ⁿ leaves. Orderings fill each position from the unused items: n! leaves.
+- One working list serves the whole search. A return doesn't undo a choice: pop it (and unmark it). Save a complete
+  answer as a copy, never the list itself.
+- Pruning rejects a partial solution as soon as it breaks a rule, with its whole subtree: 4 queens take 8 placements,
+  not 256 boards. The worst case stays exponential.
+- Next: [breadth-first and depth-first search](/learn/bfs-dfs), where depth-first search backtracks through a graph.
+  Practise with [All Subsets](/practice/subsets), [All Orderings](/practice/permutations),
+  [Combinations That Add Up](/practice/combination-sum) and [Find a Word in a Letter Grid](/practice/word-search), or
+  try bigger boards in the [N-Queens](/visualisers/n-queens) and [Sudoku](/visualisers/sudoku-solver) visualisers.
+
+</Section>
