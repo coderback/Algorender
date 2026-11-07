@@ -196,6 +196,7 @@ concepts:
     summary: Keep one running total and slide it, instead of re-adding every window.
     prereqs: [two-pointers]
     visualisers: [sliding-window]
+    lesson: sliding-window
   - id: monotonic-stack
     title: Monotonic stack
     track: patterns

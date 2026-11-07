@@ -77,6 +77,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 12,
   },
   {
+    slug: 'sliding-window',
+    title: 'Sliding window: add one, drop one',
+    concept: 'sliding-window',
+    summary: 'Update one running total as the window slides instead of re-adding it, and grow and shrink a window to find the best run under a rule, both in O(n).',
+    minutes: 15,
+  },
+  {
     slug: 'memoization',
     title: 'Memoization: stop solving the same problem twice',
     concept: 'memoization',

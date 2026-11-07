@@ -1,0 +1,283 @@
+<Section step="hook" title="The busiest hour in a day of readings">
+
+A sensor takes one reading a second, 86,400 readings a day. Which hour, 3,600 readings in a row, had the highest total?
+The obvious way adds up every possible hour: all 82,801 of them, at 3,600 readings each, which is nearly 300 million
+additions.
+
+But the hour that starts one second later is almost the same hour. It loses its oldest reading and gains one new one;
+the other 3,599 are shared. Keep one running total and update it with just those two readings, and the whole day takes
+about 170,000 additions and subtractions.
+
+That is the **sliding window**. Like [two pointers](/learn/two-pointers) it keeps two indices, but instead of closing in
+from both ends they move the same way, both to the right, with a running total for the run between them. The same idea
+handles windows whose size isn't fixed, such as the longest stretch of text with no repeated letter, and it stays O(n).
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="window">A run of consecutive positions, from a left edge to a right edge. It never skips a position, so it only answers questions about contiguous runs.</Term>
+  <Term name="window size k">How many values a fixed window holds. With its right edge at i, it covers positions i − k + 1 to i.</Term>
+  <Term name="slide">Move both edges one place right. One value enters on the right and one leaves on the left; the k − 1 in between stay.</Term>
+  <Term name="running sum">The total of the values inside the window, kept up to date as the window moves instead of added up again.</Term>
+  <Term name="variable window">A window whose size changes: the right edge grows it one value at a time, and the left edge shrinks it when a rule says so, such as while the total is over a limit.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Add one, drop one">
+
+This array holds 4, 2, 12, 3, 8, 1 and 9, and the window holds k = 3 values. The visualiser adds up the first window once,
+then slides it right one place at a time, looking for the 3 consecutive values with the largest sum.
+
+<Explore slug="sliding-window" settings={{ input: '4, 2, 12, 3, 8, 1, 9 | k=3' }} caption="The first window, positions 0 to 2, adds up to 18. Each slide adds the value entering and subtracts the one leaving: 18 + 3 − 4 = 17, then 17 + 8 − 2 = 23, the best, at positions 2 to 4. Additions ends at 11: 3 for the first window and 2 for each of the 4 slides." />
+
+Adding every window up again would cost k additions for each of the n − k + 1 windows: O(n·k), and O(n²) when the window
+is half as wide as the array. The slide gets the same total with two operations, because the windows before and after
+it share k − 1 values. Only the value that left and the value that entered differ, so only those two change the total.
+
+<KeyIdea>
+
+**Keep one running total for the window and update it as the window slides: add the value that enters, subtract the one
+that leaves.** The total always equals the sum of the k values inside the window, each slide costs two operations however
+wide the window is, and the whole scan is O(n) instead of O(n·k), with O(1) extra space.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: does the new window win?">
+
+Now k = 3 over 6, 1, 4, 9, 2, 3, 8, 5 and 3. At each slide, work out the new total from the old one (add the value
+entering, subtract the one leaving) and say whether it beats the best so far. A tie doesn't beat it: the first best
+window found is kept.
+
+<PredictChallenge slug="sliding-window" settings={{ input: '6, 1, 4, 9, 2, 3, 8, 5, 3 | k=3' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Wider windows, and windows that change size">
+
+The saving grows with k. A slide costs 2 whatever the width, while re-adding a window costs k.
+
+<Explore slug="sliding-window" settings={{ preset: 'wide', n: 20 }} input caption="A window of 10 over 20 values. Additions ends at 30: 10 for the first window and 2 for each of the 10 slides. Adding up all 11 windows from scratch would take 110. Move the Size slider below to try other sizes: the window stays about half the array, and each slide still costs 2." />
+
+Not every question fixes the size. Say each value is the cost of one day out, and you want the longest run of
+consecutive days that costs at most 6 in total. The answer might be two days or five, so the window has to grow and
+shrink:
+
+- The **right** edge moves one place every step, adding the new cost to the total.
+- While the total is over the limit, the **left** edge moves right, taking costs off, until the window fits again.
+- What is left is the longest run ending at the right edge that fits, so compare its length with the best so far.
+
+Dropping the leftmost cost is safe because no cost is negative. A window that is over the limit stays over it however
+far right it grows, so no run that fits can start at its left edge any more. The code below runs this on the costs 2, 1,
+3, 1, 1, 4 and 2 with a limit of 6.
+
+<TraceCode
+  snippet="longest-run-window"
+  question="Across the whole call, how many times does the line total -= nums[left] run?"
+  choices={['5', '7', '28', '49']}
+  answer={0}
+  why="left starts at 0, only ever moves right and ends at 5, so the line runs 5 times in all: once when right is 3, then twice each when right is 5 and 6. Whatever the costs, left can’t move more than n = 7 times, because each value leaves the window at most once. With the 7 additions that is at most 2n updates: O(n), not O(n²). It prints 4, for the run 1, 3, 1, 1, which costs exactly 6."
+/>
+
+The same loop solves many window questions; only the rule and what the window keeps change. For the longest stretch of
+text with no repeated character, the window keeps a set of the characters inside it, and a repeat entering on the right
+makes the left edge move until the earlier copy has left. For the shortest run whose total reaches a target, the left
+edge moves while the total still reaches it, recording the length each time.
+
+<Misconception
+  id="re-add-each-window"
+  title="Each window has to be added up again"
+  probes={[
+    {
+      q: 'The window over positions 3 to 7 adds up to 40. A[3] is 6 and A[8] is 9. What does the window over positions 4 to 8 add up to?',
+      choices: ['43', '49', 'It can’t be known without adding A[4] to A[8] again'],
+      answer: 0,
+      trap: 2,
+      why: 'The new window is the old one without A[3] and with A[8]: 40 − 6 + 9 = 43. The four values in between are in both windows, so they never need adding again. 49 forgets to take off the 6.',
+    },
+    {
+      q: 'A window of 1,000 values slides one place along a list of a million. How many values must be added or subtracted to get its new total?',
+      choices: ['1,000', '2', '999'],
+      answer: 1,
+      trap: 0,
+      why: 'One value enters and one leaves; the other 999 are in both windows. Re-adding all 1,000 on every slide would make the scan about a billion additions instead of about 2 million.',
+    },
+  ]}
+>
+
+Two neighbouring windows share all but two values. The new total is the old total plus the value that entered and minus
+the value that left, so a slide costs two operations whatever k is. Adding every window up again costs k for each of the
+n − k + 1 windows, O(n·k) in all; the running total makes the scan O(n).
+
+</Misconception>
+
+<Misconception
+  id="inner-loop-quadratic"
+  title="The while loop inside the for loop makes it O(n²)"
+  probes={[
+    {
+      q: 'A grow-and-shrink window runs over 1,000 values. right steps through all 1,000 positions, and a while loop inside the for loop moves left. In the whole run, at most how many times can left move?',
+      choices: ['1,000', '1,000,000', '500,500'],
+      answer: 0,
+      trap: 1,
+      why: 'left only moves right and never passes the end, so it moves at most 1,000 times in total, however those moves are spread over the steps of right. Each value is added once and removed at most once.',
+    },
+    {
+      q: 'What is the running time of the grow-and-shrink window on n values?',
+      choices: ['O(n²): there are two nested loops', 'O(n): each value enters once and leaves at most once', 'O(n log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'The inner loop never starts again from the beginning: left carries on from where it stopped. Over the whole run right moves n times and left at most n times, so there are at most 2n updates.',
+    },
+  ]}
+>
+
+Nested loops are O(n²) when the inner loop starts again for every step of the outer one. Here it doesn't: left carries
+on from where it stopped and only moves right. Across the whole run right moves n times and left at most n times, so the
+window does at most 2n updates: O(n). A step that removes many values uses up removals that later steps can't make, the
+same kind of amortised argument as appending to a [doubling array](/learn/arrays).
+
+</Misconception>
+
+<Misconception
+  id="negatives-ok"
+  title="A grow-and-shrink window works with negative numbers too"
+  probes={[
+    {
+      q: 'Find the longest run with total at most 4 in [5, −4, 3]. The grow-and-shrink window drops the 5 at once, because 5 is over 4, and reports 2. What is the right answer?',
+      choices: ['2: the window is right', '3: the whole list adds up to 4', '1'],
+      answer: 1,
+      trap: 0,
+      why: '5 − 4 + 3 = 4, so all three values fit. The window dropped the 5 because it couldn’t know that a −4 was coming to bring the total back down. Shrinking is only safe when adding a value can never lower the total.',
+    },
+    {
+      q: 'For which lists can a grow-and-shrink window find the longest run with total at most a limit?',
+      choices: ['Any list of integers', 'Lists whose values are all zero or more', 'Only sorted lists'],
+      answer: 1,
+      trap: 0,
+      why: 'When no value is negative, adding a value never lowers the total, so a window over the limit can only be fixed by moving left. With negative values a later value might fix it, so dropping the left value can lose the answer.',
+    },
+  ]}
+>
+
+Shrinking from the left relies on one fact: adding a value never lowers the total, so a window that is over the limit
+stays over it as it grows. With negative numbers that fails. A value still to come can pull the total back down, and
+the window may already have thrown away part of the answer. Questions about runs with negative numbers usually need
+prefix sums (the total of everything up to each position) instead, as in
+[Count Runs That Sum to k](/practice/subarray-sum-equals-k).
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A = [5, 9, 2, 7, 4] and k = 3. The first window adds up to 16. What is the total after one slide?',
+      choices: ['18', '23', '11', '13'],
+      answer: 0,
+      why: 'The window loses 5 and gains 7: 16 − 5 + 7 = 18, which is 9 + 2 + 7. 23 forgets to take off the 5, and 13 is the total after the next slide.',
+    },
+    {
+      q: 'There are 10,000 values and the window holds k = 100. About how many additions does re-adding every window take, and about how many additions and subtractions does sliding take?',
+      choices: ['About 990,000, and about 20,000', 'About 990,000 both ways', 'About 20,000 both ways', 'About 10,000, and about 100'],
+      answer: 0,
+      why: 'There are 10,000 − 100 + 1 = 9,901 windows. Re-adding costs 100 for each, about 990,000. Sliding adds up the first window once and then costs 2 per slide: 100 + 2 × 9,900 = 19,900.',
+      traps: { 1: 're-add-each-window' },
+    },
+    {
+      q: 'In a grow-and-shrink window over n values, one step of right can make left move many times. Why is the whole run still O(n)?',
+      choices: [
+        'left only moves right, so it moves at most n times in total, shared across all the steps',
+        'It isn’t: with a loop inside a loop it is O(n²) in the worst case',
+        'The while loop runs at most once per step',
+        'The values are sorted first',
+      ],
+      answer: 0,
+      why: 'Each value is added once when right reaches it and removed at most once when left passes it, so the whole run does at most 2n updates. A step with many removals uses up removals that later steps can’t make.',
+      traps: { 1: 'inner-loop-quadratic' },
+    },
+    {
+      q: 'Which of these can a grow-and-shrink window solve as it is?',
+      choices: [
+        'The longest run with total at most 50, when every value is positive',
+        'The longest run with total at most 50, when values can be negative',
+        'Both of them',
+      ],
+      answer: 0,
+      why: 'With positive values, adding a value never lowers the total, so once a window is over 50, dropping its left value is safe. A negative value still to come could bring the total back under 50, so the window might drop part of the answer.',
+      traps: { 1: 'negatives-ok', 2: 'negatives-ok' },
+    },
+    {
+      q: 'A window for the longest run with total at most 6 holds 1, 3, 1, 1 (total 6). The next value is 4. What does the window hold after the while loop?',
+      choices: ['1, 1, 4 (total 6)', '4 alone', '3, 1, 1, 4 (total 9)', '1, 3, 1, 1 (the 4 is skipped)'],
+      answer: 0,
+      why: 'Adding 4 makes the total 10, over 6. The left edge drops the 1 (total 9, still over), then the 3 (total 6), which fits. The window never skips a value: right always takes the next one.',
+    },
+    {
+      q: 'Which of these is not a sliding-window question?',
+      choices: [
+        'The 3 largest values anywhere in the list',
+        'The 3 consecutive values with the largest total',
+        'The longest substring with no repeated character',
+        'The shortest run of positive values whose total is at least 20',
+      ],
+      answer: 0,
+      why: 'A window only covers consecutive positions. The 3 largest values can sit anywhere in the list, so you sort it or keep a heap of 3 instead.',
+    },
+    {
+      q: 'Which question needs a window that changes size?',
+      choices: [
+        'The highest total of any 7 consecutive days',
+        'The average of every 5 consecutive readings',
+        'The longest substring with no repeated character',
+      ],
+      answer: 2,
+      why: 'The first two fix the window at 7 or 5 values. The longest substring with no repeat can be any length, so the window grows on the right and shrinks from the left whenever a repeat comes in.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="window-running-total"
+  prompt="How does a sliding window find the best run of k consecutive values in O(n) instead of O(n·k)? And why is a window that grows and shrinks still O(n), even with a loop inside a loop?"
+  rubric={[
+    'It keeps one running total for the window instead of adding each window up again.',
+    'Each slide adds the value that enters on the right and subtracts the one that leaves on the left: two operations, whatever k is.',
+    'A variable window grows on the right and shrinks from the left while its rule is broken.',
+    'Both edges only move right, so each value enters once and leaves at most once: at most 2n updates, which is O(n).',
+  ]}
+  example="Adding up every window from scratch costs k additions for each of about n windows, which is O(n·k). But neighbouring windows share all but two values, so the window keeps one running total. When it slides one place right, it adds the value that enters and subtracts the one that leaves: two operations however wide it is, so the whole scan is O(n). A variable window has edges that move separately. The right edge adds a value every step, and while the window breaks its rule, such as a total over the limit, the left edge moves right and removes values. The while loop sits inside the for loop, but left never moves back, so over the whole run it moves at most n times. Each value is added once and removed at most once, so this is O(n) too."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A window is a run of consecutive positions. Keep one running total for it and update it as it moves, instead of adding
+  each window up again.
+- A fixed window of k values slides one place at a time: add the value that enters, subtract the one that leaves. That is
+  two operations per slide, so O(n) instead of O(n·k), with O(1) extra space.
+- A variable window grows on the right and shrinks from the left when its rule says so, such as while the total is over
+  the limit. Each value enters once and leaves at most once, so it is O(n) too, even with a loop inside a loop.
+- Shrinking is only safe when growing can't fix a broken window, as with totals of values that are zero or more. With
+  negative numbers, reach for prefix sums instead.
+- Next: the **monotonic stack**, which keeps its values in order so each is pushed once and popped at most once (open
+  [its visualiser](/visualisers/monotonic-stack)); kept in a deque, the same idea gives the largest value in every
+  window in O(n). Practise with [Best Single Trade](/practice/best-time-to-buy-and-sell-stock),
+  [Longest Stretch Without a Repeat](/practice/longest-substring-without-repeating) and
+  [Longest Run After k Changes](/practice/longest-repeating-character-replacement), then try the hard one,
+  [Smallest Window Holding Every Letter](/practice/minimum-window-substring). To try your own values and k, open
+  [the sliding window visualiser](/visualisers/sliding-window).
+
+</Section>

@@ -478,6 +478,63 @@ console.log(priorities);
 `,
     },
   },
+  {
+    id: 'longest-run-window',
+    title: 'The longest run within a limit, with a window that grows and shrinks',
+    code: {
+      python: `def longest_run(nums, limit):
+    left = 0
+    total = 0
+    best = 0
+    for right in range(len(nums)):
+        total += nums[right]
+        while total > limit:
+            total -= nums[left]
+            left += 1
+        best = max(best, right - left + 1)
+    return best
+
+costs = [2, 1, 3, 1, 1, 4, 2]
+print(longest_run(costs, 6))
+`,
+      javascript: `function longestRun(nums, limit) {
+  let left = 0;
+  let total = 0;
+  let best = 0;
+  for (let right = 0; right < nums.length; right++) {
+    total += nums[right];
+    while (total > limit) {
+      total -= nums[left];
+      left += 1;
+    }
+    best = Math.max(best, right - left + 1);
+  }
+  return best;
+}
+
+const costs = [2, 1, 3, 1, 1, 4, 2];
+console.log(longestRun(costs, 6));
+`,
+      typescript: `function longestRun(nums: number[], limit: number): number {
+  let left = 0;
+  let total = 0;
+  let best = 0;
+  for (let right = 0; right < nums.length; right++) {
+    total += nums[right];
+    while (total > limit) {
+      total -= nums[left];
+      left += 1;
+    }
+    best = Math.max(best, right - left + 1);
+  }
+  return best;
+}
+
+const costs: number[] = [2, 1, 3, 1, 1, 4, 2];
+console.log(longestRun(costs, 6));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {
