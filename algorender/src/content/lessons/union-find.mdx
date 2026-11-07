@@ -1,0 +1,265 @@
+<Section step="hook" title="Can these two reach each other yet?">
+
+A building is being wired one cable at a time, each cable joining two computers. After every cable someone asks: can
+computer 3 now reach computer 8 through any chain of cables? Searching from 3 each time walks the cables laid so far,
+again and again.
+
+It is really a question about groups. Computers that can reach each other form a group, and a new cable can only merge
+two groups, or do nothing if its ends already share one. **Union-find** tracks exactly that. It answers "same group?"
+and merges groups in nearly constant time, averaged over many operations, using just two [arrays](/learn/arrays) of
+numbers.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="disjoint sets">Groups that share no elements, so every element is in exactly one set. Union-find is also called a disjoint-set structure.</Term>
+  <Term name="parent and root">Each element stores one number, parent[x]. Following parents from any element ends at the root of its set, the one element that is its own parent. The root names the set.</Term>
+  <Term name="find and connected">find(x) climbs parent links from x to the root and returns it. connected(a, b) asks whether find(a) and find(b) are the same root.</Term>
+  <Term name="union">union(a, b) merges the set holding a with the set holding b: it finds both roots and makes one the parent of the other.</Term>
+  <Term name="rank and path compression">Two tricks that keep trees flat. A root's rank is an upper bound on its tree's height, and union by rank hangs the root of lower rank under the other. Path compression points every element a find climbs past straight at the root.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Climb to the root, link the roots">
+
+Here are 8 elements, 0 to 7, each in a set of its own. Each set is drawn as a tree, root at the top, with an arrow from
+every element to its parent, above the arrays parent[x] and rank[x]. At the start every element is its own parent: all 8
+are roots.
+
+<Explore slug="union-find" settings={{ start: 'singletons' }} caption="Union 0 and 1, then 2 and 3, then 0 and 2. The first union finds two roots of rank 0, hangs 1 under 0 (parent[1] = 0) and raises rank[0] to 1. The second hangs 3 under 2 the same way. The third links two roots of rank 1: 2 goes under 0, rank[0] becomes 2, and 3 is now two links below the root." />
+
+The sets live entirely in those links: two elements are connected exactly when their climbs reach the same root, and
+union points one root at the other. Neither tree is walked or copied: merging two sets of a million costs two finds and
+one link.
+
+The cost to watch is the climb. A find follows one link per level, so it is as slow as the tree is tall. Suppose union
+always hung a's root under b's. Then union(0, 1), union(0, 2), union(0, 3) and so on would each hang the whole tree
+under one new element, building a chain: 0 under 1 under 2 under 3. With n elements, find(0) climbs n − 1 links: O(n).
+
+**Union by rank** prevents that. Every root keeps a rank, an upper bound on its tree's height, and union hangs the root of
+lower rank under the other, so the merged tree keeps the larger rank and its height bound does not grow. Only a tie
+raises it: the new root's rank goes up by one (on a tie, this visualiser hangs b's root under a's). Rank 1 needs two
+elements and rank 2 needs two rank-1 trees, so at least four: a root of rank r has at least $2^r$ elements in its tree.
+So no tree is taller than log₂ n, which is 19 links for a million elements.
+
+**Path compression** flattens the trees further, almost for free. A find climbs the whole path anyway, so once it knows
+the root it points every element it passed straight at it, and the next find from any of them takes one hop.
+
+<Explore slug="union-find" settings={{ start: 'tall' }} caption="Find 7, then find 7 again. 7 sits three links below the root, 0, as deep as union by rank allows in a tree of 8. The first find climbs from 7 to 6, 4 and 0, then re-points 7 and 6 straight at 0 (4 already pointed there). The second find takes one hop." />
+
+<KeyIdea>
+
+**Each set is a tree stored in one parent array, and its root names it.** find climbs to the root, connected compares
+two roots, and union links one root under the other. Union by rank keeps every tree at most log₂ n tall, and path
+compression flattens every path a find climbs, so finds stay short.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: roots, hops and ranks">
+
+Two sets of five: 0 is the root of 0 to 4, with 3 under 2, and 5 is the root of 5 to 9, with 8 under 7, both of rank 2.
+Union 3 and 8, predicting at each step whether they already share a set, which root each find reaches, how many pointers
+compression changes and which root goes underneath. Then ask Connected? for 4 and 9.
+
+<PredictChallenge slug="union-find" settings={{ start: 'two-sets' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Union-find in code, and where it pays">
+
+In code, union-find is two lists of numbers. `find_root` (`findRoot` in JavaScript and TypeScript) is recursive, as in
+the [recursion lesson](/learn/recursion): a root is the base case, and any other element gets its parent's root, stores
+it as its own parent and returns it. Those stores, made as the calls return, are path compression. (The visualiser
+makes them in a second loop instead.) `union` finds both roots, stops if they match, and otherwise hangs the lower-ranked root
+under the other.
+
+The program starts from two sets: 0 is the root of 0 to 3, with 3 under 2, and 4 is the root of 4 and 5. The list is
+`forest` at the top and `parent` inside the functions, two names for one list. Each real merge returns 1, so `groups`
+counts the sets left.
+
+<TraceCode
+  snippet="union-by-rank"
+  question="union(forest, rank, 3, 5) merges the two sets. Which write links them?"
+  choices={['parent[5] = 3', 'parent[4] = 0', 'parent[0] = 4', 'parent[3] = 5']}
+  answer={1}
+  why="The finds climb 3, 2, 0 and 5, 4, so the roots are 0 and 4. rank[4] is 1, lower than rank[0], which is 2, so 4 goes under 0 and takes 5 with it. parent[5] = 3 would link the elements instead and pull 5 away from 4. On the way, 3 was re-pointed straight at 0, and the program prints 1: one set left."
+/>
+
+The link goes between roots, and that matters more than it looks.
+
+<Misconception
+  id="union-links-elements"
+  title="union(a, b) can just set parent[a] = b"
+  probes={[
+    {
+      q: 'parent is [0, 0, 1, 3]: 0 is the root of 0, 1 and 2, and 3 is alone. A buggy union(1, 3) sets parent[1] = 3. Are 0 and 3 in the same set now?',
+      choices: ['Yes: the union merged the two sets', 'No: 1 and 2 moved under 3, but 0 is still a root on its own', 'No: nothing changed'],
+      answer: 1,
+      trap: 0,
+      why: 'parent[1] = 3 cuts 1, and 2 below it, away from 0. 0 is still its own parent, so find(0) = 0 while find(1) = 3: one set was split, not two merged.',
+    },
+    {
+      q: 'Which write always merges the set holding a with the set holding b?',
+      choices: ['parent[find(a)] = find(b)', 'parent[a] = b', 'parent[a] = find(b)'],
+      answer: 0,
+      trap: 1,
+      why: 'Only a root can change its parent without leaving part of its set behind. When a is not a root, the other writes move a and its subtree, and strand the rest of its old set.',
+    },
+  ]}
+>
+
+parent[a] is a's only link to the rest of its set. Overwrite it and a moves to b's tree with everything below it, but its
+old root and the other branches stay behind: one set split, not two merged. A root has nothing above it to lose, so
+linking two roots carries both whole trees. Union links the roots, never the elements it was given.
+
+</Misconception>
+
+The classic user is **Kruskal's algorithm** for a minimum spanning tree, the cheapest set of edges connecting every node
+of a weighted graph. It takes edges cheapest first and keeps one only if its ends are not yet connected; otherwise it
+would close a cycle.
+
+<Explore slug="union-find" settings={{ start: 'singletons' }} caption="Play Kruskal's algorithm on nodes 0, 1 and 2: union 0 and 1, then 1 and 2, then ask Connected? for 0 and 2. The second union climbs from 1 to its root, 0, and hangs 2 (rank 0) under 0 (rank 1), so rank[0] stays 1. Both finds then reach 0: an edge between 0 and 2 would close a cycle, so Kruskal's algorithm skips it." />
+
+Counting a graph's **connected components** is the same loop: start with n sets, union the ends of every edge, and
+subtract one for each union that links two roots, as `groups` did. Either way, the check must compare roots, not
+parents.
+
+<Misconception
+  id="same-parent-same-set"
+  title="Two elements are connected only if they have the same parent"
+  probes={[
+    {
+      q: 'parent[3] = 2, parent[2] = 0, parent[0] = 0 and parent[4] = 0. Are 3 and 4 in the same set?',
+      choices: ['Yes: both climb to the root, 0', 'No: parent[3] is 2 but parent[4] is 0'],
+      answer: 0,
+      trap: 1,
+      why: '3 climbs to 2 and then to 0; 4 climbs straight to 0. Same root, same set. A parent only says where the climb goes next.',
+    },
+    {
+      q: 'A Kruskal implementation skips an edge when parent[a] equals parent[b], without calling find. What goes wrong?',
+      choices: ['Nothing: after a union every element points at its root', 'It can miss that a and b are connected, and keep an edge that closes a cycle', 'It skips edges the tree needs'],
+      answer: 1,
+      trap: 0,
+      why: 'A union re-points one root, so the elements below it keep their old parents. Two elements of one set can have different parents, so an edge that closes a cycle gets in.',
+    },
+  ]}
+>
+
+A parent only says where the climb goes next. Union re-points a single root, so everything below it keeps its old
+parent, and compression only flattens paths that finds have walked: after the three unions in the first visualiser, 1
+points at 0 but 3 at 2. Only the root names a set, so compare find(a) with find(b).
+
+</Misconception>
+
+How fast is it in the end? With both tricks, any m operations on n elements take O(m α(n)) time in total, where α, the
+inverse Ackermann function, is at most 4 for any n you could ever store. That is nearly constant per operation, but
+only on average over the sequence, and that caveat matters.
+
+<Misconception
+  id="every-find-constant"
+  title="With path compression, every find takes constant time"
+  probes={[
+    {
+      q: 'With union by rank and path compression, element 7 is three links below its root, and no find has passed it yet. How many links does find(7) follow?',
+      choices: ['1: compression makes every find one hop', '2', '3'],
+      answer: 2,
+      trap: 0,
+      why: 'Compression flattens a path only after a find has climbed it. This find climbs all 3 links, then points 7 and the element above it at the root, so the next find(7) takes one hop.',
+    },
+    {
+      q: 'With union by rank and path compression, what does O(α(n)) per operation promise?',
+      choices: ['Every single operation takes at most about α(n) steps', 'An average over the sequence: one find can still climb up to about log₂ n links', 'Nothing useful, since α(n) grows like log n'],
+      answer: 1,
+      trap: 0,
+      why: 'The bound is amortised: m operations take O(m α(n)) in total. A long climb leaves its path flat for later finds, and α(n) is at most 4 for any realistic n.',
+    },
+  ]}
+>
+
+Compression helps later finds, not the one doing it: a find climbs every link of its path before re-pointing them, and
+with union by rank that can still be log₂ n links. The O(α(n)) is **amortised**, an average over the sequence, paid for
+by each long climb leaving its path flat. Say "nearly constant, amortised", not "constant".
+
+</Misconception>
+
+Union-find only merges, though: it has no operation that splits a set apart again.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'From singletons 0 to 3, union(0, 1), union(2, 3) and union(1, 3) run with union by rank, b’s root going under a’s on a tie. Which element ends up as the root, with what rank?',
+      choices: ['0, rank 2', '2, rank 2', '0, rank 1', '1, rank 2'],
+      answer: 0,
+      why: 'The first two unions make roots 0 and 2, each of rank 1. union(1, 3) links those two roots, and the tie hangs 2 under 0 and raises rank[0] to 2.',
+    },
+    {
+      q: 'In one set, 0 is the root of 0, 1 and 2; in another, 3 is the root of 3 and 4. Which single write merges them into one set?',
+      choices: ['parent[2] = 4', 'parent[3] = 0', 'parent[4] = 2', 'parent[2] = 3'],
+      answer: 1,
+      why: 'Linking the roots carries both whole trees along. Each other write moves a non-root element and its subtree, and strands the rest of its old set.',
+      traps: { 0: 'union-links-elements', 2: 'union-links-elements', 3: 'union-links-elements' },
+    },
+    {
+      q: 'parent is [0, 0, 0, 2] after union(0, 1), union(2, 3) and union(0, 2). Kruskal’s algorithm now looks at the edge between 1 and 3. What should it do?',
+      choices: ['Keep it: parent[1] is 0 but parent[3] is 2, so they are in different sets', 'Skip it: find(1) and find(3) are both 0, so it would close a cycle', 'Keep it: 1 and 3 were never unioned together'],
+      answer: 1,
+      why: '3 climbs to 2 and then to 0, the root 1 reaches too, so they are already connected and the edge would close a cycle.',
+      traps: { 0: 'same-parent-same-set' },
+    },
+    {
+      q: 'A union always sets parent[find(a)] = find(b), with no ranks and no compression. From singletons 0 to 4 it runs union(0, 1), union(0, 2), union(0, 3) and union(0, 4). How many links does find(0) follow now?',
+      choices: ['1', '2', '4', '5'],
+      answer: 2,
+      why: 'Each union hangs the whole tree under one new element, making the chain 0 → 1 → 2 → 3 → 4: n − 1 links for n elements. Union by rank would hang each new element under the existing root.',
+    },
+    {
+      q: 'Union by rank and path compression make m operations on n elements take O(m α(n)) time. What does that say about a single find?',
+      choices: ['It always follows at most one link', 'It can still climb up to about log₂ n links; the bound is an average over the sequence', 'It follows exactly α(n) links', 'Nothing: only unions are fast'],
+      answer: 1,
+      why: 'The bound is amortised: a find on an uncompressed path climbs every link, then leaves the path flat for later finds. Averaged over the sequence, that is O(α(n)) per operation.',
+      traps: { 0: 'every-find-constant', 2: 'every-find-constant' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="union-find-roots"
+  prompt="How does union-find tell whether two elements are in the same set, and how does it merge two sets? What do union by rank and path compression each do to keep it fast?"
+  rubric={[
+    'Each set is a tree stored in a parent array; a root is its own parent and names the set.',
+    'find climbs parent links to the root, and two elements are in the same set exactly when their roots match.',
+    'union finds both roots and links one under the other, never just the two elements.',
+    'Union by rank hangs the lower-ranked root under the other, so no tree grows taller than log₂ n.',
+    'Path compression points every element a find passed straight at the root; together the tricks give nearly constant amortised time, O(α(n)).',
+  ]}
+  example="Each element stores its parent in an array, and following parents ends at a root, an element that is its own parent and names the set. find climbs to the root, so two elements share a set exactly when they reach the same root. union finds both roots and makes one the parent of the other; linking the elements themselves could split a set. Union by rank hangs the lower-ranked root underneath, so trees only grow when equal ranks meet and stay at most log₂ n tall. Path compression points every element a find passed straight at the root. Together they make each operation nearly constant, amortised: O(α(n))."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Union-find keeps disjoint sets as trees in one parent array. A root is its own parent and names its set.
+- find climbs to the root, and connected(a, b) is find(a) = find(b): compare roots, never parents.
+- union(a, b) links the two roots. Overwriting a non-root's parent splits its set instead.
+- Union by rank keeps every tree at most log₂ n tall; path compression points each path a find climbs at the root.
+- Together, m operations take O(m α(n)): nearly constant each, amortised. Sets merge but never split.
+- Next: **minimum spanning trees**, where [Kruskal's algorithm](/visualisers/kruskals) uses union-find to skip edges that
+  would close a cycle. Practise with [Count Connected Groups](/practice/connected-components) and
+  [The Extra Edge](/practice/redundant-connection), or open the [union-find visualiser](/visualisers/union-find) to try
+  more operations.
+
+</Section>

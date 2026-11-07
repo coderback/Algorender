@@ -1,0 +1,308 @@
+<Section step="hook" title="Two sorted piles are easy">
+
+A teacher has 600 exam papers to put in order of surname. Slotting them one at a time into a growing sorted pile, as
+[insertion sort](/visualisers/insertion-sort) does, means checking each new paper against papers already placed: the
+O(n²) pattern of the simple sorts in [sorting in code](/learn/sorting-in-code). So she hands half the stack to a
+colleague. Each sorts 300, and the two sorted piles go face up on the desk. The first paper
+overall must be on top of one pile or the other, so she takes the earlier of the two top papers, again and again, until
+both piles are gone. Merging is easy because both piles are already sorted.
+
+**Merge sort** does that all the way down: halves of halves, until every pile holds one paper, which is sorted by
+definition. For a million items, that turns insertion sort's worst case of about 500 billion comparisons into about 20
+million.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="divide and conquer">Split a problem into smaller copies of itself, solve each, and combine the answers.</Term>
+  <Term name="run">A stretch of values already in sorted order. A single value is a run, and each merge turns two runs into one.</Term>
+  <Term name="merge">Combining two sorted runs into one by repeatedly comparing their front values and taking the smaller.</Term>
+  <Term name="buffer">Extra space the merge writes into, here a second row B as long as the array, before the merged run is copied back.</Term>
+  <Term name="stable">A sort is stable if equal values keep the order they started in. It matters when you sort records by one field.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Split down, merge up">
+
+Here are 8 values. Play the run, and watch where the comparisons happen.
+
+<Explore slug="merge-sort" settings={{ input: '38, 16, 71, 5, 52, 24, 9, 63' }} caption="Splitting compares nothing: the first comparison is 38 against 16, once both are pieces of one. Merges then build longer runs: 16 38 and 5 71 become 5 16 38 71, the right half becomes 9 24 52 63, and the last merge combines them. The pair merges take 1 comparison each, the merges of four 3 each, and the last 7, after which 71 follows without one: 17 in all." />
+
+Splitting is only arithmetic: mid = ⌊(lo + hi) / 2⌋, with no comparisons and no moves. It stops at pieces of one value,
+because one value is already sorted. The calls run depth first, as in the [recursion lesson](/learn/recursion), so the
+left half is completely sorted before the right half is even split.
+
+All the work is in the merges. Both halves are sorted, so the smallest value left must be at the front of one of them:
+compare the two fronts, move the smaller into the buffer, and step that side on. Each comparison places one value, and
+once one half runs out, the rest of the other follows with no comparisons at all.
+
+Now count by level. The pieces on one level hold all n values between them, and each value is placed with at most one
+comparison, so a level costs fewer than n comparisons: above, the levels cost 4, 6 and 7 for 8 values. Halving 8 values
+reaches pieces of one after 3 levels, and halving a million takes 20, because 2²⁰ is just over a million.
+
+<KeyIdea>
+
+**Halving reaches single values after about log₂ n levels, and the merges on each level place all n values with at most
+one comparison each. So merge sort makes at most about n log₂ n comparisons: O(n log n), whatever order the input is
+in.**
+
+</KeyIdea>
+
+For a million values that is about 20 million comparisons, against n²/2, or 500 billion, for insertion sort on a
+reversed list: at a billion a second, a fiftieth of a second against more than eight minutes. Here are both sorts on
+reversed lists, insertion sort's worst order:
+
+<Growth
+  algorithms={['insertion-sort', 'merge-sort']}
+  example="reversed"
+  stat="comparisons"
+  label="Comparisons"
+  max={64}
+  step={8}
+  curves={['n²/2', 'n log₂ n']}
+  caption="Each point is a real run on a reversed list. Move along the chart, or use the arrow keys, to read the counts at any n."
+/>
+
+At n = 64 insertion sort makes about 2,000 comparisons and merge sort about 200. Doubling n from 32 multiplies insertion
+sort's count by about 4, the mark of O(n²), and merge sort's by about 2.4.
+
+</Section>
+
+<Section step="predict" title="Your turn: which value goes next?">
+
+Before each merge step, predict which value goes into the buffer. Look only at the two front values: the smaller goes
+in. This list has two pairs of equal values. When the fronts tie, read the merge line in the code panel,
+A[i] ≤ A[j]: it takes the left one.
+
+<PredictChallenge slug="merge-sort" settings={{ input: '27, 14, 14, 40, 9, 33, 27, 52' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="The merge in code, and what it costs">
+
+Here is the merge on its own, on two short sorted lists, with one index walking each, as in
+[two pointers](/learn/two-pointers). When one list runs out, the other's leftovers are copied across.
+
+<TraceCode
+  snippet="merge-sorted-lists"
+  question="How many times does the merge compare left[i] with right[j]?"
+  choices={['3', '6', '7', '12']}
+  answer={1}
+  why="Each comparison places one value: 3, 4, the left 7, the right 7, 9 and 12. That uses up left, so 15 follows with no comparison at all. Merging a and b sorted values takes at most a + b − 1 comparisons, never a × b. At the tie the test is true, so the 7 from left goes first."
+/>
+
+That is the hard part. The sort around it is a few lines of recursion: stop at one value, find mid, sort each half,
+merge.
+
+<Misconception
+  id="merge-every-pair"
+  title="Merging compares every value with every value in the other half"
+  probes={[
+    {
+      q: 'You merge two sorted halves of 500 values each. At most how many comparisons can it take?',
+      choices: ['999', '250,000', '500'],
+      answer: 0,
+      trap: 1,
+      why: 'Each comparison places one value and the last needs none, so at most 500 + 500 − 1 = 999. Sorted halves never need all 500 × 500 pairs. 500 is the fewest, when one half is all smaller.',
+    },
+    {
+      q: 'What does one merge of two sorted halves holding n values in all cost?',
+      choices: ['O(n²): each value is checked against the whole other half', 'O(n)', 'O(log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'Only the two front values are ever compared, and each comparison moves one of them into the buffer. n values take fewer than n comparisons.',
+    },
+  ]}
+>
+
+Only the two fronts are ever compared. Both halves are sorted, so nothing behind a front can be smaller than it, and one
+comparison of the fronts finds and places the smallest value left. Once a half is empty the rest follows with none, so
+merging a and b values takes at most a + b − 1 comparisons: O(n), not O(n²).
+
+</Misconception>
+
+Does the order of the input help? Here is a list that is already sorted.
+
+<Explore slug="merge-sort" settings={{ preset: 'sorted', n: 16 }} input caption="16 sorted values. Every merge takes the whole left half first, since each left value is ≤ every right value, and then the right half follows with no comparisons, so each merge compares only half its values. Comparisons ends at 32, which is ½ × 16 × log₂ 16." />
+
+That is about as few as merge sort ever makes: it still splits all the way down and merges every level, and Writes
+stays at 128, as on any 16 values. Switch the input to Reversed or Random and Comparisons ends at 33 or 45. Insertion
+sort makes just 15 on the sorted list. So insertion sort ranges from n − 1 comparisons to about n²/2, while merge sort
+stays between about ½ n log₂ n and n log₂ n.
+
+Real libraries take the best of both. Python's sorted and list.sort, Java's sort for objects and JavaScript's
+Array.prototype.sort in V8 (Chrome and Node) all use Timsort or a close relative: a merge sort that first finds runs
+already in order, lengthens short ones with insertion sort, then merges the runs. A sorted list is one run, so it
+finishes in n − 1 comparisons, and the worst case is still O(n log n).
+
+The visualiser draws a second row under the array, the merge buffer B. In the first run, on 8 values, Writes ended at
+48: each of the 3 levels moved all 8 values into B and back again.
+
+<Misconception
+  id="merge-in-place"
+  title="Merge sort sorts in place"
+  probes={[
+    {
+      q: 'Merge sort and insertion sort each sort an array of n values. Which needs extra memory that grows with n?',
+      choices: ['Merge sort: its buffer has a slot for every value', 'Insertion sort: it lifts out a key', 'Neither: both sort inside the array'],
+      answer: 0,
+      trap: 2,
+      why: 'Each merge writes its run into the buffer and copies it back, and the buffer is as long as the array: O(n). Insertion sort holds one key at a time, O(1).',
+    },
+    {
+      q: 'Why does the merge write into a buffer instead of straight into the array?',
+      choices: [
+        'It doesn’t: it swaps values into place inside the array',
+        'Writing into the array would overwrite values of the left half that have not been placed yet',
+        'The buffer makes each merge O(log n)',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'If the first value taken comes from the right half, writing it at position lo destroys the left half’s front value. The buffer keeps both halves intact until the merged run is copied back.',
+    },
+  ]}
+>
+
+The merge can't write into the array as it goes: the slot it would fill next may still hold a left-half value that
+hasn't been placed. So it fills a buffer as long as the array and copies the run back: O(n) extra memory, plus O(log n)
+for the recursion. In-place merges exist, but they are intricate and slower, so library merge sorts use a buffer. Heap
+sort and quick sort work inside the array instead. On a [linked list](/learn/linked-lists) the
+merge relinks nodes, with no buffer, which is one reason merge sort is the usual way to sort a list.
+
+</Misconception>
+
+One character in the merge decides something else: the ≤ in A[i] ≤ A[j].
+
+<Misconception
+  id="ties-either-side"
+  title="On a tie, it doesn't matter which half goes first"
+  probes={[
+    {
+      q: 'Rows are being sorted by score. A merge’s two fronts tie: Ann (30) in the left half and Bo (30) in the right half, and the merge tests left ≤ right. Who goes first?',
+      choices: ['Ann', 'Bo', 'Either: the scores are equal, so it makes no difference'],
+      answer: 0,
+      trap: 2,
+      why: '30 ≤ 30 is true, so the merge takes Ann from the left half. The left half holds rows that came earlier, so Ann stays ahead of Bo as she was before the sort.',
+    },
+    {
+      q: 'Someone changes the merge’s test from A[i] ≤ A[j] to A[i] < A[j]. What happens?',
+      choices: [
+        'The output is still sorted, but equal values can swap their original order: the sort is no longer stable',
+        'Nothing changes, since equal values are interchangeable',
+        'The output is no longer sorted',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'With <, a tie takes the right value first, so a later record jumps ahead of an earlier one with the same key. The values still come out in order; only the order among equals breaks.',
+    },
+  ]}
+>
+
+Equal keys don't mean equal records. The left half always holds values that came earlier in the input, so taking the
+left value on a tie keeps equal values in their original order, and that makes merge sort **stable**. With `<` instead
+of `≤`, the right value wins ties: the output is still sorted, but a later record can jump ahead of an earlier one.
+Stability is why sorting orders by time and then by price leaves each price's orders in time order.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Merge sort sorts 16 values. How many levels of merging are there, and how many comparisons can each level make?',
+      choices: [
+        '4 levels, fewer than 16 comparisons each',
+        '16 levels, fewer than 4 comparisons each',
+        '4 levels, up to 64 comparisons each',
+        '2 levels, fewer than 8 comparisons each',
+      ],
+      answer: 0,
+      why: '16 halves to 8, 4, 2 and 1: four levels, since 2⁴ = 16. Each level places all 16 values with at most one comparison each. 64 would be the top merge comparing all 8 × 8 pairs, which sorted halves never need.',
+      traps: { 2: 'merge-every-pair' },
+    },
+    {
+      q: 'How many comparisons does it take to merge [2, 9, 14] with [5, 6, 20, 31]?',
+      choices: ['5', '7', '12', '6'],
+      answer: 0,
+      why: '2, 5, 6, 9 and 14 each take one comparison. Then the left list is empty, and 20 and 31 follow without any. 12 would be every pair.',
+      traps: { 2: 'merge-every-pair' },
+    },
+    {
+      q: 'How much extra memory does the merge sort in the visualiser use for n values?',
+      choices: [
+        'O(1): it only moves values within the array',
+        'O(n): a buffer as long as the array',
+        'O(n log n): a new buffer for every level',
+        'O(n²): a buffer for every pair',
+      ],
+      answer: 1,
+      why: 'Each merge writes into the one buffer B and copies the run back, and B has a slot for every position. The recursion adds O(log n) on top.',
+      traps: { 0: 'merge-in-place' },
+    },
+    {
+      q: 'A list of orders is sorted by time. You sort it by price with merge sort, and two orders cost £12. In what order do they end up?',
+      choices: [
+        'The earlier order first, because merge sort is stable',
+        'Either order: equal prices are interchangeable',
+        'The later order first, because merging reverses ties',
+      ],
+      answer: 0,
+      why: 'On a tie the merge takes from the left half, which holds the values that came earlier, so orders with the same price stay in time order.',
+      traps: { 1: 'ties-either-side' },
+    },
+    {
+      q: 'Merge sort and insertion sort each sort 1,000 values that are already in order. Which is true?',
+      choices: [
+        'Insertion sort makes 999 comparisons, and merge sort still makes about 5,000',
+        'Both make 999 comparisons',
+        'Merge sort makes none, because it notices the list is sorted',
+        'Insertion sort makes about 500,000',
+      ],
+      answer: 0,
+      why: 'Insertion sort compares each value once with its left neighbour. Merge sort still merges every level, and each merge stops comparing when its left half runs out: about ½ n log₂ n in all.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="merge-sort-cost"
+  prompt="How does merge sort put an array in order, and why does it make O(n log n) comparisons on any input? What does it cost in memory, and what does its tie rule buy?"
+  rubric={[
+    'It splits the array in half again and again until each piece holds one value, which is already sorted; splitting compares nothing.',
+    'Merging compares the front values of two sorted runs and takes the smaller, so each comparison places one value.',
+    'Each level of merges places all n values with at most n comparisons, and halving gives about log₂ n levels: O(n log n) on any input.',
+    'The merge writes into a buffer as long as the array, so merge sort needs O(n) extra memory and is not in place.',
+    'Taking the left value on a tie keeps equal values in their original order, so merge sort is stable.',
+  ]}
+  example="Merge sort splits the array in half, then each half, until every piece holds one value, which is already sorted. Then it merges pieces back in pairs. Both pieces are sorted, so the smallest value left is at the front of one of them: the merge compares the two fronts and moves the smaller into a buffer, one comparison per value placed. Each level of merging places all n values with at most n comparisons, and halving reaches single values after about log₂ n levels, so it is O(n log n) whatever the order. The price is the buffer, as long as the array, so it isn't in place. On a tie it takes the left value, which came first, so equal values keep their order: it is stable."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Merge sort halves the array until each piece holds one value, then merges sorted pieces back together. Splitting
+  compares nothing; all the work is in the merges.
+- A merge compares two front values and takes the smaller, so each comparison places one value: at most a + b − 1.
+- About log₂ n levels at fewer than n comparisons each make O(n log n) on every input: about 20 million comparisons for a
+  million values, not 500 billion.
+- It needs a buffer as long as the array, so it isn't in place, and taking the left value on ties makes it stable.
+- Sorted input still costs merge sort about ½ n log₂ n comparisons, while insertion sort's drop to n − 1. Timsort, in
+  Python, Java and V8, merges the runs it finds to get both.
+- Next: **quick sort**, which divides around a pivot and sorts in place (try [its visualiser](/visualisers/quick-sort)),
+  **intervals**, where sorting by start comes first, and [storage engines](/learn/storage-engines), where compaction
+  merges sorted runs on disk. Practise with [Merge Two Sorted Linked Lists](/practice/merge-two-sorted-lists) and
+  [Merge Overlapping Intervals](/practice/merge-intervals), or open [the merge sort visualiser](/visualisers/merge-sort)
+  and [race the sorts](/compare).
+
+</Section>

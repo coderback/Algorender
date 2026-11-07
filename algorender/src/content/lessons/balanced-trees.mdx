@@ -1,0 +1,288 @@
+<Section step="hook" title="Sorted keys, short tree">
+
+The [binary search trees lesson](/learn/binary-search-trees) ended on its worst case: insert keys in sorted order and
+each one goes right of the last, so the tree becomes a chain and a search walks past every key. Real data often arrives
+sorted, so a plain search tree can't promise O(log n).
+
+A **self-balancing tree** keeps that promise by repairing its shape as keys arrive. The **AVL tree**, published by
+Adelson-Velsky and Landis in 1962, watches how much taller one side of each node is than the other. When an insert makes
+one side two levels taller, a **rotation** lifts that side up: a few links change, the keys stay in order, and the seven
+sorted keys that made a chain of 7 levels come out 3 levels tall.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="height">The number of levels in a subtree, as in the last lesson: a leaf has height 1 and an empty subtree 0. Each AVL node stores its own.</Term>
+  <Term name="balance factor">A node's left height minus its right height: +1 means its left side is one level taller, −1 its right side, 0 level. (Some books subtract the other way round.)</Term>
+  <Term name="AVL rule">On top of the search-tree rule, every node's balance factor is −1, 0 or +1. A node at +2 or −2 must be fixed.</Term>
+  <Term name="rotation">Lifting one child of a node into the node's place and moving the node down to the other side. A few links change; the keys stay in order.</Term>
+  <Term name="the four cases">Named by the path from the node at ±2 down its taller side: left-left and right-right are straight, left-right and right-left are bent.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Lift the taller side">
+
+These are the seven keys that made a chain in the plain tree, inserted in the same order. To the right of each node are
+its balance factor, above, and its height, below (h1, h2 …).
+
+<Explore slug="avl-tree" settings={{ start: 'sorted' }} caption="10 to 70, inserted in sorted order: 3 levels, 40 at the root, and every balance factor 0. Search for 70: it is compared with 40, 60 and 70, three comparisons where the chain took seven." />
+
+The repairs happen one insert at a time. In the smallest case, 30 has a left child, 20, and nothing on its right, so it
+already leans left by one.
+
+<Explore slug="avl-tree" settings={{ start: 'leaning' }} caption="Insert 10: it goes left at 30 and at 20, and becomes 20's left child. On the way back up, 20's height becomes 2 and its balance factor +1, which is allowed; 30's height becomes 3 and its balance factor +2, which is not. One right rotation lifts 20 into 30's place, with 10 and 30 as its children." />
+
+Insert walks down as in a plain search tree. The new part is the walk back up the same path: each node recomputes its
+height as 1 + its taller child's height, then its balance factor. Nodes off the path gained nothing, so they can't have
+changed.
+
+At 30 the path went left and left again, so 20 moved up and 30 moved down to its right. The keys still read 10, 20, 30
+from left to right, and the subtree is 2 levels tall again, as before 10 arrived, so nothing above it changes.
+
+<KeyIdea>
+
+**An AVL tree keeps the two subtree heights of every node within 1 of each other. After an insert it walks back up the
+path, updating heights, and lifts the taller side of the first node at ±2 with one or two rotations, which change a few
+links and keep the keys in order.** The height stays O(log n), so search, insert and delete are O(log n) whatever order
+the keys arrive in.
+
+</KeyIdea>
+
+That path was straight. If it bends, left and then right, one rotation is not enough.
+
+<Explore slug="avl-tree" settings={{ start: 'leaning' }} caption="Insert 25: left at 30, then right at 20. 30 is at +2 again, but its left child 20 now leans right (−1). So 20 is rotated left first, which lifts 25 above it and straightens the path; then 30 is rotated right, and 25 takes 30's place with 20 and 30 as its children. Two rotations." />
+
+So there are four cases. **Left-left** takes one right rotation and **right-right** one left rotation. **Left-right**
+takes a left rotation at the child, then a right rotation at the node, and **right-left** is its mirror. In the
+pseudo-code: if the node leans left (`bf > 1`) and its left child leans right (`bf(left) < 0`), straighten the child
+first.
+
+</Section>
+
+<Section step="predict" title="Your turn: which rotation?">
+
+Before each step, predict which way the walk goes, and at a node that reaches ±2, which rotation fixes it. This tree
+starts empty. Insert 10, then 30, then 20. Then undo the 20, insert 40 instead, and compare the two fixes.
+
+<PredictChallenge slug="avl-tree" settings={{ start: 'empty' }} goal={7} />
+
+</Section>
+
+<Section step="do" title="Rotations in code, and deleting">
+
+A rotation is a few assignments. This program builds the chain from the first rotation, 30 above 20 above 10, and
+rotates it right. `lifted` is the child that moves up.
+
+<TraceCode
+  snippet="rotate-right"
+  question="When the rotation returns, what is 30’s left child?"
+  choices={['20, as before', '10', 'Nothing: `None` in Python, `null` in JavaScript']}
+  answer={2}
+  why="`node.left = lifted.right` gives 30 whatever hung on 20’s right, and 20 had no right child, so 30’s left becomes empty. Then `lifted.right = node` hangs 30 below 20. 10 never moves."
+/>
+
+Two links change inside the subtree, and the caller stores the returned node where 30 hung (here `root`): three links,
+however big the subtrees below, so a rotation is O(1). The last line prints `10 < 20 < 30`: the order survives. Besides
+the two nodes that trade places, only the lifted child's inner subtree changes parent, and its keys all lie between
+those two. An AVL node also stores its height, so recompute the lowered node's, then the lifted node's. A left rotation
+is the mirror image.
+
+<Misconception
+  id="rebalancing-rebuilds"
+  title="Rebalancing reshapes the whole tree, so insert is O(n)"
+  probes={[
+    {
+      q: 'A rotation lifts a node’s left child. The subtrees below them hold 500,000 keys. How many links change?',
+      choices: ['Three: two inside the subtree and the one from above', 'About 500,000: every key below moves', 'None: only the heights change'],
+      answer: 0,
+      trap: 1,
+      why: 'The subtrees move as whole blocks, still hanging from the same links. Only the node, its lifted child and the link from above are rewired, so a rotation is O(1).',
+    },
+    {
+      q: 'An AVL tree holds a million keys. What does one insert do?',
+      choices: [
+        'Walks one path of 20 to 28 nodes down and back up, with at most two rotations',
+        'Rebuilds the tree in balanced form: about a million steps',
+        'Walks one path down, then rotates at every node on the way back up',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Insert follows one path down and back up. The first rotation, single or double, restores the subtree’s old height, so nothing above it needs fixing: O(log n) in all.',
+    },
+  ]}
+>
+
+A rotation is local: it rewires a node, its lifted child and the link from above, and recomputes two heights. The
+subtrees below come along whole, so it is O(1). An insert walks one path down and back up, O(log n) nodes, with at most
+one rotation, single or double, because afterwards the subtree is as tall as it was before the insert.
+
+</Misconception>
+
+Why does a bent case need two rotations? Think back to the insert of 25.
+
+<Misconception
+  id="one-rotation-fixes-all"
+  title="One rotation fixes any node at ±2"
+  probes={[
+    {
+      q: '30 is at +2. Its left child, 20, has no left child and one right child, 25. What fixes 30?',
+      choices: ['One right rotation at 30', 'A left rotation at 20, then a right rotation at 30', 'One left rotation at 30'],
+      answer: 1,
+      trap: 0,
+      why: 'The path bends. A right rotation at 30 alone puts 20 on top with 30 on its right and 25 under 30: 20 is at −2. Rotating 20 left first straightens the path, so the right rotation at 30 lifts 25 to the top.',
+    },
+    {
+      q: 'After an insert, a node is at −2 and its right child is at +1. Which case is it?',
+      choices: ['Right-right: one left rotation', 'Right-left: rotate the child right, then the node left', 'Left-right: rotate the child left, then the node right'],
+      answer: 1,
+      trap: 0,
+      why: '−2 means the right side is taller, and +1 means the right child leans left. Right then left is a bent path: straighten the child first, then rotate the node left.',
+    },
+  ]}
+>
+
+A rotation moves the lifted child's inner subtree across to the other side. In a straight case the extra level is on
+the outside and goes up with the child. In a bent case it is in the inner subtree, so it just changes sides: rotate 30
+right while 20 leans right, and 20 ends up on top at −2, the same problem mirrored. So rotate the child first, which
+lifts the middle key of the three, then the node, which lifts that key to the top.
+
+</Misconception>
+
+Delete works the same way: remove the key as in a plain search tree, then walk back up, updating heights and rotating
+wherever a node reaches ±2.
+
+<Explore slug="avl-tree" settings={{ start: 'balanced' }} caption="Delete 20, then 40, then 30. After the first two, every balance factor is still within ±1. The third leaves 50 with nothing on its left and two levels on its right: −2. Its right child, 70, is level (0), so one left rotation lifts 70 to the root, and 60, the key between 50 and 70, moves across to become 50's right child." />
+
+One rotation was enough here, but after a delete the rotated subtree can end up a level shorter than before, which can
+tip the node above it, and so on: at worst one rotation per level, still O(log n). The walk checks every node on the
+path, because the rule covers every node.
+
+<Misconception
+  id="root-only-balance"
+  title="A tree is balanced if its root is"
+  probes={[
+    {
+      q: 'The root’s two subtrees both have height 3. The root’s left child has a left subtree of height 2 and nothing on its right. Does the tree keep the AVL rule?',
+      choices: ['Yes: the root’s balance factor is 0', 'No: the root’s left child is at +2', 'Yes: a balance factor of 2 is allowed below the root'],
+      answer: 1,
+      trap: 0,
+      why: 'The rule holds at every node. The left child’s subtrees differ by two levels, so it is at +2 and must be rotated, however level the root is.',
+    },
+    {
+      q: 'After an insert, which nodes can an AVL tree find out of balance?',
+      choices: ['Only the root', 'Any node on the path above the new leaf, up to the root', 'Only the new leaf’s parent'],
+      answer: 1,
+      trap: 0,
+      why: 'Every node on the path gained a key below it, so any of them from the leaf’s grandparent up to the root can reach ±2 (the parent holds at most one key on each side). The walk back up checks each one.',
+    },
+  ]}
+>
+
+The AVL rule is about **every** node: the two subtree heights of each one differ by at most 1. A level root says
+nothing about the nodes below it. A tree that kept only its root level could hang a chain of n/2 keys on each side, and
+its height would be O(n). Only the rule at every node bounds the height, so insert and delete check each node on the
+path back up, and code that checks a tree must look at every node.
+
+</Misconception>
+
+Within 1 is enough: the fewest keys an AVL tree of a given height can hold grow like the Fibonacci numbers, so its
+height stays below about $1.44 \log_2 n$. A million keys take at most 28 levels; no binary tree fits them in fewer than
+20, and the sorted chain took a million. **Red-black trees**, behind Java's TreeMap and the usual C++ std::map, balance
+more loosely (height up to about $2 \log_2 n$) but need at most three rotations per insert or delete: cheaper updates,
+slightly slower lookups.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'In a binary search tree, the root’s two subtrees both have height 4. The root’s left child has subtrees of heights 3 and 1. Is it an AVL tree?',
+      choices: ['Yes: the root’s balance factor is 0', 'No: the root’s left child is at +2', 'Yes: only the root’s balance matters for search', 'No: the root must lean to one side'],
+      answer: 1,
+      why: 'The rule holds at every node. The left child’s subtrees differ by 3 − 1 = 2, so it is at +2, even though the root is level.',
+      traps: { 0: 'root-only-balance', 2: 'root-only-balance' },
+    },
+    {
+      q: 'After an insert, 50 is at +2 and its left child, 30, is at −1. What restores the balance?',
+      choices: [
+        'One right rotation at 50',
+        'A left rotation at 30, then a right rotation at 50',
+        'One left rotation at 50',
+        'A right rotation at 30, then a left rotation at 50',
+      ],
+      answer: 1,
+      why: '+2 means 50’s left side is too tall, and −1 means 30 leans right: a left-right bend. A right rotation at 50 alone would only mirror the bend, so rotate 30 left first.',
+      traps: { 0: 'one-rotation-fixes-all' },
+    },
+    {
+      q: 'A right rotation at 30 lifts its left child, 20, which has children 10 and 25. Where does 25 end up?',
+      choices: ['30’s left child', '20’s right child, as before', '10’s right child', 'At the root'],
+      answer: 0,
+      why: '30 takes 20’s right slot, so 25 moves across into 30’s left subtree, where every key is larger than 20 and smaller than 30. That is the line `node.left = lifted.right`.',
+    },
+    {
+      q: 'Why is insert into an AVL tree O(log n) in the worst case, even though it rotates?',
+      choices: [
+        'It walks one path of O(log n) nodes down and back up, with at most two rotations of O(1) each',
+        'It is not: rebalancing reshapes the tree, so insert is O(n)',
+        'Rotations only happen once every n inserts',
+        'The keys are also kept in a sorted array',
+      ],
+      answer: 0,
+      why: 'The height stays below about 1.44 log₂ n, so the path is short. A rotation rewires three links, and the first fix, single or double, restores the subtree’s old height, so nothing above it changes.',
+      traps: { 1: 'rebalancing-rebuilds' },
+    },
+    {
+      q: 'How many rotations can one delete in an AVL tree need?',
+      choices: [
+        'At most two, the same as an insert',
+        'Up to one, single or double, at each level on the way back up',
+        'None: removing a key can never unbalance a tree',
+        'One for every key in the tree',
+      ],
+      answer: 1,
+      why: 'A rotated subtree can end up a level shorter than before the delete, which can tip the node above it, up to the root. Each rotation is O(1), so a delete is still O(log n).',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="avl-balance"
+  prompt="What does an AVL tree keep true at every node, and how does it restore that after an insert? Why does this keep search and insert O(log n) whatever order the keys arrive in?"
+  rubric={[
+    'At every node, the left and right subtree heights differ by at most 1: the balance factor is −1, 0 or +1.',
+    'After an insert it walks back up the path, updating heights, and fixes the first node at +2 or −2.',
+    'A straight lean needs one rotation; a bent one (left-right or right-left) rotates the child first, then the node.',
+    'A rotation changes a few links in one place, keeps the keys in order and costs O(1).',
+    'The height stays below about 1.44 log₂ n, so the one path an operation follows is O(log n) long.',
+  ]}
+  example="An AVL tree is a binary search tree in which the two subtrees of every node differ in height by at most one. Insert adds a leaf as usual, then walks back up the path, recomputing heights. The first node at +2 or −2 is fixed by a rotation that lifts the child on its taller side; if that child leans the other way, it is rotated first. A rotation rewires a few links and keeps the keys in order: O(1). Because every node stays within one, the height stays below about 1.44 log₂ n, and search and insert follow one path of that length: O(log n), even for sorted keys."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- An AVL tree is a binary search tree whose every node has a balance factor (left height minus right height) of −1, 0
+  or +1.
+- Insert and delete work as in a plain search tree, then walk back up updating heights and rotating at any node at ±2.
+  Straight cases need one rotation; bent cases rotate the child first.
+- A rotation rewires three links and keeps the keys in order: O(1). An insert needs at most one single or double
+  rotation; a delete may need one per level.
+- The height stays below about 1.44 log₂ n, so search, insert and delete are O(log n) in the worst case, whatever the
+  order of the keys.
+- Next: **B-trees**, which pack many keys into each node (try the [B-tree visualiser](/visualisers/b-tree)), and
+  [storage engines](/learn/storage-engines), where a variant, the B+ tree, holds database indexes.
+  Practise with [Check a Binary Tree Is Balanced](/practice/balanced-binary-tree) and
+  [Depth of a Binary Tree](/practice/maximum-depth-of-binary-tree), or open the [AVL tree visualiser](/visualisers/avl-tree).
+
+</Section>

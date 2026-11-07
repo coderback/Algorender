@@ -593,6 +593,404 @@ console.log(fewestCoins([1, 3, 4], 6));
 `,
     },
   },
+  {
+    id: 'chained-map',
+    title: 'Putting and getting keys in a hash map with chained buckets',
+    code: {
+      python: `def bucket_of(key, m):
+    total = 0
+    for ch in key:
+        total += ord(ch)
+    return total % m
+
+def put(buckets, key, value):
+    chain = buckets[bucket_of(key, len(buckets))]
+    for pair in chain:
+        if pair[0] == key:
+            pair[1] = value
+            return
+    chain.append([key, value])
+
+def get(buckets, key):
+    chain = buckets[bucket_of(key, len(buckets))]
+    for pair in chain:
+        if pair[0] == key:
+            return pair[1]
+    return -1
+
+buckets = [[], [], [], [], []]
+put(buckets, 'no', 4)
+put(buckets, 'on', 9)
+print(get(buckets, 'on'))
+`,
+      javascript: `function bucketOf(key, m) {
+  let total = 0;
+  for (const ch of key) {
+    total += ch.charCodeAt(0);
+  }
+  return total % m;
+}
+
+function put(buckets, key, value) {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      pair[1] = value;
+      return;
+    }
+  }
+  chain.push([key, value]);
+}
+
+function get(buckets, key) {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      return pair[1];
+    }
+  }
+  return -1;
+}
+
+const buckets = [[], [], [], [], []];
+put(buckets, 'no', 4);
+put(buckets, 'on', 9);
+console.log(get(buckets, 'on'));
+`,
+      typescript: `function bucketOf(key: string, m: number): number {
+  let total = 0;
+  for (const ch of key) {
+    total += ch.charCodeAt(0);
+  }
+  return total % m;
+}
+
+function put(buckets: [string, number][][], key: string, value: number): void {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      pair[1] = value;
+      return;
+    }
+  }
+  chain.push([key, value]);
+}
+
+function get(buckets: [string, number][][], key: string): number {
+  const chain = buckets[bucketOf(key, buckets.length)];
+  for (const pair of chain) {
+    if (pair[0] === key) {
+      return pair[1];
+    }
+  }
+  return -1;
+}
+
+const buckets: [string, number][][] = [[], [], [], [], []];
+put(buckets, 'no', 4);
+put(buckets, 'on', 9);
+console.log(get(buckets, 'on'));
+`,
+    },
+  },
+  {
+    id: 'rotate-right',
+    title: 'Rotating a leaning subtree right',
+    code: {
+      python: `class BstNode:
+    def __init__(self, key, left):
+        self.key = key
+        self.left = left
+        self.right = None
+
+def rotate_right(node):
+    lifted = node.left
+    node.left = lifted.right
+    lifted.right = node
+    return lifted
+
+root = BstNode(30, BstNode(20, BstNode(10, None)))
+print('root ' + str(root.key))
+root = rotate_right(root)
+print('root ' + str(root.key))
+print(str(root.left.key) + ' < ' + str(root.key) + ' < ' + str(root.right.key))
+`,
+      javascript: `class BstNode {
+  constructor(key, left) {
+    this.key = key;
+    this.left = left;
+    this.right = null;
+  }
+}
+
+function rotateRight(node) {
+  const lifted = node.left;
+  node.left = lifted.right;
+  lifted.right = node;
+  return lifted;
+}
+
+let root = new BstNode(30, new BstNode(20, new BstNode(10, null)));
+console.log('root ' + root.key);
+root = rotateRight(root);
+console.log('root ' + root.key);
+console.log(root.left.key + ' < ' + root.key + ' < ' + root.right.key);
+`,
+      typescript: `class BstNode {
+  key: number;
+  left: BstNode | null;
+  right: BstNode | null;
+
+  constructor(key: number, left: BstNode | null) {
+    this.key = key;
+    this.left = left;
+    this.right = null;
+  }
+}
+
+function rotateRight(node: BstNode): BstNode {
+  const lifted = node.left!;
+  node.left = lifted.right;
+  lifted.right = node;
+  return lifted;
+}
+
+let root = new BstNode(30, new BstNode(20, new BstNode(10, null)));
+console.log('root ' + root.key);
+root = rotateRight(root);
+console.log('root ' + root.key);
+console.log(root.left!.key + ' < ' + root.key + ' < ' + root.right!.key);
+`,
+    },
+  },
+  {
+    id: 'adjacency-from-edges',
+    title: 'Building adjacency lists from a list of edges',
+    code: {
+      python: `def build(vertices, edges):
+    adj = {}
+    for v in vertices:
+        adj[v] = []
+    for u, v in edges:
+        adj[u].append(v)
+        adj[v].append(u)
+    return adj
+
+stops = ['A', 'B', 'C', 'D']
+roads = [['A', 'B'], ['A', 'C'], ['B', 'C'], ['C', 'D']]
+graph = build(stops, roads)
+for v in stops:
+    print(v + ': ' + ' '.join(graph[v]))
+`,
+      javascript: `function build(vertices, edges) {
+  const adj = {};
+  for (const v of vertices) {
+    adj[v] = [];
+  }
+  for (const [u, v] of edges) {
+    adj[u].push(v);
+    adj[v].push(u);
+  }
+  return adj;
+}
+
+const stops = ['A', 'B', 'C', 'D'];
+const roads = [['A', 'B'], ['A', 'C'], ['B', 'C'], ['C', 'D']];
+const graph = build(stops, roads);
+for (const v of stops) {
+  console.log(v + ': ' + graph[v].join(' '));
+}
+`,
+      typescript: `function build(vertices: string[], edges: string[][]): Record<string, string[]> {
+  const adj: Record<string, string[]> = {};
+  for (const v of vertices) {
+    adj[v] = [];
+  }
+  for (const [u, v] of edges) {
+    adj[u].push(v);
+    adj[v].push(u);
+  }
+  return adj;
+}
+
+const stops: string[] = ['A', 'B', 'C', 'D'];
+const roads: string[][] = [['A', 'B'], ['A', 'C'], ['B', 'C'], ['C', 'D']];
+const graph = build(stops, roads);
+for (const v of stops) {
+  console.log(v + ': ' + graph[v].join(' '));
+}
+`,
+    },
+  },
+  {
+    id: 'union-by-rank',
+    title: 'Union by rank, with path compression',
+    code: {
+      python: `def find_root(parent, x):
+    if parent[x] != x:
+        parent[x] = find_root(parent, parent[x])
+    return parent[x]
+
+def union(parent, rank, a, b):
+    ra = find_root(parent, a)
+    rb = find_root(parent, b)
+    if ra == rb:
+        return 0
+    if rank[ra] < rank[rb]:
+        ra, rb = rb, ra
+    parent[rb] = ra
+    if rank[ra] == rank[rb]:
+        rank[ra] += 1
+    return 1
+
+forest = [0, 0, 0, 2, 4, 4]
+rank = [2, 0, 1, 0, 1, 0]
+groups = 2
+groups -= union(forest, rank, 3, 5)
+print(groups)
+`,
+      javascript: `function findRoot(parent, x) {
+  if (parent[x] !== x) {
+    parent[x] = findRoot(parent, parent[x]);
+  }
+  return parent[x];
+}
+
+function union(parent, rank, a, b) {
+  let ra = findRoot(parent, a);
+  let rb = findRoot(parent, b);
+  if (ra === rb) {
+    return 0;
+  }
+  if (rank[ra] < rank[rb]) {
+    [ra, rb] = [rb, ra];
+  }
+  parent[rb] = ra;
+  if (rank[ra] === rank[rb]) {
+    rank[ra] += 1;
+  }
+  return 1;
+}
+
+const forest = [0, 0, 0, 2, 4, 4];
+const rank = [2, 0, 1, 0, 1, 0];
+let groups = 2;
+groups -= union(forest, rank, 3, 5);
+console.log(groups);
+`,
+      typescript: `function findRoot(parent: number[], x: number): number {
+  if (parent[x] !== x) {
+    parent[x] = findRoot(parent, parent[x]);
+  }
+  return parent[x];
+}
+
+function union(parent: number[], rank: number[], a: number, b: number): number {
+  let ra = findRoot(parent, a);
+  let rb = findRoot(parent, b);
+  if (ra === rb) {
+    return 0;
+  }
+  if (rank[ra] < rank[rb]) {
+    [ra, rb] = [rb, ra];
+  }
+  parent[rb] = ra;
+  if (rank[ra] === rank[rb]) {
+    rank[ra] += 1;
+  }
+  return 1;
+}
+
+const forest: number[] = [0, 0, 0, 2, 4, 4];
+const rank: number[] = [2, 0, 1, 0, 1, 0];
+let groups = 2;
+groups -= union(forest, rank, 3, 5);
+console.log(groups);
+`,
+    },
+  },
+  {
+    id: 'merge-sorted-lists',
+    title: 'Merging two sorted lists, one index on each',
+    code: {
+      python: `def merge(left, right):
+    out = []
+    i = 0
+    j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            out.append(left[i])
+            i += 1
+        else:
+            out.append(right[j])
+            j += 1
+    while i < len(left):
+        out.append(left[i])
+        i += 1
+    while j < len(right):
+        out.append(right[j])
+        j += 1
+    return out
+
+merged = merge([4, 7, 12], [3, 7, 9, 15])
+print(*merged)
+`,
+      javascript: `function merge(left, right) {
+  const out = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    if (left[i] <= right[j]) {
+      out.push(left[i]);
+      i += 1;
+    } else {
+      out.push(right[j]);
+      j += 1;
+    }
+  }
+  while (i < left.length) {
+    out.push(left[i]);
+    i += 1;
+  }
+  while (j < right.length) {
+    out.push(right[j]);
+    j += 1;
+  }
+  return out;
+}
+
+const merged = merge([4, 7, 12], [3, 7, 9, 15]);
+console.log(merged.join(' '));
+`,
+      typescript: `function merge(left: number[], right: number[]): number[] {
+  const out: number[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    if (left[i] <= right[j]) {
+      out.push(left[i]);
+      i += 1;
+    } else {
+      out.push(right[j]);
+      j += 1;
+    }
+  }
+  while (i < left.length) {
+    out.push(left[i]);
+    i += 1;
+  }
+  while (j < right.length) {
+    out.push(right[j]);
+    j += 1;
+  }
+  return out;
+}
+
+const merged: number[] = merge([4, 7, 12], [3, 7, 9, 15]);
+console.log(merged.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

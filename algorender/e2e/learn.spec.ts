@@ -12,14 +12,19 @@ const lessonPaths = [
   'arrays',
   'stacks-queues',
   'linked-lists',
+  'hash-tables',
   'binary-search',
   'binary-search-trees',
+  'balanced-trees',
   'heaps',
   'two-pointers',
   'sliding-window',
   'memoization',
   'dynamic-programming',
+  'graph-representations',
+  'union-find',
   'dijkstra',
+  'merge-sort',
 ];
 
 async function openLesson(page: Page, slug: string) {

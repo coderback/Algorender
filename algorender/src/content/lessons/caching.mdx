@@ -205,7 +205,7 @@ paying.
 <Section step="recap" title="What to remember">
 
 - A cache keeps hot data close. Hit rate is what matters: at 1 ms against 100 ms, 90% hits average about 11 ms and 99% about 2 ms.
-- LRU evicts the entry used longest ago, in O(1) with a hash map and a doubly linked list; LFU evicts the least used.
+- LRU evicts the entry used longest ago, in O(1) with a [hash map](/learn/hash-tables) and a doubly linked list; LFU evicts the least used.
 - Page replacement is the same problem for memory pages: FIFO, LRU, Clock (one use bit) and OPT, the unreachable ideal that sees the future.
 - FIFO can fault more with more frames (Bélády's anomaly); LRU fails on loops and scans; past the working set, more memory stops helping.
 

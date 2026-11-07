@@ -437,7 +437,7 @@ export const avlTree = defineStructure<Avl, TreeState>({
     experiments: [
       { example: 'leaning', prompt: 'Insert 10: which rotation? Undo, insert 25: why does it need two?' },
       { example: 'sorted', prompt: 'These sorted inserts made a chain in a plain BST. Here the tree is balanced. Search for 70 and count the comparisons.' },
-      { example: 'balanced', prompt: 'Delete 20, then 40: which node goes out of balance, and why?' },
+      { example: 'balanced', prompt: 'Delete 20, then 40, then 30: which node goes out of balance, and why?' },
     ],
   },
 });

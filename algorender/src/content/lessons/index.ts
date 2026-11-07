@@ -42,6 +42,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'hash-tables',
+    title: 'Hash tables: work out the bucket, look only there',
+    concept: 'hash-tables',
+    summary: 'Why hashing a key to one bucket makes put, get and delete O(1) on average, why collisions come long before the table is full, and why resizing rehashes every key yet stays O(1) amortised.',
+    minutes: 15,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',
@@ -61,6 +68,13 @@ export const lessons: readonly LessonMeta[] = [
     concept: 'binary-search-trees',
     summary: 'Smaller keys to the left and larger to the right at every node: why search and insert cost one comparison per level, why sorted inserts make a slow chain, and how to delete a node with two children.',
     minutes: 20,
+  },
+  {
+    slug: 'balanced-trees',
+    title: 'Self-balancing trees: lift the taller side',
+    concept: 'balanced-trees',
+    summary: "Keep every node's two sides within one level of each other: how an AVL tree finds a node at ±2 on the way back up, how one or two rotations fix it without breaking the order, and why sorted keys no longer make a chain.",
+    minutes: 15,
   },
   {
     slug: 'heaps',
@@ -98,6 +112,20 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'graph-representations',
+    title: 'Representing graphs: a list per vertex or a cell per pair',
+    concept: 'graph-representations',
+    summary: "Adjacency lists or an adjacency matrix: why one lists a vertex's neighbours in deg(u) steps and the other checks an edge in one read, why an undirected edge is stored twice, and which suits a sparse graph.",
+    minutes: 15,
+  },
+  {
+    slug: 'union-find',
+    title: 'Union-find: same root, same group',
+    concept: 'union-find',
+    summary: 'Disjoint sets as trees in one parent array: why two elements share a set exactly when they reach the same root, why union links roots and never elements, and how union by rank and path compression make each operation nearly constant, amortised.',
+    minutes: 15,
+  },
+  {
     slug: 'dijkstra',
     title: "Dijkstra's algorithm: settle the closest node first",
     concept: 'shortest-paths',
@@ -110,6 +138,13 @@ export const lessons: readonly LessonMeta[] = [
     concept: 'quadratic-sorts',
     summary: 'Predict what real code does, run it to check, then change it and write a sort of your own, in Python, JavaScript or TypeScript.',
     minutes: 25,
+  },
+  {
+    slug: 'merge-sort',
+    title: 'Merge sort: two sorted halves make a sorted whole',
+    concept: 'merge-sort',
+    summary: 'Why merging two sorted halves takes one comparison per value, why that makes merge sort O(n log n) on every input, and what its buffer and its tie rule buy.',
+    minutes: 15,
   },
   {
     slug: 'linear-transformations',
