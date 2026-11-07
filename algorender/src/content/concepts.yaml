@@ -303,6 +303,7 @@ concepts:
     summary: Finding a pattern in text without restarting from scratch after each mismatch.
     prereqs: [arrays, hash-tables]
     visualisers: [kmp, rabin-karp, z-algorithm]
+    lesson: string-matching
   - id: palindromes
     title: Palindromes
     track: strings

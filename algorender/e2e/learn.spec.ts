@@ -27,6 +27,7 @@ const lessonPaths = [
   'dijkstra',
   'merge-sort',
   'quick-sort',
+  'string-matching',
 ];
 
 async function openLesson(page: Page, slug: string) {

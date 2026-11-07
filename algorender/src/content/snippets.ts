@@ -1116,6 +1116,75 @@ console.log(nums.join(' '));
 `,
     },
   },
+  {
+    id: 'kmp-lps-table',
+    title: 'Building the KMP lps table',
+    code: {
+      python: `def build_lps(p):
+    lps = [0] * len(p)
+    border = 0
+    i = 1
+    while i < len(p):
+        if p[i] == p[border]:
+            border += 1
+            lps[i] = border
+            i += 1
+        elif border > 0:
+            border = lps[border - 1]
+        else:
+            lps[i] = 0
+            i += 1
+    return lps
+
+lps_table = build_lps('aabaaab')
+print(*lps_table)
+`,
+      javascript: `function buildLps(p) {
+  const lps = new Array(p.length).fill(0);
+  let border = 0;
+  let i = 1;
+  while (i < p.length) {
+    if (p[i] === p[border]) {
+      border += 1;
+      lps[i] = border;
+      i += 1;
+    } else if (border > 0) {
+      border = lps[border - 1];
+    } else {
+      lps[i] = 0;
+      i += 1;
+    }
+  }
+  return lps;
+}
+
+const lpsTable = buildLps('aabaaab');
+console.log(lpsTable.join(' '));
+`,
+      typescript: `function buildLps(p: string): number[] {
+  const lps: number[] = new Array(p.length).fill(0);
+  let border = 0;
+  let i = 1;
+  while (i < p.length) {
+    if (p[i] === p[border]) {
+      border += 1;
+      lps[i] = border;
+      i += 1;
+    } else if (border > 0) {
+      border = lps[border - 1];
+    } else {
+      lps[i] = 0;
+      i += 1;
+    }
+  }
+  return lps;
+}
+
+const lpsTable: number[] = buildLps('aabaaab');
+console.log(lpsTable.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

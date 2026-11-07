@@ -161,6 +161,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'string-matching',
+    title: 'String matching: never start over',
+    concept: 'string-matching',
+    summary: "Why the naive search can take n·m comparisons, how KMP's table of borders slides the pattern without ever moving back in the text, and how Rabin–Karp's rolling hash skips most windows without reading a letter.",
+    minutes: 15,
+  },
+  {
     slug: 'linear-transformations',
     title: 'Matrices move space',
     concept: 'vectors-matrices',

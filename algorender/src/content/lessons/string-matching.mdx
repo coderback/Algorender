@@ -1,0 +1,279 @@
+<Section step="hook" title="Find it without starting over">
+
+You search a long report for a word, and every place it occurs lights up; biologists look for short sequences in a
+genome of three billion letters. The job: find every position where a **pattern** of m letters occurs in a **text** of n
+letters.
+
+The obvious way lines the pattern up under the text and compares letter by letter until one differs, then moves the
+pattern one place right and starts again. On ordinary text a mismatch usually comes at once. But search a million a's
+for “aaaab”, and at almost every position four letters match before one fails: about five million comparisons, and
+O(n·m) in the worst case, because every fresh start reads again letters already seen.
+
+This lesson shows two ways not to start over. **KMP** (Knuth, Morris and Pratt) uses what it has already read, so it
+never moves back in the text. **Rabin–Karp** compares one number per window, a hash, instead of m letters.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="text and pattern">The text T has n letters and the pattern P has m. P occurs at position s when T[s..s + m − 1] equals P. Two occurrences may overlap.</Term>
+  <Term name="shift">Where the pattern sits under the text. The naive search tries every shift from 0 to n − m.</Term>
+  <Term name="border">A string that is both a proper prefix and a suffix of another, where proper means shorter than the whole. “ab” is a border of “abcab”.</Term>
+  <Term name="lps table">lps[i] is the length of the longest border of P[0..i], the pattern's first i + 1 letters: its longest proper prefix that is also a suffix. Also called the failure function.</Term>
+  <Term name="rolling hash">A window's hash, updated rather than worked out again as the window slides: the leaving letter's share comes out and the entering letter's goes in.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Slide the pattern, keep what matched">
+
+Take the text “abcabcabd” and the pattern “abcabd”. At shift 0 the naive search matches a, b, c, a and b, then T[5] = 'c'
+fails against 'd'. It moves the pattern to shift 1 and compares T[1] with P[0], going back four letters in the text.
+
+It doesn't need to. Those five text letters are known: they are “abcab”, the pattern's own start. A match at shift 1
+would need “bcab” to begin the pattern, and one at shift 2 would need “cab” to; neither does. At shift 3 the last two
+matched letters, “ab”, are the pattern's first two. So the pattern can slide 3 places with “ab” already lined up, and
+compare T[5] with P[2] next.
+
+That depends only on the pattern: “ab” is the longest border of “abcab”. So KMP first works out the longest border of
+every prefix of the pattern, the **lps table**. For “abcabd” it is 0, 0, 0, 1, 2, 0; lps[4] = 2 is the “ab”.
+
+<Explore slug="kmp" settings={{ input: 'text: abcabcabd | pattern: abcabd' }} caption="The run builds the table first, with 6 comparisons. The search matches “abcab”, fails at T[5] = 'c' against 'd', slides the pattern 3 places to keep “ab” lined up, and compares T[5] again, with P[2]. It finds the match at 3 with 10 comparisons; the naive search, in the readout, makes 14." />
+
+<KeyIdea>
+
+**When j letters have matched and the next one doesn't, the j text letters just matched are known: they are P[0..j − 1]. The
+longest border of that prefix, lps[j − 1], is how many of them can still start a match, so KMP slides the pattern to
+keep exactly those and compares the same text letter again. Each comparison moves the text pointer on or slides the
+pattern right, and neither ever moves back: at most 2n comparisons. With the table, built the same way in O(m), KMP is
+O(n + m).**
+
+</KeyIdea>
+
+The table pays for itself on the naive search's worst case: a run of one letter, and a pattern ending in another.
+
+<Explore slug="kmp" settings={{ input: 'text: aaaaaaaaaaaaaaaaaaaaaaab | pattern: aaaab' }} caption="23 a's and a b, searched for “aaaab”. Each of the naive search's 20 shifts matches four a's before the fifth comparison decides: 100 comparisons. After each mismatch KMP keeps three a's (lps[3] = 3), so it compares each text letter at most twice: 43 comparisons, plus 7 for the table." />
+
+</Section>
+
+<Section step="predict" title="Your turn: where does the pattern land?">
+
+Now the pattern is “aaa” and the text “aaaabaaa”. The run builds the table first, with two questions, then asks at
+every comparison of the search. Once two letters have matched, the choices also offer the naive restart, which KMP
+never makes. After each match, watch how far the pattern moves.
+
+<PredictChallenge slug="kmp" settings={{ input: 'text: aaaabaaa | pattern: aaa' }} goal={7} />
+
+</Section>
+
+<Section step="do" title="Building the table, then hashing windows">
+
+The table is built with the same move, run on the pattern against itself. `border` is the length of the border found
+so far, and the next pair to compare is P[i] and P[border]. If they match, lps[i] = border + 1 and i moves on. If not,
+fall back to the next-longest border, lps[border − 1], and try again; only when no border is left is lps[i] = 0. Each
+comparison moves i on or shrinks the border, and the border, growing at most one per step of i, can't shrink more than
+m times: under 2m comparisons, O(m). Here it is for “aabaaab”.
+
+<TraceCode
+  snippet="kmp-lps-table"
+  question="At i = 5 the border is “aa” (border = 2), and P[5] = 'a' fails against P[2] = 'b'. What is border set to next?"
+  choices={['0', '1', '2']}
+  answer={1}
+  why="border = lps[1] = 1: “aa” has the shorter border “a”, the next candidate to extend. P[5] = 'a' matches P[1], so lps[5] = 2, and the program prints 0 1 0 1 2 2 3. Dropping straight to 0 would set lps[5] = 1, too short, and lps[6] would come out 0 instead of 3."
+/>
+
+The search falls back the same way, j becoming lps[j − 1] after a mismatch, and that step is easy to get wrong.
+
+<Misconception
+  id="skip-matched-letters"
+  title="After a mismatch, the pattern can jump past every letter that matched"
+  probes={[
+    {
+      q: 'Searching “aaab” for “aab”, shift 0 matches “aa” and then fails. A search that slides past both matched letters reaches shift 2, where the pattern no longer fits, and stops. What has it missed?',
+      choices: ['Nothing: a match can’t start inside letters that already matched', 'The match at shift 1', 'Nothing: “aab” doesn’t occur in “aaab”'],
+      answer: 1,
+      trap: 0,
+      why: 'T[1..3] is “aab”. The matched “aa” has the border “a”, so a match can start on its last letter. KMP keeps that a (lps[1] = 1) and finds the match at 1.',
+    },
+    {
+      q: 'When is it safe to slide the pattern past all j letters that just matched?',
+      choices: ['Always: those letters have already been read', 'Only when P[0..j − 1] has no border, so lps[j − 1] = 0', 'Only when j is 1'],
+      answer: 1,
+      trap: 0,
+      why: 'A border is a stretch at the end of what matched that is also the pattern’s start, so a match could begin there. Only with no border can the pattern skip all j letters.',
+    },
+  ]}
+>
+
+Sliding past everything that matched is only safe when the matched part has no border. If its end repeats the pattern's
+start, a match can begin inside it, and jumping past can miss it. KMP slides by j − lps[j − 1], not by j, keeping
+exactly the letters that could still start one: in the first run above, the “ab” at the end of “abcab”.
+
+</Misconception>
+
+<Misconception
+  id="border-no-overlap"
+  title="A border's prefix and suffix can't overlap"
+  probes={[
+    {
+      q: 'What is the longest border of “aaaa”?',
+      choices: ['“aa”', '“aaa”', '“aaaa”'],
+      answer: 1,
+      trap: 0,
+      why: '“aaa” is both the first three letters and the last three, sharing two letters, which is allowed. “aaaa” itself is too long: a border must be shorter than the whole.',
+    },
+    {
+      q: 'KMP searches “aaaaa” for “aaa” and reports a match at 0. Where does the next match it reports start?',
+      choices: ['1', '2', 'There is no other match'],
+      answer: 0,
+      trap: 1,
+      why: 'lps[2] = 2, since “aa” is a border of “aaa”. After the match the pattern keeps two letters and slides one place, and the next letter completes a match at 1, then another at 2.',
+    },
+  ]}
+>
+
+A border only has to be shorter than the whole string; its two copies may share letters. “abca” is a border of
+“abcabca”, and the lps table of “aaaa” is 0, 1, 2, 3. Overlapping borders are how KMP finds overlapping matches: in
+the challenge above, after the match at 0, lps[2] = 2 kept two a's, and the pattern slid one place, onto the match at 1.
+
+</Misconception>
+
+Rabin–Karp takes a different shortcut: it compares each window's hash with the pattern's. Equal words always get equal
+hashes, so a window with a different hash is skipped unread. The visualiser's hash is like the one in
+[the hash tables lesson](/learn/hash-tables), with smaller numbers: letters are digits from a = 1 to z = 26, read in
+base 26, keeping the remainder mod 101. For “car” that is (3 × 26² + 1 × 26 + 18) mod 101 = 52.
+
+Hashing each window from scratch would cost m steps. So the hash **rolls**, like a
+[sliding window](/learn/sliding-window)'s running total: take out the leaving letter's share (its value × $26^{m-1}$),
+multiply the rest by 26, and add the entering letter, a few steps whatever m is.
+
+<Explore slug="rabin-karp" settings={{ input: 'text: racecar | pattern: car' }} caption="Search “racecar” for “car”, which hashes to 52. Windows 0, 2 and 3 (“rac”, “cec” and “eca”, hashes 77, 40 and 25) are skipped without reading a letter. Window 1, “ace”, also hashes to 52: a spurious hit, rejected by one letter comparison, 'a' against 'c'. Window 4 hashes to 52 and its 3 letters agree: a match at 4. That is 5 hash comparisons and 4 letter comparisons." />
+
+<Misconception
+  id="equal-hash-is-match"
+  title="Equal hashes mean the window matches"
+  probes={[
+    {
+      q: 'With the visualiser’s hash, “one” and “dab” both hash to 5. Searching for “dab”, Rabin–Karp reaches the window “one”. What does it do?',
+      choices: ['Reports a match: the hashes are equal', 'Compares letters, finds that ‘o’ is not ‘d’, and moves on', 'Skips the window without comparing anything'],
+      answer: 1,
+      trap: 0,
+      why: 'Equal hashes only say the window might match, and the first letter comparison shows it doesn’t: a spurious hit. Skipping without a check is only right when the hashes differ.',
+    },
+    {
+      q: 'A Rabin–Karp search for an 8-letter pattern switches its modulus from 101 to a prime near a billion. What happens to spurious hits?',
+      choices: ['They become impossible, so the letter check can go', 'They become rare, but the letter check is still needed', 'They become more common'],
+      answer: 1,
+      trap: 0,
+      why: 'There are about 200 billion 8-letter windows and only a billion values, so some different windows must share one. A big modulus makes a clash unlikely, never impossible.',
+    },
+  ]}
+>
+
+A hash squeezes every window into one of a few values, 101 here. There are 17,576 three-letter words, so about 174 share
+each value on average. Different hashes prove two words differ; equal hashes only mean “maybe”, so Rabin–Karp compares
+the letters of every hit. A larger modulus makes spurious hits rarer; with more possible windows than values, never
+impossible.
+
+</Misconception>
+
+So Rabin–Karp is expected O(n + m), not guaranteed: each hit costs up to m letter comparisons, and a weak hash, or
+aaaa…a searched for aaa, makes nearly every window a hit: O(n·m). Its strength is many patterns of one length at once:
+keep their hashes in a hash set and look up each window's hash, in one pass.
+
+A third linear method, the [Z-algorithm](/visualisers/z-algorithm), joins the pattern, a separator and the text into one
+string and measures, at every position, how far the letters agree with its start; where that reaches m, the pattern
+starts. Like KMP it reuses earlier comparisons, so it is O(n + m) too.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is the lps table of “ababa”?',
+      choices: ['0 0 1 2 3', '0 0 1 2 1', '0 1 2 3 4', '0 0 1 0 1'],
+      answer: 0,
+      why: 'Each entry is the length of the longest border of the prefix ending there: “a” for “aba”, “ab” for “abab” and “aba” for “ababa”, whose two copies share the middle a. A prefix is never its own border, so not 0 1 2 3 4.',
+      traps: { 1: 'border-no-overlap' },
+    },
+    {
+      q: 'P = “abab”, so lps = [0, 0, 1, 2]. KMP has matched “aba”, and the next text letter fails against P[3]. What does it do next?',
+      choices: [
+        'Sets j = lps[2] = 1 and compares the same text letter with P[1]',
+        'Goes back two text letters and restarts the pattern',
+        'Sets j = 0 and compares the same text letter with P[0]',
+        'Sets j = 0 and moves on to the next text letter',
+      ],
+      answer: 0,
+      why: 'The last matched letter, a, is also the pattern’s first, so a match may start there. KMP keeps it (j = 1) and compares the failed letter again, against P[1]. Going back is the naive search; j = 0 throws away a possible match.',
+      traps: { 2: 'skip-matched-letters' },
+    },
+    {
+      q: 'KMP can compare one text letter several times in a row. Why does its search still make at most 2n comparisons?',
+      choices: [
+        'Each comparison moves i on or slides the pattern right, and each can happen at most n times',
+        'It slides past every letter that matched, so no letter is compared twice',
+        'It compares each text letter exactly once',
+      ],
+      answer: 0,
+      why: 'A match moves i on. A mismatch moves i on (when j is 0) or slides the pattern at least one place right. Neither i nor the pattern ever moves back, so each moves right at most n times.',
+      traps: { 1: 'skip-matched-letters' },
+    },
+    {
+      q: 'A Rabin–Karp search (mod 101) reports every window whose hash equals the pattern’s, without comparing letters. What goes wrong?',
+      choices: [
+        'Nothing: equal hashes mean equal words',
+        'It reports windows that don’t match: different words share each of the 101 values',
+        'It misses real matches: a match can hash differently from the pattern',
+      ],
+      answer: 1,
+      why: 'Many words share each value: “car” and “ace” both hash to 52. Equal words always hash equally, so no match is missed, but every hit needs its letters checked.',
+      traps: { 0: 'equal-hash-is-match' },
+    },
+    {
+      q: 'You must check a long text for any of 1,000 banned words, all 8 letters long. Which plan reads the text only once?',
+      choices: ['Rabin–Karp, with the 1,000 pattern hashes in a hash set', 'KMP, run once for each word', 'The naive search, run once for each word'],
+      answer: 0,
+      why: 'Each window’s rolling hash is looked up in the set in O(1) on average, and only hits get their letters checked. KMP once per word reads the text 1,000 times.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="kmp-and-rabin-karp"
+  prompt="How does KMP find a pattern without ever moving back in the text, and why is that O(n + m)? How does Rabin–Karp skip most windows, and why must it still compare letters?"
+  rubric={[
+    'After a mismatch, the j text letters just matched are known to be P[0..j − 1], so they need not be read again.',
+    'lps[j − 1], the longest border of that prefix, is how many of them can still start a match; KMP keeps exactly those.',
+    'Each comparison moves the text pointer on or slides the pattern right: at most 2n comparisons, plus O(m) for the table.',
+    'Rabin–Karp compares each window’s hash with the pattern’s, rolling it in O(1) per slide, and skips windows whose hashes differ.',
+    'Different words can share a hash, so every hit has its letters checked; many hits make it O(n·m).',
+  ]}
+  example="After j letters match and the next fails, KMP knows those text letters are P[0..j − 1]. lps[j − 1], the longest border of that prefix, is how many can still start a match, so it slides the pattern to keep them and compares the same text letter again. Every comparison moves the text pointer on or slides the pattern right: at most 2n comparisons, plus O(m) for the table. Rabin–Karp compares hashes instead: each window's hash rolls in O(1), and a different hash proves there is no match. Different words can share a hash, so every hit has its letters compared; many hits make it O(n·m)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The naive search restarts after every mismatch and reads the text again: O(n·m) on text like aaaa…ab.
+- A border is a proper prefix that is also a suffix; its two copies may overlap. lps[i] is the length of the longest
+  border of P[0..i], built by extending a border or falling back to a shorter one, in O(m).
+- After a mismatch with j letters matched, KMP sets j = lps[j − 1] and compares the same text letter again. The text
+  pointer never moves back: O(n + m) in all.
+- Rabin–Karp rolls a window's hash in O(1) and compares letters only on a hit. Hits can be spurious, so the check stays:
+  expected O(n + m), O(n·m) at worst.
+- Next: **palindromes**, where Manacher's algorithm reuses mirror images as KMP reuses borders
+  ([its visualiser](/visualisers/manacher)), and **tries**, for many words at once. Practise with
+  [Longest Palindromic Substring](/practice/longest-palindromic-substring) and
+  [Build a Prefix Tree](/practice/implement-trie), or try your own text on the [KMP](/visualisers/kmp),
+  [Rabin–Karp](/visualisers/rabin-karp) and [Z-algorithm](/visualisers/z-algorithm) visualisers.
+
+</Section>
