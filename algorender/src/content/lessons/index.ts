@@ -35,6 +35,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'linked-lists',
+    title: 'Linked lists: cheap to splice, slow to reach',
+    concept: 'linked-lists',
+    summary: 'Why linking a node in takes two pointer writes but reaching index i takes i hops, how head and tail make the ends cheap, and how to reverse a list in place.',
+    minutes: 20,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',

@@ -216,6 +216,91 @@ console.log(total(values, 0));
 `,
     },
   },
+  {
+    id: 'reverse-list',
+    title: 'Reversing a linked list in place',
+    code: {
+      python: `class Node:
+    def __init__(self, value, next):
+        self.value = value
+        self.next = next
+
+def reverse(head):
+    prev = None
+    cur = head
+    while cur is not None:
+        nxt = cur.next
+        cur.next = prev
+        prev = cur
+        cur = nxt
+    return prev
+
+head = Node(1, Node(2, Node(3, None)))
+head = reverse(head)
+node = head
+while node is not None:
+    print(node.value)
+    node = node.next
+`,
+      javascript: `class Node {
+  constructor(value, next) {
+    this.value = value;
+    this.next = next;
+  }
+}
+
+function reverse(head) {
+  let prev = null;
+  let cur = head;
+  while (cur !== null) {
+    const nxt = cur.next;
+    cur.next = prev;
+    prev = cur;
+    cur = nxt;
+  }
+  return prev;
+}
+
+let head = new Node(1, new Node(2, new Node(3, null)));
+head = reverse(head);
+let node = head;
+while (node !== null) {
+  console.log(node.value);
+  node = node.next;
+}
+`,
+      typescript: `class Node {
+  value: number;
+  next: Node | null;
+
+  constructor(value: number, next: Node | null) {
+    this.value = value;
+    this.next = next;
+  }
+}
+
+function reverse(head: Node | null): Node | null {
+  let prev: Node | null = null;
+  let cur = head;
+  while (cur !== null) {
+    const nxt = cur.next;
+    cur.next = prev;
+    prev = cur;
+    cur = nxt;
+  }
+  return prev;
+}
+
+let head: Node | null = new Node(1, new Node(2, new Node(3, null)));
+head = reverse(head);
+let node = head;
+while (node !== null) {
+  console.log(node.value);
+  node = node.next;
+}
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

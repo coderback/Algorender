@@ -8,7 +8,15 @@ async function expectAccessible(page: Page) {
   expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 }
 
-const lessonPaths = ['arrays', 'stacks-queues', 'binary-search', 'two-pointers', 'memoization', 'dijkstra'];
+const lessonPaths = [
+  'arrays',
+  'stacks-queues',
+  'linked-lists',
+  'binary-search',
+  'two-pointers',
+  'memoization',
+  'dijkstra',
+];
 
 async function openLesson(page: Page, slug: string) {
   await page.goto(`/learn/${slug}`);

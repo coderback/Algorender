@@ -79,6 +79,7 @@ concepts:
     summary: Nodes joined by pointers, so inserting is cheap but finding is not.
     prereqs: [arrays]
     visualisers: [linked-list]
+    lesson: linked-lists
 
   # ── Searching and sorting ────────────────────────────────────
   - id: linear-search
