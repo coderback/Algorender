@@ -91,6 +91,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'dynamic-programming',
+    title: 'Dynamic programming: fill a table from the bottom up',
+    concept: 'dynamic-programming',
+    summary: 'Four decisions turn a problem into a table you fill in a loop: what a cell means, how it is built, where it starts, and an order that keeps every input ready.',
+    minutes: 20,
+  },
+  {
     slug: 'dijkstra',
     title: "Dijkstra's algorithm: settle the closest node first",
     concept: 'shortest-paths',

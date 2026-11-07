@@ -18,6 +18,7 @@ const lessonPaths = [
   'two-pointers',
   'sliding-window',
   'memoization',
+  'dynamic-programming',
   'dijkstra',
 ];
 

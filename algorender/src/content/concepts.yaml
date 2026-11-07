@@ -275,6 +275,7 @@ concepts:
     summary: Filling a table of subproblem answers in an order where each cell's inputs are ready.
     prereqs: [memoization]
     visualisers: [coin-change, house-robber, unique-paths, knapsack-01]
+    lesson: dynamic-programming
   - id: sequence-dp
     title: Dynamic programming on sequences
     track: design

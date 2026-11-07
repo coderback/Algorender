@@ -535,6 +535,64 @@ console.log(longestRun(costs, 6));
 `,
     },
   },
+  {
+    id: 'fewest-coins',
+    title: 'The fewest coins for an amount, filled bottom-up',
+    code: {
+      python: `def fewest_coins(coins, amount):
+    too_many = amount + 1
+    dp = [too_many] * (amount + 1)
+    dp[0] = 0
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c <= a and dp[a - c] + 1 < dp[a]:
+                dp[a] = dp[a - c] + 1
+    if dp[amount] == too_many:
+        return -1
+    return dp[amount]
+
+print(fewest_coins([1, 3, 4], 6))
+`,
+      javascript: `function fewestCoins(coins, amount) {
+  const tooMany = amount + 1;
+  const dp = new Array(amount + 1).fill(tooMany);
+  dp[0] = 0;
+  for (let a = 1; a <= amount; a++) {
+    for (const c of coins) {
+      if (c <= a && dp[a - c] + 1 < dp[a]) {
+        dp[a] = dp[a - c] + 1;
+      }
+    }
+  }
+  if (dp[amount] === tooMany) {
+    return -1;
+  }
+  return dp[amount];
+}
+
+console.log(fewestCoins([1, 3, 4], 6));
+`,
+      typescript: `function fewestCoins(coins: number[], amount: number): number {
+  const tooMany = amount + 1;
+  const dp: number[] = new Array(amount + 1).fill(tooMany);
+  dp[0] = 0;
+  for (let a = 1; a <= amount; a++) {
+    for (const c of coins) {
+      if (c <= a && dp[a - c] + 1 < dp[a]) {
+        dp[a] = dp[a - c] + 1;
+      }
+    }
+  }
+  if (dp[amount] === tooMany) {
+    return -1;
+  }
+  return dp[amount];
+}
+
+console.log(fewestCoins([1, 3, 4], 6));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {
