@@ -70,6 +70,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'balanced-trees',
+    title: 'Self-balancing trees: lift the taller side',
+    concept: 'balanced-trees',
+    summary: "Keep every node's two sides within one level of each other: how an AVL tree finds a node at ±2 on the way back up, how one or two rotations fix it without breaking the order, and why sorted keys no longer make a chain.",
+    minutes: 15,
+  },
+  {
     slug: 'heaps',
     title: 'Heaps and priority queues: the most urgent first',
     concept: 'heaps',

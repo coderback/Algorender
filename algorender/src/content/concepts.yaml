@@ -157,6 +157,7 @@ concepts:
     summary: AVL rotations keep a search tree's height near log n whatever the insert order.
     prereqs: [binary-search-trees]
     visualisers: [avl-tree]
+    lesson: balanced-trees
   - id: b-trees
     title: B-trees
     track: trees

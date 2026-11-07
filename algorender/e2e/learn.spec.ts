@@ -15,6 +15,7 @@ const lessonPaths = [
   'hash-tables',
   'binary-search',
   'binary-search-trees',
+  'balanced-trees',
   'heaps',
   'two-pointers',
   'sliding-window',

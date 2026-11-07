@@ -693,6 +693,76 @@ console.log(get(buckets, 'on'));
 `,
     },
   },
+  {
+    id: 'rotate-right',
+    title: 'Rotating a leaning subtree right',
+    code: {
+      python: `class BstNode:
+    def __init__(self, key, left):
+        self.key = key
+        self.left = left
+        self.right = None
+
+def rotate_right(node):
+    lifted = node.left
+    node.left = lifted.right
+    lifted.right = node
+    return lifted
+
+root = BstNode(30, BstNode(20, BstNode(10, None)))
+print('root ' + str(root.key))
+root = rotate_right(root)
+print('root ' + str(root.key))
+print(str(root.left.key) + ' < ' + str(root.key) + ' < ' + str(root.right.key))
+`,
+      javascript: `class BstNode {
+  constructor(key, left) {
+    this.key = key;
+    this.left = left;
+    this.right = null;
+  }
+}
+
+function rotateRight(node) {
+  const lifted = node.left;
+  node.left = lifted.right;
+  lifted.right = node;
+  return lifted;
+}
+
+let root = new BstNode(30, new BstNode(20, new BstNode(10, null)));
+console.log('root ' + root.key);
+root = rotateRight(root);
+console.log('root ' + root.key);
+console.log(root.left.key + ' < ' + root.key + ' < ' + root.right.key);
+`,
+      typescript: `class BstNode {
+  key: number;
+  left: BstNode | null;
+  right: BstNode | null;
+
+  constructor(key: number, left: BstNode | null) {
+    this.key = key;
+    this.left = left;
+    this.right = null;
+  }
+}
+
+function rotateRight(node: BstNode): BstNode {
+  const lifted = node.left!;
+  node.left = lifted.right;
+  lifted.right = node;
+  return lifted;
+}
+
+let root = new BstNode(30, new BstNode(20, new BstNode(10, null)));
+console.log('root ' + root.key);
+root = rotateRight(root);
+console.log('root ' + root.key);
+console.log(root.left!.key + ' < ' + root.key + ' < ' + root.right!.key);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {
