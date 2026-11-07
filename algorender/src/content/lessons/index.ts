@@ -77,6 +77,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'tries',
+    title: 'Tries: one letter per edge',
+    concept: 'tries',
+    summary: 'Why a trie spells each word along a path from the root, why insert, search and starts-with take one step per letter however many words are stored, why a path is not a word without its end mark, and what all those nodes cost in memory.',
+    minutes: 15,
+  },
+  {
     slug: 'heaps',
     title: 'Heaps and priority queues: the most urgent first',
     concept: 'heaps',

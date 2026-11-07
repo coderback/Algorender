@@ -1,0 +1,268 @@
+<Section step="hook" title="Every word that starts with “ca”">
+
+Type “ca” on a phone and it offers car, card and cat before you reach the third letter, from a dictionary of a few
+hundred thousand words. A [hash set](/learn/hash-tables) of those words would say at once whether “cat” is one of them,
+but to find the words that start with “ca” it would have to check every word it holds.
+
+A **trie** (usually said “try”; the name comes from retrieval) is built for that question. It stores words letter by
+letter along paths down from a root, so every word that starts with “ca” sits below one node. Reaching that node takes
+two steps, one per letter, however many words the trie holds.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="trie (prefix tree)">A tree whose edges are letters. The path from the root down to a node spells that node's prefix; the root stands for the empty string.</Term>
+  <Term name="prefix">The first few letters of a word: “ca” is a prefix of “car” and of “cat”. A word counts as a prefix of itself.</Term>
+  <Term name="end-of-word mark">A flag on a node saying that a stored word ends there, drawn as a double ring. Without it, a trie can't tell a stored word from the start of a longer one.</Term>
+  <Term name="children">How a node reaches the next letter: a map from each letter to its child node, or an array of 26 slots, one per letter, most of them empty.</Term>
+  <Term name="search and starts-with">Search asks whether a whole word is stored. Starts-with asks whether any stored word begins with a prefix; autocomplete goes on to list them all.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One letter per edge">
+
+This trie holds car, card, care, cat, do, dog and dot. Its nodes carry no letters themselves: each edge is labelled with
+one, and the path down to a node spells its prefix. The four words starting with c hang below one node for “c” and one
+for “ca”, so those two letters are stored once, not four times.
+
+<Explore slug="trie" settings={{ start: 'dictionary' }} caption="Insert “dove”: it follows the d and o edges that do, dog and dot already use, then adds nodes for “dov” and “dove” and marks the last one: 4 child lookups, 2 nodes added. Then run Autocomplete with “ca”: it walks c and a, visits everything below in a–z order, and outputs car, card, care and cat." />
+
+Insert follows the child for each letter where there is one and adds one where there isn't (after the first added node,
+every letter needs a new one), then marks the node it stopped on. Search walks the same way and gives up at the first
+missing child. Autocomplete walks to the prefix's node and collects everything below it: each node's own word first,
+then its children from a to z, so the words come out in alphabetical order.
+
+Insert and search never look at a word off their path. Each step asks one node for one child, so a word of length L
+takes at most L steps, whether the trie holds seven words or seven million. A balanced
+[binary search tree](/learn/binary-search-trees) of n words does worse: it compares the target with about log₂ n stored
+words, and each comparison can read up to L letters, so a search costs O(L log n).
+
+<KeyIdea>
+
+**A trie spells every word along a path from the root, one letter per edge, so words that share a prefix share its
+nodes. Insert, search and starts-with follow one child per letter: O(L) for a word of length L, however many words are
+stored. A mark on each node says whether a word ends there.**
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: word or only a prefix?">
+
+Before each answer, look at where the walk stops: is that node marked, and does anything hang below it?
+Search for “ca”, then for “cat”. Run Autocomplete with “do”. Then delete “card”, and after it “car”. Each of those five
+operations asks one question.
+
+<PredictChallenge slug="trie" settings={{ start: 'dictionary' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="A trie in code, and what it costs">
+
+Here is a trie in code. Each node is a map (a dict in Python, an object in JavaScript) from a letter to its child, and
+the key `'$'` marks the end of a word. `insert` walks down the word, makes any missing child, marks the last node and
+returns how many nodes it added. `search` walks the same way and answers yes only if the node it stops on is marked. The
+program inserts “car” and “cat”, prints how many nodes the trie has, root included, and then asks whether “ca” is stored.
+
+<TraceCode
+  snippet="trie-insert-search"
+  question="How many nodes does insert(root, 'cat') add?"
+  choices={['3', '1', '2', '0']}
+  answer={1}
+  why="“car” already made the nodes for c and ca, so the loop follows those two and creates only the node for t: added is 1. The trie ends with 5 nodes (the root, c, ca, car and cat) for 6 letters. Then the search for “ca” finds both letters and still prints no, because the node it stops on has no end mark."
+/>
+
+The search for “ca” met no missing child and still said no. Without that last check, a trie reports every prefix of
+every word as a word.
+
+<Misconception
+  id="prefix-path-is-word"
+  title="If the path is there, the word is stored"
+  probes={[
+    {
+      q: 'A trie holds only “card” and “cart”. A search for “car” follows c, a and r and finds every child it needs. What should it return?',
+      choices: ['True: every letter was matched', 'False: the node for “car” is not marked as the end of a word', 'True, but only if “card” was inserted first'],
+      answer: 1,
+      trap: 0,
+      why: 'The path c, a, r exists because two longer words run through it, but nobody stored “car”. Only the end-of-word mark says a word ends at a node, and this one has none.',
+    },
+    {
+      q: 'A trie holds only “card”. You insert “car”. What changes?',
+      choices: ['Nothing: the path c, a, r is already there, so “car” was already stored', 'No node is added, but the node for “car” gets an end-of-word mark', 'Three new nodes are added, one per letter'],
+      answer: 1,
+      trap: 0,
+      why: 'The insert follows the existing c, a and r, so it adds no nodes. It must still set the mark: until it does, a search for “car” returns false.',
+    },
+  ]}
+>
+
+A path only says that some stored word **starts** with those letters. Whether a word **ends** there is a separate fact,
+kept in the node's mark, so search has two ways to say no: a missing child, or a walk that ends on an unmarked node.
+Starts-with is the same walk without that final check. Insert, likewise, must set the mark even when it adds no node.
+
+</Misconception>
+
+For whole words, a hash set does as well: both answer “is cat stored?” in O(L) on average, since hashing reads all L
+letters. The trie wins on prefixes. Starts-with is a walk of p steps for a prefix of length p, and autocomplete visits
+only the nodes below it, where a hash set would check every word. Collecting from the root lists every word in sorted
+order, where a hash table would have to sort its keys first.
+
+So tries turn up wherever keys are matched by how they start: search boxes that complete what you type, spell
+checkers that walk the trie letting a letter differ, word-game solvers that abandon a path of letters once no word
+starts with it, and routers that walk a trie of address bits to find the longest stored prefix of a packet's address.
+
+Delete has to undo an insert without harming the other words that share its path.
+
+<Explore slug="trie" settings={{ start: 'shared' }} caption="Five words with 33 letters fit in 15 nodes, root included, because shared starts such as “inter” are stored once. Delete “interval”: its mark goes, then the climb removes the nodes for “interval”, “interva” and “interv”, which no other word needs, and stops at “inter”, which is a word itself: 8 child lookups, 3 nodes removed." />
+
+<Misconception
+  id="delete-removes-path"
+  title="Deleting a word removes its whole path"
+  probes={[
+    {
+      q: 'A trie holds “car” and “card”. You delete “car”. Which nodes are removed?',
+      choices: ['c, ca and car: every node on the path of “car”', 'None: the node for “car” loses its mark, but “card” still runs through it', 'Only the node for “car”'],
+      answer: 1,
+      trap: 0,
+      why: 'Removing any of those nodes would cut “card” off. Delete clears the mark, sees that the node for “car” still has a child, and stops there.',
+    },
+    {
+      q: 'A trie holds “be” and “bead”. You delete “bead”. Which nodes are removed?',
+      choices: ['b, be, bea and bead: the whole path', 'bea and bead: “be” is still a word, and b leads to it', 'Only bead'],
+      answer: 1,
+      trap: 0,
+      why: 'Unmarked, the node for “bead” has no children and ends no word, so it goes, and then so does “bea”. “be” ends a stored word, so the climb stops there.',
+    },
+  ]}
+>
+
+A word's path is shared with every word that starts the same way. So delete clears the mark, then climbs towards the
+root, removing a node only while it has no children and ends no word. The first node that leads on to another word, or
+is a word itself, stops the climb: deleting “do” from the small dictionary removes only its ring, as dog and dot pass
+through it. The climb still matters: if delete only cleared marks, starts-with would go on finding “card” after
+“card” was gone.
+
+</Misconception>
+
+A trie's price is memory: a node for every distinct prefix, each carrying its children. Sharing helps only where words
+start the same way: “internal” and “interval” share five nodes, then need three each.
+
+<Misconception
+  id="trie-saves-memory"
+  title="Sharing prefixes makes a trie compact"
+  probes={[
+    {
+      q: 'You store 1,000 random 12-letter codes, made of a to z, in a trie whose nodes each have an array of 26 child slots. Compared with the 12,000 bytes of letters, the trie needs…',
+      choices: ['Less memory: shared prefixes are stored once', 'Far more memory: over 10,000 nodes of 26 slots each', 'About the same: one node per letter'],
+      answer: 1,
+      trap: 0,
+      why: 'After the first two or three letters, almost every code has a path of its own, so the trie has over 10,000 nodes. At 26 pointers of 8 bytes each, that is over 2 MB to hold 12,000 letters.',
+    },
+    {
+      q: 'Why can a plain trie take more memory than a hash set holding the same words?',
+      choices: ['It can’t: shared prefixes always make a trie the smaller of the two', 'Every distinct prefix needs its own node, and each node carries a child map or an array of slots, far bigger than the one letter it adds', 'It keeps a full copy of each word at the node where it ends'],
+      answer: 1,
+      trap: 0,
+      why: 'Sharing saves nodes only where words begin alike. Every other letter still costs a node, and a node with its children costs many times one letter.',
+    },
+  ]}
+>
+
+Every letter that isn't shared still costs a whole node, and a node is far bigger than a letter. With an array of 26
+slots on a 64-bit machine it is 26 pointers of 8 bytes, 208 bytes, standing for one letter. The five-word trie above
+has 15 nodes and 390 slots, and only 14 point to a child: every node but the root is pointed at once, by its parent. A
+map per node skips the empty slots but is a small hash table of its own. So a plain trie often takes much more memory
+than the words themselves. Compressed tries (radix trees) merge each chain of unmarked single-child nodes into one
+edge of several letters.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A trie holds a million words. At most how many child lookups does a search for “zebra” make?',
+      choices: ['5: one per letter', 'About 20: one per level of a balanced tree of a million', 'Up to a million: one per stored word', 'It depends on how many words start with z'],
+      answer: 0,
+      why: 'A search follows one child per letter, so it makes at most 5 lookups however many words are stored. About 20 is a balanced binary search tree’s count, and each of its comparisons can read a whole word.',
+    },
+    {
+      q: 'A trie holds “tea”, “ten” and “to”. Which call returns true?',
+      choices: ['search("te")', 'startsWith("te")', 'search("t")', 'startsWith("tx")'],
+      answer: 1,
+      why: '“tea” and “ten” both run through the node for “te”, so starts-with finds a path and says true. Search also needs the node to be marked as a word end, and neither “te” nor “t” is. No word starts with “tx”.',
+      traps: { 0: 'prefix-path-is-word', 2: 'prefix-path-is-word' },
+    },
+    {
+      q: 'The small dictionary holds car, card, care, cat, do, dog and dot. You delete “cat”. Which nodes are removed?',
+      choices: ['Only the node for “cat”', 'c, ca and cat: every node on its path', 'ca and cat'],
+      answer: 0,
+      why: 'Once its mark goes, the node for “cat” has no children and ends no word, so it is removed. The node for “ca” still leads to car, card and care, so the climb stops there.',
+      traps: { 1: 'delete-removes-path' },
+    },
+    {
+      q: 'The small dictionary stores 22 letters in 11 nodes, root included. If every node had an array of 26 child slots, how many slots would the trie hold?',
+      choices: ['22: one per letter stored', '286, and only 10 of them point to a child', '26: one array for the whole trie', '11: one per node'],
+      answer: 1,
+      why: 'Every node has its own array: 11 × 26 = 286 slots. Each node except the root is pointed at by one slot, its parent’s, so only 10 are in use.',
+      traps: { 0: 'trie-saves-memory', 3: 'trie-saves-memory' },
+    },
+    {
+      q: 'Autocomplete with “do” on the small dictionary outputs do, dog and dot. Why in alphabetical order?',
+      choices: [
+        'Those words were inserted in that order',
+        'The results are sorted once they have all been collected',
+        'The collecting walk outputs a node’s own word before going deeper, and visits children from a to z',
+      ],
+      answer: 2,
+      why: '“do” comes out first because the walk starts at its node, then “dog” before “dot” because g comes before t. Nothing is sorted afterwards, and the order of the inserts makes no difference.',
+    },
+    {
+      q: 'Which question does a trie answer far faster than a hash set holding the same words?',
+      choices: ['Is “cart” stored?', 'Add “cart” if it is missing', 'Which stored words start with “car”?'],
+      answer: 2,
+      why: 'Both check or add a whole word in O(L) on average. But a word’s bucket says nothing about how it starts, so the hash set checks all n words, while the trie walks three edges and collects what is below.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="trie-paths"
+  prompt="How does a trie store words? Why does a lookup take a step per letter however many words it holds, and how does it tell a stored word from a prefix?"
+  rubric={[
+    'Each edge is a letter, so the path from the root to a node spells a prefix, and words that share a prefix share its nodes.',
+    'Insert, search and starts-with follow one child per letter: at most L steps for a word of length L, however many words are stored.',
+    'Each node has a mark for a word ending there; search must end on a marked node, so a bare prefix is not found.',
+    'The price is memory: a node for every distinct prefix, each with a child map or an array of slots.',
+  ]}
+  example="A trie keeps words along paths from a root. Each edge is a letter, so the path down to a node spells a prefix, and words that start the same way share those nodes: car and cat share the nodes for c and ca. Every operation follows the child for each letter in turn from the root, so a word of length L takes at most L steps, however many words are stored. Each node also has a mark saying a word ends there, and a search must finish on a marked node; otherwise the letters are only the start of longer words. The price is memory: a node for every distinct prefix, each with its own map or array of children."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A trie stores words along paths from the root, one letter per edge, so words that share a prefix share its nodes.
+- Insert, search and starts-with follow at most L children for a word or prefix of length L: O(L), however many words
+  are stored.
+- A search must end on a marked node: “ca” is not stored just because “car” is.
+- Autocomplete walks to the prefix's node and collects everything below it, in sorted order when children are visited
+  from a to z. A hash set would check every word.
+- Delete clears the mark, then removes nodes on the way up only while no other word needs them.
+- The price is memory: a node for every distinct prefix, each with a child map or an array of slots.
+- Next: [string matching](/learn/string-matching), which finds a pattern anywhere inside a text. Practise with
+  [Build a Prefix Tree](/practice/implement-trie), then [Word Dictionary with Wildcards](/practice/word-dictionary),
+  where a `.` matches any letter, so the search tries every child and backs up when a branch fails, as in
+  [backtracking](/learn/backtracking). Or open the [trie visualiser](/visualisers/trie) to try more operations.
+
+</Section>

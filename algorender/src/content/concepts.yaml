@@ -179,6 +179,7 @@ concepts:
     summary: One letter per edge, so every path from the root spells a prefix.
     prereqs: [linked-lists]
     visualisers: [trie]
+    lesson: tries
   - id: union-find
     title: Union-find
     track: trees

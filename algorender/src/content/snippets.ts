@@ -1234,6 +1234,106 @@ subsets(letters, 0, path);
 `,
     },
   },
+  {
+    id: 'trie-insert-search',
+    title: 'Inserting words into a trie and searching for a prefix',
+    code: {
+      python: `def insert(node, word):
+    added = 0
+    for ch in word:
+        if ch not in node:
+            node[ch] = {}
+            added += 1
+        node = node[ch]
+    node['$'] = 1
+    return added
+
+def search(node, word):
+    for ch in word:
+        if ch not in node:
+            return 'no'
+        node = node[ch]
+    if '$' in node:
+        return 'yes'
+    return 'no'
+
+root = {}
+nodes = 1
+nodes += insert(root, 'car')
+nodes += insert(root, 'cat')
+print(nodes)
+print(search(root, 'ca'))
+`,
+      javascript: `function insert(node, word) {
+  let added = 0;
+  for (const ch of word) {
+    if (!(ch in node)) {
+      node[ch] = {};
+      added += 1;
+    }
+    node = node[ch];
+  }
+  node['$'] = 1;
+  return added;
+}
+
+function search(node, word) {
+  for (const ch of word) {
+    if (!(ch in node)) {
+      return 'no';
+    }
+    node = node[ch];
+  }
+  if ('$' in node) {
+    return 'yes';
+  }
+  return 'no';
+}
+
+const root = {};
+let nodes = 1;
+nodes += insert(root, 'car');
+nodes += insert(root, 'cat');
+console.log(nodes);
+console.log(search(root, 'ca'));
+`,
+      typescript: `type Trie = { [key: string]: Trie | number };
+
+function insert(node: Trie, word: string): number {
+  let added = 0;
+  for (const ch of word) {
+    if (!(ch in node)) {
+      node[ch] = {};
+      added += 1;
+    }
+    node = node[ch] as Trie;
+  }
+  node['$'] = 1;
+  return added;
+}
+
+function search(node: Trie, word: string): string {
+  for (const ch of word) {
+    if (!(ch in node)) {
+      return 'no';
+    }
+    node = node[ch] as Trie;
+  }
+  if ('$' in node) {
+    return 'yes';
+  }
+  return 'no';
+}
+
+const root: Trie = {};
+let nodes = 1;
+nodes += insert(root, 'car');
+nodes += insert(root, 'cat');
+console.log(nodes);
+console.log(search(root, 'ca'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {
