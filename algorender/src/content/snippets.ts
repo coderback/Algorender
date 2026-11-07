@@ -822,6 +822,93 @@ for (const v of stops) {
 `,
     },
   },
+  {
+    id: 'union-by-rank',
+    title: 'Union by rank, with path compression',
+    code: {
+      python: `def find_root(parent, x):
+    if parent[x] != x:
+        parent[x] = find_root(parent, parent[x])
+    return parent[x]
+
+def union(parent, rank, a, b):
+    ra = find_root(parent, a)
+    rb = find_root(parent, b)
+    if ra == rb:
+        return 0
+    if rank[ra] < rank[rb]:
+        ra, rb = rb, ra
+    parent[rb] = ra
+    if rank[ra] == rank[rb]:
+        rank[ra] += 1
+    return 1
+
+forest = [0, 0, 0, 2, 4, 4]
+rank = [2, 0, 1, 0, 1, 0]
+groups = 2
+groups -= union(forest, rank, 3, 5)
+print(groups)
+`,
+      javascript: `function findRoot(parent, x) {
+  if (parent[x] !== x) {
+    parent[x] = findRoot(parent, parent[x]);
+  }
+  return parent[x];
+}
+
+function union(parent, rank, a, b) {
+  let ra = findRoot(parent, a);
+  let rb = findRoot(parent, b);
+  if (ra === rb) {
+    return 0;
+  }
+  if (rank[ra] < rank[rb]) {
+    [ra, rb] = [rb, ra];
+  }
+  parent[rb] = ra;
+  if (rank[ra] === rank[rb]) {
+    rank[ra] += 1;
+  }
+  return 1;
+}
+
+const forest = [0, 0, 0, 2, 4, 4];
+const rank = [2, 0, 1, 0, 1, 0];
+let groups = 2;
+groups -= union(forest, rank, 3, 5);
+console.log(groups);
+`,
+      typescript: `function findRoot(parent: number[], x: number): number {
+  if (parent[x] !== x) {
+    parent[x] = findRoot(parent, parent[x]);
+  }
+  return parent[x];
+}
+
+function union(parent: number[], rank: number[], a: number, b: number): number {
+  let ra = findRoot(parent, a);
+  let rb = findRoot(parent, b);
+  if (ra === rb) {
+    return 0;
+  }
+  if (rank[ra] < rank[rb]) {
+    [ra, rb] = [rb, ra];
+  }
+  parent[rb] = ra;
+  if (rank[ra] === rank[rb]) {
+    rank[ra] += 1;
+  }
+  return 1;
+}
+
+const forest: number[] = [0, 0, 0, 2, 4, 4];
+const rank: number[] = [2, 0, 1, 0, 1, 0];
+let groups = 2;
+groups -= union(forest, rank, 3, 5);
+console.log(groups);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

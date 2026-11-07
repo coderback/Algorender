@@ -119,6 +119,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'union-find',
+    title: 'Union-find: same root, same group',
+    concept: 'union-find',
+    summary: 'Disjoint sets as trees in one parent array: why two elements share a set exactly when they reach the same root, why union links roots and never elements, and how union by rank and path compression make each operation nearly constant, amortised.',
+    minutes: 15,
+  },
+  {
     slug: 'dijkstra',
     title: "Dijkstra's algorithm: settle the closest node first",
     concept: 'shortest-paths',

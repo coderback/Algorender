@@ -183,6 +183,7 @@ concepts:
     summary: Disjoint sets as a forest, with path compression for near-constant time.
     prereqs: [arrays, recursion]
     visualisers: [union-find]
+    lesson: union-find
 
   # ── Patterns ─────────────────────────────────────────────────
   - id: two-pointers
