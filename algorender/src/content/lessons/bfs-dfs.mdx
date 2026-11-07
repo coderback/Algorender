@@ -156,7 +156,7 @@ node, not necessarily the shortest. For the fewest edges, use BFS.
 Each search has its jobs. BFS answers "how few steps?": the fewest hops between two people, the fewest moves in a
 puzzle, how fast something spreads (several starts at level 0 give each node its distance to the nearest). DFS answers
 "can I get there?" and "is there a loop?": filling regions, finding cycles, and
-**topological sort**, ordering tasks so each comes after what it depends on. Neither goes beyond what its start can
+[topological sort](/learn/topological-sort), ordering tasks so each comes after what it depends on. Neither goes beyond what its start can
 reach.
 
 <Explore slug="breadth-first-search" settings={{ preset: 'components' }} caption="BFS from A discovers B and C at level 1 and D at level 2, then the queue runs dry. E, F and G are never discovered: no edge joins them to A's group." />
@@ -275,7 +275,7 @@ but swaps the queue for a priority queue, so nodes come out in order of total di
 - In BFS, mark a node the moment it is discovered, so it joins the queue once. Both take O(V + E) with adjacency
   lists, O(V²) with a matrix, and O(V) extra memory. Neighbour order decides the visit order.
 - A search reaches only what its start can reach; start again from each undiscovered node to cover every component.
-- Next: **topological sort**, [Dijkstra's algorithm](/learn/dijkstra) for weighted edges, **minimum spanning trees**
+- Next: [topological sort](/learn/topological-sort), [Dijkstra's algorithm](/learn/dijkstra) for weighted edges, **minimum spanning trees**
   and **strongly connected components**. Write both searches in [Write breadth-first search](/code/bfs-levels) and
   [Write depth-first search](/code/dfs-order), then practise with [Count the Islands](/practice/number-of-islands), a
   search per island, and [Spreading Rot](/practice/rotting-oranges), a BFS from every rotten orange at once.

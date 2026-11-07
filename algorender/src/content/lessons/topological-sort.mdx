@@ -1,0 +1,285 @@
+<Section step="hook" title="Socks before shoes">
+
+Your socks and your shirt can go on in either order, but your socks must go on before your shoes. A build is the same:
+a library has to be compiled before any program that uses it. Draw each task as a node and each “must come first” as
+an arrow, and you have a directed graph.
+
+A **topological order** lists the tasks so that every arrow points forward: each task comes after everything it
+depends on. Often many orders work. Sometimes none does: if two tasks each wait for the other, neither can go first.
+This lesson finds an order, or proves there isn't one, in time proportional to the size of the graph.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="dependency edge">An edge u → v says u must come before v: v depends on u. A prerequisite points at the course it unlocks.</Term>
+  <Term name="topological order">A list of every node in which each edge u → v has u earlier than v.</Term>
+  <Term name="in-degree">The number of edges into a node: how many things it waits for. A node with in-degree 0 is ready.</Term>
+  <Term name="cycle">A path of edges that comes back to where it started, such as A → B → C → A.</Term>
+  <Term name="DAG">A directed acyclic graph: a directed graph with no cycle.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Place whatever waits for nothing">
+
+These are eight courses, from Prg (programming) and Mth (maths) to ML (machine learning). An edge points from a course
+to one that needs it: Mth → DS says take maths before data structures. The visualiser runs **Kahn's algorithm**, and
+the number beside each node is its in-degree, counting only the prerequisites not yet placed.
+
+<Explore slug="topological-sort" settings={{ preset: 'courses' }} caption="Mth and Prg have no prerequisites, so both start in the queue. Placing Mth lowers Alg and DS to 1; placing Prg brings DS and Sys to 0, so they join the queue. The order comes out Mth, Prg, DS, Sys, Alg, OS, ML, Net, with 9 edges examined, one per edge. Net is the last to become ready: it needs OS too, at the end of the chain Prg → Sys → OS." />
+
+A node can be placed once everything with an edge into it is placed, and Kahn's algorithm keeps that as a count. It
+counts each node's in-degree and queues every node whose count is 0. Then, until the queue is empty, it takes the
+front node, appends it to the order, and lowers the count of every node it has an edge to. A count that reaches 0
+means that node's last prerequisite has just been placed, so it joins the queue.
+
+So every edge points forward, and the queue only decides which ready node goes next. Counting the in-degrees reads
+every edge once. After that, each node is queued and taken out once, and each edge is examined once, when the node it
+leaves is placed: O(V + E) with adjacency lists (O(V²) with a matrix), and O(V) extra memory for the counts and the
+queue.
+
+<KeyIdea>
+
+**A node is ready once everything with an edge into it has been placed. Kahn's algorithm counts each node's unplaced
+prerequisites, places ready nodes one at a time, and lowers the counts of the nodes each one points to, queueing any
+that reach 0.** Every edge ends up pointing forward, and each node and edge is handled once: O(V + E).
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: run the queue">
+
+Here A, B and C are all ready at the start. At each step, predict which node leaves the queue next, or whether the
+edge about to be followed makes its node ready. The queue is first in, first out, and ready means a count of 0.
+
+<PredictChallenge slug="topological-sort" settings={{ preset: 'many' }} goal={8} />
+
+D became ready only on its second edge, from B, and F only on its second, from E. Four times the queue held more than
+one node, and each time any of them could have gone next: this small graph has 16 valid orders, and C, B, E, A, D, F
+is one of them.
+
+</Section>
+
+<Section step="do" title="Kahn's algorithm in code, cycles, and the DFS way">
+
+Here is Kahn's algorithm in code, on three courses: ml needs both maths and code. `unlocks` holds each course's
+outgoing edges, the courses that need it. `indeg` starts at 0 for every course, and each edge adds 1 to the course it
+points to. The queue is a list with a head index, as in [breadth-first search](/learn/bfs-dfs); every course that
+leaves it joins the order, so the function returns the list itself. The second print compares the number placed with
+the number of courses.
+
+<TraceCode
+  snippet="kahn-course-order"
+  question="What does the first print show?"
+  choices={['maths ml code', 'maths code ml', 'ml maths code', 'code maths ml']}
+  answer={1}
+  why="maths and code have no prerequisites, so both are queued first, maths ahead because the dictionary lists it first. Taking maths lowers indeg['ml'] from 2 to 1, so ml waits; taking code brings it to 0 and appends it. The second line, 3 of 3, says every course was placed."
+/>
+
+The course ml joined the queue on its second edge, not its first: that wait is what separates Kahn's algorithm from
+breadth-first search.
+
+<Misconception
+  id="ready-when-reached"
+  title="A node is ready as soon as an edge reaches it"
+  probes={[
+    {
+      q: 'Edges: A → B, A → C and B → C. Kahn’s algorithm has just placed A. Which nodes are ready now?',
+      choices: ['B and C: an edge from A reaches each', 'Only B: C still waits for B', 'Neither: A’s edges are not removed yet'],
+      answer: 1,
+      trap: 0,
+      why: 'Placing A lowers C’s count from 2 to 1, so C waits for B. B’s only prerequisite was A, so its count is now 0.',
+    },
+    {
+      q: 'In Kahn’s algorithm, a course has three prerequisites. When does it join the queue?',
+      choices: ['When the first of the three is placed', 'When the last of the three is placed', 'At the start, with the courses that have none'],
+      answer: 1,
+      trap: 0,
+      why: 'Its count starts at 3 and drops by one as each prerequisite is placed, so it reaches 0 only with the last.',
+    },
+  ]}
+>
+
+An edge from a placed node satisfies **one** prerequisite. A node is ready only when its count reaches 0, when the
+**last** edge into it is satisfied. Queueing a node the first time an edge reaches it is what breadth-first
+search does, and its order need not be a topological order: with A → B, A → C and C → B, BFS from A visits A, B, C,
+though C must come before B. Kahn's algorithm counts down instead, so B waits for C.
+
+</Misconception>
+
+The order code, maths, ml would be just as valid: the program put maths first only because the dictionary lists it
+first. That is a tie-break, like the visualiser's first in, first out, not the one right answer.
+
+<Misconception
+  id="one-valid-order"
+  title="A graph has one correct topological order"
+  probes={[
+    {
+      q: 'A graph has the edges A → C and B → C, and nothing else. How many topological orders does it have?',
+      choices: ['1', '2', '6'],
+      answer: 1,
+      trap: 0,
+      why: 'A and B are both ready at the start, so A, B, C and B, A, C both work. C must be last, which rules out the other four.',
+    },
+    {
+      q: 'Two correct programs topologically sort the same graph and print different orders. What does that tell you?',
+      choices: [
+        'At least one of them has a bug',
+        'Nothing is wrong: at some point two nodes were ready together, and the programs broke the tie differently',
+        'The graph has a cycle',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Nodes that are ready at the same time don’t depend on each other, so either may go first. Any order with every edge pointing forward is right.',
+    },
+  ]}
+>
+
+Two nodes ready at the same moment don't depend on each other, so either can go first. The order is unique only when the queue never holds two nodes, which means each node in the
+order has an edge to the next. So a checker can't compare an answer with one expected list; it checks that every edge
+points forward.
+
+</Misconception>
+
+Kahn's algorithm has no separate step for cycles. It simply runs out of ready nodes.
+
+<Explore slug="topological-sort" settings={{ preset: 'cycle' }} caption="Only A starts ready. Placing A lowers B to 1 and frees F, which points nowhere. Then the queue is empty with B, C, D and E unplaced: B → C → D → B is a cycle, so none of those three reaches 0, and E waits for D, stuck behind the cycle. 2 of the 6 nodes are placed." />
+
+So the test is a count: fewer than V nodes placed means a cycle. Each stuck node has an edge in from another stuck
+node, or its count would have reached 0, so stepping backwards along such edges must come back to a node already
+passed: that loop is a cycle. And no list can order a cycle, since whichever of its nodes comes first has an edge into
+it from one listed later. **A topological order exists exactly when the graph is a DAG**, and Kahn's algorithm finds
+one or proves there is none.
+
+The second O(V + E) method uses [depth-first search](/learn/bfs-dfs). Take any edge u → v as DFS looks at it from u.
+If v is undiscovered, DFS(v) runs and finishes before u does. If v has finished, it finished first. If v is still on
+the call stack, v reaches u, and the edge closes a cycle. So in a DAG, v always finishes before u: list the nodes as
+they finish, then reverse the list.
+
+<Explore slug="depth-first-search" settings={{ input: 'A>B, A>C, B>D, C>D, D>E | start A' }} caption="DFS from A discovers A, B, D, E, and only then C, though C → D: when C looks at D, D has already finished. The nodes finish in the order E, D, B, C, A. Reversed, that is A, C, B, D, E, and every edge points forward." />
+
+Here A reaches every node; in general, start a new DFS from each node not yet discovered, adding to the same list.
+
+<Misconception
+  id="dfs-visit-order"
+  title="Depth-first search lists nodes in topological order"
+  probes={[
+    {
+      q: 'A DFS of a DAG discovers Y before X, and the graph has an edge X → Y. In a topological order, where must X go?',
+      choices: ['After Y: DFS reached it later', 'Before Y', 'Either side: DFS never compared them'],
+      answer: 1,
+      trap: 0,
+      why: 'The edge X → Y puts X first, whatever DFS met first. Y was reached along another path and finished before X was discovered, so reversing the finishing order puts X ahead of Y.',
+    },
+    {
+      q: 'A depth-first search of a DAG finishes its nodes in the order D, B, C, A. Which list is sure to be a topological order?',
+      choices: ['D, B, C, A', 'A, C, B, D', 'A, B, C, D'],
+      answer: 1,
+      trap: 0,
+      why: 'For every edge u → v, v finishes before u, so the finishing order lists each node before the nodes it depends on. Reversing it puts every edge forward.',
+    },
+  ]}
+>
+
+DFS discovers a node as soon as any path reaches it, which can be before another node that must come first: above, it
+found D through B before it had seen C. Its finishing order is backwards, since each node finishes before everything
+that points into it. Only the finishing order **reversed** puts every edge forward. If your edges point the other way,
+from a task to what it needs, the finishing order itself is the build order.
+
+</Misconception>
+
+Wherever there are dependencies, there is a topological sort: builds, package installs, a spreadsheet recalculating
+each cell after the cells its formula reads, and [backpropagation](/learn/backpropagation), which sends gradients back
+through a computation graph in reverse topological order.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A graph has the edges A → B, A → C, B → D and C → D. Which list is not a topological order?',
+      choices: ['A, B, C, D', 'A, C, B, D', 'A, B, D, C'],
+      answer: 2,
+      why: 'C → D needs C before D, but A, B, D, C puts D third. The other two both work: once A is placed, B and C are ready together, and either can go first.',
+      traps: { 1: 'one-valid-order' },
+    },
+    {
+      q: 'Kahn’s algorithm runs on the edges P → S, Q → R and R → S, and starts with P ahead of Q in its queue. In what order does it place the nodes?',
+      choices: ['P, Q, S, R', 'P, Q, R, S', 'P, R, Q, S'],
+      answer: 1,
+      why: 'P and Q start ready. Placing P lowers S to 1, since S still waits for R. Placing Q brings R to 0, and placing R brings S to 0, so S comes last.',
+      traps: { 0: 'ready-when-reached' },
+    },
+    {
+      q: 'A package manager runs Kahn’s algorithm on 9 packages and places only 6. Which must be true?',
+      choices: [
+        'All 3 unplaced packages are on one cycle',
+        'Some packages need each other in a loop, and every unplaced package is on such a loop or waits for one',
+        'Running it again from the 3 unplaced packages will finish the order',
+      ],
+      answer: 1,
+      why: 'Fewer than V placed means a cycle. A stuck package waits for another stuck one, so it is on a cycle or behind one; a cycle of two can hold up a third package. Running again changes nothing: no count can reach 0.',
+    },
+    {
+      q: 'Edges: A → B, A → D, B → C, D → C and D → E, lists in alphabetical order. A DFS from A discovers A, B, C, D, E. Which is a topological order?',
+      choices: ['A, B, C, D, E', 'A, D, E, B, C', 'C, B, E, D, A'],
+      answer: 1,
+      why: 'The nodes finish C, B, E, D, A (D finds C already finished), and reversed that is A, D, E, B, C. Discovery order puts C before D, though D → C.',
+      traps: { 0: 'dfs-visit-order', 2: 'dfs-visit-order' },
+    },
+    {
+      q: 'A build has five steps, and no step depends on any other. How many valid orders are there?',
+      choices: ['1', '5', '120'],
+      answer: 2,
+      why: 'With no edges, every step is ready from the start and nothing can point backwards, so every order works: 5 × 4 × 3 × 2 × 1 = 120.',
+      traps: { 0: 'one-valid-order' },
+    },
+    {
+      q: 'Kahn’s algorithm runs on a DAG with 1,000 nodes and 5,000 edges, stored as adjacency lists. How many times is a count lowered?',
+      choices: ['1,000', '5,000', '10,000', '1,000,000'],
+      answer: 1,
+      why: 'Each edge lowers one count, once, when the node it leaves is placed, and in a DAG every node is placed. With each node queued once as well, the run is O(V + E).',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="topological-order"
+  prompt="What is a topological order, and when does one exist? How does Kahn's algorithm build one, and how does it notice a cycle?"
+  rubric={[
+    'A topological order lists every node so that each edge u → v has u before v.',
+    'An order exists exactly when the graph has no directed cycle: on a cycle each node waits for another, so none can go first.',
+    'Kahn’s algorithm counts in-degrees, queues the nodes with none, then repeatedly places one and lowers the counts of the nodes it points to, queueing any that reach 0.',
+    'Each node and edge is handled once: O(V + E) time.',
+    'If fewer than V nodes are placed, the rest are on a cycle or behind one, so no order exists.',
+  ]}
+  example="A topological order lists the nodes so every edge points forward: each task comes after what it depends on. One exists exactly when there is no cycle, since on a cycle every node waits for another, so none can go first. Kahn's algorithm counts each node's in-degree and queues the nodes with none. It repeatedly takes a node from the queue, appends it to the order and lowers the counts of the nodes it points to, queueing any that reach 0. Each node and edge is handled once: O(V + E). If the queue empties with fewer than V nodes placed, the rest are on or behind a cycle."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A topological order lists every node so each edge u → v has u first. One exists exactly when there is no directed
+  cycle, and there are often many: ready nodes can go in any order.
+- Kahn's algorithm counts in-degrees, queues the nodes with none, then repeatedly places one and lowers the counts of
+  the nodes it points to. A node joins the queue when its last prerequisite is placed, not its first. O(V + E).
+- Fewer than V nodes placed means a cycle: the rest are on it or stuck behind it.
+- DFS works too: reverse the finishing order, not the discovery order. An edge to a node still on the call stack
+  means a cycle.
+- Next: **strongly connected components**, groups of nodes that can all reach each other; shrink each group to one
+  node and what is left is a DAG.
+  Practise with [Can Every Course Be Taken?](/practice/course-schedule) and [Course Order](/practice/course-schedule-ii),
+  write the DFS way in [Run backpropagation in the right order](/code/topological-backward), or open the
+  [topological sort visualiser](/visualisers/topological-sort) and try a graph of your own.
+
+</Section>

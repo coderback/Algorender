@@ -1334,6 +1334,108 @@ console.log(search(root, 'ca'));
 `,
     },
   },
+  {
+    id: 'kahn-course-order',
+    title: "Kahn's algorithm ordering three courses, with a list and a head index as the queue",
+    code: {
+      python: `def course_order(unlocks):
+    indeg = {}
+    for u in unlocks:
+        indeg[u] = 0
+    for u in unlocks:
+        for v in unlocks[u]:
+            indeg[v] += 1
+    queue = []
+    for u in unlocks:
+        if indeg[u] == 0:
+            queue.append(u)
+    head = 0
+    while head < len(queue):
+        u = queue[head]
+        head += 1
+        for v in unlocks[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                queue.append(v)
+    return queue
+
+courses = {'maths': ['ml'], 'code': ['ml'], 'ml': []}
+plan = course_order(courses)
+print(' '.join(plan))
+print(str(len(plan)) + ' of ' + str(len(courses)))
+`,
+      javascript: `function courseOrder(unlocks) {
+  const indeg = {};
+  for (const u of Object.keys(unlocks)) {
+    indeg[u] = 0;
+  }
+  for (const u of Object.keys(unlocks)) {
+    for (const v of unlocks[u]) {
+      indeg[v] += 1;
+    }
+  }
+  const queue = [];
+  for (const u of Object.keys(unlocks)) {
+    if (indeg[u] === 0) {
+      queue.push(u);
+    }
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of unlocks[u]) {
+      indeg[v] -= 1;
+      if (indeg[v] === 0) {
+        queue.push(v);
+      }
+    }
+  }
+  return queue;
+}
+
+const courses = { maths: ['ml'], code: ['ml'], ml: [] };
+const plan = courseOrder(courses);
+console.log(plan.join(' '));
+console.log(plan.length + ' of ' + Object.keys(courses).length);
+`,
+      typescript: `function courseOrder(unlocks: Record<string, string[]>): string[] {
+  const indeg: Record<string, number> = {};
+  for (const u of Object.keys(unlocks)) {
+    indeg[u] = 0;
+  }
+  for (const u of Object.keys(unlocks)) {
+    for (const v of unlocks[u]) {
+      indeg[v] += 1;
+    }
+  }
+  const queue: string[] = [];
+  for (const u of Object.keys(unlocks)) {
+    if (indeg[u] === 0) {
+      queue.push(u);
+    }
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of unlocks[u]) {
+      indeg[v] -= 1;
+      if (indeg[v] === 0) {
+        queue.push(v);
+      }
+    }
+  }
+  return queue;
+}
+
+const courses: Record<string, string[]> = { maths: ['ml'], code: ['ml'], ml: [] };
+const plan = courseOrder(courses);
+console.log(plan.join(' '));
+console.log(plan.length + ' of ' + Object.keys(courses).length);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

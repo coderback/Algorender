@@ -237,6 +237,7 @@ concepts:
     summary: Ordering tasks so every dependency comes first, or proving there is a cycle.
     prereqs: [bfs-dfs]
     visualisers: [topological-sort]
+    lesson: topological-sort
   - id: shortest-paths
     title: Shortest paths
     track: graphs

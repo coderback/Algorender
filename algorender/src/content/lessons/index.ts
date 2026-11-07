@@ -140,6 +140,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'topological-sort',
+    title: 'Topological sort: every prerequisite first',
+    concept: 'topological-sort',
+    summary: "List tasks so every edge points forward: how Kahn's algorithm places a node once its last prerequisite is placed, in O(V + E), why running out of ready nodes proves a cycle, why many orders are often valid, and why depth-first search must reverse its finishing order.",
+    minutes: 15,
+  },
+  {
     slug: 'union-find',
     title: 'Union-find: same root, same group',
     concept: 'union-find',

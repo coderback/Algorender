@@ -25,6 +25,7 @@ const lessonPaths = [
   'backtracking',
   'graph-representations',
   'bfs-dfs',
+  'topological-sort',
   'union-find',
   'dijkstra',
   'merge-sort',
