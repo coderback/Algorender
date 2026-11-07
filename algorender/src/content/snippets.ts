@@ -216,6 +216,383 @@ console.log(total(values, 0));
 `,
     },
   },
+  {
+    id: 'reverse-list',
+    title: 'Reversing a linked list in place',
+    code: {
+      python: `class Node:
+    def __init__(self, value, next):
+        self.value = value
+        self.next = next
+
+def reverse(head):
+    prev = None
+    cur = head
+    while cur is not None:
+        nxt = cur.next
+        cur.next = prev
+        prev = cur
+        cur = nxt
+    return prev
+
+head = Node(1, Node(2, Node(3, None)))
+head = reverse(head)
+node = head
+while node is not None:
+    print(node.value)
+    node = node.next
+`,
+      javascript: `class Node {
+  constructor(value, next) {
+    this.value = value;
+    this.next = next;
+  }
+}
+
+function reverse(head) {
+  let prev = null;
+  let cur = head;
+  while (cur !== null) {
+    const nxt = cur.next;
+    cur.next = prev;
+    prev = cur;
+    cur = nxt;
+  }
+  return prev;
+}
+
+let head = new Node(1, new Node(2, new Node(3, null)));
+head = reverse(head);
+let node = head;
+while (node !== null) {
+  console.log(node.value);
+  node = node.next;
+}
+`,
+      typescript: `class Node {
+  value: number;
+  next: Node | null;
+
+  constructor(value: number, next: Node | null) {
+    this.value = value;
+    this.next = next;
+  }
+}
+
+function reverse(head: Node | null): Node | null {
+  let prev: Node | null = null;
+  let cur = head;
+  while (cur !== null) {
+    const nxt = cur.next;
+    cur.next = prev;
+    prev = cur;
+    cur = nxt;
+  }
+  return prev;
+}
+
+let head: Node | null = new Node(1, new Node(2, new Node(3, null)));
+head = reverse(head);
+let node = head;
+while (node !== null) {
+  console.log(node.value);
+  node = node.next;
+}
+`,
+    },
+  },
+  {
+    id: 'bst-insert-search',
+    title: 'Inserting into and searching a binary search tree',
+    code: {
+      python: `class Node:
+    def __init__(self, key):
+        self.key = key
+        self.left = None
+        self.right = None
+
+def insert(node, key):
+    if node is None:
+        return Node(key)
+    if key < node.key:
+        node.left = insert(node.left, key)
+    elif key > node.key:
+        node.right = insert(node.right, key)
+    return node
+
+def search(node, key):
+    while node is not None:
+        if key == node.key:
+            return True
+        if key < node.key:
+            node = node.left
+        else:
+            node = node.right
+    return False
+
+root = None
+for key in [50, 30, 70, 40]:
+    root = insert(root, key)
+print(search(root, 40))
+print(search(root, 60))
+`,
+      javascript: `class Node {
+  constructor(key) {
+    this.key = key;
+    this.left = null;
+    this.right = null;
+  }
+}
+
+function insert(node, key) {
+  if (node === null) {
+    return new Node(key);
+  }
+  if (key < node.key) {
+    node.left = insert(node.left, key);
+  } else if (key > node.key) {
+    node.right = insert(node.right, key);
+  }
+  return node;
+}
+
+function search(node, key) {
+  while (node !== null) {
+    if (key === node.key) {
+      return true;
+    }
+    if (key < node.key) {
+      node = node.left;
+    } else {
+      node = node.right;
+    }
+  }
+  return false;
+}
+
+let root = null;
+for (const key of [50, 30, 70, 40]) {
+  root = insert(root, key);
+}
+console.log(search(root, 40));
+console.log(search(root, 60));
+`,
+      typescript: `class Node {
+  key: number;
+  left: Node | null;
+  right: Node | null;
+
+  constructor(key: number) {
+    this.key = key;
+    this.left = null;
+    this.right = null;
+  }
+}
+
+function insert(node: Node | null, key: number): Node {
+  if (node === null) {
+    return new Node(key);
+  }
+  if (key < node.key) {
+    node.left = insert(node.left, key);
+  } else if (key > node.key) {
+    node.right = insert(node.right, key);
+  }
+  return node;
+}
+
+function search(node: Node | null, key: number): boolean {
+  while (node !== null) {
+    if (key === node.key) {
+      return true;
+    }
+    if (key < node.key) {
+      node = node.left;
+    } else {
+      node = node.right;
+    }
+  }
+  return false;
+}
+
+let root: Node | null = null;
+for (const key of [50, 30, 70, 40]) {
+  root = insert(root, key);
+}
+console.log(search(root, 40));
+console.log(search(root, 60));
+`,
+    },
+  },
+  {
+    id: 'heap-push',
+    title: 'Pushing a value onto a min-heap and sifting it up',
+    code: {
+      python: `def heap_push(heap, x):
+    heap.append(x)
+    i = len(heap) - 1
+    while i > 0:
+        parent = (i - 1) // 2
+        if heap[parent] <= heap[i]:
+            break
+        heap[i], heap[parent] = heap[parent], heap[i]
+        i = parent
+
+priorities = [1, 4, 3, 8, 6, 9, 7]
+heap_push(priorities, 2)
+print(priorities)
+`,
+      javascript: `function heapPush(heap, x) {
+  heap.push(x);
+  let i = heap.length - 1;
+  while (i > 0) {
+    const parent = Math.floor((i - 1) / 2);
+    if (heap[parent] <= heap[i]) {
+      break;
+    }
+    [heap[i], heap[parent]] = [heap[parent], heap[i]];
+    i = parent;
+  }
+}
+
+const priorities = [1, 4, 3, 8, 6, 9, 7];
+heapPush(priorities, 2);
+console.log(priorities);
+`,
+      typescript: `function heapPush(heap: number[], x: number): void {
+  heap.push(x);
+  let i = heap.length - 1;
+  while (i > 0) {
+    const parent = Math.floor((i - 1) / 2);
+    if (heap[parent] <= heap[i]) {
+      break;
+    }
+    [heap[i], heap[parent]] = [heap[parent], heap[i]];
+    i = parent;
+  }
+}
+
+const priorities: number[] = [1, 4, 3, 8, 6, 9, 7];
+heapPush(priorities, 2);
+console.log(priorities);
+`,
+    },
+  },
+  {
+    id: 'longest-run-window',
+    title: 'The longest run within a limit, with a window that grows and shrinks',
+    code: {
+      python: `def longest_run(nums, limit):
+    left = 0
+    total = 0
+    best = 0
+    for right in range(len(nums)):
+        total += nums[right]
+        while total > limit:
+            total -= nums[left]
+            left += 1
+        best = max(best, right - left + 1)
+    return best
+
+costs = [2, 1, 3, 1, 1, 4, 2]
+print(longest_run(costs, 6))
+`,
+      javascript: `function longestRun(nums, limit) {
+  let left = 0;
+  let total = 0;
+  let best = 0;
+  for (let right = 0; right < nums.length; right++) {
+    total += nums[right];
+    while (total > limit) {
+      total -= nums[left];
+      left += 1;
+    }
+    best = Math.max(best, right - left + 1);
+  }
+  return best;
+}
+
+const costs = [2, 1, 3, 1, 1, 4, 2];
+console.log(longestRun(costs, 6));
+`,
+      typescript: `function longestRun(nums: number[], limit: number): number {
+  let left = 0;
+  let total = 0;
+  let best = 0;
+  for (let right = 0; right < nums.length; right++) {
+    total += nums[right];
+    while (total > limit) {
+      total -= nums[left];
+      left += 1;
+    }
+    best = Math.max(best, right - left + 1);
+  }
+  return best;
+}
+
+const costs: number[] = [2, 1, 3, 1, 1, 4, 2];
+console.log(longestRun(costs, 6));
+`,
+    },
+  },
+  {
+    id: 'fewest-coins',
+    title: 'The fewest coins for an amount, filled bottom-up',
+    code: {
+      python: `def fewest_coins(coins, amount):
+    too_many = amount + 1
+    dp = [too_many] * (amount + 1)
+    dp[0] = 0
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c <= a and dp[a - c] + 1 < dp[a]:
+                dp[a] = dp[a - c] + 1
+    if dp[amount] == too_many:
+        return -1
+    return dp[amount]
+
+print(fewest_coins([1, 3, 4], 6))
+`,
+      javascript: `function fewestCoins(coins, amount) {
+  const tooMany = amount + 1;
+  const dp = new Array(amount + 1).fill(tooMany);
+  dp[0] = 0;
+  for (let a = 1; a <= amount; a++) {
+    for (const c of coins) {
+      if (c <= a && dp[a - c] + 1 < dp[a]) {
+        dp[a] = dp[a - c] + 1;
+      }
+    }
+  }
+  if (dp[amount] === tooMany) {
+    return -1;
+  }
+  return dp[amount];
+}
+
+console.log(fewestCoins([1, 3, 4], 6));
+`,
+      typescript: `function fewestCoins(coins: number[], amount: number): number {
+  const tooMany = amount + 1;
+  const dp: number[] = new Array(amount + 1).fill(tooMany);
+  dp[0] = 0;
+  for (let a = 1; a <= amount; a++) {
+    for (const c of coins) {
+      if (c <= a && dp[a - c] + 1 < dp[a]) {
+        dp[a] = dp[a - c] + 1;
+      }
+    }
+  }
+  if (dp[amount] === tooMany) {
+    return -1;
+  }
+  return dp[amount];
+}
+
+console.log(fewestCoins([1, 3, 4], 6));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

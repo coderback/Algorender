@@ -1,0 +1,304 @@
+<Section step="hook" title="Binary search you can add to">
+
+[Binary search](/learn/binary-search) finds one key among a million sorted ones in at most 20 probes. Keeping those
+keys sorted is the expensive part: an array has to shift every key after the insertion point to make room, half a
+million moves for a key that lands in the middle (the [arrays lesson](/learn/arrays) counts them).
+
+A **binary search tree** keeps sorted keys in nodes joined by links instead of side by side. Each node holds one key,
+smaller keys go in its left subtree and larger ones in its right, and the same holds at every node below. Finding a key
+is binary search again, one comparison per level, and adding one hangs a new node at the bottom without moving anything
+else. The catch is the shape: the same seven keys can make a tree 3 levels tall or a chain of 7, and only the order they
+arrived in decides which.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="root, child and leaf">The root is the node at the top. Every node has at most two children, a left one and a right one, and a leaf is a node with none.</Term>
+  <Term name="subtree">A node together with everything below it. A node's left subtree is its left child and all of that child's descendants, however deep.</Term>
+  <Term name="search-tree rule">For every node, every key in its left subtree is smaller than the node's key and every key in its right subtree is larger. Each key is stored once.</Term>
+  <Term name="height and depth">Height is the number of levels, counting the root's level as 1: the seven-key tree below has height 3. A node's depth counts the steps down from the root, which has depth 0. (Some books count height in steps instead, which gives one fewer.)</Term>
+  <Term name="in-order successor">The next larger key in the tree. When a node has a right subtree, its successor is the smallest key there: go right once, then left as far as possible.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One comparison per level">
+
+This tree holds seven keys. 50 is the root, 30 and 70 are its children, and 20, 40, 60 and 80 are leaves. Search for a
+key and watch the path: at each node the search compares, then goes left or right.
+
+<Explore slug="binary-tree" settings={{ start: 'balanced' }} caption="Search for 40, then for 65, then insert 65. 40 is found at the third comparison: 50, 30, then 40. 65 goes right at 50, left at 70 and right at 60, which has no right child, so 65 is not in the tree. Insert 65 walks the same three steps and hangs 65 in that empty spot, as 60's right child." />
+
+When the search for 40 goes left at 50, it rules out 50's whole right subtree, 70, 60 and 80, without looking at them:
+every key there is larger than 50, so none of them can be 40. That is binary search again. The subtree the search is
+in plays the part of the window, and each comparison throws away everything else. In this tree the root, 50, is even
+the middle key, just as binary search probes the middle first.
+
+Insert is a search that is meant to fail. Where the walk falls off the tree is the only place the new key keeps the
+rule, so it becomes a new leaf there, and no other node moves. Inserting a key the tree already holds changes nothing.
+
+<KeyIdea>
+
+**Every key in a node's left subtree is smaller than it and every key in its right subtree is larger, so one comparison
+rules out a whole subtree.** Search and insert follow a single path down from the root, one comparison per level, so
+they cost O(h), where h is the tree's height.
+
+</KeyIdea>
+
+A tree with every level full holds 1, 3, 7, 15 … keys in 1, 2, 3, 4 … levels: $2^h - 1$ keys in h levels. So n keys can
+fit in about $\log_2 n$ levels, 20 for a million, the same count as binary search's probes. But the shape is decided by
+the order the keys arrive in.
+
+<Explore slug="binary-tree" settings={{ start: 'sorted' }} caption="Seven keys inserted in sorted order, 10 first and 70 last. Each new key was larger than every key before it, so it went right at every node, and the tree is a chain 7 levels tall. Search for 70: it is compared with all seven keys, one per level." />
+
+A chain has height n, so search, insert and delete all cost O(n), no faster than checking a list from the front. Keys
+that arrive in random order usually make a tree of height O(log n), a small multiple of $\log_2 n$, but real data often
+arrives sorted or nearly sorted: IDs, timestamps, names read from a sorted file. **Self-balancing trees** fix that by
+reshaping the tree as keys come and go, so the height stays O(log n) whatever the order.
+
+</Section>
+
+<Section step="predict" title="Your turn: left or right?">
+
+Before each comparison, predict which way the walk goes. Insert 45, then 55: each walk asks at every node it passes.
+Then try inserting 50, a key the tree already has.
+
+<PredictChallenge slug="binary-tree" settings={{ start: 'balanced' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="In code, in order, and out of the tree">
+
+In code, a node is a small object: a key and two links, `None` (`null` in JavaScript) where there is no child.
+`insert(node, key)` is recursive, like the functions in the [recursion lesson](/learn/recursion): it adds the key
+somewhere below `node` and returns the root of that subtree. A call on an empty subtree returns a brand-new node, and
+every caller stores what comes back as its child. `search` changes no links, so it never has to come back up the path,
+and a loop is enough: it moves `node` to a child until it finds the key or runs out of tree.
+
+<TraceCode
+  snippet="bst-insert-search"
+  question="When insert makes the node for 40, how many calls to insert are running?"
+  choices={['1', '2', '3', '4']}
+  answer={2}
+  why="insert(root, 40) starts at 50 and, since 40 is smaller, calls insert on 50's left child, 30. 40 is larger than 30, so that call calls insert on 30's right child, which is empty, and this third call makes the node. That is one call per level the walk reached, each waiting for the call it made. Then they return in turn: 30's call stores the new node as its right child, and 50's call stores 30 as its left child again, the child it already had."
+/>
+
+The rule also hands you the keys in sorted order. An **in-order traversal** lists a node's left subtree, then the node,
+then its right subtree, recursively. Everything on the left is smaller and everything on the right is larger, so if each
+subtree comes out sorted, so does the whole list, and each subtree does, by the same argument one level down.
+
+<Explore slug="binary-tree" settings={{ start: 'balanced' }} caption="Run In-order: it finishes 50's left subtree before it visits 50, and the Visited list fills up 20, 30, 40, 50, 60, 70, 80, sorted. Then run Pre-order, which visits each node before its subtrees: 50, 30, 20, 40, 70, 60, 80." />
+
+Listing all n keys this way takes O(n). The smallest key is the leftmost node (keep going left until there is no left
+child) and the largest is the rightmost, each O(h) away. That is what a search tree offers over a hash table: the keys in
+order, the smallest and largest, and every key between two values.
+
+Deleting depends on how many children the node has. A **leaf** is simply removed. A node with **one child** is replaced
+by that child, which brings its whole subtree up with it; every key there was already on the correct side of everything
+above. A node with **two children** leaves two subtrees and only one slot, so the node stays and gets a new key instead:
+its **in-order successor**, the next larger key. Go right once, then left as far as possible. That key is larger than
+everything in the left subtree and smaller than everything else in the right, so the rule still holds. The successor
+never has a left child (that child would be smaller still), so taking it out of its old place is one of the two easy
+cases.
+
+<Explore slug="binary-tree" settings={{ start: 'balanced' }} caption="Delete 50, then 70, then 20: one of each case. 50 has two children, so its successor, 60 (right to 70, then left to 60), is copied into the root and the old 60 leaf is removed. 70 now has one child, 80, which moves up into its place. 20 is a leaf and is simply removed." />
+
+Each delete is one walk down to the node, and with two children a little further, to the successor: O(h) again. Using
+the in-order predecessor instead, the largest key in the left subtree, works just as well; this visualiser uses the
+successor.
+
+<Misconception
+  id="children-only"
+  title="The rule only compares a node with its children"
+  probes={[
+    {
+      q: 'A tree has root 50. Its left child is 30, and 30’s right child is 60. Each child is on the correct side of its parent. Is this a binary search tree?',
+      choices: ['Yes: 30 is smaller than 50, and 60 is larger than 30', 'No: 60 is in 50’s left subtree, so it must be smaller than 50', 'Yes, but only if 50 also has a right child'],
+      answer: 1,
+      trap: 0,
+      why: 'The rule covers whole subtrees. 60 sits below 50 on the left, so it must be smaller than 50, and it is not. Checking each node only against its parent misses that.',
+    },
+    {
+      q: 'A tree has root 50 and no right child. 50’s left child is 30, and 30’s right child is 60. A search for 60 starts at the root. What does it report?',
+      choices: ['Found: left to 30, then right to 60', 'Not found: 60 is larger than 50, so it goes right, and 50 has no right child', 'Found, after checking both of 50’s subtrees'],
+      answer: 1,
+      trap: 0,
+      why: 'Search trusts the rule: 60 is larger than 50, so it can only be on the right, and the left side is never looked at. A key on the wrong side of an ancestor is lost to search.',
+    },
+  ]}
+>
+
+The rule is about **whole subtrees**: every key anywhere in a node's left subtree is smaller than it, and every key
+anywhere in its right subtree is larger. A tree can have each child on the correct side of its parent and still break
+it. Put 30 as the left child of 50 and 60 as the right child of 30: 60 is larger than 30, but it sits in 50's left
+subtree, and a search for 60 goes right at 50 and never finds it. Checking a tree means passing bounds down: everything
+below 30's right must be larger than 30 and also smaller than 50.
+
+</Misconception>
+
+<Misconception
+  id="always-log-n"
+  title="Search in a binary search tree is always O(log n)"
+  probes={[
+    {
+      q: 'You insert 1, 2, 3 and so on up to 1,000, in that order, into an empty binary search tree that does not rebalance. About how many comparisons does a search for 1,000 take?',
+      choices: ['About 10, since log₂ 1,000 is about 10', 'About 1,000: each key went right of the one before, so the tree is a chain', 'About 500'],
+      answer: 1,
+      trap: 0,
+      why: 'Every key was larger than all the keys before it, so each one became the right child of the last: a chain 1,000 levels tall. Search compares one key per level, so it checks all 1,000.',
+    },
+    {
+      q: 'What does one search cost in a plain binary search tree of n keys and height h?',
+      choices: ['O(log n), whatever its shape', 'O(h): about log₂ n when it is balanced, up to n when it is a chain', 'O(1) on average'],
+      answer: 1,
+      trap: 0,
+      why: 'Search compares one key per level along a single path, so it costs O(h). The height depends on the order the keys arrived in: log₂ n is the best case, not a promise.',
+    },
+  ]}
+>
+
+Search, insert and delete cost **O(h)**, one comparison per level. h is about log₂ n only when the tree is balanced. A
+plain binary search tree keeps whatever shape its inserts give it: sorted input makes a chain with h = n, nearly sorted
+input comes close, and then every operation is O(n). The O(log n) guarantee needs a **self-balancing** tree, such as an
+AVL or red-black tree, which reshapes itself as keys come and go.
+
+</Misconception>
+
+<Misconception
+  id="right-child-replaces"
+  title="A deleted node’s right child takes its place"
+  probes={[
+    {
+      q: 'A tree has 50 at the root, 30 and 70 below it, and 20, 40, 60 and 80 as leaves. You delete 50 using the in-order successor. Which key ends up in the root?',
+      choices: ['70, 50’s right child', '60', '80'],
+      answer: 1,
+      trap: 0,
+      why: 'The successor is the smallest key in 50’s right subtree: go right to 70, then left as far as possible, to 60. 60 is larger than everything on the left and smaller than everything else on the right, so it can sit at the root.',
+    },
+    {
+      q: 'Root 30 has left child 20 and right child 40, and 40 has a left child, 35. You delete 30 using the in-order successor. Which key replaces it?',
+      choices: ['40, its right child', '35', '20'],
+      answer: 1,
+      trap: 0,
+      why: 'Go right to 40, then left as far as possible, to 35: the smallest key larger than 30. The right child is the successor only when it has no left child.',
+    },
+  ]}
+>
+
+When a node with two children is deleted, its key is replaced by its **in-order successor**, the next larger key: go
+right once, then left as far as possible. The right child is that key only when it has no left child of its own;
+otherwise a smaller key sits below it, and moving the right child up would leave its left subtree and the deleted node's
+left subtree competing for one slot. The successor never has a left child, so taking it out of its old place is a leaf
+or one-child removal. The in-order predecessor, the largest key on the left, works just as well.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A tree has root 40. Its left child is 20, and 20’s right child is 45. Is it a binary search tree?',
+      choices: ['Yes: 20 is smaller than 40, and 45 is larger than 20', 'No: 45 is in 40’s left subtree but larger than 40', 'Yes, as long as 40 has no right child', 'No: 20 should be the root'],
+      answer: 1,
+      why: 'Every key in 40’s left subtree must be smaller than 40, however deep it sits. 45 breaks that, so a search for 45 would go right at 40 and miss it.',
+      traps: { 0: 'children-only' },
+    },
+    {
+      q: 'A tree has 50 at the root, 30 and 70 below it, and 20, 40, 60 and 80 as leaves. A search for 65 compares it with which keys?',
+      choices: ['50, 70 and 60', '50, 30, 70 and 60', 'All seven keys', '50 and 70'],
+      answer: 0,
+      why: '65 is larger than 50, so go right to 70; smaller than 70, so go left to 60; larger than 60, but 60 has no right child, so 65 is not there. One key per level: 30, 20, 40 and 80 are never looked at.',
+    },
+    {
+      q: 'You insert 10, 20, 30, 40, 50, 60 and 70, in that order, into an empty binary search tree that does not rebalance. How many levels does it have?',
+      choices: ['3', '4', '7', '1'],
+      answer: 2,
+      why: 'Each key is larger than every key before it, so it goes right at every node and becomes the right child of the last one: a chain of 7 levels. The same keys inserted middle first (40, then 20 and 60, then the rest) make 3 levels.',
+      traps: { 0: 'always-log-n' },
+    },
+    {
+      q: 'Which traversal of a binary search tree lists its keys in sorted order?',
+      choices: ['Pre-order: node, left, right', 'In-order: left, node, right', 'Post-order: left, right, node', 'Level order: top to bottom'],
+      answer: 1,
+      why: 'Everything in a node’s left subtree is smaller and everything in its right subtree larger, so left, then node, then right puts each node exactly between them, at every level.',
+    },
+    {
+      q: 'A tree has 50 at the root, 30 and 70 below it, and 20, 40, 60 and 80 below those. Then 65 is inserted, as 60’s right child. You delete 50 using the in-order successor. What happens?',
+      choices: [
+        '60 is copied into the root, and 65 moves up into 60’s old place as 70’s left child',
+        '70 moves up into the root, with 60 and 80 below it',
+        '65 is copied into the root, because it was inserted last',
+        '40 is copied into the root, and 30 loses its right child',
+      ],
+      answer: 0,
+      why: 'The successor is the smallest key in 50’s right subtree: right to 70, then left to 60. 60 is copied into the root and its old node is removed; it had one child, 65, which takes its place.',
+      traps: { 1: 'right-child-replaces' },
+    },
+    {
+      q: 'Why does a search in a balanced binary search tree of n keys take O(log n) time?',
+      choices: [
+        'Each comparison rules out a whole subtree, so it checks one key per level, and a balanced tree has about log₂ n levels',
+        'It checks every key, but each check is fast',
+        'The keys are stored in a sorted array underneath',
+        'It jumps straight to the key’s node, like an array index',
+      ],
+      answer: 0,
+      why: 'Search follows one path down from the root. A balanced tree of n keys is about log₂ n levels tall, 20 for a million, so that path is short.',
+    },
+    {
+      q: 'Where does insert put a new key?',
+      choices: [
+        'At the root, pushing the other keys down a level',
+        'As a new leaf, in the empty spot where a search for it falls off the tree',
+        'Wherever keeps the tree balanced',
+        'Next to the closest key, as its sibling',
+      ],
+      answer: 1,
+      why: 'Insert walks the same path a search would. Where the walk finds no child, that empty spot is the only place the key keeps the rule, so it becomes a leaf there and no other node moves.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="bst-one-path"
+  prompt="What rule does a binary search tree keep at every node, and how does it let search and insert follow one path? What do they cost, and when does that become O(n)?"
+  rubric={[
+    'Every key in a node’s left subtree is smaller and every key in its right subtree larger, for whole subtrees, not just children.',
+    'One comparison at a node rules out the other subtree, so search follows a single path down from the root.',
+    'Insert follows the same path and adds the key as a new leaf where the walk falls off the tree.',
+    'Both cost O(h), one comparison per level: about log₂ n when the tree is balanced, but n when sorted inserts make a chain.',
+  ]}
+  example="A binary search tree keeps every key in a node’s left subtree smaller than the node and every key in its right subtree larger, all the way down, not just for its children. So when search compares its key with a node, it knows which side the key must be on and skips the whole other subtree. It walks one path from the root, one comparison per level, and insert walks the same path and adds the key as a leaf where the path ends. Both cost O(h), the height. A balanced tree of n keys is about log₂ n levels tall, so they are O(log n). Keys inserted in sorted order each go right of the last, the tree becomes a chain n levels tall, and they are O(n)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A binary search tree keeps every key in a node's left subtree smaller and every key in its right subtree larger, for
+  whole subtrees, not just a node's children.
+- Search, insert and delete follow one path down from the root, so they cost O(h). Insert adds a new leaf where a search
+  for the key falls off the tree; nothing else moves.
+- h is about log₂ n when the tree is balanced (20 levels for a million keys), but n when keys arrive sorted and the tree
+  becomes a chain: then every operation is O(n).
+- An in-order traversal (left subtree, node, right subtree) visits the keys in sorted order in O(n). The smallest key is
+  the leftmost node and the largest the rightmost.
+- Deleting a node with two children copies in its in-order successor (right once, then left as far as possible) and
+  removes the successor's old node, which has at most one child.
+- Next: **self-balancing trees**, which reshape themselves to keep h O(log n) whatever the order; try sorted inserts on
+  the [AVL tree](/visualisers/avl-tree). Practise with [Check a Binary Search Tree](/practice/validate-binary-search-tree),
+  [Kth Smallest Value in a Binary Search Tree](/practice/kth-smallest-in-bst) and
+  [Lowest Common Ancestor in a Binary Search Tree](/practice/lowest-common-ancestor-bst), write
+  [Insert into a binary search tree](/code/bst-insert) and [Write an inorder traversal](/code/inorder-traversal)
+  yourself, or open the [binary search tree visualiser](/visualisers/binary-tree) to try more operations.
+
+</Section>

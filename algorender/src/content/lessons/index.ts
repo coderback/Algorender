@@ -35,6 +35,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'linked-lists',
+    title: 'Linked lists: cheap to splice, slow to reach',
+    concept: 'linked-lists',
+    summary: 'Why linking a node in takes two pointer writes but reaching index i takes i hops, how head and tail make the ends cheap, and how to reverse a list in place.',
+    minutes: 20,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',
@@ -49,6 +56,20 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'binary-search-trees',
+    title: 'Binary search trees: one path down',
+    concept: 'binary-search-trees',
+    summary: 'Smaller keys to the left and larger to the right at every node: why search and insert cost one comparison per level, why sorted inserts make a slow chain, and how to delete a node with two children.',
+    minutes: 20,
+  },
+  {
+    slug: 'heaps',
+    title: 'Heaps and priority queues: the most urgent first',
+    concept: 'heaps',
+    summary: 'A complete tree packed into an array: why the top is always one read away, why insert and remove take O(log n), and why a heap is not sorted.',
+    minutes: 20,
+  },
+  {
     slug: 'two-pointers',
     title: 'Two pointers: from n² pairs to n steps',
     concept: 'two-pointers',
@@ -56,11 +77,25 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 12,
   },
   {
+    slug: 'sliding-window',
+    title: 'Sliding window: add one, drop one',
+    concept: 'sliding-window',
+    summary: 'Update one running total as the window slides instead of re-adding it, and grow and shrink a window to find the best run under a rule, both in O(n).',
+    minutes: 15,
+  },
+  {
     slug: 'memoization',
     title: 'Memoization: stop solving the same problem twice',
     concept: 'memoization',
     summary: 'See plain recursion explode, then tame it with a table of answers you have already found.',
     minutes: 15,
+  },
+  {
+    slug: 'dynamic-programming',
+    title: 'Dynamic programming: fill a table from the bottom up',
+    concept: 'dynamic-programming',
+    summary: 'Four decisions turn a problem into a table you fill in a loop: what a cell means, how it is built, where it starts, and an order that keeps every input ready.',
+    minutes: 20,
   },
   {
     slug: 'dijkstra',

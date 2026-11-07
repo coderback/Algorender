@@ -1,0 +1,293 @@
+<Section step="hook" title="Two coins, or three?">
+
+A machine has to pay out 6 using coins worth 1, 3 and 4, with as few coins as it can. The obvious plan is to take the
+biggest coin that fits, again and again: 4, then 1, then 1. Three coins. Yet 3 + 3 makes 6 with only two.
+
+You could try every combination of coins, but the combinations multiply as the amount grows. The
+[memoization lesson](/learn/memoization) ended with a better way: write the answers to the smaller questions into a
+table, filled from the bottom up, so that each one is worked out once. This lesson shows how to design that table for
+a problem made of overlapping smaller ones, and how to fill it with a plain loop. That is **dynamic programming**.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="state">What one cell of the table means, in words. In coin change, dp[a] is the fewest coins that add up to exactly a.</Term>
+  <Term name="recurrence">The rule that builds a cell from other cells, such as dp[a] = 1 + the smallest dp[a − c] over the coins c that fit.</Term>
+  <Term name="base case">A cell whose answer is known without the rule, such as dp[0] = 0, since making 0 takes no coins. Every other cell grows from it.</Term>
+  <Term name="fill order">The order the cells are filled in. Each cell must come after every cell its recurrence reads.</Term>
+  <Term name="bottom-up (tabulation)">Filling the table in a loop from the base cases up, instead of recursing from the top and remembering answers on the way back, as memoization does.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Every amount from the amounts below it">
+
+Think about the **last** coin in the best way to make 6. It is a 1, a 3 or a 4, and whichever it is, the coins before it
+must make what is left (5, 3 or 2) with as few coins as possible. So if the table already holds the fewest coins for
+every smaller amount, dp[6] is one more than the smallest of dp[5], dp[3] and dp[2]. The same holds for every amount,
+so the table can be filled from 0 upwards.
+
+<Explore slug="coin-change" settings={{ preset: 'greedy-fails' }} caption="Coins 1, 3 and 4, amount 6. Each dp[a] tries every coin that fits as the last one and keeps the fewest: dp[6] = dp[3] + 1 = 2. The coin row records each winning last coin, and following it back from 6 gives 3 + 3, where largest-coin-first takes 4 + 1 + 1." />
+
+The order is what makes it work. Every dp[a − c] is a smaller amount than a, so by the time the loop reaches a, it is
+already final. Each amount is worked out once, from answers that are already there, and nothing waits on a recursive
+call.
+
+<KeyIdea>
+
+**A dynamic programming solution is four decisions: what a cell means (the state), how a cell is built from other cells
+(the recurrence), which cells are known outright (the base cases), and an order that fills every cell after the cells it
+reads (the fill order).** Then a loop fills the table, solving each subproblem once, and the answer is one of its cells.
+
+</KeyIdea>
+
+The same four decisions work on a grid, for a question that counts. A robot steps only right or down: how many paths
+lead from the top-left corner to the bottom-right? Let P[i,j] be the number of paths that reach cell (i, j). Every path
+into a cell arrives from the cell above or the cell to its left, so P[i,j] = P[i−1,j] + P[i,j−1]. There is one way to
+be at the start, so P[0,0] = 1, and every cell in the top row or the left column can be reached only one way. Filling
+row by row, left to right, has both neighbours ready in time.
+
+<Explore slug="unique-paths" settings={{ preset: 'open' }} caption="A 3 × 7 grid with no walls. P[0,0] = 1, the top row and left column copy their one neighbour, and every other cell adds the cell above and the cell to its left. Row by row, the bottom-right corner reaches 28." />
+
+Look at what each recurrence does with its candidates. Unique paths **adds** them: a path through the cell above and a
+path through the cell to the left are different paths, so both count. Coin change keeps the **smallest**, because it
+wants one best answer, not all of them. Counting questions (how many ways?) add up the ways in; optimising questions
+(the fewest, the most, the cheapest) keep the best candidate.
+
+</Section>
+
+<Section step="predict" title="Your turn: rob or skip">
+
+Here is an optimising question that keeps the **largest** candidate. A street of houses holds 5, 9, 6, 1, 8 and 7, and
+a robber wants the most money without ever robbing two houses next door. The four decisions:
+
+- **State:** dp[i] is the most money from houses 1 to i alone.
+- **Base cases:** dp[0] = 0 (no houses) and dp[1] = 5 (rob the only house).
+- **Recurrence:** at house i, either skip it and keep dp[i − 1], or rob it and add its value to dp[i − 2], since its
+  neighbour must then be skipped: dp[i] = max(dp[i − 1], v[i] + dp[i − 2]).
+- **Fill order:** left to right, so both earlier totals are ready.
+
+Before each house is filled in, predict whether robbing it beats skipping it. Then, walking back from the last house,
+say which houses were robbed.
+
+<PredictChallenge slug="house-robber" settings={{ preset: 'greedy-fails' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="The table in code, and how much to keep">
+
+Here is coin change as two loops. The table starts with dp[0] = 0 and every other amount at amount + 1, which stands in
+for ∞: no real answer needs more than amount coins, because every coin is worth at least 1. Then, for each amount from
+1 up, each coin that fits offers dp[a − c] + 1, and the smallest offer stays. If dp[amount] is still amount + 1 at the
+end, no coins make it, and the function returns `-1`.
+
+<TraceCode
+  snippet="fewest-coins"
+  question="When a reaches 6, the inner loop tries the coins 1, 3 and 4 in turn. Which coin’s offer does dp[6] keep?"
+  choices={['1', '3', '4', 'None: dp[6] stays at 7']}
+  answer={1}
+  why="The 1 coin goes first and writes dp[5] + 1 = 3. Then the 3 coin offers dp[3] + 1 = 2, which is smaller, so it replaces that offer. The 4 coin offers dp[2] + 1 = 3, no better. dp[6] ends at 2, two 3s, and the program prints 2."
+/>
+
+This finds exactly the answers a memoised recursion would: the same subproblems and the same recurrence. What differs
+is how it runs. For n coins and a target amount A, the loop fills every amount from 1 to A and tries every coin at each,
+so it takes O(n·A) time and O(A) memory, and it never recurses. A memoised version asked for 10,000 with a 1 coin
+would recurse thousands of calls deep, past Python’s default limit of 1,000. Top-down has one edge in return: it solves only the amounts it actually reaches,
+while bottom-up fills them all.
+
+Amounts that can't be made are where ∞ matters. If every coin that fits leaves an amount that can't be made, this
+amount can't be made either: one more coin on top of impossible is still impossible, ∞ + 1 = ∞.
+
+<Explore slug="coin-change" settings={{ preset: 'impossible' }} input caption="Coins 3 and 5, amount 7. dp[1] and dp[2] stay ∞ because no coin fits, dp[4] because a 3 leaves 1, and dp[7] because a 3 leaves 4 and a 5 leaves 2, neither of which can be made. Change the coins or the amount to try your own." />
+
+Each recurrence also says which cells it reads, and that decides how much of the table you must keep. House robber
+reads only the last two totals, so two variables can slide along the street: O(1) memory. Unique paths reads only the
+row above and the cell to the left, so one row, updated in place, is enough. Keep the whole table when you need to walk
+back through it to recover the choices, the coins used or the houses robbed, as every visualiser here does.
+
+<Misconception
+  id="greedy-is-enough"
+  title="Taking the best-looking choice each time is enough"
+  probes={[
+    {
+      q: 'Coins are worth 1, 6 and 10. To make 12, you take the biggest coin that fits, again and again. What happens?',
+      choices: ['You take 10 + 1 + 1, and three coins is the fewest possible', 'You take 10 + 1 + 1, three coins, but 6 + 6 makes 12 with two', 'You take 6 + 6, two coins'],
+      answer: 1,
+      trap: 0,
+      why: 'The biggest coin that fits is 10, which leaves 2, and only two 1s make that. The table checks every last coin: a 6 leaves 6, which one coin makes, so dp[12] = 2.',
+    },
+    {
+      q: 'Houses hold 6, 10, 7 and 1, and no two neighbours may be robbed. You keep robbing the richest house left that has no robbed neighbour. What happens?',
+      choices: ['You rob 10 and 1 for 11, and no plan gets more', 'You rob 10 and 1 for 11, but robbing 6 and 7 gives 13', 'You rob 6 and 7 for 13'],
+      answer: 1,
+      trap: 0,
+      why: 'Robbing the 10 rules out both its neighbours, the 6 and the 7, which are worth 13 together. The recurrence weighs exactly that: at house 3, 7 + dp[1] = 13 beats keeping dp[2] = 10.',
+    },
+  ]}
+>
+
+Taking whatever looks best right now is a **greedy** strategy, and it never looks ahead. A 4 is the biggest coin that
+fits in 6, but it leaves 2, which takes two more coins; a 3 leaves 3, which takes one. The table compares every possible
+last coin against the best way to make what that coin leaves, so it can't be misled. Greedy is right for some problems,
+and for coin sets like 1, 5, 10 and 25 largest-first happens to give the fewest, but each case needs its own proof.
+Dynamic programming is right for any coin set.
+
+</Misconception>
+
+<Misconception
+  id="fill-in-any-order"
+  title="Any fill order works, as long as every cell gets filled"
+  probes={[
+    {
+      q: 'You fill the coin change table from dp[A] down to dp[1], with every cell except dp[0] starting at ∞. What goes wrong?',
+      choices: ['Nothing: each cell gets the same value in any order', 'dp[a] reads smaller amounts before they are filled, so every amount that needs two or more coins is left at ∞', 'The loop never ends'],
+      answer: 1,
+      trap: 0,
+      why: 'In a downward loop, every dp[a − c] except dp[0] is still ∞ when dp[a] reads it, so only amounts equal to a single coin get a number and every other amount stays ∞. Filling upwards makes every input final first.',
+    },
+    {
+      q: 'In the unique paths grid, P[i,j] = P[i−1,j] + P[i,j−1]. Which order fills every cell after the two cells it reads?',
+      choices: ['Row by row from the bottom, right to left', 'Row by row from the top, left to right', 'Any order: each cell needs only two numbers'],
+      answer: 1,
+      trap: 2,
+      why: 'P[i,j] reads the cell above and the cell to its left, so those must be filled first. Going row by row from the top-left does that; starting from the bottom-right reads cells that are still empty.',
+    },
+  ]}
+>
+
+A cell can only use answers that already exist. Before choosing an order, list what each cell reads: dp[a] reads smaller
+amounts, so fill the amounts upwards; P[i,j] reads the cell above and the cell to its left, so fill the rows from the
+top, each one left to right. Memoization finds a working order by itself, because a call waits for the calls it makes.
+Bottom-up, you choose the order, and a wrong one quietly builds on cells that are still blank or still ∞.
+
+</Misconception>
+
+<Misconception
+  id="whole-table-needed"
+  title="Bottom-up has to keep the whole table"
+  probes={[
+    {
+      q: 'House robber’s recurrence is dp[i] = max(dp[i − 1], v[i] + dp[i − 2]). To find only the best total for a street of n houses, how much memory does it need?',
+      choices: ['O(n): one cell per house', 'O(1): just the last two totals', 'O(n²)'],
+      answer: 1,
+      trap: 0,
+      why: 'Each cell reads only the two totals before it, so two variables can slide along the street. You need the whole table only to walk back and list which houses were robbed.',
+    },
+    {
+      q: 'Bottom-up Fibonacci fills dp[i] = dp[i − 1] + dp[i − 2]. To get F(n) alone, what must you keep?',
+      choices: ['The whole table of n + 1 values', 'The last two values', 'Only the last value'],
+      answer: 1,
+      trap: 0,
+      why: 'Each value reads only the two before it. Keep two variables and move them along: O(1) memory instead of O(n), with the same O(n) additions.',
+    },
+  ]}
+>
+
+A cell needs only the cells its recurrence reads. When those are the last one or two cells, or the row above, keep just
+those and let them slide along: Fibonacci and house robber need two numbers, and unique paths needs one row. That turns
+O(n) memory into O(1), or O(mn) into O(n). Keep the whole table only when you need to walk back through it to recover
+the choices, such as which coins were used or which houses were robbed.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'In the coin change table, what does dp[a] hold?',
+      choices: ['The fewest coins that add up to exactly a', 'How many coins are worth a', 'The largest coin that fits in a', 'How many different ways there are to make a'],
+      answer: 0,
+      why: 'That is the state. The recurrence, the base case dp[0] = 0 and the upward fill order all follow from saying exactly what a cell means. Counting the ways to make a is a different question, with a different table.',
+    },
+    {
+      q: 'Coins are worth 1, 4 and 5. What is the smallest number of coins that adds up to 8?',
+      choices: ['2', '3', '4', '5'],
+      answer: 0,
+      why: '4 + 4 makes 8 with two coins. Taking the biggest coin first grabs 5 and is left with 3, which only 1s can make: 5 + 1 + 1 + 1, four coins.',
+      traps: { 2: 'greedy-is-enough' },
+    },
+    {
+      q: 'In unique paths, why is P[0,0] = 1?',
+      choices: ['There is exactly one way to be at the start: stay put', 'Every cell starts at 1 before the loop', 'It makes the top row add up to the grid’s width'],
+      answer: 0,
+      why: 'A base case is a real answer, not a placeholder: one path, with no moves, reaches the start, and every other count grows from it. In coin change the base case is dp[0] = 0, because making 0 takes no coins.',
+    },
+    {
+      q: 'House robber’s dp[i] reads dp[i − 1] and dp[i − 2]. In which order must the cells be filled?',
+      choices: ['From the base cases dp[0] and dp[1] upwards: i = 2, 3, … n', 'From i = n down to 2', 'Any order, since every cell uses the same rule'],
+      answer: 0,
+      why: 'Each cell needs the two before it to be final, so the cells go upwards from the base cases. Filling downwards would read totals that have not been worked out yet.',
+      traps: { 1: 'fill-in-any-order', 2: 'fill-in-any-order' },
+    },
+    {
+      q: 'Unique paths adds its two candidates, but coin change keeps the smaller one. Why the difference?',
+      choices: [
+        'Unique paths counts all the paths, and paths through different neighbours are different paths; coin change wants only the best way',
+        'Adding is faster than taking a minimum',
+        'Grids always add and lists always take a minimum',
+        'Either would do: both give the same table',
+      ],
+      answer: 0,
+      why: 'Counting questions add up the ways in, since every path arrives through exactly one neighbour. Optimising questions keep the best candidate: the smallest for the fewest coins, the largest for house robber.',
+    },
+    {
+      q: 'You need only the number of paths across a 100 × 100 grid, not the paths themselves. What is the least you must keep while filling it?',
+      choices: ['All 10,000 cells', 'One row of 100 cells, updated in place', 'Two numbers, like house robber'],
+      answer: 1,
+      why: 'Each cell reads only the cell above and the cell to its left. Going left to right along one row, row[j] still holds the count from above and row[j − 1] already holds the count to the left, so row[j] += row[j − 1] is the whole update.',
+      traps: { 0: 'whole-table-needed' },
+    },
+    {
+      q: 'A memoised top-down coin change and a bottom-up one are given the same coins and amount. How do their answers compare?',
+      choices: ['They are the same: same subproblems and recurrence, only the order differs', 'Bottom-up can be off by a coin, because it never recurses', 'Top-down is exact, and bottom-up is an estimate'],
+      answer: 0,
+      why: 'Both compute dp[a] = 1 + the smallest dp[a − c]. Top-down discovers the order by recursing and solves only the amounts it reaches; bottom-up fills every amount in a loop, with no call stack to overflow.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="four-decisions"
+  prompt="How does bottom-up dynamic programming find the fewest coins that make an amount? Name the four decisions, and say why it can’t be fooled the way taking the biggest coin first can."
+  rubric={[
+    'The state: dp[a] holds the fewest coins that add up to exactly a.',
+    'The recurrence: the best way to make a ends with some coin c, so dp[a] = 1 + the smallest dp[a − c] over coins that fit.',
+    'The base case: dp[0] = 0, because making 0 takes no coins; an amount no coins can make stays ∞.',
+    'The fill order: amounts go from small to large, so every dp[a − c] is final before dp[a] reads it.',
+    'It compares every possible last coin, so it finds the fewest for any coin set, where largest-coin-first can use too many.',
+  ]}
+  example="The table dp holds, for each amount a, the fewest coins that add up to exactly a. The best way to make a ends with some coin c, and the coins before it must make a − c as cheaply as possible, so dp[a] is 1 plus the smallest dp[a − c] over the coins that fit. The base case is dp[0] = 0, because making 0 takes no coins, and an amount no coins can make stays at ∞. Amounts are filled from 0 upwards, so every dp[a − c] is already final when dp[a] reads it. Because every cell compares every possible last coin, it can’t be fooled like largest-coin-first: with coins 1, 3 and 4 it makes 6 as 3 + 3, not 4 + 1 + 1."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Dynamic programming fills a table of subproblem answers so that each one is solved once. It takes four decisions: the
+  state (what a cell means), the recurrence, the base cases and the fill order.
+- The fill order must put every cell after the cells it reads: amounts upwards for coin change, rows from the top for
+  unique paths, houses left to right for house robber.
+- Counting questions add up the ways in (unique paths); optimising questions keep the best candidate: the smallest for
+  coin change, the largest for house robber.
+- It gives the same answers as memoization, in a loop with no recursion depth. When cells read only the last one or two
+  cells or the row above, keep just those.
+- A greedy choice can fail where the table doesn't: largest-coin-first makes 6 from 1, 3 and 4 with three coins, and
+  the table finds two.
+- Next: **dynamic programming on sequences**, where the table compares two strings cell by cell (try the
+  [edit distance](/visualisers/edit-distance) visualiser), and **all-pairs shortest paths**, where
+  [Floyd–Warshall](/visualisers/floyd-warshall) allows one more stop-over node at a time. Practise with
+  [Fewest Coins for an Amount](/practice/coin-change), [Rob a Row of Houses](/practice/house-robber) and
+  [Count Paths Across a Grid](/practice/unique-paths), or fill the table yourself in
+  [Count the paths through a grid](/code/unique-paths). The [0/1 knapsack](/visualisers/knapsack-01) uses the same
+  recipe on a table of items and capacities.
+
+</Section>

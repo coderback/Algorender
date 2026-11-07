@@ -79,6 +79,7 @@ concepts:
     summary: Nodes joined by pointers, so inserting is cheap but finding is not.
     prereqs: [arrays]
     visualisers: [linked-list]
+    lesson: linked-lists
 
   # ── Searching and sorting ────────────────────────────────────
   - id: linear-search
@@ -148,6 +149,7 @@ concepts:
     summary: Smaller keys to the left, larger to the right, so search follows one path.
     prereqs: [binary-search, recursion]
     visualisers: [binary-tree]
+    lesson: binary-search-trees
   - id: balanced-trees
     title: Self-balancing trees
     track: trees
@@ -166,6 +168,7 @@ concepts:
     summary: A tree packed into an array that always has its smallest (or largest) item on top.
     prereqs: [arrays]
     visualisers: [heap]
+    lesson: heaps
   - id: tries
     title: Tries
     track: trees
@@ -193,6 +196,7 @@ concepts:
     summary: Keep one running total and slide it, instead of re-adding every window.
     prereqs: [two-pointers]
     visualisers: [sliding-window]
+    lesson: sliding-window
   - id: monotonic-stack
     title: Monotonic stack
     track: patterns
@@ -271,6 +275,7 @@ concepts:
     summary: Filling a table of subproblem answers in an order where each cell's inputs are ready.
     prereqs: [memoization]
     visualisers: [coin-change, house-robber, unique-paths, knapsack-01]
+    lesson: dynamic-programming
   - id: sequence-dp
     title: Dynamic programming on sequences
     track: design

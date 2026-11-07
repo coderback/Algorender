@@ -1,0 +1,292 @@
+<Section step="hook" title="The most urgent first">
+
+An emergency department doesn't see patients in the order they arrive. Each one is given an urgency, whoever is most
+urgent goes next, and new patients keep coming through the door. A queue, from [stacks and queues](/learn/stacks-queues),
+would hand back whoever has waited longest. This needs a different rule: the item with the **highest priority** comes out
+first.
+
+Keep the waiting list sorted and the most urgent is always at one end, but every arrival has to be slotted into place,
+shifting up to n entries, as in [arrays](/learn/arrays). Keep it unsorted and arrivals are cheap, but finding the most
+urgent means checking all n. A **heap** sits in between. It keeps the list only partly in order, just enough that the
+top item is always first. It is a tree laid out in a plain array with no pointers, and a million entries make a tree
+just 20 levels deep, so adding or removing one takes at most 19 swaps.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="priority queue">The interface: insert an item, peek at the top one, remove the top one. The top is the smallest key or the largest, depending on the queue. A heap is the usual way to build one.</Term>
+  <Term name="complete binary tree">Every level is full except perhaps the last, which fills from the left. Numbered level by level, its nodes leave no gaps, so they pack into an array.</Term>
+  <Term name="heap property">In a **min-heap** every parent is no larger than its children, so the smallest value is at the root. A **max-heap** flips the rule, and the largest is on top. Either way, no child beats its parent.</Term>
+  <Term name="index arithmetic">Counting from 0, the children of index i are at 2i + 1 and 2i + 2, and its parent is at ⌊(i − 1) / 2⌋: i − 1 halved and rounded down.</Term>
+  <Term name="sift up and sift down">How a heap repairs itself after a change: a value swaps with its parent while it beats it (up), or with its better child while that child beats it (down).</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A tree with no pointers">
+
+This min-heap holds seven values. Read it as a tree, with 2 at the root, or as the strip under it: the array that
+actually stores the values, with each index below its cell. Each node shows its index too. Insert a value and watch both
+views change.
+
+<Explore slug="heap" settings={{ start: 'min', seed: 7 }} caption="Insert 5. It joins at the end of the array, index 7. Its parent, at index ⌊(7 − 1) / 2⌋ = 3, holds 70, so they swap; then 5 swaps with 7 at index 1 and stops under the root, 2, which is smaller. Two swaps in a tree four levels deep." />
+
+Nothing stores where a child is. The tree is complete, so numbering its nodes level by level, left to right, gives exactly
+the array order, and the children of index i are always at 2i + 1 and 2i + 2. (Some books count from 1, which makes them
+2i and 2i + 1 and the parent ⌊i / 2⌋; here, as in Python's heapq, counting starts at 0.)
+
+Notice what the array is not: sorted. It starts as 2, 7, 41, 70, 52, 97, 47, so 70 comes before 52, and 97 before 47.
+The heap property only compares each parent with its own children. That is enough for a priority queue, because along
+any path up the tree the values never grow, so the smallest of all sits at the root, index 0, and peeking at it is O(1).
+
+Insert keeps the tree complete first: the new value goes into the next free cell, the end of the array. That may break the
+heap property with its parent, so it **sifts up**, swapping with its parent while it is smaller. Each swap climbs one
+level. Removing the top is the mirror image. Only the last cell can go without leaving a gap, so the last value fills the
+hole at the root, and then it **sifts down**.
+
+<Explore slug="heap" settings={{ start: 'min', seed: 7 }} caption="Extract the root. 2 comes out, and the last value, 47, moves from index 6 to the root. It swaps with 7, the smaller of its two children, then stops at index 1, where its children 70 and 52 are both larger." />
+
+At each level the sinking value looks at both children and swaps with the **smaller** one. That child moves up and becomes
+the parent of its old sibling, so it has to be no larger than the sibling too. The value stops as soon as it is no larger
+than either child, or when it reaches a leaf.
+
+Completeness is what keeps every path short. A tree allowed to grow lopsided could become a chain of n nodes, and sifting
+along it would cost O(n). A complete tree has no such chains: each level doubles the room.
+
+<KeyIdea>
+
+**A heap is a complete tree in an array with one rule: no child beats its parent.** Insert appends and sifts up;
+removing the top moves the last value to the root and sifts it down. Each walks one path between the root and a leaf, and
+a complete tree of n values is only ⌊log₂ n⌋ + 1 levels deep, so both are O(log n). Peek reads index 0 in O(1).
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: up or down, left or right">
+
+This is a max-heap of the same seven values: every parent is no smaller than its children, so 97 sits on top, and a
+sinking value swaps with its **larger** child. Insert 80, then extract the root twice. Before each step, predict whether
+the value swaps with its parent, or which child it swaps with.
+
+<PredictChallenge slug="heap" settings={{ start: 'max', seed: 7 }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Sift up in code, and a faster build">
+
+A priority queue is what you ask for; a binary heap is how it is usually built. Python's heapq module and Java's
+PriorityQueue are both binary min-heaps kept in an array. To order tasks by priority in Python, push tuples such as
+(priority, task), which compare by their first item first. Dijkstra's algorithm keeps its frontier this way, keyed by
+distance (see the [Dijkstra lesson](/learn/dijkstra)), and so do schedulers, event simulations and "top k" problems.
+
+Here is push for a min-heap kept in a plain list. It appends the value, then climbs: work out the parent's index, stop if
+the parent is no larger, otherwise swap the two and move up.
+
+<TraceCode
+  snippet="heap-push"
+  question="What does the program print?"
+  choices={['[1, 2, 3, 4, 6, 7, 8, 9]', '[1, 2, 3, 4, 6, 9, 7, 8]', '[1, 4, 3, 8, 6, 9, 7, 2]', '[2, 1, 3, 4, 6, 9, 7, 8]']}
+  answer={1}
+  why="2 joins at index 7. Its parent is at index 3, half of 7 − 1, and holds 8, so they swap. Its next parent, 4 at index 1, is larger too, so they swap again. The root, 1, is no larger than 2, so the loop breaks. Nothing else moves, so 9 still comes before 7: the list is a heap, not a sorted list. Two swaps for eight values, never more than one per level."
+/>
+
+The printed list shows how little a heap promises, and that little is what makes it cheap.
+
+<Misconception
+  id="heap-is-sorted"
+  title="A heap keeps its values in sorted order"
+  probes={[
+    {
+      q: 'Is the array [1, 4, 2, 9, 5, 3] a valid min-heap?',
+      choices: ['No: it isn’t sorted', 'Yes: every parent is no larger than its children', 'Only if 9 and 5 swap places'],
+      answer: 1,
+      trap: 0,
+      why: 'Index 0 holds 1, above 4 and 2; index 1 holds 4, above 9 and 5; index 2 holds 2, above 3. Every parent is no larger than its children, which is all a min-heap asks. Sorted order is never required.',
+    },
+    {
+      q: 'A min-heap holds 15 different values. Where can the largest one be?',
+      choices: ['Only at the last index, 14', 'In any leaf: indices 7 to 14', 'At index 1 or 2, just below the root'],
+      answer: 1,
+      trap: 0,
+      why: 'A parent must be smaller than its children, so the largest value can’t have any: it is a leaf. Indices 7 to 14 are the leaves of a 15-node heap, and nothing says which one holds it. Only a sorted array would put it last.',
+    },
+  ]}
+>
+
+A heap is only partly ordered. The heap property compares each parent with its own children and says nothing about
+siblings, cousins or anything else, so [1, 4, 2, 9, 5, 3] is a valid min-heap even though 4 comes before 2. That is why a
+heap is cheap to keep: insert and remove repair one path, never the whole array. It is also why a heap can't binary
+search. To find out whether some value is in it, you may have to look at every node, which is O(n). To get every value
+out in order, remove the top n times; that is **heap sort**, and it costs O(n log n).
+
+</Misconception>
+
+Sift down is the step that is easiest to get wrong. A value with two children has a choice to make, one that sift up
+never faces, since a node has only one parent.
+
+<Misconception
+  id="swap-either-child"
+  title="Sift down can swap with any child that beats the value"
+  probes={[
+    {
+      q: 'In a min-heap, 9 is being sifted down. Its children are 6 and 2. What happens next?',
+      choices: ['9 swaps with 6, the left child', '9 swaps with 2, the smaller child', 'Either swap works, since both are smaller than 9'],
+      answer: 1,
+      trap: 2,
+      why: 'If 6 moved up, it would become the parent of 2, which is smaller, and the heap property would break where 9 was. Only the smaller child, 2, can sit above both 9 and 6.',
+    },
+    {
+      q: 'In a max-heap, 3 is being sifted down. Its children are 10 and 12. Which does it swap with?',
+      choices: ['10', '12', 'Either, since both are larger than 3'],
+      answer: 1,
+      trap: 2,
+      why: 'In a max-heap a parent must be no smaller than its children, so the larger child, 12, moves up: it is no smaller than 10 or 3. Swapping with 10 would put 10 above 12.',
+    },
+  ]}
+>
+
+Sift down must swap with the **better** child: the smaller one in a min-heap, the larger one in a max-heap. The child
+that moves up becomes the parent of its old sibling, so it has to beat that sibling as well as the sinking value, and only
+the better of the two does. Swap with the other one and the heap property breaks at the very spot you were fixing.
+
+</Misconception>
+
+Sometimes all the values arrive at once. Inserting them one at a time costs O(log n) each, O(n log n) in all. Building
+**bottom-up** does better. Lay the values out as they are: that is already a complete tree. Every leaf, the second half of
+the array, is a heap of one. Then walk backwards from the last parent, index ⌊n/2⌋ − 1, to the root, sifting each value
+down. Both subtrees below it are heaps already, so one sift-down makes its whole subtree a heap.
+
+<Explore slug="heap" settings={{ start: 'min-empty' }} caption="Type 9, 8, 7, 6, 5, 4, 3 into Build heap. It starts at index 2, the last parent, and sinks 7, then 8, then 9, which falls two levels: four swaps in all, and 3 ends on top. Inserting the same values one at a time would take 10 swaps, because each new value is the smallest so far and climbs to the root." />
+
+Four swaps against ten is no accident. Counted the obvious way, though, the build looks no better than inserting: one
+sift-down per parent, each up to log₂ n levels long.
+
+<Misconception
+  id="heapify-n-log-n"
+  title="Building a heap from n values costs O(n log n)"
+  probes={[
+    {
+      q: 'What does building a min-heap bottom-up from an unsorted array of n values cost?',
+      choices: ['O(n log n): n sift-downs of O(log n) each', 'O(n)', 'O(log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'Most sift-downs are short: half the nodes are leaves and never move, a quarter sink at most one level, and so on. The swaps add up to fewer than n, so the build is O(n).',
+    },
+    {
+      q: 'Why is building bottom-up faster than inserting the n values one at a time?',
+      choices: ['It isn’t: both cost O(n log n)', 'Most nodes sit near the bottom, where a sift-down is short', 'It sorts the values first'],
+      answer: 1,
+      trap: 0,
+      why: 'Inserting sifts each value up, and the many values near the bottom can have a long way to climb: O(n log n) in the worst case. Bottom-up sifts each value down, and the many values near the bottom have almost nowhere to go: O(n).',
+    },
+  ]}
+>
+
+"n sift-downs of O(log n) each" is a true upper bound, but not a tight one. Only the root can sink the whole height.
+Half the nodes are leaves and never move, a quarter sit one level up and sink at most one level, an eighth sink at most
+two, and so on: n/4 × 1 + n/8 × 2 + n/16 × 3 + … adds up to fewer than n swaps, so building bottom-up is **O(n)**.
+Inserting one value at a time really is O(n log n) in the worst case, as with the descending list above, because there
+the many nodes at the bottom are the ones with the long climb.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A heap is stored in an array counted from 0. Where are the children of index 4, and where is its parent?',
+      choices: ['Children at 9 and 10, parent at 1', 'Children at 8 and 9, parent at 2', 'Children at 5 and 6, parent at 3', 'Children at 9 and 10, parent at 2'],
+      answer: 0,
+      why: 'The children are at 2i + 1 = 9 and 2i + 2 = 10, and the parent is at ⌊(4 − 1) / 2⌋ = 1. Children at 2i and 2i + 1 with the parent at ⌊i / 2⌋ is the rule for arrays counted from 1.',
+    },
+    {
+      q: 'Which of these arrays is a valid min-heap?',
+      choices: ['[2, 4, 3, 1, 5, 8]', '[2, 4, 3, 9, 5, 8]', '[9, 5, 8, 4, 2, 3]', 'None of them: none is sorted'],
+      answer: 1,
+      why: 'In [2, 4, 3, 9, 5, 8], 2 is above 4 and 3, 4 is above 9 and 5, and 3 is above 8, so every parent is no larger than its children. The first breaks the rule at index 1, where 4 sits above 1. The third is a max-heap.',
+      traps: { 3: 'heap-is-sorted' },
+    },
+    {
+      q: 'A min-heap holds [3, 8, 5, 10, 9, 7]. You insert 4. What does the array look like afterwards?',
+      choices: ['[3, 8, 5, 10, 9, 7, 4]', '[3, 8, 4, 10, 9, 7, 5]', '[3, 4, 5, 7, 8, 9, 10]', '[4, 8, 3, 10, 9, 7, 5]'],
+      answer: 1,
+      why: '4 joins at index 6. Its parent, at ⌊(6 − 1) / 2⌋ = 2, holds 5, so they swap. Its new parent, the root, holds 3, which is no larger than 4, so it stops after one swap. Nothing re-sorts the rest of the array.',
+      traps: { 2: 'heap-is-sorted' },
+    },
+    {
+      q: 'A max-heap is stored as [50, 30, 40, 10, 20, 35]. You insert 45. At which index does it end up?',
+      choices: ['Index 6, where it was appended', 'Index 2, below 50', 'Index 0, the root', 'Index 1, below 50'],
+      answer: 1,
+      why: '45 joins at index 6, under 40 at index 2, and swaps with it, since a max-heap parent must be no smaller than its children. Its new parent, 50, is larger, so it stops at index 2. Sift up only ever walks the path to the root, so it never visits index 1.',
+    },
+    {
+      q: 'A min-heap is stored as [2, 6, 3, 9, 7, 5, 4]. You extract the root. What does the array look like afterwards?',
+      choices: ['[3, 6, 4, 9, 7, 5]', '[6, 4, 3, 9, 7, 5]', '[4, 6, 3, 9, 7, 5]', '[3, 4, 5, 6, 7, 9]'],
+      answer: 0,
+      why: 'The last value, 4, fills the hole at the root. Its children are 6 and 3, and only the smaller, 3, can sit above both 4 and 6, so they swap. At index 2, the only child of 4 is 5, which is larger, so it stops. Swapping with 6 instead would put 6 above 3.',
+      traps: { 1: 'swap-either-child', 3: 'heap-is-sorted' },
+    },
+    {
+      q: 'You have a million unsorted values to put in a heap. What does building it bottom-up cost, and what does inserting them one at a time cost in the worst case?',
+      choices: ['O(n) bottom-up, and O(n log n) one at a time', 'O(n log n) either way', 'O(log n) bottom-up, and O(n) one at a time', 'O(n²) either way'],
+      answer: 0,
+      why: 'Bottom-up, most values sit near the bottom and sink a level or two at most, so the work adds up to O(n). One at a time, each insert can climb the full height of about log₂ n levels, so the worst case is O(n log n).',
+      traps: { 1: 'heapify-n-log-n' },
+    },
+    {
+      q: 'Dijkstra’s algorithm keeps taking the closest unsettled node while new distances keep arriving. Why use a min-heap rather than a sorted array?',
+      choices: [
+        'A sorted array gives the minimum fast, but each new distance shifts up to n entries; a heap inserts and removes the minimum in O(log n)',
+        'A heap keeps every distance in sorted order, so the closest is always first',
+        'A heap can binary search for any node’s entry and lower it in O(log n)',
+        'A sorted array can’t hold the same node twice',
+      ],
+      answer: 0,
+      why: 'The heap makes the minimum cheap and nothing else. It isn’t sorted, so it can’t binary search, and finding an arbitrary entry is O(n). That is why Dijkstra pushes a new entry when a distance improves and skips the stale one when it comes out.',
+      traps: { 1: 'heap-is-sorted', 2: 'heap-is-sorted' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="heap-array-ops"
+  prompt="How does a binary heap store a tree in a plain array, and why are insert and remove-the-top O(log n) while peek is O(1)?"
+  rubric={[
+    'The tree is complete, so it fills the array level by level with no gaps: the children of index i are at 2i + 1 and 2i + 2.',
+    'No child beats its parent, so the top value is always at the root, index 0, and peek is O(1).',
+    'Insert appends the value and sifts it up while it beats its parent; removing the top moves the last value to the root and sifts it down.',
+    'Each sift follows one path between the root and a leaf, and a complete tree of n values has about log₂ n levels, so both cost O(log n).',
+  ]}
+  example="A heap is a complete binary tree: every level is full except the last, which fills from the left. Numbered level by level, the nodes fill an array with no gaps, so no pointers are needed: the children of index i sit at 2i + 1 and 2i + 2, and its parent at (i − 1) / 2 rounded down. In a min-heap every parent is no larger than its children, so the smallest value is always at index 0, and peek just reads it in O(1). Insert appends the value and swaps it with its parent while it is smaller. Removing the top moves the last value to the root and swaps it with its smaller child while that child is smaller. Each walks one path, and the tree is only about log₂ n levels deep, so both are O(log n)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A binary heap is a complete binary tree stored in an array counted from 0: the children of i are at 2i + 1 and 2i + 2,
+  its parent at ⌊(i − 1) / 2⌋. No pointers are stored.
+- The heap property only compares parents with their children. The top value is at index 0, so peek is O(1), but the
+  array is not sorted, and finding any other value is O(n).
+- Insert appends and sifts up; removing the top moves the last value to the root and sifts it down, swapping with the
+  better child. Both walk one path in a tree about log₂ n levels deep: O(log n).
+- Building a heap bottom-up from n values is O(n), because most nodes sit near the bottom and barely move.
+- A priority queue is the interface (insert, peek, remove the top); a binary heap is the usual implementation.
+- Next: **heap sort**, which builds a max-heap in place and keeps moving the top to the end of the array
+  ([the heap sort visualiser](/visualisers/heap-sort)), and heaps at work in [Dijkstra's algorithm](/learn/dijkstra),
+  in [Prim's algorithm](/visualisers/prims) for **minimum spanning trees** and in [meeting rooms](/visualisers/meeting-rooms)
+  for **intervals**. Practise with [Smash the Heaviest Stones](/practice/last-stone-weight),
+  [Kth Largest in a Stream](/practice/kth-largest-in-stream) and [Kth Largest Number in a List](/practice/kth-largest-element),
+  or open the [heap visualiser](/visualisers/heap) to try more operations.
+
+</Section>

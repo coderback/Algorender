@@ -1,0 +1,320 @@
+<Section step="hook" title="Play next, without the shuffle">
+
+Your music app has a queue of 10,000 songs, and you tap **Play next** on one more. It has to go straight after the song
+that is playing. If the queue were an array, every song after that spot would shift one cell along: nearly 10,000 moves
+for a single tap.
+
+A **linked list** needs two pointer changes instead. Each song sits in its own node, and each node records where the next
+one is, so slotting a song in means changing who points at whom. Nothing moves. The price is what an array gave you for
+free: to reach song 5,000, you start at the first and follow 4,999 pointers, one at a time.
+
+Like a stack or a queue, a linked list is cheap at its ends, with one catch you will meet below. Unlike them, it is also
+cheap in the middle, as long as you are already standing there.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="node">One element of the list: a value and a pointer to the next node. Each node is its own small allocation, wherever memory had room.</Term>
+  <Term name="next pointer and null">A node’s next says where the following node is. The last node’s next is null (None in Python): nothing comes after it.</Term>
+  <Term name="head and tail">Pointers to the first and the last node. Everything is reached from head; tail is an extra that makes adding at the back cheap. Both are null in an empty list.</Term>
+  <Term name="walk (traversal)">Visiting the nodes in order by following next pointers from head, one hop at a time. It is the only way to reach a node in the middle.</Term>
+  <Term name="singly and doubly linked">In a singly linked list each node points only forwards. In a doubly linked list each node also has a prev pointer back to the node before it.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Rewire, don’t shift">
+
+This list holds 7, 23, 42 and 15. Each box is a node, with its value on the left and its next pointer on the right,
+where the arrow to the following node leaves. head points at 7, tail at 15, and 15's next is null, drawn as ∅. Insert a
+value in the middle, then search for one, and watch the two counts.
+
+<Explore slug="linked-list" settings={{ start: 'example' }} caption="Insert 99 at index 2, then search for 15. The insert visits 2 nodes, 7 and 23, then writes 2 pointers: first 99's next to 42, then 23's next to 99. The search compares 7, 23, 99, 42 and 15, visiting 5 nodes, and finds 15 at index 4." />
+
+Nothing was shifted or copied. 42 and 15 kept their places in memory (the drawing only slides them along at the end, to
+make room for 99 in the row), and two arrows changed: the new node took over 23's link to 42, then 23 was pointed at the
+new node. That order matters. If 23 pointed at 99 first, nothing would point at 42 any more, and 42 and 15 would be
+lost. Linking a node in costs those two writes whether the list has 4 nodes or 4 million.
+
+Getting to the spot is another matter. An array finds index i with one calculation, because its cells sit side by side.
+A list's nodes are allocated one at a time, wherever memory had room, so there is no formula for where node i is: the
+only way in is head, and the only way along is next. The insert had to walk to 23 before it could link anything, and the
+search had to look at every node until it reached 15.
+
+<KeyIdea>
+
+**A linked list rewires instead of shifting. Once you hold the node before the spot, inserting or deleting is one or two
+pointer writes: O(1). But nothing says where node i is, so reaching index i, or searching, follows next pointers from
+head: O(n).**
+
+</KeyIdea>
+
+The ends are where a list is cheapest. head leads straight to the first node, so inserting or deleting there needs no
+walk at all. A **tail** pointer leads straight to the last node, so inserting after it is O(1) too. Deleting the last
+node is the exception: it changes the node *before* the tail, and in this list nothing points backwards.
+
+<Explore slug="linked-list" settings={{ start: 'example' }} caption="Insert 8 at the tail, then delete at index 0: neither visits a single node. Then delete at index 3, which now holds the 8: prev has to visit 3 nodes, 23, 42 and 15, to reach the node before the tail, and tail moves back to 15." />
+
+</Section>
+
+<Section step="predict" title="Your turn: follow the pointers">
+
+Before each step, predict what comes next: which pointer changes first, whether the node the walk has reached is the one
+it wants, and how many nodes a walk must pass. Insert 99 at index 2, insert a value at the tail, then delete the value 15.
+
+<PredictChallenge slug="linked-list" settings={{ start: 'example' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="Turn a list around, and work its ends">
+
+Reversing a list in place is the classic linked-list exercise, and it shows the one rule of rewiring in its plainest
+form: save a link before you overwrite it. The loop keeps three names. prev is the part already turned round (nothing,
+at first), cur is the next node to turn, and nxt holds on to the rest of the list. Each pass saves cur's next in nxt,
+points cur back at prev, then moves prev and cur one node along.
+
+<TraceCode
+  snippet="reverse-list"
+  question="After the loop’s first pass, what does `next` hold in the node with value 1?"
+  choices={['The node with value 2', 'Nothing: `None` in Python, `null` in JavaScript', 'The node with value 3', 'The node itself']}
+  answer={1}
+  why="The first pass runs `cur.next = prev` while prev is still nothing, so node 1, the old head, becomes the end of the reversed list. Its link to node 2 is gone, which is why the line before saves it in `nxt`: without that, nothing would lead to nodes 2 and 3."
+/>
+
+Each pass turns one arrow round and does a fixed amount of work, so reversing n nodes is O(n) time, with three extra
+names whatever n is: O(1) extra memory. No value is copied and no node moves; only the arrows change direction.
+
+The loop also shows the right way to go through a list: one pointer, stepped along, visiting each node once. Asking for
+positions by index is the wrong way, because each request starts again at head.
+
+<Misconception
+  id="list-index-jumps"
+  title="A linked list can jump straight to index i"
+  probes={[
+    {
+      q: 'A linked list holds 1,000,000 nodes. About how many nodes does reading the value at index 500,000 visit?',
+      choices: ['One: it works out where node 500,000 is', 'About 500,000', 'About 20'],
+      answer: 1,
+      trap: 0,
+      why: 'Nodes are allocated one by one and can be anywhere in memory, so there is no formula for where node i is. The only way there is to follow 500,000 next pointers from head.',
+    },
+    {
+      q: 'A loop calls get(list, i) for every i from 0 to n − 1, and each get walks from head. What does the whole loop cost on a linked list?',
+      choices: ['O(n): each get is O(1)', 'O(n²): get(i) follows i pointers, so the walks add up to about n²/2', 'O(n log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'The walks cost 0 + 1 + … + (n − 1) hops. Keeping one pointer and stepping it along, cur = cur.next, visits every node in O(n) in total.',
+    },
+  ]}
+>
+
+A list has no address formula. An array finds A[i] at base + i × cellSize because its cells sit side by side, but a
+list's nodes were allocated one at a time and can be anywhere, so the only way to node i is from head, following i next
+pointers: O(n). A loop that asks for position 0, then 1, then 2 pays that walk every time, which turns an O(n) pass into
+O(n²). To visit every node, keep one pointer and step it along, as the reverse loop does.
+
+</Misconception>
+
+The same walk hides inside the O(1) that tables of costs give for inserting into a list.
+
+<Misconception
+  id="insert-always-o1"
+  title="Inserting into a linked list is always O(1)"
+  probes={[
+    {
+      q: 'Tables of costs list linked-list insertion as O(1). What does that assume?',
+      choices: ['That you already hold the node the new one goes after', 'Nothing: inserting at any index is O(1)', 'That the list is sorted'],
+      answer: 0,
+      trap: 1,
+      why: 'The O(1) is the relinking: a pointer write or two. Finding the spot by index or by value is a walk from head, O(n), unless the spot is the head, the tail, or a node you already have.',
+    },
+    {
+      q: 'Which of these is O(1) on a singly linked list of n nodes?',
+      choices: ['Inserting right after a node you hold a reference to', 'Inserting at index n/2, starting from head', 'Inserting just before the first node that holds 42'],
+      answer: 0,
+      trap: 1,
+      why: 'With the node in hand, the new node takes over its next and the node points at the new one: two writes. Reaching index n/2 takes about n/2 hops, and finding 42 is a search.',
+    },
+  ]}
+>
+
+The O(1) is the rewiring, not the finding. Once you hold the node before the spot, linking a new node in is two pointer
+writes, however long the list is. Reaching that node by index or by value is a walk from head, so inserting at index i
+costs O(i) to get there plus O(1) to link: in the middle of a list that is O(n), the same order as an array's shift. The
+real wins are at the head, at the tail with a tail pointer, and right after a node you already have, like the song that
+is playing.
+
+</Misconception>
+
+Cheap ends make a linked list a natural **queue**: enqueue inserts at the tail and dequeue deletes at the head, and in
+the second list above, neither visited a node. Unlike the ring buffer in [stacks and queues](/learn/stacks-queues), it
+never fills up and never has to grow, because each value gets a node of its own. The cost is memory: every value carries
+a pointer, 8 bytes on a 64-bit machine, and every node is a separate allocation with its own overhead. Which end does
+which job matters, though.
+
+<Misconception
+  id="tail-delete-cheap"
+  title="A tail pointer makes removing the last node O(1)"
+  probes={[
+    {
+      q: 'A singly linked list with head and tail pointers holds n nodes. What does removing its last node cost?',
+      choices: ['O(1): tail leads straight to it', 'O(n): only a walk from head finds the node before it', 'O(log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'Removing the last node sets the next of the node before it to null and moves tail there. Nodes only point forwards, so finding that node means walking the list from head.',
+    },
+    {
+      q: 'A queue is built on a singly linked list with head and tail pointers. Which way round should it work?',
+      choices: ['Enqueue at the head, dequeue at the tail', 'Enqueue at the tail, dequeue at the head', 'Enqueue and dequeue both at the head'],
+      answer: 1,
+      trap: 0,
+      why: 'Adding at either end is O(1), but only the head is O(1) to remove. Dequeuing at the tail would walk the whole list every time. Both at the head would make a stack, not a queue.',
+    },
+  ]}
+>
+
+tail finds the last node in one step, but removing it changes a different node: the one before it, whose next must
+become null and where tail must move. Nodes only point forwards, so the only way to find that node is a walk from head,
+O(n). That is why a queue on a singly linked list adds at the tail and removes at the head. A **doubly linked list**
+keeps a prev pointer in every node, so the node before the tail is one step away and removing at either end is O(1).
+
+</Misconception>
+
+A doubly linked list pays for that with a second pointer in every node, and with twice the pointer writes for each
+change: four to link a node in, two to unlink one. In return, any node you hold can be unlinked in O(1), and the list can
+be walked in both directions. Java's LinkedList is doubly linked, and Python's collections.deque is a doubly linked list
+of blocks of values.
+
+One cost never shows up in big-O. The processor fetches memory in small blocks, so reading one array value brings its
+neighbours along for free. A list's nodes can be anywhere, so each hop can be a fresh trip to memory. Walking a list and
+scanning an array are both O(n), but the array usually wins by a wide margin, which is why most code reaches for an array
+first and keeps linked lists for when it really does splice in the middle.
+
+Linked lists turn up most often as a part inside other structures. A hash table that resolves collisions by chaining,
+as Java's HashMap does, keeps the keys that land in one bucket in a short linked list. A graph's adjacency list can keep
+each vertex's neighbours in one. An LRU cache keeps its entries in a doubly linked list and finds each entry's node through a hash map, so it can unlink any entry in O(1) (the
+[caching lesson](/learn/caching) shows it at work), and a database's B+ tree links its leaves so a range scan can walk
+along them (see [storage engines](/learn/storage-engines)).
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A singly linked list is 4 → 8 → 15 → 16. To insert 23 at index 2, which two pointer writes are needed, and in which order?',
+      choices: [
+        'Point 23 at 15, then point 8 at 23',
+        'Point 8 at 23, then point 23 at 15',
+        'Move 15 and 16 one place along, then put 23 at index 2',
+        'Point 23 at 8, then point 15 at 23',
+      ],
+      answer: 0,
+      why: 'The new node copies 8’s link to 15 first, then 8 points at 23. In the other order, once 8 points at 23 nothing leads to 15 any more, so 15 and 16 are lost. No node moves.',
+    },
+    {
+      q: 'Which of these is O(1) on a singly linked list of n nodes with head and tail pointers?',
+      choices: ['Reading the value at index n/2', 'Inserting at the tail', 'Removing the tail', 'Checking whether 42 is in the list'],
+      answer: 1,
+      why: 'tail leads straight to the last node, so linking a new one after it is two pointer writes. Reading index n/2 and searching walk from head, and removing the tail needs the node before it, which only a walk finds.',
+      traps: { 0: 'list-index-jumps', 2: 'tail-delete-cheap' },
+    },
+    {
+      q: 'A singly linked list holds 10,000 nodes. You insert a value at index 5,000, starting from head. What does it cost, and where does the cost come from?',
+      choices: [
+        'O(1): two pointer writes, whatever the index',
+        'O(n): about 5,000 hops to reach the node before the spot, then two pointer writes',
+        'O(n): the 5,000 nodes after the spot each move one place',
+      ],
+      answer: 1,
+      why: 'Linking the node in is O(1), but reaching index 4,999 takes 4,999 hops from head. Nothing shifts: moving every later element is an array’s cost, not a list’s.',
+      traps: { 0: 'insert-always-o1' },
+    },
+    {
+      q: 'A queue is built on a singly linked list with head and tail pointers. Why does it dequeue at the head rather than the tail?',
+      choices: [
+        'Removing the head is one pointer write, but removing the tail needs the node before it, which only a walk finds',
+        'The head always holds the smallest value',
+        'The tail pointer can’t be changed once it is set',
+        'It makes no difference: removing either end is O(1)',
+      ],
+      answer: 0,
+      why: 'head ← head.next unlinks the first node in O(1). Removing the last node means setting the next of the node before it to null, and finding that node walks the list: O(n).',
+      traps: { 3: 'tail-delete-cheap' },
+    },
+    {
+      q: 'A loop reverses a linked list in place. Why does it save cur.next in nxt before it sets cur.next to prev?',
+      choices: [
+        'Once cur.next changes, nothing else leads to the rest of the list',
+        'To make the loop O(1) instead of O(n)',
+        'Python and JavaScript can’t change a field without a spare name',
+        'To copy each node before it changes',
+      ],
+      answer: 0,
+      why: 'cur.next is the only pointer to the rest of the list. Overwriting it with prev without saving it first would cut the list off after the first node.',
+    },
+    {
+      q: 'What does a doubly linked list add to each node, and what does that buy?',
+      choices: [
+        'A prev pointer: unlinking any node you hold, even the tail, becomes O(1), and the list can be walked backwards',
+        'An index: reading any position becomes O(1)',
+        'A copy of the next node’s value, so searching is faster',
+        'Nothing: it only links the last node back to the first',
+      ],
+      answer: 0,
+      why: 'With prev, the node before any node is one step away, so unlinking is O(1) wherever you stand. There is still no address formula, so reaching index i is O(n). The cost is one more pointer per node.',
+      traps: { 1: 'list-index-jumps' },
+    },
+    {
+      q: 'Summing a million numbers is O(n) in an array and in a linked list. Which is usually faster in practice?',
+      choices: [
+        'The array: its values sit side by side, so memory delivers neighbours together, while list nodes can be scattered',
+        'The linked list: it never has to resize',
+        'Neither: both are O(n), so they take the same time',
+      ],
+      answer: 0,
+      why: 'Big-O counts steps, not how long each step takes. Each hop along a list can be a fresh trip to memory, while an array is read in order from one block, which processors are built to do fast.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="linked-list-costs"
+  prompt="Why is inserting right after a node you already hold O(1) in a linked list, while reaching index i is O(n)? And why does removing the last node of a singly linked list stay O(n), even with a tail pointer?"
+  rubric={[
+    'Each node holds a value and a pointer to the next node, and the nodes can sit anywhere in memory, not in one block.',
+    'Inserting or deleting right after a node you already hold rewires one or two pointers and moves nothing else, so it is O(1).',
+    'There is no address formula for node i, so reaching index i, or searching, follows next pointers from head: O(n).',
+    'Removing the last node changes the node before it, and a singly linked list only finds that node by walking from head: O(n), even with a tail pointer.',
+  ]}
+  example="A linked list keeps each value in its own node, with a pointer to the next node, and the nodes can sit anywhere in memory. To insert after a node I already hold, I point the new node at that node’s successor first, then point the node at the new one. That is two pointer writes and nothing moves, so it is O(1). But there is no formula for where node i is, so reaching index i means starting at head and following i next pointers: O(n). The tail pointer finds the last node at once, but removing it means changing the node before it, setting its next to null and moving tail there. Nodes only point forwards, so finding that node walks the list from head, which is O(n)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A linked list is a chain of nodes, each a value and a next pointer, reached through head. The nodes can be anywhere in
+  memory.
+- Inserting or deleting right after a node you hold rewires one or two pointers: O(1). Write the new node's next first,
+  so the rest of the list stays reachable.
+- Reaching index i, or searching, walks from head: O(n). There is no address formula, and scattered nodes make each hop
+  slower than a step along an array.
+- head and tail make adding at either end O(1), so a list can back a queue: enqueue at the tail, dequeue at the head.
+  Removing the tail is O(n) unless the list is doubly linked.
+- Reversing in place turns each arrow round in one pass, saving next before overwriting it: O(n) time, O(1) extra memory.
+- Next: **hash tables**, which chain colliding keys in short linked lists, **tries**, where a node can have a next
+  pointer for every letter, and **representing graphs** with adjacency lists. Practise with
+  [Reverse a Linked List](/practice/reverse-linked-list) (write it without looking back),
+  [Merge Two Sorted Linked Lists](/practice/merge-two-sorted-lists) and
+  [Remove the Nth Node from the End](/practice/remove-nth-node-from-end), or open
+  [the linked list visualiser](/visualisers/linked-list) to try more operations.
+
+</Section>
