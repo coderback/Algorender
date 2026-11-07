@@ -301,6 +301,129 @@ while (node !== null) {
 `,
     },
   },
+  {
+    id: 'bst-insert-search',
+    title: 'Inserting into and searching a binary search tree',
+    code: {
+      python: `class Node:
+    def __init__(self, key):
+        self.key = key
+        self.left = None
+        self.right = None
+
+def insert(node, key):
+    if node is None:
+        return Node(key)
+    if key < node.key:
+        node.left = insert(node.left, key)
+    elif key > node.key:
+        node.right = insert(node.right, key)
+    return node
+
+def search(node, key):
+    while node is not None:
+        if key == node.key:
+            return True
+        if key < node.key:
+            node = node.left
+        else:
+            node = node.right
+    return False
+
+root = None
+for key in [50, 30, 70, 40]:
+    root = insert(root, key)
+print(search(root, 40))
+print(search(root, 60))
+`,
+      javascript: `class Node {
+  constructor(key) {
+    this.key = key;
+    this.left = null;
+    this.right = null;
+  }
+}
+
+function insert(node, key) {
+  if (node === null) {
+    return new Node(key);
+  }
+  if (key < node.key) {
+    node.left = insert(node.left, key);
+  } else if (key > node.key) {
+    node.right = insert(node.right, key);
+  }
+  return node;
+}
+
+function search(node, key) {
+  while (node !== null) {
+    if (key === node.key) {
+      return true;
+    }
+    if (key < node.key) {
+      node = node.left;
+    } else {
+      node = node.right;
+    }
+  }
+  return false;
+}
+
+let root = null;
+for (const key of [50, 30, 70, 40]) {
+  root = insert(root, key);
+}
+console.log(search(root, 40));
+console.log(search(root, 60));
+`,
+      typescript: `class Node {
+  key: number;
+  left: Node | null;
+  right: Node | null;
+
+  constructor(key: number) {
+    this.key = key;
+    this.left = null;
+    this.right = null;
+  }
+}
+
+function insert(node: Node | null, key: number): Node {
+  if (node === null) {
+    return new Node(key);
+  }
+  if (key < node.key) {
+    node.left = insert(node.left, key);
+  } else if (key > node.key) {
+    node.right = insert(node.right, key);
+  }
+  return node;
+}
+
+function search(node: Node | null, key: number): boolean {
+  while (node !== null) {
+    if (key === node.key) {
+      return true;
+    }
+    if (key < node.key) {
+      node = node.left;
+    } else {
+      node = node.right;
+    }
+  }
+  return false;
+}
+
+let root: Node | null = null;
+for (const key of [50, 30, 70, 40]) {
+  root = insert(root, key);
+}
+console.log(search(root, 40));
+console.log(search(root, 60));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

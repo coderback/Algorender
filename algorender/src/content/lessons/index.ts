@@ -56,6 +56,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'binary-search-trees',
+    title: 'Binary search trees: one path down',
+    concept: 'binary-search-trees',
+    summary: 'Smaller keys to the left and larger to the right at every node: why search and insert cost one comparison per level, why sorted inserts make a slow chain, and how to delete a node with two children.',
+    minutes: 20,
+  },
+  {
     slug: 'two-pointers',
     title: 'Two pointers: from n² pairs to n steps',
     concept: 'two-pointers',

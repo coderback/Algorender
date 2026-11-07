@@ -13,6 +13,7 @@ const lessonPaths = [
   'stacks-queues',
   'linked-lists',
   'binary-search',
+  'binary-search-trees',
   'two-pointers',
   'memoization',
   'dijkstra',

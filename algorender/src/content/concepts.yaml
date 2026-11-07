@@ -149,6 +149,7 @@ concepts:
     summary: Smaller keys to the left, larger to the right, so search follows one path.
     prereqs: [binary-search, recursion]
     visualisers: [binary-tree]
+    lesson: binary-search-trees
   - id: balanced-trees
     title: Self-balancing trees
     track: trees
