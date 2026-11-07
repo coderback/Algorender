@@ -26,6 +26,7 @@ const lessonPaths = [
   'graph-representations',
   'bfs-dfs',
   'topological-sort',
+  'strongly-connected-components',
   'union-find',
   'dijkstra',
   'merge-sort',

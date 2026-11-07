@@ -263,6 +263,7 @@ concepts:
     summary: Groups of nodes that can all reach each other, found with one or two depth-first passes.
     prereqs: [bfs-dfs]
     visualisers: [kosaraju, tarjan]
+    lesson: strongly-connected-components
 
   # ── Algorithm design ─────────────────────────────────────────
   - id: greedy

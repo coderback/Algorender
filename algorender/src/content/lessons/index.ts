@@ -147,6 +147,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'strongly-connected-components',
+    title: 'Strongly connected components: two searches, the second backwards',
+    concept: 'strongly-connected-components',
+    summary: "Groups of nodes that all reach each other: why the node a depth-first search finishes last lies in a source component, why Kosaraju's second search runs on the reversed graph, how Tarjan's low-links find the same groups in one pass, and why squashing them leaves a DAG.",
+    minutes: 15,
+  },
+  {
     slug: 'union-find',
     title: 'Union-find: same root, same group',
     concept: 'union-find',

@@ -1436,6 +1436,67 @@ console.log(plan.length + ' of ' + Object.keys(courses).length);
 `,
     },
   },
+  {
+    id: 'dfs-finish-order',
+    title: 'Depth-first search that records the order nodes finish in',
+    code: {
+      python: `def dfs(graph, u, seen, finished):
+    seen[u] = True
+    for v in graph[u]:
+        if v not in seen:
+            dfs(graph, v, seen, finished)
+    finished.append(u)
+
+graph = {'A': ['B'], 'B': ['A'], 'C': ['A', 'D'], 'D': ['C']}
+seen = {}
+finished = []
+for u in graph:
+    if u not in seen:
+        dfs(graph, u, seen, finished)
+print(' '.join(finished))
+`,
+      javascript: `function dfs(graph, u, seen, finished) {
+  seen[u] = true;
+  for (const v of graph[u]) {
+    if (!(v in seen)) {
+      dfs(graph, v, seen, finished);
+    }
+  }
+  finished.push(u);
+}
+
+const graph = { A: ['B'], B: ['A'], C: ['A', 'D'], D: ['C'] };
+const seen = {};
+const finished = [];
+for (const u of Object.keys(graph)) {
+  if (!(u in seen)) {
+    dfs(graph, u, seen, finished);
+  }
+}
+console.log(finished.join(' '));
+`,
+      typescript: `function dfs(graph: Record<string, string[]>, u: string, seen: Record<string, boolean>, finished: string[]): void {
+  seen[u] = true;
+  for (const v of graph[u]) {
+    if (!(v in seen)) {
+      dfs(graph, v, seen, finished);
+    }
+  }
+  finished.push(u);
+}
+
+const graph: Record<string, string[]> = { A: ['B'], B: ['A'], C: ['A', 'D'], D: ['C'] };
+const seen: Record<string, boolean> = {};
+const finished: string[] = [];
+for (const u of Object.keys(graph)) {
+  if (!(u in seen)) {
+    dfs(graph, u, seen, finished);
+  }
+}
+console.log(finished.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

@@ -276,7 +276,7 @@ through a computation graph in reverse topological order.
 - Fewer than V nodes placed means a cycle: the rest are on it or stuck behind it.
 - DFS works too: reverse the finishing order, not the discovery order. An edge to a node still on the call stack
   means a cycle.
-- Next: **strongly connected components**, groups of nodes that can all reach each other; shrink each group to one
+- Next: [strongly connected components](/learn/strongly-connected-components), groups of nodes that can all reach each other; shrink each group to one
   node and what is left is a DAG.
   Practise with [Can Every Course Be Taken?](/practice/course-schedule) and [Course Order](/practice/course-schedule-ii),
   write the DFS way in [Run backpropagation in the right order](/code/topological-backward), or open the
