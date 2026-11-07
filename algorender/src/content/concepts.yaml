@@ -272,6 +272,7 @@ concepts:
     summary: Taking the best-looking choice each time, and knowing when that is safe.
     prereqs: [quadratic-sorts]
     visualisers: [activity-selection, knapsack-greedy]
+    lesson: greedy
   - id: memoization
     title: Memoization
     track: design

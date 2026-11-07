@@ -126,6 +126,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'greedy',
+    title: 'Greedy algorithms: take the best now, never look back',
+    concept: 'greedy',
+    summary: 'Why a sort and one pass of best-looking choices can be optimal: how an exchange argument proves that earliest finish first fits the most activities and best value per kilo first packs goods that can be cut, why shortest first and whole items break, and why the sort is usually the cost.',
+    minutes: 15,
+  },
+  {
     slug: 'graph-representations',
     title: 'Representing graphs: a list per vertex or a cell per pair',
     concept: 'graph-representations',

@@ -1,0 +1,289 @@
+<Section step="hook" title="Take the best now, never look back">
+
+A lecture hall takes bookings for one day, and you want to fit in as many talks as you can, never two at once. With 30
+requests there are about a billion sets of talks to check. Or follow one rule: of the talks that still fit, take the
+one that **finishes first**, and never change your mind. That rule fits the most talks every time.
+
+It is a **greedy algorithm**: make the choice that looks best now and never take it back. Looking best is not always
+being best: in the [dynamic programming lesson](/learn/dynamic-programming), the biggest coin first paid out 6 with
+three coins where two would do. This lesson shows how to tell a safe greedy rule from one that only sounds safe.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="greedy choice">The option a fixed rule ranks best right now, such as the activity that finishes first. It is taken at once and never undone.</Term>
+  <Term name="greedy-choice property">Some best solution starts with the greedy choice: not necessarily every best solution, just one.</Term>
+  <Term name="optimal substructure">After a choice, what is left is a smaller problem of the same kind, and its best solution completes a best solution.</Term>
+  <Term name="exchange argument">The usual proof of the greedy-choice property: swap a choice in any best solution for the greedy one, and show the result is still allowed and no worse.</Term>
+  <Term name="counterexample">One input on which a rule does worse than the best possible. One is enough to prove the rule wrong.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Finish first, then do it again">
+
+Five activities want one room. A runs from 0 to 10, and B, C, D and E fill the time from 1 to 9 in four short slots.
+
+<Explore slug="activity-selection" settings={{ preset: 'longest-trap' }} caption="A starts first but finishes last, so sorting by finish time moves it to the bottom. B (1–3) is chosen first, then C (3–5), D (5–7) and E (7–9), each starting just as the last choice ends. A starts at 0, before 9, so it is skipped: 4 of 5." />
+
+Sort by start time instead and A goes first, holding the room until 10, by when every other activity has started: one
+activity. What matters is when an activity **finishes**, because the one that frees the room soonest leaves the most
+time for the rest.
+
+That is a hunch; here is the proof. Take any schedule with the most activities, and look at its first activity. B
+finishes at 3, the earliest of all, so it ends no later than that one. Swap B in. Every other activity in the schedule
+starts no earlier than the old first one ends, so no earlier than B ends either: no overlaps, and the same count. So
+some best schedule starts with B, and choosing B loses nothing. What is left is the same problem, smaller: the
+activities that start at 3 or later. The same argument picks the next choice, and the next, so one pass in finish
+order is enough, remembering only **last**, the time the latest choice ends.
+
+<KeyIdea>
+
+**A greedy algorithm is correct when two things hold: some best solution starts with the greedy choice (the
+greedy-choice property), and what is left after it is a smaller problem of the same kind (optimal substructure).** An
+exchange argument proves the first: take any best solution, swap its first choice for the greedy one, and show the
+result is still allowed and no worse. Then the same step repeats on what is left.
+
+</KeyIdea>
+
+The same proof works on another problem. A knapsack holds 50 kg of goods that can be cut, like grain or cloth. The
+greedy rule: pack the best value per kilo first.
+
+<Explore slug="knapsack-greedy" settings={{ preset: 'textbook' }} caption="A is 10 kg worth 60, 6 per kg; B is 20 kg worth 100, 5 per kg; C is 30 kg worth 120, 4 per kg. A and B go in whole, leaving 20 kg, so 20 of C’s 30 kg go in (67%), worth 80. Total 240, with the knapsack full." />
+
+Here the swap is a kilo for a kilo. If a packing holds a kilo of C while some of A is left out, swapping the two keeps
+the weight and adds 6 − 4 = 2 to the value. So a best packing never leaves a better kilo out while a worse one is in,
+and that is exactly the packing ratio order makes. Only the last item is ever cut.
+
+Both algorithms sort by the greedy rule, then make one pass that settles each item once and never looks back.
+
+</Section>
+
+<Section step="predict" title="Your turn: take it or skip it">
+
+Eleven activities, lettered in order of finish time, so the sort leaves them where they are. A is taken without a
+question; from B on, predict whether each activity starts no earlier than **last**, the time the room becomes free.
+
+<PredictChallenge slug="activity-selection" settings={{ preset: 'textbook' }} goal={8} />
+
+Four of the eleven fit: A, D, H and K. Each of the seven skipped overlaps the choice made just before it.
+
+</Section>
+
+<Section step="do" title="The pass in code, and where greedy breaks">
+
+Here is the pass as a function, on talks already sorted by finish time, each a title, a start and an end. The
+variable last starts at 0, so the first talk always fits, and the test `start >= last` lets a talk start the moment
+the last one ends.
+
+<TraceCode
+  snippet="earliest-finish-first"
+  question="When the loop reaches E, which runs from 6 to 9, what is last, and is E chosen?"
+  choices={['last is 6, and E is chosen', 'last is 6, and E is skipped because they touch at 6', 'last is 8, and E is skipped', 'last is 5, and E is chosen']}
+  answer={0}
+  why="C (4–6) was the last talk chosen, so last is 6: skipping D (5–8) left it alone. 6 >= 6, so E goes in and last becomes 9; F, starting at 8, is skipped, and the program prints A C E. With > instead of >=, E would be skipped and F chosen."
+/>
+
+Earliest finish is not the only rule that sounds right. Shortest first sounds as good: a short activity uses little of
+the room's time. In the run below, though, the shortest activity, B, clashes with both the others, so that rule fits
+just one.
+
+<Explore slug="activity-selection" settings={{ preset: 'shortest-trap' }} caption="A (0–5), B (4–7) and C (6–11). B is the shortest, 3 long, but it overlaps both of the others. Earliest finish takes A, skips B, which starts at 4, before A ends at 5, and then takes C: two activities." />
+
+<Misconception
+  id="sensible-rule-is-safe"
+  title="A sensible-looking rule that passes the examples is correct"
+  probes={[
+    {
+      q: 'Talks run 1–4, 3–5 and 4–7. A planner keeps taking the shortest talk that doesn’t clash with those already taken. How many talks does it keep?',
+      choices: ['2, the most that fit', '1', '3'],
+      answer: 1,
+      trap: 0,
+      why: '3–5 is the shortest, and it overlaps both others, so nothing fits after it. Earliest finish takes 1–4 and then 4–7.',
+    },
+    {
+      q: 'You invent a greedy rule, and it finds the best answer on all 20 inputs you try. What has that shown?',
+      choices: [
+        'That the rule is correct',
+        'Only that none of the 20 breaks it; a proof is what shows it is correct',
+        'That dynamic programming would give a different answer',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'One counterexample proves a rule wrong, but no number of passing tests proves it right: the input that breaks it may be one you didn’t try.',
+    },
+  ]}
+>
+
+Earliest start and shortest first sound as reasonable as earliest finish, and both fail on as few as three activities;
+even fewest clashes first fails on some inputs. The exchange argument shows what is special about earliest finish: the
+activity swapped in ends no later than the one it replaces, so nothing after it can clash. A shorter or earlier-starting
+one can end later, and then the swap breaks. One counterexample proves a greedy rule wrong; only a proof proves it
+right.
+
+</Misconception>
+
+The value-per-kilo rule has a limit too. Here it is on three items that can be cut, in a 10 kg knapsack:
+
+<Explore slug="knapsack-greedy" settings={{ input: '6:10, 5:7, 5:7 | 10' }} caption="A is 6 kg worth 10, 1.67 per kg; B and C are 5 kg worth 7 each, 1.4 per kg. A goes in whole, then 4 kg of B, worth 5.6, fills the knapsack, and C stays out: 15.6 in all." />
+
+Now make them a 6 kg laptop and two 5 kg cameras, which can't be cut. The same rule takes A, and the 4 kg left holds
+neither camera: 10. Yet B and C weigh exactly 10 kg together and are worth 14.
+
+<Misconception
+  id="ratio-whole-items"
+  title="Best value per kilo first also packs whole items best"
+  probes={[
+    {
+      q: 'A van takes 50 kg of whole crates: A is 10 kg worth 60, B 20 kg worth 100 and C 30 kg worth 120. Best value per kilo first loads A and B, worth 160. What is the best load?',
+      choices: ['160: ratio order is best', '220', '240'],
+      answer: 1,
+      trap: 0,
+      why: 'C doesn’t fit after A and B, so ratio order stops with 20 kg empty. B and C are worth 220; 240 would need C cut.',
+    },
+    {
+      q: 'Why is best value per kilo first right when items can be cut, but not for whole items?',
+      choices: [
+        'It is right for whole items too',
+        'Its proof swaps a worse kilo for a better one, which whole items don’t allow, so one can leave room nothing fills',
+        'Whole items can’t be sorted by value per kilo',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Goods that can be cut trade weight for weight, so a better kilo never stays out. Whole items trade only as wholes.',
+    },
+  ]}
+>
+
+The ratio rule's proof swaps a kilo for a kilo. Whole items allow no such swap, so a heavy item with a high ratio can
+leave a gap that nothing fills. No greedy rule is known to solve this **0/1 knapsack**; dynamic programming solves it
+in O(n·W) time for n items and a whole-number capacity W. The [0/1 knapsack visualiser](/visualisers/knapsack-01)
+fills that table, and its example Greedy-by-value fails is the laptop and the two cameras.
+
+</Misconception>
+
+Not every greedy algorithm can sort once at the start. [Dijkstra's algorithm](/learn/dijkstra) settles the closest
+unsettled node next, and each node it settles can bring others closer, so a [heap](/learn/heaps) hands it each choice
+in O(log n). Its proof needs edges of non-negative weight: past a negative edge, a settled node could still get closer.
+
+<Misconception
+  id="one-pass-is-linear"
+  title="A greedy algorithm is one pass, so it is O(n)"
+  probes={[
+    {
+      q: 'The fractional knapsack works out n values per kilo, sorts the items by them, then fills the bag in one pass. What does it cost for large n?',
+      choices: ['O(n): one pass fills the bag', 'O(n log n): the sort outweighs both O(n) passes', 'O(n²)'],
+      answer: 1,
+      trap: 0,
+      why: 'The ratios and the filling are O(n) each, but sorting n items by comparing them is O(n log n), and that dominates.',
+    },
+    {
+      q: 'A greedy loop makes n choices, each time scanning every waiting job for the cheapest. What does it cost?',
+      choices: ['O(n): one choice per job', 'O(n²): each scan reads up to n jobs', 'O(n log n)'],
+      answer: 1,
+      trap: 0,
+      why: 'The scans read n + (n − 1) + … + 1 jobs, about n²/2. Sorting first, or a heap, makes the whole loop O(n log n).',
+    },
+  ]}
+>
+
+The pass is O(n) only once the items are in greedy order, and a comparison sort such as [merge sort](/learn/merge-sort)
+costs O(n log n), more than the pass: on unsorted input the sort is the cost. Finding each choice by scanning
+everything left is worse, n scans of up to n items: O(n²). Sort once when the order never changes, and use a heap when
+it does.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Five meetings want one room: 0–7, 1–3, 4–6, 6–9 and 8–10. Which does earliest finish first choose?',
+      choices: ['1–3, 4–6 and 6–9', '0–7 and 8–10', '1–3, 4–6, 6–9 and 8–10', '1–3 and 6–9'],
+      answer: 0,
+      why: 'In finish order: 1–3, 4–6, 0–7, 6–9, 8–10. 0–7 starts before 6 and 8–10 before 9, so both are skipped. Taking 0–7 because it starts first leaves room only for 8–10.',
+      traps: { 1: 'sensible-rule-is-safe' },
+    },
+    {
+      q: 'A best schedule for some bookings is 2–5, 6–8 and 9–12, and the booking that finishes first of all is 1–4. What does the exchange argument do with it?',
+      choices: [
+        'Swaps 2–5 for 1–4: nothing overlaps, so a best schedule starts with 1–4',
+        'Adds 1–4, making a schedule of four',
+        'Swaps 9–12 for 1–4',
+        'Nothing: 1–4 isn’t in this best schedule, so choosing it first could lose',
+      ],
+      answer: 0,
+      why: '1–4 ends no later than 2–5, so 6–8 and 9–12 still start after it ends; adding it would overlap 2–5. A best schedule needn’t contain the greedy choice: the swap makes one that does.',
+    },
+    {
+      q: 'A bag holds 8 kg of spices that can be split: saffron, 2 kg worth 30; pepper, 5 kg worth 25; cumin, 4 kg worth 12. What is the most the bag can be worth?',
+      choices: ['58', '55', '67', '42'],
+      answer: 0,
+      why: 'Per kilo, saffron is worth 15, pepper 5 and cumin 3. All the saffron and pepper weigh 7 kg and are worth 55, and the last kilo is cumin, worth 3.',
+    },
+    {
+      q: 'Which of these does taking the best value per kilo first solve exactly?',
+      choices: [
+        'Filling a 20-tonne truck from heaps of sand, gravel and topsoil, any amount of each',
+        'Choosing which whole crates to load into a van with a weight limit',
+        'Both: the rule is the same either way',
+        'Neither',
+      ],
+      answer: 0,
+      why: 'A tonne of a worse heap can always be swapped for a tonne of a better one. Crates can’t be split, so ratio order can leave room that nothing fills: that is the 0/1 knapsack.',
+      traps: { 1: 'ratio-whole-items', 2: 'ratio-whole-items' },
+    },
+    {
+      q: 'Activity selection gets 1,000 activities already in finish order, and later 1,000,000 in random order. What does each run cost?',
+      choices: [
+        'O(n) for the first, which can skip the sort; O(n log n) for the second, where the sort dominates',
+        'O(n) for both: it is one pass',
+        'O(n²) for both',
+      ],
+      answer: 0,
+      why: 'The pass makes one comparison per activity, but random order must be sorted first, and that costs O(n log n).',
+      traps: { 1: 'one-pass-is-linear' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="greedy-exchange"
+  prompt="What makes a greedy algorithm correct? Use the exchange argument to explain why earliest finish first fits the most activities, and say why best value per kilo first fails when items can’t be cut."
+  rubric={[
+    'A greedy algorithm is correct when some best solution starts with its choice and what is left is a smaller problem of the same kind.',
+    'Swap the first activity of any best schedule for the earliest finisher: it ends no later, so nothing overlaps and the count stays the same.',
+    'What is left is the same problem on the activities that start once the choice has ended, so the argument repeats at every step.',
+    'With whole items a kilo can’t be swapped for a kilo, so a high-ratio item can leave room nothing fills; the 0/1 knapsack needs dynamic programming.',
+  ]}
+  example="A greedy algorithm never goes back on a choice, so it is correct only if some best solution starts with that choice and what is left is a smaller problem of the same kind. Take any schedule with the most activities and swap its first activity for the one that finishes earliest of all. That one ends no later, so nothing after it clashes and the count is unchanged. What is left is the same problem on the activities that start once it ends, so the argument repeats. Value per kilo first works for goods that can be cut, because a worse kilo can always be swapped for a better one. Whole items can’t be swapped that way, so a high-ratio item can leave room that nothing fills, and the 0/1 knapsack needs dynamic programming."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A greedy algorithm makes the choice that looks best now and never takes it back. It is usually a sort and one pass:
+  O(n log n), with the sort as the cost.
+- It is correct only when some best solution starts with the greedy choice and what is left is a smaller problem of the
+  same kind. An exchange argument proves the first; one counterexample proves a rule wrong.
+- Activity selection: sort by finish time and take each activity that starts no earlier than the last one taken ends.
+  Earliest start and shortest first both fail on small inputs.
+- Fractional knapsack: pack the best value per kilo first, cutting only the last item. For whole items that rule fails,
+  and the 0/1 knapsack needs dynamic programming.
+- Next: **minimum spanning trees**, where the cheapest edge joining two separate pieces is safe for the same kind of
+  reason (try [Kruskal's algorithm](/visualisers/kruskals)), and **Huffman coding**, which keeps merging the two
+  rarest groups of symbols. Practise with [Fewest Ranges to Remove](/practice/non-overlapping-intervals), activity
+  selection counted the other way, [Reach the Last Index](/practice/jump-game) and
+  [Drive Once Around a Ring Road](/practice/gas-station), or fool a greedy cashier in [Break it](/play/break-it).
+
+</Section>

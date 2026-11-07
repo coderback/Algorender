@@ -1497,6 +1497,59 @@ console.log(finished.join(' '));
 `,
     },
   },
+  {
+    id: 'earliest-finish-first',
+    title: 'Earliest finish first',
+    code: {
+      python: `def choose_talks(talks):
+    chosen = []
+    last = 0
+    for title, start, end in talks:
+        if start >= last:
+            chosen.append(title)
+            last = end
+    return chosen
+
+bookings = [['A', 1, 3], ['B', 2, 5], ['C', 4, 6], ['D', 5, 8], ['E', 6, 9], ['F', 8, 10]]
+picked = choose_talks(bookings)
+print(' '.join(picked))
+`,
+      javascript: `function chooseTalks(talks) {
+  const chosen = [];
+  let last = 0;
+  for (const [title, start, end] of talks) {
+    if (start >= last) {
+      chosen.push(title);
+      last = end;
+    }
+  }
+  return chosen;
+}
+
+const bookings = [['A', 1, 3], ['B', 2, 5], ['C', 4, 6], ['D', 5, 8], ['E', 6, 9], ['F', 8, 10]];
+const picked = chooseTalks(bookings);
+console.log(picked.join(' '));
+`,
+      typescript: `type Talk = [string, number, number];
+
+function chooseTalks(talks: Talk[]): string[] {
+  const chosen: string[] = [];
+  let last = 0;
+  for (const [title, start, end] of talks) {
+    if (start >= last) {
+      chosen.push(title);
+      last = end;
+    }
+  }
+  return chosen;
+}
+
+const bookings: Talk[] = [['A', 1, 3], ['B', 2, 5], ['C', 4, 6], ['D', 5, 8], ['E', 6, 9], ['F', 8, 10]];
+const picked = chooseTalks(bookings);
+console.log(picked.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

@@ -23,6 +23,7 @@ const lessonPaths = [
   'memoization',
   'dynamic-programming',
   'backtracking',
+  'greedy',
   'graph-representations',
   'bfs-dfs',
   'topological-sort',
