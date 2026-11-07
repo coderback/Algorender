@@ -14,6 +14,7 @@ const lessonPaths = [
   'linked-lists',
   'binary-search',
   'binary-search-trees',
+  'heaps',
   'two-pointers',
   'memoization',
   'dijkstra',

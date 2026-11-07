@@ -63,6 +63,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'heaps',
+    title: 'Heaps and priority queues: the most urgent first',
+    concept: 'heaps',
+    summary: 'A complete tree packed into an array: why the top is always one read away, why insert and remove take O(log n), and why a heap is not sorted.',
+    minutes: 20,
+  },
+  {
     slug: 'two-pointers',
     title: 'Two pointers: from n² pairs to n steps',
     concept: 'two-pointers',

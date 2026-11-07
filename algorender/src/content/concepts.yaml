@@ -168,6 +168,7 @@ concepts:
     summary: A tree packed into an array that always has its smallest (or largest) item on top.
     prereqs: [arrays]
     visualisers: [heap]
+    lesson: heaps
   - id: tries
     title: Tries
     track: trees

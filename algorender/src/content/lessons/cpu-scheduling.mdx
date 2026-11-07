@@ -194,7 +194,7 @@ can be wrong. Shortest-first is the ideal the estimates aim at, and the benchmar
 - **FCFS** is simple but forms convoys behind long jobs. **SJF/SRTF** minimise average waiting but need predicted burst
   lengths. **Round robin** keeps response times short at the cost of context switches; with a huge quantum it becomes
   FCFS. **Priority** can starve low priorities unless waiting jobs age upwards.
-- Heaps meet schedulers here: SRTF and priority scheduling keep the ready queue in a **priority queue** keyed by remaining
+- [Heaps](/learn/heaps) meet schedulers here: SRTF and priority scheduling keep the ready queue in a **priority queue** keyed by remaining
   time or priority, so picking the next process costs $O(\log n)$ instead of a scan.
 
 </Section>

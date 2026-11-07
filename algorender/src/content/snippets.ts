@@ -424,6 +424,60 @@ console.log(search(root, 60));
 `,
     },
   },
+  {
+    id: 'heap-push',
+    title: 'Pushing a value onto a min-heap and sifting it up',
+    code: {
+      python: `def heap_push(heap, x):
+    heap.append(x)
+    i = len(heap) - 1
+    while i > 0:
+        parent = (i - 1) // 2
+        if heap[parent] <= heap[i]:
+            break
+        heap[i], heap[parent] = heap[parent], heap[i]
+        i = parent
+
+priorities = [1, 4, 3, 8, 6, 9, 7]
+heap_push(priorities, 2)
+print(priorities)
+`,
+      javascript: `function heapPush(heap, x) {
+  heap.push(x);
+  let i = heap.length - 1;
+  while (i > 0) {
+    const parent = Math.floor((i - 1) / 2);
+    if (heap[parent] <= heap[i]) {
+      break;
+    }
+    [heap[i], heap[parent]] = [heap[parent], heap[i]];
+    i = parent;
+  }
+}
+
+const priorities = [1, 4, 3, 8, 6, 9, 7];
+heapPush(priorities, 2);
+console.log(priorities);
+`,
+      typescript: `function heapPush(heap: number[], x: number): void {
+  heap.push(x);
+  let i = heap.length - 1;
+  while (i > 0) {
+    const parent = Math.floor((i - 1) / 2);
+    if (heap[parent] <= heap[i]) {
+      break;
+    }
+    [heap[i], heap[parent]] = [heap[parent], heap[i]];
+    i = parent;
+  }
+}
+
+const priorities: number[] = [1, 4, 3, 8, 6, 9, 7];
+heapPush(priorities, 2);
+console.log(priorities);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {
