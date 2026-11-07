@@ -140,6 +140,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 25,
   },
   {
+    slug: 'merge-sort',
+    title: 'Merge sort: two sorted halves make a sorted whole',
+    concept: 'merge-sort',
+    summary: 'Why merging two sorted halves takes one comparison per value, why that makes merge sort O(n log n) on every input, and what its buffer and its tie rule buy.',
+    minutes: 15,
+  },
+  {
     slug: 'linear-transformations',
     title: 'Matrices move space',
     concept: 'vectors-matrices',

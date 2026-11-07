@@ -909,6 +909,88 @@ console.log(groups);
 `,
     },
   },
+  {
+    id: 'merge-sorted-lists',
+    title: 'Merging two sorted lists, one index on each',
+    code: {
+      python: `def merge(left, right):
+    out = []
+    i = 0
+    j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            out.append(left[i])
+            i += 1
+        else:
+            out.append(right[j])
+            j += 1
+    while i < len(left):
+        out.append(left[i])
+        i += 1
+    while j < len(right):
+        out.append(right[j])
+        j += 1
+    return out
+
+merged = merge([4, 7, 12], [3, 7, 9, 15])
+print(*merged)
+`,
+      javascript: `function merge(left, right) {
+  const out = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    if (left[i] <= right[j]) {
+      out.push(left[i]);
+      i += 1;
+    } else {
+      out.push(right[j]);
+      j += 1;
+    }
+  }
+  while (i < left.length) {
+    out.push(left[i]);
+    i += 1;
+  }
+  while (j < right.length) {
+    out.push(right[j]);
+    j += 1;
+  }
+  return out;
+}
+
+const merged = merge([4, 7, 12], [3, 7, 9, 15]);
+console.log(merged.join(' '));
+`,
+      typescript: `function merge(left: number[], right: number[]): number[] {
+  const out: number[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    if (left[i] <= right[j]) {
+      out.push(left[i]);
+      i += 1;
+    } else {
+      out.push(right[j]);
+      j += 1;
+    }
+  }
+  while (i < left.length) {
+    out.push(left[i]);
+    i += 1;
+  }
+  while (j < right.length) {
+    out.push(right[j]);
+    j += 1;
+  }
+  return out;
+}
+
+const merged: number[] = merge([4, 7, 12], [3, 7, 9, 15]);
+console.log(merged.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

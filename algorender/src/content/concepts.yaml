@@ -109,6 +109,7 @@ concepts:
     summary: Divide in half, sort each half, merge, for a guaranteed O(n log n).
     prereqs: [quadratic-sorts, recursion]
     visualisers: [merge-sort]
+    lesson: merge-sort
   - id: quick-sort
     title: Quick sort
     track: searching-sorting

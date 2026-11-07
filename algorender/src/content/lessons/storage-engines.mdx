@@ -215,7 +215,7 @@ space, which is part of an LSM tree's **space amplification**.
 
 </Misconception>
 
-Compaction is merge sort's merge: the inputs are already sorted, so one sequential pass writes the merged run. It is
+Compaction is [merge sort](/learn/merge-sort)'s merge: the inputs are already sorted, so one sequential pass writes the merged run. It is
 also where the LSM tree pays for its cheap writes. Each entry is rewritten again every time it sinks a level, so the
 bytes written to disk can be many times the bytes put: **write amplification**. A get may read several tables: **read
 amplification**. Old versions take room until merged away: **space amplification**. No engine minimises all three;
