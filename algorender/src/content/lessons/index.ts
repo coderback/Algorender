@@ -119,6 +119,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'intervals',
+    title: 'Intervals: sort by start, then look back once',
+    concept: 'intervals',
+    summary: "Sort by start, then sweep once: why a merge only has to check the last merged interval and must keep the larger end, why touching ends are each problem's choice, and how a min-heap of end times finds the fewest meeting rooms, the most meetings running at once, in O(n log n).",
+    minutes: 15,
+  },
+  {
     slug: 'memoization',
     title: 'Memoization: stop solving the same problem twice',
     concept: 'memoization',

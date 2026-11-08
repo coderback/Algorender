@@ -1,0 +1,274 @@
+<Section step="hook" title="Busy when, and in how many rooms">
+
+A team's shared calendar holds the day's bookings: 9–11, 10–12 and 14–15. Two questions keep coming up. When is
+somebody busy? 9–11 and 10–12 run into each other, so the busy times are 9–12 and 14–15. And how many meeting
+rooms do the bookings need, if a room holds one meeting at a time?
+
+Each booking is an **interval**: a start and an end. Comparing every pair to find the clashes takes n(n − 1)/2
+comparisons, about 50 million for 10,000 bookings. Both have a faster answer that starts the same way: sort the
+intervals by start, in O(n log n) with [merge sort](/learn/merge-sort). Then one pass merges the busy times, and
+one pass with a [heap](/learn/heaps) counts the rooms.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="interval">A start and an end, written [s, e] or s–e, with the start before the end. The visualisers letter them A, B, C… in input order.</Term>
+  <Term name="overlap">Two intervals overlap when each starts before the other ends. Whether two that only touch, like [1, 4] and [4, 5], count as overlapping is each problem's choice.</Term>
+  <Term name="nested">One interval lies inside another: it starts no earlier and ends no later, like [2, 3] inside [1, 5].</Term>
+  <Term name="sweep">One pass over the intervals in order of start, carrying a little state: the current merged interval, or the time each room becomes free.</Term>
+  <Term name="min-heap of end times">A heap holding, for each room opened so far, the time it is next free, with the earliest on top: the room that frees up first.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Sort by start, then look back once">
+
+Merge Intervals turns every group of overlapping intervals into one. Here intervals that touch count as overlapping:
+[1, 4] and [4, 5] leave no gap between them.
+
+<Explore slug="merge-intervals" settings={{ preset: 'touching' }} caption="Sorting puts B [1, 4] first, then A [4, 5], D [6, 7], E [7, 9] and C [9, 12]. A touches B at 4, so the merged interval grows to [1, 5]. D starts at 6, after 5, so [1, 5] is final and D opens [6, 7]. E touches it at 7 and stretches it to [6, 9], and C touches that at 9: 5 intervals become [1, 5] and [6, 12]." />
+
+Why is one look back enough? The merged intervals come out in order and apart, each ending before the one after it
+begins. The interval being checked starts no earlier than the last merged one, which began after every earlier one had
+ended, so the last is the only one it can reach. And once an interval starts after the last merged end, that merged
+interval is final: everything still to come starts later too.
+
+The second question is **meeting rooms**: the fewest rooms that hold every meeting, never two at once in one room.
+Activity selection in [greedy algorithms](/learn/greedy) asked the reverse: with one room, keep the most meetings, by
+earliest finish. Here every meeting is held: meetings get rooms in order of start, and a min-heap holds each room's
+end time. A room is free again the moment its meeting ends.
+
+<Explore slug="meeting-rooms" settings={{ preset: 'textbook' }} caption="Sorted by start: A, C, B, E, D, F. A holds Room 1 until 15, so C, at 2, opens Room 2. B starts at 5 as C ends and reuses Room 2. At 6, E finds the heap’s top, Room 2, busy until 8, so Room 3 opens. D and F take the rooms freed at 8 and 10: 3 rooms, since at time 6 A, B and E are all in progress." />
+
+Only the top of the heap matters: if the room that frees up first is still busy, every room is. And a room opens only
+when every room's meeting has started and not yet ended, so at that moment one more meeting than there are rooms is
+running. The rooms never outnumber the most meetings running at once, and no schedule can use fewer: each of those
+meetings needs its own room.
+
+<KeyIdea>
+
+**Sorted by start, each interval needs one comparison: with the last merged interval, or with the room that frees up
+first.** A merge stretches the last end to the larger of the two ends, or starts a new interval. A meeting reuses
+the room on top of a min-heap of end times if that room is free by its start, or opens a new one, and the rooms
+opened equal the most meetings running at once. Both are O(n log n): the sort, then O(1) per interval to merge, or
+O(log n) per meeting for the heap.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: extend, inside or new">
+
+Seven unsorted intervals. After the sort, the first opens the merged list; before each of the other six, predict
+whether it extends the last merged interval, lies inside it, or starts a new one. Touching counts as overlapping.
+
+<PredictChallenge slug="merge-intervals" settings={{ input: '8-10, 1-4, 11-12, 3-6, 14-16, 2-3, 9-14' }} goal={6} />
+
+Seven intervals became two, [1, 6] and [8, 16]. F lay inside [1, 4] and C inside [8, 14], and E only touched
+[8, 14] at 14, which was enough to join it.
+
+</Section>
+
+<Section step="do" title="The merge in code, and three ways to miscount">
+
+Here is the merge as a function, on intervals already sorted by start. `merged` starts with a copy of the first
+interval, so the input never changes. `last` is a second name for the last merged interval, not a copy, so writing
+`last[1]` changes the interval inside `merged`: two arrows point at the same list.
+
+<TraceCode
+  snippet="merge-sorted-intervals"
+  question="When the loop reaches [4, 8], it compares 4 with `last[1]`. What is `last[1]` then?"
+  choices={['3', '5', '8', '4']}
+  answer={1}
+  why="[2, 3] lies inside [1, 5], so `max(5, 3)` left the end at 5. 4 ≤ 5, so [4, 8] stretches it to 8, and the program prints [1, 8] [10, 12]. With `last[1] = end`, the end would have dropped to 3 and [4, 8] would have started its own interval."
+/>
+
+[2, 3] is the case that catches people out: it starts after [1, 5] but ends earlier. Here one interval contains
+all the others.
+
+<Explore slug="merge-intervals" settings={{ preset: 'nested' }} caption="Sorted by start: B [1, 12], D [2, 4], A [3, 6], E [5, 8] and C [9, 11]. All four after B lie inside [1, 12]: four overlap checks, four intervals merged in, and the end never moves." />
+
+<Misconception
+  id="end-from-next"
+  title="The merged end becomes the next interval’s end"
+  probes={[
+    {
+      q: 'Merging intervals sorted by start, the last merged interval is [2, 10], and the next one is [3, 5]. What should the merged interval be after it?',
+      choices: ['[2, 5]: the end moves to the new interval’s end', '[2, 10]: max(10, 5) keeps the end', '[3, 10]'],
+      answer: 1,
+      trap: 0,
+      why: '[3, 5] lies inside [2, 10], so nothing changes. Shrinking the end to 5 would lose the times from 5 to 10, and a later [7, 9] would wrongly start its own interval.',
+    },
+    {
+      q: 'Why does the merge set the end to max(last.end, x.end) rather than x.end?',
+      choices: [
+        'An interval can lie inside the last one and end earlier, and the merged interval must not shrink',
+        'No real reason: sorted by start, the next interval always ends later too',
+        'To merge intervals that only touch',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Sorting by start says nothing about the ends: [1, 12] comes before [2, 4]. The max leaves the end where it is when x is nested.',
+    },
+  ]}
+>
+
+Sorting by start orders the starts, not the ends: [1, 12] comes before [2, 4]. Setting the end to x.end shrinks the
+merged interval whenever x is nested, and later intervals then look separate. Take max(last.end, x.end): a later
+end stretches the merged interval, and a nested one leaves it alone. Test a merge on a nested interval followed by
+one that overlaps only the outer one.
+
+</Misconception>
+
+Rooms have a rule about touching too: Meeting Rooms reuses a room whose end time is no later than the next start.
+
+<Explore slug="meeting-rooms" settings={{ preset: 'back-to-back' }} caption="Sorted by start: B 1–3, D 3–5, A 5–8 and C 8–10. Each starts just as the one before it ends, so the heap’s top is always free in time and every meeting reuses Room 1: one room. Merge Intervals would join the same four into one interval, [1, 10]." />
+
+<Misconception
+  id="touching-always-overlaps"
+  title="Intervals that touch at an end always overlap"
+  probes={[
+    {
+      q: 'Meetings run 9–10 and 10–11, and a room is free again the moment its meeting ends. How many rooms do they need?',
+      choices: ['2: both include 10', '1', 'It depends on which was booked first'],
+      answer: 1,
+      trap: 0,
+      why: 'The first meeting frees its room at 10, just as the second starts, so they share it. The heap’s test is heap.min ≤ m.start, and 10 ≤ 10.',
+    },
+    {
+      q: 'A problem says ranges that only touch don’t overlap. A sweep compares each range’s start with lastEnd, the end of the last range it kept. Which test says the two don’t overlap?',
+      choices: ['start > lastEnd', 'start >= lastEnd', 'start == lastEnd'],
+      answer: 1,
+      trap: 0,
+      why: 'A range that starts exactly at lastEnd only touches the last one, so it can stay: >=. With >, the sweep would treat touching ranges as overlapping and drop one of them.',
+    },
+  ]}
+>
+
+Touching is each problem's choice, and the code shows it in one character: `<=` or `<`. Merge Intervals joins [1, 4]
+and [4, 5], which leave no gap, as does [Merge Overlapping Intervals](/practice/merge-intervals). Meeting Rooms lets
+a meeting that starts at 4 use the room freed at 4, and [Fewest Ranges to Remove](/practice/non-overlapping-intervals)
+keeps two ranges that only touch. Read the statement for the rule, and test on a pair that touches.
+
+</Misconception>
+
+The last trap mixes the two questions up. Merging says when someone is busy, not how many rooms that takes:
+
+<Explore slug="meeting-rooms" settings={{ input: '1-4, 3-6, 5-8, 7-10, 9-12' }} caption="Each meeting overlaps the next, so merged they would make one block, 1–12. But A frees Room 1 at 4, in time for C at 5, and B frees Room 2 at 6, in time for D at 7, so the rooms take turns: two rooms, because no more than two meetings ever run at once." />
+
+<Misconception
+  id="rooms-per-merged-block"
+  title="A block of overlapping meetings needs a room for each meeting"
+  probes={[
+    {
+      q: 'Meeting A overlaps meeting B, and B overlaps C, so all three fall in one busy block. Must A and C have different rooms?',
+      choices: ['Yes: they are in the same busy block, so they clash', 'No: A may end before C starts, and then they can share a room', 'Only if C is longer than A'],
+      answer: 1,
+      trap: 0,
+      why: 'Overlapping doesn’t pass along a chain. With A 2–6, B 5–9 and C 8–12, A ends at 6, before C starts at 8, so A and C share a room and two rooms are enough.',
+    },
+    {
+      q: 'What number does the meeting rooms sweep compute?',
+      choices: ['How many meetings overlap at least one other', 'The most meetings in progress at one moment', 'How many busy blocks the meetings merge into'],
+      answer: 1,
+      trap: 0,
+      why: 'A room opens only when every room is busy at a meeting’s start, so the count is the most meetings running at once. A chain of overlaps can need just two rooms.',
+    },
+  ]}
+>
+
+Overlapping doesn't pass along a chain: A overlaps B and B overlaps C, yet A may end before C starts. A merged block
+says only that the busy time has no gap. The rooms needed are the most meetings running at any one moment: anything
+from 1, for meetings that only touch, up to the number of meetings in the block.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A merge receives [1, 9], [2, 4], [5, 7] and [8, 12], already sorted by start. What does it return?',
+      choices: ['[1, 12]', '[1, 4], [5, 7], [8, 12]', '[1, 9], [8, 12]', '[1, 9]'],
+      answer: 0,
+      why: '[2, 4] and [5, 7] lie inside [1, 9] and leave its end alone; [8, 12] starts before 9 and stretches it to 12. Setting the end to each new interval’s end would shrink it to 4 and split the rest off.',
+      traps: { 1: 'end-from-next' },
+    },
+    {
+      q: 'A program skips the sort and merges [4, 6] and then [1, 2] with the same loop. 1 ≤ 6, so it counts [1, 2] as an overlap. What does it return?',
+      choices: ['[4, 6], with [1, 2] swallowed', '[1, 6]', '[1, 2], [4, 6]', '[1, 2]'],
+      answer: 0,
+      why: 'x.start ≤ last.end means an overlap only when x starts no earlier than last, which the sort guarantees. [1, 2] ends before [4, 6] begins, so the times 1 to 2 are lost. Sorted first, the answer is [1, 2], [4, 6].',
+    },
+    {
+      q: 'Meetings run 1–3, 3–5, 5–7 and 2–4, and a room is free again the moment its meeting ends. How many rooms do they need?',
+      choices: ['2', '3', '4', '1'],
+      answer: 0,
+      why: 'Sorted: 1–3, 2–4, 3–5, 5–7. 2–4 starts while 1–3 runs, so it opens a second room; 3–5 takes the room freed at 3, and 5–7 the one freed at 4. Counting touching ends as clashes would put three meetings at time 3.',
+      traps: { 1: 'touching-always-overlaps', 2: 'rooms-per-merged-block' },
+    },
+    {
+      q: 'Three rooms are open, and the min-heap holds their end times: 9, 11 and 14. The next meeting in start order runs 10–12. What happens?',
+      choices: [
+        'Pop 9 and push 12: the room free at 9 takes it',
+        'Open a fourth room, since 11 and 14 are later than 10',
+        'Pop 11 and push 12',
+        'Pop 9, 11 and 14, then push 12',
+      ],
+      answer: 0,
+      why: 'Only the top matters: the room free at 9 is free by 10, so the meeting reuses it. The heap then holds 11, 12 and 14.',
+    },
+    {
+      q: 'Five meetings, 1–5, 2–3, 4–7, 6–9 and 8–10, merge into one busy block, 1–10. How many rooms do they need?',
+      choices: ['5', '2', '1', '3'],
+      answer: 1,
+      why: 'No more than two ever run at once: 2–3 ends before 4–7 starts, 1–5 before 6–9, and 4–7 before 8–10. One busy block says there is no gap, not how many meetings share a moment.',
+      traps: { 0: 'rooms-per-merged-block' },
+    },
+    {
+      q: 'A program keeps the end times in a plain list and scans it all for the earliest at every meeting. What does that cost when all n meetings overlap?',
+      choices: ['O(n log n), the same as a heap', 'O(n²): the k-th meeting scans k − 1 end times', 'O(n): one scan per meeting'],
+      answer: 1,
+      why: 'Every meeting opens a room, so the scans read 0 + 1 + … + (n − 1) end times, about n²/2. A min-heap reads the earliest in O(1) and updates in O(log n): O(n log n) in all.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="intervals-sweep"
+  prompt="How do you merge overlapping intervals, and why does sorting by start make one pass enough? How does a min-heap of end times find the fewest meeting rooms, and why is that the most meetings running at once?"
+  rubric={[
+    'Sorted by start, an interval can only overlap the last merged one, because every earlier merged interval ended before that one began.',
+    'If it starts no later than the last merged end, the end becomes the larger of the two (a nested one ends earlier); otherwise it starts a new one.',
+    'For rooms, a min-heap holds each room’s end time; if the earliest is no later than the next start, that room is reused, otherwise a new room opens.',
+    'A room opens only when every room is busy at that start, so the rooms equal the most meetings running at once, which any schedule needs.',
+  ]}
+  example="Sort the intervals by start. Every earlier merged interval ended before the last one began, and the next starts no earlier, so only the last merged one can overlap it. If the next starts no later than its end, the end becomes the larger of the two ends, since a nested interval ends earlier; otherwise it starts a new one. For rooms, take meetings in start order, with each room’s end time in a min-heap. If the earliest end is no later than the next start, pop it and push the new end. Otherwise every room is busy, so open one: one more meeting is running than there were rooms. So the count is the most meetings at once, and no schedule can use fewer."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Two intervals overlap when each starts before the other ends; whether touching counts is the problem's choice,
+  one character in the code.
+- Sorted by start, an interval can only overlap the last merged one, so merging is one pass: extend the end to
+  max(last.end, x.end), not x.end, since a nested interval ends earlier; or start a new interval. O(n log n), for the
+  sort.
+- Meeting rooms: in start order, reuse the top of a min-heap of end times if that room is free by the next start, and
+  open one otherwise. O(n log n). The rooms are the most meetings running at once, not the size of a merged block.
+- Next: [greedy algorithms](/learn/greedy), where sorting by finish keeps the most intervals in one room. Practise
+  with [Merge Overlapping Intervals](/practice/merge-intervals),
+  [Insert a Range into a Sorted List](/practice/insert-interval) and [Fewest Meeting Rooms](/practice/meeting-rooms-ii),
+  or open the [merge intervals](/visualisers/merge-intervals) and [meeting rooms](/visualisers/meeting-rooms)
+  visualisers.
+
+</Section>

@@ -218,6 +218,7 @@ concepts:
     summary: Sort by start, then sweep, to merge overlaps or count rooms.
     prereqs: [merge-sort, heaps]
     visualisers: [merge-intervals, meeting-rooms]
+    lesson: intervals
 
   # ── Graphs ───────────────────────────────────────────────────
   - id: graph-representations

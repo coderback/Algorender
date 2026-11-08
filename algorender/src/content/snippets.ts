@@ -1860,6 +1860,71 @@ console.log(result.join(' '));
 `,
     },
   },
+  {
+    id: 'merge-sorted-intervals',
+    title: 'Merge intervals sorted by start',
+    code: {
+      python: `def merge(spans):
+    merged = [[spans[0][0], spans[0][1]]]
+    for start, end in spans[1:]:
+        last = merged[-1]
+        if start <= last[1]:
+            last[1] = max(last[1], end)
+        else:
+            merged.append([start, end])
+    return merged
+
+spans = [[1, 5], [2, 3], [4, 8], [10, 12]]
+result = merge(spans)
+text = ''
+for start, end in result:
+    text += '[' + str(start) + ', ' + str(end) + '] '
+print(text.strip())
+`,
+      javascript: `function merge(spans) {
+  const merged = [[spans[0][0], spans[0][1]]];
+  for (const [start, end] of spans.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (start <= last[1]) {
+      last[1] = Math.max(last[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+  return merged;
+}
+
+const spans = [[1, 5], [2, 3], [4, 8], [10, 12]];
+const result = merge(spans);
+let text = '';
+for (const [start, end] of result) {
+  text += '[' + start + ', ' + end + '] ';
+}
+console.log(text.trim());
+`,
+      typescript: `function merge(spans: number[][]): number[][] {
+  const merged: number[][] = [[spans[0][0], spans[0][1]]];
+  for (const [start, end] of spans.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (start <= last[1]) {
+      last[1] = Math.max(last[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+  return merged;
+}
+
+const spans: number[][] = [[1, 5], [2, 3], [4, 8], [10, 12]];
+const result = merge(spans);
+let text = '';
+for (const [start, end] of result) {
+  text += '[' + start + ', ' + end + '] ';
+}
+console.log(text.trim());
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

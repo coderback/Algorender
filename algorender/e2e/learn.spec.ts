@@ -22,6 +22,7 @@ const lessonPaths = [
   'heap-sort',
   'two-pointers',
   'sliding-window',
+  'intervals',
   'memoization',
   'dynamic-programming',
   'backtracking',
