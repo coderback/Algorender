@@ -111,7 +111,8 @@ export const progressEvent = pgTable(
 );
 
 /**
- * Every run of the server judge (Java, C++, Go): what was judged and how it
+ * Every run of the server judge (Java, C++, Go), and every expected answer to
+ * a learner's own test (kind 'expected'): what was judged and how it
  * went. Quotas count these rows, and a row still 'running' stops a learner
  * from starting a second run at once.
  */
@@ -124,7 +125,7 @@ export const judgeRun = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     problem: text('problem').notNull(),
     language: text('language').notNull(),
-    /** 'run' (the examples), 'submit' (every test) or 'custom' (the learner's own test). */
+    /** 'run' (the examples), 'submit' (every test), 'custom' (the learner's own test) or 'expected' (the reference solution's answer to it, expected.ts). */
     kind: text('kind').notNull(),
     /** 'running', 'done', or 'failed' (the sandbox broke, not the learner's code). */
     status: text('status').notNull(),

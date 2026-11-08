@@ -92,7 +92,9 @@ test('a signed-in learner runs their own test in Java on the server', async ({ p
   const unavailable = page.locator('main').getByRole('alert').filter({ hasText: 'isn’t set up here' });
   await expect(result.or(unavailable)).toBeVisible({ timeout: 90_000 });
   test.skip(await unavailable.isVisible(), 'No server judge here: build the Docker image with npm run judge:image.');
-  await expect(result.getByRole('definition')).toHaveText('[1, 2]');
+  // Our solution's answer comes from the server too, and theirs is checked against it.
+  await expect(result.getByRole('definition')).toHaveText(['[1, 2]', '[1, 2]']);
+  await expect(result).toContainText('Right: it’s one of the right answers.');
   await expect(result).toContainText('Watching a run step by step works in Python, JavaScript and TypeScript');
 });
 
