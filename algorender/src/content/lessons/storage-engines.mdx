@@ -129,7 +129,7 @@ sequentially, the cheapest write there is. When the memtable fills, it is writte
 The catch is reads. A key may have been written many times, and its versions sit in different tables, newest at the
 top. A get searches from the top down, memtable first, then L0 newest first, then each level below, and stops at the
 first version it meets. Two things keep that cheap: tables below L0 never overlap within a level, so a key's range rules
-most tables out, and each table has a **Bloom filter** in memory.
+most tables out, and each table has a [Bloom filter](/learn/bloom-filters) in memory.
 
 <Explore slug="lsm-tree" settings={{ start: 'levels' }} caption="Get 7: one table is skipped by its key range, a whole level holds nothing in range, and a Bloom filter rules out the last candidate, so the answer costs no disk reads. Then get 50: this time a Bloom filter says “maybe” and is wrong, one wasted read." />
 

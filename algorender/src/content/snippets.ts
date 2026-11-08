@@ -2034,6 +2034,81 @@ console.log(lcsLength('no', 'on'));
 `,
     },
   },
+  {
+    id: 'bloom-two-hashes',
+    title: 'A ten-bit Bloom filter with two hash functions: add two words, test two more',
+    code: {
+      python: `def positions(word):
+    return [ord(word[0]) % 10, ord(word[-1]) % 10]
+
+def add(bits, word):
+    for p in positions(word):
+        bits[p] = 1
+
+def test(bits, word):
+    for p in positions(word):
+        if bits[p] == 0:
+            return 'definitely not'
+    return 'probably present'
+
+bits = [0] * 10
+add(bits, 'cat')
+add(bits, 'dog')
+print(test(bits, 'cab'))
+print(test(bits, 'cog'))
+`,
+      javascript: `function positions(word) {
+  return [word.charCodeAt(0) % 10, word.charCodeAt(word.length - 1) % 10];
+}
+
+function add(bits, word) {
+  for (const p of positions(word)) {
+    bits[p] = 1;
+  }
+}
+
+function test(bits, word) {
+  for (const p of positions(word)) {
+    if (bits[p] === 0) {
+      return 'definitely not';
+    }
+  }
+  return 'probably present';
+}
+
+const bits = new Array(10).fill(0);
+add(bits, 'cat');
+add(bits, 'dog');
+console.log(test(bits, 'cab'));
+console.log(test(bits, 'cog'));
+`,
+      typescript: `function positions(word: string): number[] {
+  return [word.charCodeAt(0) % 10, word.charCodeAt(word.length - 1) % 10];
+}
+
+function add(bits: number[], word: string): void {
+  for (const p of positions(word)) {
+    bits[p] = 1;
+  }
+}
+
+function test(bits: number[], word: string): string {
+  for (const p of positions(word)) {
+    if (bits[p] === 0) {
+      return 'definitely not';
+    }
+  }
+  return 'probably present';
+}
+
+const bits: number[] = new Array(10).fill(0);
+add(bits, 'cat');
+add(bits, 'dog');
+console.log(test(bits, 'cab'));
+console.log(test(bits, 'cog'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

@@ -49,6 +49,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'bloom-filters',
+    title: 'Bloom filters: a sure no, or a maybe',
+    concept: 'bloom-filters',
+    summary: "How k hash functions switching on bits answer \"have I seen this?\" in about 10 bits per item, why \"definitely not\" is always right while \"probably present\" can be a false positive that grows as the filter fills, and why a filter can't list, delete or grow.",
+    minutes: 15,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',

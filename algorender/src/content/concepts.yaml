@@ -147,6 +147,7 @@ concepts:
     summary: A few bits per item that answer "definitely not" or "probably yes".
     prereqs: [hash-tables]
     visualisers: [bloom-filter]
+    lesson: bloom-filters
 
   # ── Trees and heaps ──────────────────────────────────────────
   - id: binary-search-trees
