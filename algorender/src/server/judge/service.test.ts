@@ -54,7 +54,7 @@ function fakeSandbox({ wrong = false, fail = false } = {}): Sandbox & { runs: nu
   };
 }
 
-const request = (kind: 'run' | 'submit', code = 'class Solution {}'): JudgeRequest => ({ slug: SLUG, language: 'java', code, kind });
+const request = (kind: JudgeRequest['kind'], code = 'class Solution {}'): JudgeRequest => ({ slug: SLUG, language: 'java', code, kind });
 
 describe('the judge service', () => {
   it('runs the examples, and records the run without an event', async () => {
@@ -118,6 +118,24 @@ describe('the judge service', () => {
     expect((await sync(db, userId, { events: [], cursor: 0 })).events).toEqual([]);
   });
 
+  it('runs the learner’s own test, with no expected answer and no event', async () => {
+    const userId = await learner();
+    const result = await judge(db, fakeSandbox(), userId, { ...request('custom'), input: { head: [1, 2, 3] } });
+    expect(result.checked).toEqual([{ id: 'custom', verdict: { status: 'ran', message: 'Ran.', got: spec.cases[0].expected, ms: 1 }, output: [] }]);
+    expect(result.event).toBeUndefined();
+    const [row] = await db.select().from(judgeRun).where(eq(judgeRun.userId, userId));
+    expect(row).toMatchObject({ kind: 'custom', status: 'done', tests: 1, failed: 0 });
+  });
+
+  it('turns down an own test that doesn’t fit the signature, before it counts as a run', async () => {
+    const userId = await learner();
+    const sandbox = fakeSandbox();
+    await expect(judge(db, sandbox, userId, { ...request('custom'), input: { head: [1, 'two'] } })).rejects.toMatchObject({ status: 400, message: 'head, item 2 should be a whole number, not "two".' });
+    await expect(judge(db, sandbox, userId, { ...request('custom'), input: { list: [1] } })).rejects.toMatchObject({ status: 400, message: 'There’s no parameter called list.' });
+    expect(sandbox.runs).toBe(0);
+    expect(await db.select().from(judgeRun).where(eq(judgeRun.userId, userId))).toEqual([]);
+  });
+
   it('refuses unknown problems', async () => {
     await expect(judge(db, fakeSandbox(), await learner(), { ...request('run'), slug: 'no-such-problem' })).rejects.toMatchObject({ status: 404 });
   });
@@ -125,6 +143,8 @@ describe('the judge service', () => {
   it('validates requests: a server language, a problem slug, and code of a sensible size', () => {
     const ok = { slug: SLUG, language: 'go', code: 'func f() {}', kind: 'submit' };
     expect(parseJudgeRequest(ok)).toEqual(ok);
+    const own = { ...ok, kind: 'custom', input: { head: [1, 2] } };
+    expect(parseJudgeRequest(own)).toEqual(own);
     for (const bad of [null, { ...ok, language: 'python' }, { ...ok, slug: '../etc' }, { ...ok, kind: 'watch' }, { ...ok, code: '' }]) {
       expect(() => parseJudgeRequest(bad)).toThrow(JudgeError);
     }

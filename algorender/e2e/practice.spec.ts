@@ -67,7 +67,8 @@ async function openWith(page: Page, slug: string, language: string, code: string
     [slug, language, code],
   );
   await page.goto(`/practice/${slug}`);
-  await expect(page.locator('.cm-editor')).toBeVisible();
+  // Attached, not visible: on a phone the editor waits in the Code pane.
+  await expect(page.locator('.cm-editor')).toBeAttached();
 }
 
 const results = (page: Page) => page.getByRole('group', { name: 'Test results' });
@@ -162,6 +163,80 @@ test('a syntax error is reported once, on its line', async ({ page }) => {
   await expect(results(page)).toHaveCount(0);
 });
 
+const ownTest = (page: Page) => page.getByRole('region', { name: 'Your own test' });
+const ownResult = (page: Page) => ownTest(page).getByRole('group', { name: 'Your test’s result' });
+
+test('your own test runs any input, names what is wrong with it, and can be watched', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openWith(page, 'two-sum', 'javascript', TWO_SUM_JS);
+  const own = ownTest(page);
+  const nums = own.getByLabel('nums', { exact: true });
+  // It starts from the first example.
+  await expect(nums).toHaveValue('[3, 9, 14, 5]');
+  await nums.fill('[1, 5, 5');
+  await own.getByRole('button', { name: 'Run your test' }).click();
+  await expect(nums).toHaveAccessibleDescription('A list is missing its closing ].');
+  await expect(ownResult(page)).toHaveCount(0);
+
+  await nums.fill('[1, 5, 5]');
+  await own.getByLabel('target', { exact: true }).fill('10');
+  await own.getByLabel('target', { exact: true }).press('ControlOrMeta+Enter');
+  await expect(ownResult(page)).toContainText('Your test · finished');
+  await expect(ownResult(page).getByRole('definition')).toHaveText('[1, 2]');
+
+  await ownResult(page).getByRole('button', { name: 'Watch your code on this test' }).click();
+  await expect(page.locator('#watch').getByRole('heading', { name: 'Watching your test' })).toBeVisible();
+
+  // Changing the code marks the answer as out of date.
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText('\n');
+  await expect(ownResult(page)).toContainText('You’ve changed the code or the test since this run.');
+
+  // The test is kept on this device, until the learner goes back to the example.
+  await page.reload();
+  await expect(ownTest(page).getByLabel('nums', { exact: true })).toHaveValue('[1, 5, 5]');
+  await ownTest(page).getByRole('button', { name: 'Back to example 1' }).click();
+  await expect(ownTest(page).getByLabel('nums', { exact: true })).toHaveValue('[3, 9, 14, 5]');
+  await expect(ownTest(page).getByRole('button', { name: 'Back to example 1' })).toBeDisabled();
+  expect(errors).toEqual([]);
+});
+
+test('a design problem’s own test shows what each call gives, up to one that fails', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openWith(page, 'min-stack', 'javascript', MIN_STACK_JS);
+  const own = ownTest(page);
+  const calls = own.getByLabel('Calls, one per line');
+  await expect(calls).toHaveValue(/^MinStack\(\)\npush\(/);
+  await calls.fill('MinStack()\npush(2)\npush(1)\ngetMin()\npop()\nget_min()');
+  await own.getByRole('button', { name: 'Run your test' }).click();
+  const answers = ownResult(page).getByRole('listitem');
+  await expect(answers).toHaveCount(6);
+  await expect(answers.nth(3)).toHaveText(/^getMin\(\).* 1$/);
+  await expect(answers.nth(5)).toHaveText(/^getMin\(\).* 2$/);
+
+  await calls.fill('MinStack()\npop()\ntop()');
+  await own.getByRole('button', { name: 'Run your test' }).click();
+  await expect(ownResult(page)).toContainText('Call 3, top(), failed');
+  await expect(answers.nth(2)).toHaveText('top() failed');
+
+  await calls.fill('MinStack()\npeek()');
+  await own.getByRole('button', { name: 'Run your test' }).click();
+  await expect(calls).toHaveAccessibleDescription('Line 2: a MinStack has no method called peek. Its methods are push, pop, top and getMin.');
+  expect(errors).toEqual([]);
+});
+
+test('your own test sits under the code, and fits a phone @mobile', async ({ page }) => {
+  await openWith(page, 'two-sum', 'javascript', TWO_SUM_JS);
+  // Phones show one pane at a time: the test is in the Code pane.
+  const show = page.getByRole('group', { name: 'Show' });
+  if (await show.isVisible()) await show.getByRole('button', { name: 'Code' }).click();
+  await ownTest(page).getByRole('button', { name: 'Run your test' }).click();
+  await expect(ownResult(page).getByRole('definition')).toHaveText('[0, 3]');
+  const width = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(width).toBe(0);
+});
+
 test('pattern drills ask, explain, and score a round', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/practice/drills');
@@ -199,6 +274,20 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.getByText('Show the pattern').click();
       await page.getByRole('button', { name: 'Watch your code on this test' }).click();
       await page.locator('#watch').getByRole('button', { name: /Step forward/ }).click();
+      const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      expect(violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
+    });
+
+    test('your own test passes axe, with an answer and a field to fix', async ({ page }) => {
+      await openWith(page, 'two-sum', 'javascript', TWO_SUM_JS);
+      const own = ownTest(page);
+      await own.getByRole('button', { name: 'Run your test' }).click();
+      await expect(ownResult(page)).toContainText('Your test · finished');
+      const target = own.getByLabel('target', { exact: true });
+      await target.fill('x');
+      await own.getByRole('button', { name: 'Run your test' }).click();
+      await expect(target).toHaveAttribute('aria-invalid', 'true');
+      await expect(ownResult(page)).toContainText('since this run');
       const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
     });

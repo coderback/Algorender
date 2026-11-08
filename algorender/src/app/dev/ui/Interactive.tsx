@@ -6,7 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Kbd } from '@/components/ui/CodeBlock';
-import { Field, SelectField } from '@/components/ui/Field';
+import { Field, SelectField, TextAreaField } from '@/components/ui/Field';
 import { ProgressBar } from '@/components/ui/Numbers';
 import { Segmented } from '@/components/ui/Segmented';
 
@@ -63,6 +63,7 @@ export function FieldsDemo() {
         <option value="typescript">TypeScript</option>
       </SelectField>
       <Field label="Hash table size" mono defaultValue="0" error="Pick a size from 1 to 64." />
+      <TextAreaField label="Calls, one per line" mono rows={3} defaultValue={'MinStack()\npush(3)\nget_min()'} hint="The first line makes the object." className="sm:col-span-2" />
     </div>
   );
 }

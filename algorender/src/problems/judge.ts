@@ -18,11 +18,13 @@ export type JudgeCase = {
   id: string;
   /** 'Example 1', 'Test 3', 'Random test 2'. */
   label: string;
-  group: 'example' | 'test' | 'random';
+  /** 'custom' is the learner's own test (custom.ts): it has no expected answer, so it is run, not judged. */
+  group: 'example' | 'test' | 'random' | 'custom';
   /** A function problem's arguments, by parameter name. */
   input?: Record<string, Json>;
   /** A design problem's calls, constructor first. */
   calls?: [string, ...Json[]][];
+  /** The right answer (null for a custom test). */
   expected: Json;
   explanation?: string;
 };
@@ -43,7 +45,8 @@ export type ProblemSpec = {
 };
 
 export type CaseVerdict = {
-  status: 'pass' | 'fail' | 'error' | 'timeout';
+  /** 'ran': a custom test finished. With no expected answer, there is nothing to judge, only an answer to show. */
+  status: 'pass' | 'fail' | 'error' | 'timeout' | 'ran';
   /** One sentence for the learner. */
   message: string;
   /** The learner's answer, when there was one. */
@@ -125,6 +128,7 @@ export function verdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, l
   if (error?.kind === 'timeout') {
     return { status: 'timeout', message: `Took longer than ${timeLimit(spec, language) / 1000} s: is there a loop that never ends, or a faster approach?`, ms };
   }
+  if (test.group === 'custom') return ranVerdict(spec, test, result, language);
   if (spec.design) return designVerdict(spec, test, result, language);
   if (error) return { status: 'error', message: error.line == null ? error.message : `Line ${error.line}: ${error.message}`, ms };
   const got = answerOf(spec, result);
@@ -169,6 +173,23 @@ function designVerdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, la
   }
   if (result.error) return { status: 'error', message: result.error.message, got, ms };
   return { status: 'pass', message: 'Correct.', got, ms };
+}
+
+/** A custom test's outcome: the answer the code gave, or where it failed. There's no expected answer to judge it by. */
+function ranVerdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, language: ProblemLanguage): CaseVerdict {
+  const ms = Math.round(result.ms);
+  const { error } = result;
+  const where = error ? (error.line == null ? error.message : `Line ${error.line}: ${error.message}`) : '';
+  if (!spec.design) return error ? { status: 'error', message: where, ms } : { status: 'ran', message: 'Ran.', got: answerOf(spec, result), ms };
+  const got = Array.isArray(result.returned) ? result.returned : [];
+  const calls = test.calls ?? [];
+  if (got.length < calls.length) {
+    // The run stopped at this call: it raised.
+    const i = got.length;
+    const what = error ? where.replace(/^Line/, 'line') : 'it stopped';
+    return { status: 'error', message: `Call ${i + 1}, ${callText(calls[i], language)}, failed: ${what}`, got, ms };
+  }
+  return error ? { status: 'error', message: where, got, ms } : { status: 'ran', message: 'Ran.', got, ms };
 }
 
 function callText([method, ...args]: [string, ...Json[]], language: ProblemLanguage): string {
@@ -239,19 +260,23 @@ function close(a: Json, b: Json): boolean {
 /** The most items of a list shown in a message. */
 const SHOWN = 20;
 
-/** A value as the learner's language writes it: None and True in Python, null and true in JS. */
-export function formatValue(v: Json, language: ProblemLanguage): string {
+/**
+ * A value as the learner's language writes it: None and True in Python, null
+ * and true in JS. Lists show their first `shown` items (Infinity: all of them,
+ * so the text reads back as the same value).
+ */
+export function formatValue(v: Json, language: ProblemLanguage, shown = SHOWN): string {
   const py = language === 'python';
   if (v === null) return py ? 'None' : 'null';
   if (typeof v === 'boolean') return py ? (v ? 'True' : 'False') : String(v);
   if (typeof v === 'number') return Object.is(v, -0) ? '0' : String(v);
   if (typeof v === 'string') return py ? pyString(v) : JSON.stringify(v);
   if (Array.isArray(v)) {
-    const items = v.slice(0, SHOWN).map((x) => formatValue(x, language));
-    if (v.length > SHOWN) items.push(`… ${v.length - SHOWN} more`);
+    const items = v.slice(0, shown).map((x) => formatValue(x, language, shown));
+    if (v.length > shown) items.push(`… ${v.length - shown} more`);
     return `[${items.join(', ')}]`;
   }
-  const entries = Object.entries(v).map(([k, x]) => `${py ? pyString(k) : k}: ${formatValue(x, language)}`);
+  const entries = Object.entries(v).map(([k, x]) => `${py ? pyString(k) : k}: ${formatValue(x, language, shown)}`);
   return `{${entries.join(', ')}}`;
 }
 

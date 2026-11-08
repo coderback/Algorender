@@ -50,6 +50,23 @@ export function Field({ label, hint, error, mono, className, id, ...input }: Fie
   );
 }
 
+/** A labelled text area, for text that runs over several lines. */
+export function TextAreaField({ label, hint, error, mono, className, id, ...area }: FieldProps & ComponentProps<'textarea'>) {
+  const auto = useId();
+  const fid = id ?? auto;
+  return (
+    <Frame id={fid} label={label} hint={hint} error={error} className={className}>
+      <textarea
+        id={fid}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error || hint ? `${fid}-hint` : undefined}
+        className={cx(CONTROL, 'h-auto resize-y py-3 leading-normal', mono && 'font-mono font-semibold')}
+        {...area}
+      />
+    </Frame>
+  );
+}
+
 /** A labelled native select. It follows the theme's color-scheme. */
 export function SelectField({ label, hint, error, mono, className, id, children, ...select }: FieldProps & ComponentProps<'select'>) {
   const auto = useId();

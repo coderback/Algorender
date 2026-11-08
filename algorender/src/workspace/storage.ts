@@ -62,3 +62,26 @@ export function saveProblemLanguage(language: ProblemLanguage) {
     // Not saved.
   }
 }
+
+const ownTestKey = (slug: string) => `algorender:own-test:${slug}`;
+
+/** The learner's own test on a practice problem, as they typed it (a value per field), or null while it is still the first example. */
+export function loadOwnTest(slug: string): Record<string, string> | null {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(ownTestKey(slug)) ?? 'null');
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const entries = Object.entries(value);
+    return entries.every(([, v]) => typeof v === 'string') ? Object.fromEntries(entries) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveOwnTest(slug: string, text: Record<string, string> | null) {
+  try {
+    if (text == null) localStorage.removeItem(ownTestKey(slug));
+    else localStorage.setItem(ownTestKey(slug), JSON.stringify(text));
+  } catch {
+    // Not saved; the test still runs.
+  }
+}

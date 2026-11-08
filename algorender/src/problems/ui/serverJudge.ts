@@ -2,14 +2,16 @@
 // code to /api/judge and reads back the verdicts (src/server/judge/).
 
 import type { JudgeResponse } from '@/server/judge';
+import type { CustomInput } from '../custom';
 import type { ServerLanguage } from '../languages';
 
 export type ServerAnswer = { ok: true; body: JudgeResponse } | { ok: false; status: number; message: string };
 
-export async function runOnServer(slug: string, language: ServerLanguage, code: string, kind: 'run' | 'submit'): Promise<ServerAnswer> {
+/** Runs the examples ('run'), every test ('submit'), or the learner's own test ('custom', with its values). */
+export async function runOnServer(slug: string, language: ServerLanguage, code: string, kind: 'run' | 'submit' | 'custom', custom?: CustomInput): Promise<ServerAnswer> {
   let res: Response;
   try {
-    res = await fetch('/api/judge', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug, language, code, kind }) });
+    res = await fetch('/api/judge', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug, language, code, kind, ...custom }) });
   } catch {
     return { ok: false, status: 0, message: 'Couldn’t reach the judge. Are you online?' };
   }
