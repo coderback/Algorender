@@ -217,6 +217,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'non-comparison-sorts',
+    title: 'Sorting without comparisons: count instead of compare',
+    concept: 'non-comparison-sorts',
+    summary: 'Why no comparison sort can beat about n log₂ n comparisons, how counting sort places small whole-number keys in O(n + k) with counts and running totals, why placing from the right keeps it stable, and how radix sort runs it once per digit.',
+    minutes: 15,
+  },
+  {
     slug: 'string-matching',
     title: 'String matching: never start over',
     concept: 'string-matching',

@@ -35,6 +35,7 @@ const lessonPaths = [
   'minimum-spanning-trees',
   'merge-sort',
   'quick-sort',
+  'non-comparison-sorts',
   'string-matching',
   'palindromes',
 ];

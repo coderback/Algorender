@@ -131,6 +131,7 @@ concepts:
     summary: Counting and radix sort beat the n log n limit by never comparing two elements.
     prereqs: [quadratic-sorts]
     visualisers: [counting-sort, radix-sort]
+    lesson: non-comparison-sorts
 
   # ── Hashing ──────────────────────────────────────────────────
   - id: hash-tables

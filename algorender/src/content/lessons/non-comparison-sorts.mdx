@@ -1,0 +1,290 @@
+<Section step="hook" title="A limit on comparing, and a way round it">
+
+[Merge sort](/learn/merge-sort), [quick sort](/learn/quick-sort) and [heap sort](/learn/heap-sort) take different
+routes, but they learn the order the same way: compare two values, act on the answer. However cleverly a sort picks its
+comparisons, if comparing is all it does, some list of a million values will cost it at least 18 million of them.
+That is a limit on comparing, not on any one algorithm.
+
+Now put 100,000 exam scripts in order of mark, out of 100. No script needs comparing with another. Count how many got
+each mark, 101 tallies in all, and the tallies say where each mark goes: if 12 scripts got 0 and 30 got 1, the 2s come
+straight after the first 42. One pass to count and one to place is about 200,000 steps, where merge sort makes about
+1.5 million comparisons. That is **counting sort**, and **radix sort** stretches it to bigger keys.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="comparison sort">A sort that learns the order only by comparing two elements. Bubble, insertion, merge, quick and heap sort all are.</Term>
+  <Term name="lower bound">The fewest steps every algorithm of a kind must take on its worst input.</Term>
+  <Term name="key range k">Counting sort needs whole-number keys from 0 to k − 1, such as marks: k possible keys, whether or not they occur.</Term>
+  <Term name="running total">Each count plus all the counts before it. Afterwards count[v] says how many keys are v or less.</Term>
+  <Term name="stable">Equal keys come out in the order they went in. It matters for records, and radix sort depends on it.</Term>
+  <Term name="digit and base">Radix sort writes each key as d digits in base b (base 10 has the digits 0 to 9) and sorts on one digit per pass.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Why comparing has a floor, and counting slips under it">
+
+Start with three different values. They can be in 3! = 6 orders, each needing different moves to put right. A
+comparison has two answers, so two comparisons end in at most 4 ways: two of the orders must end the same way, get the
+same moves, and one of them comes out wrong. Three comparisons end in up to 8 ways, which is enough.
+
+In general, n different values can be in n! orders, and each comparison at best halves the orders still possible, so
+the worst case needs at least ⌈log₂ n!⌉ comparisons. That is a little under n log₂ n: about 18.5 million for a million
+values, where merge sort's worst case is about 19 million. In [Comparison budget](/play/comparison-budget) you sort
+hidden cards against this bound: 6 cards have 720 orders, so nobody can promise fewer than 10 comparisons.
+
+The bound counts comparisons, so it covers only sorts that compare. Counting sort never does. It uses each key as an
+index into a row of counts: one step picks one of k cells, not one of two answers.
+
+<Explore slug="counting-sort" settings={{ input: '3, 0, 4, 1, 3, 1, 4, 3' }} caption="Eight values from 0 to 4. The first pass counts one 0, two 1s, no 2s, three 3s and two 4s. The running totals make those 1, 3, 3, 6 and 8: six values are 3 or less, so the 3s fill positions 3 to 5. Walking from the right, each value goes to its count − 1 and lowers it: the last 3 takes position 5 and the first 3 position 3. Comparisons stays at 0." />
+
+After the running totals, count[v] is how many values are v or less, so the values equal to v end just before
+position count[v]. Placing one at count[v] − 1 and lowering the count leaves the slot before it for the next equal
+value, so walking from the right puts the last of them last.
+
+Count the work. One pass reads the n values to count them, the running totals visit the k counts, and a second pass
+places the n values: O(n + k) time, and O(n + k) memory for the count row and the output row B.
+
+<KeyIdea>
+
+**A comparison learns one yes or no, and n different values can be in n! orders, so a comparison sort needs at least ⌈log₂ n!⌉
+comparisons in the worst case, about n log₂ n. Counting sort asks no such questions: it uses each key as an index,
+counting in one pass and placing in another, for O(n + k) time and memory with keys from 0 to k − 1.**
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: which position?">
+
+Before each placement, predict which output position the value goes to. Read its count in the count row: the value goes
+to count − 1, and the count drops by one for the next equal value. These seven values hold three 2s and two 4s.
+
+<PredictChallenge slug="counting-sort" settings={{ input: '2, 4, 1, 2, 0, 4, 2' }} goal={7} />
+
+The three 2s land in positions 4, 3 and 2, the last one first, so they leave in the order they arrived: 0 1 2 2 2 4 4.
+
+</Section>
+
+<Section step="do" title="Counting sort in code, and radix sort for bigger keys">
+
+Here is counting sort as a function, on five marks from 0 to 3, so k = 4. It prints the counts, then the running
+totals, then the sorted list. Two of the marks are 2, at indices 0 and 3.
+
+<TraceCode
+  snippet="counting-sort-positions"
+  question="Which index of out does the 2 from index 0 of marks land in?"
+  choices={['2', '3', '1', '4']}
+  answer={0}
+  why="The walk starts at the right, so the 2 at index 3 is placed before the one at index 0: count[2] drops from 4 to 3 and it takes out[3]. At index 0, count[2] drops from 3 to 2, so this 2 lands in out[2], ahead of the other. The program prints 1 1 2 1, then 1 2 4 5, then 0 1 2 2 3."
+/>
+
+Walking from the right keeps equal keys in order. Walk from the left with the same two lines and the first 2 takes the
+last 2-slot: still sorted, but equal keys come out reversed, which undoes any earlier sort of the records by another
+field.
+
+<Misconception
+  id="bound-covers-every-sort"
+  title="No sort can beat O(n log n)"
+  probes={[
+    {
+      q: 'What does the proof of the ⌈log₂ n!⌉ lower bound count?',
+      choices: ['Every step any sorting algorithm takes', 'Comparisons between two elements, each with two possible answers', 'Writes into the array'],
+      answer: 1,
+      trap: 0,
+      why: 'It counts yes-or-no answers, each at best halving the orders still possible. A sort that learns the order another way is outside the proof.',
+    },
+    {
+      q: 'Counting sort puts a shuffled list of the n different numbers 0 to n − 1 in order in O(n) steps, fewer than ⌈log₂ n!⌉ once n is large. Why is that no contradiction?',
+      choices: [
+        'It is one: counting sort must hide comparisons somewhere',
+        'The bound covers only sorts that learn the order by comparing, and counting sort never compares',
+        'The bound only holds for more than a million values',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'It reads each key and jumps to its count. No step asks which of two values is bigger, so the halving argument has nothing to count.',
+    },
+  ]}
+>
+
+The bound is about information: a comparison has two answers, so it at best halves the orders still possible. That
+binds every sort that learns the order only by comparing, however clever, and nothing else. Counting sort goes from a
+key straight to one of k cells. The price is that the keys must be small whole numbers, which a comparison sort never
+asks for.
+
+</Misconception>
+
+The trap is how big that price can get: the count row has a cell for every possible key, used or not.
+
+<Misconception
+  id="counting-always-wins"
+  title="Counting sort is always faster than an O(n log n) sort"
+  probes={[
+    {
+      q: 'You sort 1,000 account numbers, each below 1,000,000,000, with counting sort. About how much work is that?',
+      choices: [
+        'About 2,000 steps: counting sort is O(n)',
+        'About a billion steps: one count for every possible number',
+        'Under 10,000 comparisons, like merge sort',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'With n = 1,000 and k = 1,000,000,000, O(n + k) is nearly all k. Merge sort would make fewer than 10,000 comparisons.',
+    },
+    {
+      q: 'Counting sort costs O(n + k) and merge sort O(n log n). When does merge sort do less work?',
+      choices: ['Never: n + k is linear, so counting sort always wins', 'When k, the number of possible keys, is far bigger than n log n', 'When the input is already sorted'],
+      answer: 1,
+      trap: 0,
+      why: 'With k about n or smaller, counting sort is O(n). Once the range dwarfs n log n, the count row is the cost: most cells stay 0, yet each is cleared and summed.',
+    },
+  ]}
+>
+
+Counting sort pays for every possible key, not just those that occur. With k about n or smaller it is linear; with k
+far bigger, the count row is nearly all the work: 10 numbers between 0 and a billion need a billion counts, gigabytes
+of memory, where merge sort makes at most 25 comparisons. Keys must also be whole numbers in a known range: negative
+ones can be shifted by subtracting the smallest key, but decimals and long strings can't index an array.
+
+</Misconception>
+
+Radix sort keeps the range small by sorting on one digit at a time. Each pass is a stable counting sort with just 10
+counts, and the passes go from the ones digit up.
+
+<Explore slug="radix-sort" settings={{ input: '53, 81, 27, 50, 18, 23' }} caption="Six two-digit numbers, so two passes. The ones pass orders them by their last digit, 50 81 53 23 27 18, with 53 still ahead of 23: both end in 3, and 53 came first. The tens pass sorts by the first digit, and numbers that share one keep the order the ones pass left, 23 before 27 and 50 before 53: 18 23 27 50 53 81." />
+
+Each pass costs O(n + 10), one pass per digit of the largest key: d digits in base b cost O(d(n + b)) time and
+O(n + b) memory. Numbers below a billion take up to 9 passes over 10 counts, or 3 over 1,000 counts in base 1,000.
+With a fixed number of digits, as in 32-bit or 64-bit integers, radix sort is linear in n; fixed-length strings sort
+the same way, one character per pass.
+
+<Misconception
+  id="radix-passes-independent"
+  title="Each radix pass just sorts by its own digit"
+  probes={[
+    {
+      q: 'After radix sort’s ones pass, 31 comes before 35, and both have tens digit 3. If the tens pass were not stable and put 35 first, what would happen?',
+      choices: [
+        'Nothing: they tie on the tens digit, so either order is right',
+        'The output would have 35 before 31: the order the ones pass made is lost',
+        'The ones pass would run again to fix it',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'A tie on the tens digit is broken only by the order the ones pass left. A pass that isn’t stable throws that away.',
+    },
+    {
+      q: 'Why must the counting sort inside each radix pass be stable?',
+      choices: [
+        'It needn’t be: each pass only has to sort by its own digit',
+        'Numbers that tie on this digit must keep their order from the lower digits',
+        'A stable sort needs fewer counts',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Each pass looks at one digit only. Stability is what carries the lower digits’ order into the new pass, as the tie-breaker.',
+    },
+  ]}
+>
+
+A pass looks at one digit and nothing else. Numbers that tie on it keep the order they went in only if the pass is
+stable, and that order, from the lower digits, breaks the tie. That is also why the passes start from the least
+significant digit: the last pass has the final say, so it must be on the digit that matters most. (Radix sort can
+start from the top digit instead, but then it must sort each group of keys separately.)
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is the fewest comparisons a comparison sort can promise for any order of 4 different values?',
+      choices: ['4', '5', '6', '24'],
+      answer: 1,
+      why: '4 values have 4! = 24 orders, and 4 comparisons end in at most 2⁴ = 16 ways, too few; 5 end in up to 32. Merge sort sorts any 4 values in at most 5, so it meets the bound.',
+    },
+    {
+      q: 'Counting sort runs on [1, 3, 1, 0, 3] with keys from 0 to 3. What does the count row hold after the running totals?',
+      choices: ['1 3 3 5', '1 2 0 2', '0 1 3 3', '1 3 5 5'],
+      answer: 0,
+      why: 'The counts are 1, 2, 0 and 2, and each total adds those before it: 1, 3, 3, 5. Five values are 3 or less, so the two 3s fill positions 3 and 4.',
+    },
+    {
+      q: 'Which of these suits counting sort best?',
+      choices: [
+        'A million pixel brightnesses, each a whole number from 0 to 255',
+        'Twenty prices from £0 to £1,000,000, to the penny',
+        'Ten thousand surnames of any length',
+      ],
+      answer: 0,
+      why: 'k = 256 against n = 1,000,000 makes O(n + k) about two million steps. Twenty prices to the penny need 100,000,001 counts for 20 values, and surnames aren’t small whole numbers.',
+      traps: { 1: 'counting-always-wins' },
+    },
+    {
+      q: 'A database sorts 50 million rows by age, 0 to 130, in time proportional to the rows. A colleague says that’s impossible, since no sort beats O(n log n). Who is right?',
+      choices: [
+        'The colleague: n log₂ n limits every sort',
+        'The database: counting 131 ages needs no comparisons, so the bound doesn’t apply',
+        'Neither: it must be O(n²)',
+      ],
+      answer: 1,
+      why: 'Two passes over the rows and one over 131 counts: O(n + k) with a tiny k. The n log n bound binds only sorts that compare.',
+      traps: { 0: 'bound-covers-every-sort' },
+    },
+    {
+      q: 'Someone runs radix sort the other way round: a stable tens pass, then a stable ones pass, on 52, 37 and 19. What comes out?',
+      choices: ['19 37 52', '52 37 19', '37 19 52', '19 52 37'],
+      answer: 1,
+      why: 'The tens pass gives 19 37 52, but the ones pass comes last and sorts by 2, 7 and 9, keeping the tens order only for ties. The last pass has the final say, so it must be on the most significant digit.',
+      traps: { 0: 'radix-passes-independent' },
+    },
+    {
+      q: 'Radix sort sorts a million 32-bit keys one byte (8 bits) per pass, in base 256. How many passes, with how many counts each?',
+      choices: ['4 passes, 256 counts each', '32 passes, 2 counts each', '8 passes, 256 counts each', '1 pass, about 4.3 billion counts'],
+      answer: 0,
+      why: 'A 32-bit key is 4 bytes: 4 passes, each over 256 counts, O(4(n + 256)). A single pass would be counting sort with k of about 4.3 billion.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="beating-n-log-n"
+  prompt="Why can’t a comparison sort beat about n log₂ n comparisons in the worst case, and how does counting sort get round that? When is counting sort a poor choice, and how does radix sort help?"
+  rubric={[
+    'A comparison has two answers and at best halves the n! possible orders, so a comparison sort needs at least log₂ n! comparisons, about n log₂ n.',
+    'Counting sort never compares: it counts each key, turns the counts into positions with running totals, and places each item: O(n + k).',
+    'Placing from the end of the input keeps equal keys in order, so counting sort is stable.',
+    'When the key range k is far bigger than n, the count row dominates the time and memory.',
+    'Radix sort runs a stable counting sort per digit, least significant first: O(d(n + b)).',
+  ]}
+  example="A comparison answers yes or no, so it at best halves the orders still possible. n different values have n! orders, so a comparison sort needs at least log₂ n! comparisons in the worst case, a little under n log₂ n. Counting sort never compares: it counts each key, turns the counts into positions with running totals, then walks the input from the end, putting each item at its count minus one. That keeps equal keys in order and costs O(n + k). If k is huge next to n, the count row is the cost. Radix sort keeps k small: a stable counting sort per digit, least significant first, for O(d(n + b))."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A comparison sort learns one yes or no per comparison, and n different values have n! orders, so its worst case needs
+  at least ⌈log₂ n!⌉ comparisons, a little under n log₂ n.
+- Counting sort never compares: count, take running totals, place from the end. O(n + k) time and memory, and stable.
+- It pays for every possible key: ideal when k is no bigger than about n, hopeless for a few keys spread up to a billion.
+- Radix sort runs a stable counting sort per digit, least significant first: d passes of O(n + b). Stability carries
+  the lower digits' order into each pass.
+- Next: **bucket sort**, which spreads values over buckets by range and sorts each, linear on average for evenly
+  spread values. Practise where counting beats sorting with
+  [Same Letters, Different Order](/practice/valid-anagram), [Most Frequent Values](/practice/top-k-frequent-elements)
+  and [Group Anagrams](/practice/group-anagrams), play the bound in [Comparison budget](/play/comparison-budget), or open
+  the [counting sort](/visualisers/counting-sort) and [radix sort](/visualisers/radix-sort) visualisers.
+
+</Section>

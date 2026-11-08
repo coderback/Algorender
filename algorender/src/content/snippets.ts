@@ -1792,6 +1792,74 @@ for (let end = nums.length - 1; end > 0; end--) {
 `,
     },
   },
+  {
+    id: 'counting-sort-positions',
+    title: 'Counting sort: count, take running totals, then place from the right',
+    code: {
+      python: `def counting_sort(a, k):
+    count = [0] * k
+    for x in a:
+        count[x] += 1
+    print(*count)
+    for v in range(1, k):
+        count[v] += count[v - 1]
+    print(*count)
+    out = [0] * len(a)
+    for i in range(len(a) - 1, -1, -1):
+        count[a[i]] -= 1
+        out[count[a[i]]] = a[i]
+    return out
+
+marks = [2, 0, 3, 2, 1]
+result = counting_sort(marks, 4)
+print(*result)
+`,
+      javascript: `function countingSort(a, k) {
+  const count = new Array(k).fill(0);
+  for (const x of a) {
+    count[x] += 1;
+  }
+  console.log(count.join(' '));
+  for (let v = 1; v < k; v++) {
+    count[v] += count[v - 1];
+  }
+  console.log(count.join(' '));
+  const out = new Array(a.length).fill(0);
+  for (let i = a.length - 1; i >= 0; i--) {
+    count[a[i]] -= 1;
+    out[count[a[i]]] = a[i];
+  }
+  return out;
+}
+
+const marks = [2, 0, 3, 2, 1];
+const result = countingSort(marks, 4);
+console.log(result.join(' '));
+`,
+      typescript: `function countingSort(a: number[], k: number): number[] {
+  const count: number[] = new Array(k).fill(0);
+  for (const x of a) {
+    count[x] += 1;
+  }
+  console.log(count.join(' '));
+  for (let v = 1; v < k; v++) {
+    count[v] += count[v - 1];
+  }
+  console.log(count.join(' '));
+  const out: number[] = new Array(a.length).fill(0);
+  for (let i = a.length - 1; i >= 0; i--) {
+    count[a[i]] -= 1;
+    out[count[a[i]]] = a[i];
+  }
+  return out;
+}
+
+const marks: number[] = [2, 0, 3, 2, 1];
+const result = countingSort(marks, 4);
+console.log(result.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {
