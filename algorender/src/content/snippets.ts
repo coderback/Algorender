@@ -1976,6 +1976,64 @@ console.log(result.join(' '));
 `,
     },
   },
+  {
+    id: 'lcs-table',
+    title: 'LCS table',
+    code: {
+      python: `def lcs_length(a, b):
+    dp = []
+    for i in range(len(a) + 1):
+        dp.append([0] * (len(b) + 1))
+    for i in range(1, len(a) + 1):
+        for j in range(1, len(b) + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[len(a)][len(b)]
+
+print(lcs_length('no', 'on'))
+`,
+      javascript: `function lcsLength(a, b) {
+  const dp = [];
+  for (let i = 0; i <= a.length; i++) {
+    dp.push(new Array(b.length + 1).fill(0));
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+console.log(lcsLength('no', 'on'));
+`,
+      typescript: `function lcsLength(a: string, b: string): number {
+  const dp: number[][] = [];
+  for (let i = 0; i <= a.length; i++) {
+    dp.push(new Array(b.length + 1).fill(0));
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+console.log(lcsLength('no', 'on'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

@@ -147,6 +147,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'sequence-dp',
+    title: 'Dynamic programming on sequences: one prefix at a time',
+    concept: 'sequence-dp',
+    summary: 'How a table over prefixes finds the longest common subsequence and the edit distance of two words in O(mn), why listing the letters or edits needs the whole table, and how the longest increasing subsequence works on one sequence in O(n²) or, with binary search, O(n log n).',
+    minutes: 15,
+  },
+  {
     slug: 'backtracking',
     title: 'Backtracking: choose, explore, un-choose',
     concept: 'backtracking',

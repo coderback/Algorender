@@ -26,6 +26,7 @@ const lessonPaths = [
   'monotonic-stack',
   'memoization',
   'dynamic-programming',
+  'sequence-dp',
   'backtracking',
   'greedy',
   'graph-representations',

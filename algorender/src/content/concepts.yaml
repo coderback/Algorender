@@ -299,6 +299,7 @@ concepts:
     summary: Comparing two strings, or one sequence with itself, cell by cell.
     prereqs: [dynamic-programming]
     visualisers: [longest-common-subsequence, edit-distance, longest-increasing-subsequence]
+    lesson: sequence-dp
   - id: backtracking
     title: Backtracking
     track: design
