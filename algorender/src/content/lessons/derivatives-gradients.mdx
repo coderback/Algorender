@@ -1,0 +1,294 @@
+<Section step="hook" title="How fast, right now?">
+
+A car's speedometer reads 50 km/h. Speed is distance over time, yet the needle shows a speed at a single instant,
+when no time passes. What can that number mean?
+
+Machine learning asks the same question. A model's loss depends on millions of weights, and training asks of each:
+if this weight grew a tiny bit, how fast would the loss change, and which way? For one input the answer is a
+**derivative**; for all of them at once, the **gradient**. Both come from one move: measure a slope across a small gap,
+then let the gap shrink.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="secant slope">The slope of the line through two points of a curve, $P = (a, f(a))$ and $Q = (a + h, f(a + h))$: rise over run.</Term>
+  <Term name="derivative f′(a)">What the secant slopes settle on as $h$ shrinks to 0 from both sides: the curve's slope at the single point $a$.</Term>
+  <Term name="tangent line">The line through $P$ with slope $f'(a)$: the closest straight fit to the curve near $P$.</Term>
+  <Term name="partial derivative ∂f/∂x">The slope as $x$ changes while every other input is held fixed.</Term>
+  <Term name="gradient ∇f">All the partial derivatives stacked into a vector. It points the way $f$ rises fastest.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Shrink the gap">
+
+$P$ sits on $f(x) = x^2$ at $a = 1$. A slope needs two points, so take a second point $Q$ a gap $h$ further along,
+measure the slope between them, and shrink $h$.
+
+<Explore slug="derivative" settings={{ preset: 'square' }} caption="As h shrinks from 2 to 0.01, the secant slope goes 4, 3, 2.5, 2.25, 2.1, 2.01, and from the left, h = −0.01 gives 1.99. Both sides close in on 2, the slope of the tangent. Then the slope is measured at ten points from x = −2.7 to 2.7: the graph of f′(x) = 2x is a straight line." />
+
+For $x^2$, algebra shows why:
+
+$$
+\frac{(a + h)^2 - a^2}{h} = \frac{2ah + h^2}{h} = 2a + h
+$$
+
+At $a = 1$ that is $2 + h$: every secant misses the tangent's slope by exactly $h$. As $h$ shrinks to 0 from either
+side, $2a + h$ settles on $2a$, so the derivative of $x^2$ is $2x$. In general,
+
+$$
+f'(a) = \lim_{h \to 0} \frac{f(a + h) - f(a)}{h}
+$$
+
+and the limit must be the same from both sides. That is the needle's number: average speeds over shorter and shorter
+intervals, settling on one value.
+
+Done at every point, this makes $f'$ a function of its own, the Slope f′(x) graph above. Its **sign** says which way $f$ is
+going: negative left of 0, where $x^2$ falls, positive right of it. It is **0** where $f$ levels off, at peaks and
+valleys. Its **size** says how sensitive $f$ is: at $x = 2.7$, $f' = 5.4$, so a small step in $x$ moves $f$ about 5.4
+times as far; near 0, $f$ hardly moves.
+
+<KeyIdea>
+
+**The derivative $f'(a)$ is the slope the secants settle on as the gap $h$ shrinks to 0 from both sides: the slope of
+the tangent line at $a$.** Near $a$ the tangent is the best straight-line guess, so
+$f(a + h) \approx f(a) + f'(a)\,h$. Every method that follows a gradient relies on that guess.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: a sharp corner">
+
+Now $P$ sits at the corner of $f(x) = |x|$, at 0. Predict how the secant slope changes as $h$ shrinks,
+whether a secant from the left agrees, then whether $f$ goes uphill or downhill as the sweep moves along.
+
+<PredictChallenge slug="derivative" settings={{ preset: 'abs' }} goal={8} />
+
+</Section>
+
+<Section step="do" title="Slopes in code, and slopes on a map">
+
+A computer can't let $h$ reach 0, so it stops at a small $h$ and divides. This program measures the **forward
+difference**, the secant slope with $Q$ to the right of $P$, for $x^2$ at $a = 3$ with $h$ = 0.5, 0.25 and 0.125.
+
+<TraceCode
+  snippet="secant-slopes"
+  question="What slope does the third line of output show?"
+  choices={['6', '6.0625', '6.125', '6.25']}
+  answer={2}
+  why="For x² the secant slope is 2a + h, here 6 + h: 6.5, then 6.25, then 6.125. Each halving of h halves the gap to the true slope, 6, because the forward difference’s error is proportional to h."
+/>
+
+Points on both sides of $a$ do better. The **central difference**, $\frac{f(a + h) - f(a - h)}{2h}$, averages the
+forward and backward slopes. On $x^2$ those are $2a + h$ and $2a - h$, so the errors cancel exactly; in general what is
+left is proportional to $h^2$. For $e^x$ at 0 (slope 1) with $h = 0.01$, forward gives 1.0050 and central 1.0000167.
+
+So why not take $h = 10^{-20}$? Because floats have gaps (see [floating point](/learn/floating-point)). For $x^2$ at 3
+in float64, $h = 10^{-8}$ gives 5.99999996, $h = 10^{-12}$ gives 6.0005, and $h = 10^{-16}$ gives 0: floats near 3 are
+about $4 \times 10^{-16}$ apart, so $3 + 10^{-16}$ rounds back to 3. **Gradient checking** tests
+[backpropagation](/learn/backpropagation) this way: nudge each weight about $10^{-5}$ either way and compare the
+central difference of the loss with the backward pass's answer.
+
+<Misconception
+  id="smaller-h-always-better"
+  title="The smaller h, the better the estimate"
+  probes={[
+    {
+      q: 'In float64 you estimate the slope of x² at a = 5 with (f(5 + h) − f(5)) / h and h = 10⁻²⁰. What comes out?',
+      choices: ['10, almost exactly: a tinier h is closer to the limit', '0, because 5 + h rounds back to 5', 'About 10²⁰'],
+      answer: 1,
+      trap: 0,
+      why: 'Floats near 5 are about 9 × 10⁻¹⁶ apart, so adding 10⁻²⁰ changes nothing and f(5 + h) − f(5) is exactly 0.',
+    },
+    {
+      q: 'A forward difference in float64 is off by about 10⁻⁸ with h = 10⁻⁸, but by about 10⁻⁴ with h = 10⁻¹². Why?',
+      choices: [
+        'It can’t be: a smaller h is always more accurate, so the code has a bug',
+        'Rounding error in f(a + h) − f(a), magnified by dividing by a tiny h',
+        'The function must have a corner at a',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Each value carries a rounding error of about 10⁻¹⁶, and dividing by h = 10⁻¹² turns that into about 10⁻⁴.',
+    },
+  ]}
+>
+
+In exact arithmetic a smaller $h$ is closer; floats are not exact. As $h$ shrinks, $f(a + h)$ and $f(a)$
+share more leading digits, so their difference keeps fewer correct ones, and dividing by $h$ magnifies the rest. The
+straight-line error shrinks with $h$ while the rounding error grows like $1/h$, so the best $h$ in float64 is about
+$10^{-8}$ for a forward difference and $10^{-5}$ for a central one.
+
+</Misconception>
+
+Nobody works out every derivative from the limit. A few rules, each proved once from it, cover this lesson's functions:
+
+- **Power rule:** $x^n$ gives $n x^{n-1}$, so $x^3$ gives $3x^2$. A constant gives 0.
+- **Constant multiple and sum:** $(c f)' = c f'$ and $(f + g)' = f' + g'$, so $x^3/3 - x$ gives $x^2 - 1$.
+- **Two special functions:** $e^x$ is its own derivative, and $\sin x$ gives $\cos x$ (in radians).
+
+<Explore slug="derivative" settings={{ preset: 'exp' }} input caption="eˣ at a = 0.5. The secant slopes fall from about 5.27 at h = 2 to 1.657 at h = 0.01 (1.641 from the left) and settle on 1.6487: e^0.5, the height of P. f′ comes out as eˣ again. Try another in the box, such as sine at 2." />
+
+The rules assume the curve is smooth where you use them.
+
+<Misconception
+  id="unbroken-means-slope"
+  title="A curve with no gaps has a slope everywhere"
+  probes={[
+    {
+      q: 'Does f(x) = |x − 2| have a derivative at x = 2?',
+      choices: ['Yes: its graph has no gap or jump there', 'No: the secant slopes are −1 from the left and +1 from the right', 'Yes, and it is 0, because 2 is the lowest point'],
+      answer: 1,
+      trap: 0,
+      why: 'The graph is a V with its point at x = 2, so the two sides settle on different slopes. A smooth valley has slope 0 at its bottom; a corner has none.',
+    },
+    {
+      q: 'ReLU, f(x) = max(0, x), is drawn without lifting the pen. What is its derivative at 0?',
+      choices: ['1: an unbroken graph has a slope there, and it rises to the right', 'None: the slopes are 0 from the left and 1 from the right', '0, because ReLU(0) = 0'],
+      answer: 1,
+      trap: 0,
+      why: 'To the right ReLU is the line y = x, slope 1; to the left it is flat, slope 0. The sides disagree, so there is no derivative at 0, gap or no gap.',
+    },
+  ]}
+>
+
+Unbroken is not the same as smooth. At a corner the curve changes direction all at once, so the secants from each side
+settle on different slopes and no tangent fits: $|x|$ has slope −1 left of 0 and +1 right of it, and ReLU,
+$\max(0, x)$, has slopes 0 and 1. Training code picks a value at that one point (usually 0), since an input almost
+never lands exactly on it.
+
+</Misconception>
+
+A loss depends on many weights at once. For $f(x, y)$, the **partial derivative** $\partial f/\partial x$ is the
+ordinary derivative in $x$ with $y$ held fixed like a number, and $\partial f/\partial y$ the other way round.
+In the narrow valley $f(x, y) = x^2/20 + 5y^2$ they are $x/10$ and $10y$. Stacked, they make the gradient
+$\nabla f = (x/10, 10y)$, which at $(-3.5, 1.5)$ is $(-0.35, 15)$.
+
+Walk in the direction of a unit vector $u$, and the slope underfoot is the dot product $\nabla f \cdot u$.
+That is largest when $u$ points along $\nabla f$, so **the gradient points the way $f$ rises fastest, and its length is
+that steepest slope**: about 15 at $(-3.5, 1.5)$, where walking along $+x$ gives just −0.35. At right angles to
+$\nabla f$ the slope is 0, which is along the contour line: the gradient crosses contour lines at right angles.
+
+<Explore slug="gradient-descent" settings={{ preset: 'timid' }} caption="The valley x²/20 + 5y² from (−3.5, 1.5), with small steps (η = 0.02). Each arrow, −η·∇f, is at right angles to the contour line where it starts. The first gradient is (−0.35, 15), so the path heads almost straight across the valley, not towards the minimum at (0, 0), then creeps along the floor: after 40 steps it is only at (−3.23, 0)." />
+
+The tangent guess works in many dimensions too: $f(p + \Delta) \approx f(p) + \nabla f \cdot \Delta$ for a small step
+$\Delta$. Step by $\Delta = -\eta \nabla f$ and the guess falls by $\eta\,|\nabla f|^2$, so a small enough step against
+a nonzero gradient always goes downhill. [Gradient descent](/learn/gradient-descent) is that one idea, repeated.
+
+<Misconception
+  id="gradient-aims-at-peak"
+  title="The gradient points straight at the top of the hill"
+  probes={[
+    {
+      q: 'f(x, y) = x² + 4y² is lowest at (0, 0). At (2, 1), ∇f = (4, 8). Does −∇f point straight at (0, 0)?',
+      choices: [
+        'Yes: the steepest way down always aims at the bottom',
+        'No: −∇f = (−4, −8) points mostly in −y, while (0, 0) lies along (−2, −1)',
+        'No: −∇f points away from (0, 0)',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The contours are ellipses squeezed in y, and −∇f crosses them at right angles, so it leans far harder into −y than the line to the bottom.',
+    },
+    {
+      q: 'On f(x, y) = x² + 9y², lowest at (0, 0), you take tiny steps along −∇f from (3, 1). What does the path look like?',
+      choices: ['A straight line to (0, 0)', 'It drops quickly to near y = 0, then runs along that line to (0, 0)', 'It circles (0, 0) along a contour line'],
+      answer: 1,
+      trap: 0,
+      why: '∇f = (2x, 18y), so each step shrinks y by 18η of itself but x by only 2η: y is almost 0 before x has moved much.',
+    },
+  ]}
+>
+
+The gradient only knows the ground where you stand. It crosses the contour line there at right angles, and that aims at
+the top (or, for $-\nabla f$, the bottom) from everywhere only when the contours are circles round it, as on a round
+bowl. In a long valley $-\nabla f$ points mostly across the valley: that is why the path above dropped to the floor
+first, and why big steps zigzag.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A curve has no gaps or jumps. At x = 3 its secant slopes settle on 2 from the right and 0.5 from the left. What is f′(3)?',
+      choices: ['1.25, the average of the two sides', '2, since h is usually positive', 'It has none', '0.5'],
+      answer: 2,
+      why: 'A derivative needs the same limit from both sides. These disagree, so the curve has a corner at 3 and no tangent there.',
+      traps: { 0: 'unbroken-means-slope', 1: 'unbroken-means-slope' },
+    },
+    {
+      q: 'f(4) = 10 and f′(4) = −2. What is the best estimate of f(4.1)?',
+      choices: ['9.8', '10.2', '8', '9.98'],
+      answer: 0,
+      why: 'The tangent guess gives 10 + (−2)(0.1) = 9.8: f is falling at 4, so f(4.1) is a little below 10.',
+    },
+    {
+      q: 'With h = 0.2, a forward difference is off by 0.08 and a central difference by 0.004. Roughly how far off is each with h = 0.1?',
+      choices: ['0.04 and 0.001', '0.04 and 0.002', '0.02 and 0.001', '0.08 and 0.004'],
+      answer: 0,
+      why: 'The forward error is proportional to h, so halving h halves it. The central error is proportional to h², so halving h quarters it.',
+    },
+    {
+      q: 'In float64, a forward difference for the slope of x² at 4 with h = 10⁻¹⁴ gives 7.816, not 8. What would most likely bring it closer?',
+      choices: ['A smaller h, such as 10⁻²⁰, closer to the limit', 'A larger h, such as 10⁻⁷', 'Nothing: 7.816 is as close as float64 allows'],
+      answer: 1,
+      why: 'At h = 10⁻¹⁴, rounding errors divided by h swamp the answer. h = 10⁻⁷ gives 8.00000013; h = 10⁻²⁰ gives 0, since 4 + h rounds back to 4.',
+      traps: { 0: 'smaller-h-always-better' },
+    },
+    {
+      q: 'f(x, y) = x² + 3y. At (2, 1), how steep is the steepest climb, and how steep is the ground walking in the +y direction?',
+      choices: ['5, and 3', '7, and 3', '5, and 4', '4, and 3'],
+      answer: 0,
+      why: '∂f/∂x = 2x = 4 and ∂f/∂y = 3, so ∇f = (4, 3). The steepest slope is its length, √(4² + 3²) = 5, and along u = (0, 1) the slope is ∇f · u = 3.',
+    },
+    {
+      q: 'On a map of f, the contour lines near a point P run east to west, f is higher to the north, and the highest point on the map lies to the north-east. Which way does ∇f point at P?',
+      choices: ['North', 'North-east, towards the highest point', 'East, along the contour line', 'South'],
+      answer: 0,
+      why: 'The gradient crosses the contour line at P at right angles, on the side where f grows: due north. It only sees the slope at P, not where the highest point is.',
+      traps: { 1: 'gradient-aims-at-peak' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="slope-at-a-point"
+  prompt="What is the derivative f′(a), how can a computer estimate it, and what does the gradient tell you when f has several inputs?"
+  rubric={[
+    'f′(a) is the limit of the secant slope (f(a + h) − f(a)) / h as h shrinks to 0 from both sides; at a corner the sides disagree.',
+    'Its sign says whether f rises or falls, and near a, f(a + h) ≈ f(a) + f′(a)·h.',
+    'A computer uses a small h: the central difference’s error is proportional to h², but too small an h loses digits to rounding.',
+    'Each partial derivative holds the other inputs fixed; the gradient stacks them and points the way f rises fastest, across the contour lines.',
+  ]}
+  example="f′(a) is the slope of f at the single point a: the limit of the secant slopes through a and a + h as h shrinks to 0 from both sides. At a corner like that of |x| the sides disagree and there is none. Its sign says whether f rises or falls, and near a, f(a + h) ≈ f(a) + f′(a)·h. A computer uses a small h: the central difference is accurate to about h², but too small an h loses digits to rounding. The gradient stacks the partial derivatives, each holding the other inputs fixed, and points the way f rises fastest, across the contour lines."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- $f'(a)$ is the limit of the secant slope as $h \to 0$, from both sides. At a corner, like $|x|$ or ReLU at 0, the
+  sides disagree and there is none.
+- The sign of $f'$ says rising or falling, it is 0 at smooth peaks and valleys, and its size says how sensitive $f$ is.
+  Near $a$, $f(a + h) \approx f(a) + f'(a)\,h$.
+- Rules: $x^n$ gives $n x^{n-1}$, constant factors stay, sums split, $e^x$ stays $e^x$, and $\sin x$ gives $\cos x$.
+- The forward difference's error is proportional to $h$, the central difference's to $h^2$, and too small an $h$ loses
+  digits to rounding.
+- The gradient stacks the partial derivatives. It points the way $f$ rises fastest, its length is that slope, it
+  crosses contour lines at right angles, and the slope along a unit vector $u$ is $\nabla f \cdot u$.
+- Next: [gradient descent](/learn/gradient-descent) walks against the gradient, and
+  [backpropagation](/learn/backpropagation) computes it for every weight. Then try
+  [Backpropagate through a neuron by hand](/code/neuron-gradients).
+
+</Section>

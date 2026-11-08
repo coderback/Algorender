@@ -129,7 +129,7 @@ sequentially, the cheapest write there is. When the memtable fills, it is writte
 The catch is reads. A key may have been written many times, and its versions sit in different tables, newest at the
 top. A get searches from the top down, memtable first, then L0 newest first, then each level below, and stops at the
 first version it meets. Two things keep that cheap: tables below L0 never overlap within a level, so a key's range rules
-most tables out, and each table has a **Bloom filter** in memory.
+most tables out, and each table has a [Bloom filter](/learn/bloom-filters) in memory.
 
 <Explore slug="lsm-tree" settings={{ start: 'levels' }} caption="Get 7: one table is skipped by its key range, a whole level holds nothing in range, and a Bloom filter rules out the last candidate, so the answer costs no disk reads. Then get 50: this time a Bloom filter says “maybe” and is wrong, one wasted read." />
 
@@ -333,7 +333,7 @@ choosing one is choosing which to pay.
 <Section step="recap" title="What to remember">
 
 - Disks work in pages; sequential I/O is cheap and random I/O is not. Storage engines are judged in pages read and written.
-- A B+ tree is shallow and fat: one page per level, all keys in linked leaves, separators as copies above. Great for reads and ranges; writes rewrite pages in place.
+- A B+ tree, a [B-tree](/learn/b-trees) that keeps every key in its leaves, is shallow and fat: one page per level, all keys in linked leaves, separators as copies above. Great for reads and ranges; writes rewrite pages in place.
 - An LSM tree buffers writes in a memtable, flushes immutable SSTables and merges them in compaction. Reads go newest first, skipping tables by key range and Bloom filter.
 - Bloom filters say "certainly not" or "maybe": false positives, never false negatives. Deletes are tombstones, gone only when compaction reaches the bottom.
 - Write, read and space amplification can't all be low: B+ trees favour reads, LSM trees favour writes.

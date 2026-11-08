@@ -175,6 +175,7 @@ short edge at the end of a long route can still be further away than a node you 
 - Dijkstra settles nodes in increasing order of distance, relaxing each settled node's edges.
 - A [min-heap](/learn/heaps) finds the closest unsettled node in O(log V); stale entries are skipped.
 - It is correct **only without negative edges**; Bellman–Ford handles those.
+- For every pair at once, [all-pairs shortest paths](/learn/all-pairs-shortest-paths) runs Floyd–Warshall.
 - It is [breadth-first search](/learn/bfs-dfs) with "rings of distance" instead of "rings of steps", and the basis of routing and A* search.
 
 </Section>

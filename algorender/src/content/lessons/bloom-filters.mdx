@@ -1,0 +1,298 @@
+<Section step="hook" title="Have I seen this one before?">
+
+A web crawler has fetched a billion pages, and each holds more links. Before following one it asks: have I been here
+already? A [hash set](/learn/hash-tables) of every URL would answer exactly, but it keeps every URL in full: at 60
+characters each, 60 GB before any overhead.
+
+A **Bloom filter** answers in about 10 bits per URL, 1.25 GB for the billion, and keeps no URLs at all. It pays in
+certainty, but only in one direction: "definitely not" is always true, while "probably present" is now and then wrong,
+which costs the crawler the odd page it never fetched.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="bit array">m bits, numbered 0 to m − 1, all 0 at the start. They are everything the filter keeps: no items, no keys.</Term>
+  <Term name="hash functions">k different functions that each turn an item into a bit position, hᵢ(x) mod m. The same item always gets the same k positions, and two of them can land on the same bit.</Term>
+  <Term name="add">Switch on the item's k bits. A bit that is already 1 stays 1.</Term>
+  <Term name="test">Look at the same k bits. Any 0 means "definitely not"; all 1s means "probably present".</Term>
+  <Term name="false positive">"Probably present" for an item that was never added, because other items happened to switch on all of its bits. The opposite mistake, a false negative, can't happen.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Switch bits on, then look at them">
+
+This filter has m = 16 bits and k = 3 hash functions: the polynomial hash from the hash table lesson, with three
+different bases, 31, 37 and 41. Base 31 turns “cat” into 98262, the number the hash table used; bases 37 and 41 give
+139236 and 170512. Mod 16, those pick bits 6, 4 and 0.
+
+<Explore slug="bloom-filter" settings={{ start: 'empty' }} caption="Add “cat”, then “dog”. “cat” switches on bits 6, 4 and 0. “dog” picks bits 12, 6 and 2; bit 6 is already on, set by “cat”, so only two bits change." />
+
+Words share bits, and nothing records which word switched a bit on. (The demo lists the words added only to flag
+mistakes; a real filter keeps no list.) A test looks at the same positions.
+
+<Explore slug="bloom-filter" settings={{ start: 'example' }} caption="This filter holds “cat”, “dog” and “owl”. Test “cat”: bits 6, 4 and 0 are all on, so the answer is probably present. Then test “cow”: it picks bits 11, 13 and 1, and the first of them, bit 11, is 0. That one bit settles it: definitely not." />
+
+A 0 is proof: had “cow” been added, bit 11 would be 1, so the test stops at the first 0. All 1s proves much less:
+every added word looks like that, but so does a word whose bits others switched on.
+
+<KeyIdea>
+
+**Adding an item switches on its k bits, and no bit is ever switched off, so an added item always tests "probably
+present": a Bloom filter has no false negatives. A 0 among an item's bits proves it was never added; all 1s only says
+that nothing rules it out.** Add and test each compute k hashes and touch k bits: O(k), however many items the filter
+holds.
+
+</KeyIdea>
+
+The more a filter holds, the more bits are on, and the more often a word never added finds all of its bits on by
+chance.
+
+<Explore slug="bloom-filter" settings={{ start: 'crowded' }} caption="This filter holds 8 words, and 13 of its 16 bits are on. Test “hen”, which was never added: its bits 1, 15 and 3 were switched on by “yak” and “emu”, so the filter says probably present, a false positive. The panel at the bottom puts the expected rate for 8 words at 46.9%." />
+
+That 46.9% comes from a short calculation. After n adds, a given bit is still 0 with a chance of about $e^{-kn/m}$, so
+a word that was never added finds all k of its bits on with a chance of about $(1 - e^{-kn/m})^k$: 8.0% for this
+filter with three words, 46.9% with eight. Real filters have millions of bits, but fill up the same way.
+
+</Section>
+
+<Section step="predict" title="Your turn: no, or maybe?">
+
+This filter holds “cat”, “dog” and “owl”, with bits 0, 2, 4, 6, 10 and 12 on. Test four words, one at a time: “fox”,
+“bee”, “owl” and “pig”. Before each answer, look at the three bits the word picks and predict what the filter will say:
+it sees only bits, never the words that set them.
+
+<PredictChallenge slug="bloom-filter" settings={{ start: 'example' }} goal={4} />
+
+</Section>
+
+<Section step="do" title="A filter in code, and what it can't do">
+
+Here is a whole Bloom filter: 10 bits and two hash functions. Real hashes mix every letter; to keep this one easy to
+follow, each reads one letter: `positions` returns the last digit of the first letter's code and the last digit of the
+last letter's code. Codes run from 97 for a to 122 for z, so c (99) picks bit 9, t (116) bit 6, d (100) bit 0, g (103)
+bit 3 and b (98) bit 8. The program adds “cat” and “dog”, then tests “cab” and “cog”.
+
+<TraceCode
+  snippet="bloom-two-hashes"
+  question="What do the two print lines show, in order?"
+  choices={['definitely not, then definitely not', 'definitely not, then probably present', 'probably present, then probably present', 'probably present, then definitely not']}
+  answer={1}
+  why="“cab” picks bits 9 and 8. Bit 9 is on, switched on by the c of “cat”, but bit 8 is still 0, so test returns definitely not at its second check. “cog” picks bits 9 and 3, switched on by “cat” and “dog”, so it prints probably present though it was never added: a false positive."
+/>
+
+A Bloom filter earns its place in front of something slow: "definitely not" skips the slow step, and a wrong
+"probably" must be cheap, either because an exact check follows or because acting on it costs little.
+
+- An [LSM tree](/learn/storage-engines) keeps a filter in memory for each table on disk and reads only the tables whose
+  filter says "probably": a false positive wastes one read.
+- A crawler skips links its filter has seen: a false positive skips one unfetched page.
+- A [cache](/learn/caching) can store an object only on its second request, with a filter remembering first requests,
+  so one-off requests never push out popular ones.
+
+<Misconception
+  id="maybe-means-added"
+  title="“Probably present” means the item was added"
+  probes={[
+    {
+      q: 'A Bloom filter answers “probably present” for an item. What do you know for certain?',
+      choices: ['The item was added', 'None of its bits is 0: it may have been added, or other items may have set its bits', 'The item was added more than once'],
+      answer: 1,
+      trap: 0,
+      why: 'All 1s only means nothing rules the item out. Other items can switch on every one of its bits, which is a false positive.',
+    },
+    {
+      q: 'A filter has a 1% false-positive rate. You test 1,000 items that were never added. About how many come back “probably present”?',
+      choices: ['None: items that were never added always get “definitely not”', 'About 10', 'About 500'],
+      answer: 1,
+      trap: 0,
+      why: 'The false-positive rate is the share of never-added items that find all their bits on: 1% of 1,000 is about 10.',
+    },
+  ]}
+>
+
+"Probably present" only means that none of the item's bits is 0, and other items can switch all of them on. The filter
+can't tell that from a real match, because it never kept the items. Treat "probably" as "worth checking". Where a wrong
+yes would do harm, such as banning an account, a Bloom filter must never have the last word.
+
+</Misconception>
+
+The same design explains what a filter can't do. It can't list its items: it never kept them. It can't grow: hᵢ(x)
+mod m changes with m, and with no items there is nothing to rehash, so an overfull filter is rebuilt from the original
+data. And it can't delete, though the obvious way to try looks harmless.
+
+<Misconception
+  id="clear-bits-to-delete"
+  title="Clearing an item's bits deletes it"
+  probes={[
+    {
+      q: 'In a filter, “fig” set bits 2 and 5 and “kiwi” set bits 5 and 7. To delete “fig”, you clear bits 2 and 5. What does a test of “kiwi” answer now?',
+      choices: ['Probably present: kiwi’s bits were not touched', 'Definitely not: bit 5 was kiwi’s as well', 'Probably present, because kiwi was added after fig'],
+      answer: 1,
+      trap: 0,
+      why: 'Bit 5 belonged to both words, so “kiwi” now gets a false negative, the one mistake a filter must never make.',
+    },
+    {
+      q: 'Why can’t a plain Bloom filter remove an item?',
+      choices: [
+        'Its bits may be shared with other items, so clearing them could make those items test “definitely not”',
+        'It can: clearing the item’s k bits removes it cleanly',
+        'Finding the item’s bits would take O(n) time',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Nothing records which items switched a bit on, so clearing one can erase part of another. Finding the bits is easy: k hashes.',
+    },
+  ]}
+>
+
+Clearing an item's bits erases parts of other items. With “cat”, “dog” and “owl” added, owl's bits are 4, 6 and 10,
+but bit 6 is also cat's and dog's, and bit 4 is cat's. Clear them and “cat” and “dog” both test "definitely not": false
+negatives, the one mistake a filter must never make. A **counting Bloom filter** keeps a small counter (usually 4 bits)
+at each position: add increments the item's k counters, delete decrements them (safe only for items really added), and
+a test looks for zeros, at several times the memory. A plain filter is rebuilt without the item.
+
+</Misconception>
+
+Sizing a filter means choosing m/n, the bits per item, and k. The best k is about (m/n) ln 2, roughly 0.69 × m/n,
+which leaves half the bits on once the filter is full. Then 9.6 bits per item give 1% false positives (with 7 hash
+functions), and each further 4.8 bits per item divides the rate by ten. The items' size doesn't matter: a 2 KB
+document costs the same 9.6 bits as a three-letter word.
+
+<Misconception
+  id="more-hashes-better"
+  title="More hash functions always mean fewer false positives"
+  probes={[
+    {
+      q: 'A filter has 10 bits per item and uses 7 hash functions. You switch to 20 to make it more accurate. What happens to its false-positive rate?',
+      choices: ['It falls to almost nothing: 20 bits must all be on', 'It rises, from about 0.8% to about 5%', 'It stays the same: only the bits per item matter'],
+      answer: 1,
+      trap: 0,
+      why: 'Each add now switches on 20 bits, so the array fills up. The best k for 10 bits per item is about 7.',
+    },
+    {
+      q: 'Why can more hash functions make a Bloom filter worse?',
+      choices: [
+        'Each added item switches on more bits, so the array fills up and never-added items find their bits on more often',
+        'Hash functions can cancel each other out',
+        'They can’t: every extra hash is one more bit that must be on',
+      ],
+      answer: 0,
+      trap: 2,
+      why: 'An extra hash helps a test, but it also makes every add switch on one more bit. Past about 0.69 × m/n, the filling wins.',
+    },
+  ]}
+>
+
+Each extra hash is one more bit a never-added item must find on, but it also makes every add switch on one more bit,
+so the array fills faster. At 10 bits per item, 1 hash function gives 9.5% false positives, 7 give 0.82% and 20 give
+5.5%: past the best k, about 0.69 × m/n, the filling wins.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A filter has 8 bits and 2 hash functions. “elk” picks bits 1 and 6, and “gnu” bits 6 and 3. After adding both, you test “ram”, which picks bits 3 and 1. What does the filter answer?',
+      choices: [
+        'Definitely not: “ram” was never added',
+        'Probably present: bits 3 and 1 are both on',
+        'Definitely not: bit 6 is shared by two words',
+        'Probably present, which proves “ram” was added',
+      ],
+      answer: 1,
+      why: '“gnu” switched on bit 3 and “elk” bit 1. The filter can’t know that “ram” was never added: a false positive.',
+      traps: { 0: 'maybe-means-added', 3: 'maybe-means-added' },
+    },
+    {
+      q: 'Which of these is a good job for a Bloom filter?',
+      choices: [
+        'Blocking a payment whenever a filter of stolen card numbers says “probably present”, with no other check',
+        'Skipping a slow database lookup for usernames that are definitely not taken',
+        'Listing every page a crawler has visited',
+        'Counting how often each word appears in a book',
+      ],
+      answer: 1,
+      why: '“Definitely not” is always right, so the lookup can be skipped; a “probably” goes on to the database. A “probably” alone would block some innocent cards, and a filter keeps neither items nor counts.',
+      traps: { 0: 'maybe-means-added' },
+    },
+    {
+      q: 'An email service keeps a Bloom filter of blocked senders, and a user unblocks one. What should the service do?',
+      choices: [
+        'Clear the sender’s k bits',
+        'Rebuild the filter from the senders still blocked, or use a counting Bloom filter from the start',
+        'Nothing: the filter forgets old senders in time',
+        'Add the sender a second time to cancel the first',
+      ],
+      answer: 1,
+      why: 'Its bits may be shared with other blocked senders, which clearing them would let through. A counting filter can decrement; a plain one is rebuilt.',
+      traps: { 0: 'clear-bits-to-delete' },
+    },
+    {
+      q: 'You want a Bloom filter for 10 million keys with about 1% false positives. Roughly how much memory does it need?',
+      choices: ['About 1.2 MB', 'About 12 MB', 'About 120 MB', 'It depends on how long the keys are'],
+      answer: 1,
+      why: '9.6 bits × 10 million keys = 96 million bits, or 12 million bytes. Key length doesn’t matter: the filter keeps only the bits the hashes pick.',
+    },
+    {
+      q: 'A filter will hold n items in 8n bits. How many hash functions should it use?',
+      choices: ['1', '5 or 6', '8, one for each bit per item', 'As many as possible: each one is another bit that must be on'],
+      answer: 1,
+      why: 'The best k is about 0.69 × 8 ≈ 5.5: 5 or 6 hashes give about 2.2% false positives. One gives about 12%, and beyond 6 the rate climbs again.',
+      traps: { 3: 'more-hashes-better' },
+    },
+    {
+      q: 'A filter was sized for 1 million items at 1% false positives, with 9.6 bits per item and 7 hash functions. It now holds 2 million. What has happened?',
+      choices: [
+        'Its false-positive rate has risen to about 16%',
+        'It has started giving false negatives',
+        'Nothing: the 1% was fixed when it was built',
+        'Its false-positive rate has fallen, since it holds more information',
+      ],
+      answer: 0,
+      why: 'Twice the items switch on far more bits, so many more never-added items find all 7 of theirs on. False negatives still never happen. The fix is a bigger filter, rebuilt from the items.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="bloom-filter-answers"
+  prompt="How does a Bloom filter add and test an item? Why is “definitely not” always right while “probably present” can be wrong, and what does that make a Bloom filter good for?"
+  rubric={[
+    'Adding an item switches on the k bits its k hash functions pick; the item itself is not stored.',
+    'A test looks at the same k bits: any 0 means definitely not, and all 1s means probably present.',
+    'Bits are never switched off, so an added item always finds its bits on: there are no false negatives.',
+    'Other items can switch on all of a never-added item’s bits, so “probably present” can be a false positive, more often as the filter fills.',
+    'That suits a cheap check in front of something slow, where a rare wrong “probably” is checked exactly or costs little.',
+  ]}
+  example="A Bloom filter is m bits, all 0 at first, and k hash functions. Adding an item switches on the k bits its hashes pick; the item itself isn’t stored. A test looks at the same bits. If any is 0, the item was never added, since adding it would have switched that bit on and bits are never switched off, so “definitely not” is always right. If all are 1, it says “probably present”, but other items may have switched those bits on: a false positive, more likely as the filter fills. So it suits a cheap check in front of something slow, like a disk read, where a wrong “probably” only wastes one check."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A Bloom filter is m bits and k hash functions. Add switches on an item's k bits and test looks at them: both O(k),
+  however many items it holds, and no items are stored.
+- "Definitely not" is always true, because bits are never switched off. "Probably present" can be a false positive.
+- The false-positive rate, about $(1 - e^{-kn/m})^k$, rises as the filter fills. With the best k, about 0.69 × m/n,
+  9.6 bits per item give 1%.
+- It can't list, delete or grow: clearing bits erases parts of other items, and growing needs the items it never kept.
+- Use it as a cheap check in front of something expensive, never alone where a wrong yes is unacceptable. A hash set
+  is exact.
+- Next: [storage engines](/learn/storage-engines), where every table of an LSM tree sits behind a Bloom filter.
+  [Spot a Repeated Number](/practice/contains-duplicate) and
+  [Longest Run of Consecutive Values](/practice/longest-consecutive-sequence) need exact answers to "seen it?", so they
+  call for a hash set, not a filter. Open [the Bloom filter visualiser](/visualisers/bloom-filter) to test your own words.
+
+</Section>

@@ -2034,6 +2034,354 @@ console.log(lcsLength('no', 'on'));
 `,
     },
   },
+  {
+    id: 'bloom-two-hashes',
+    title: 'A ten-bit Bloom filter with two hash functions: add two words, test two more',
+    code: {
+      python: `def positions(word):
+    return [ord(word[0]) % 10, ord(word[-1]) % 10]
+
+def add(bits, word):
+    for p in positions(word):
+        bits[p] = 1
+
+def test(bits, word):
+    for p in positions(word):
+        if bits[p] == 0:
+            return 'definitely not'
+    return 'probably present'
+
+bits = [0] * 10
+add(bits, 'cat')
+add(bits, 'dog')
+print(test(bits, 'cab'))
+print(test(bits, 'cog'))
+`,
+      javascript: `function positions(word) {
+  return [word.charCodeAt(0) % 10, word.charCodeAt(word.length - 1) % 10];
+}
+
+function add(bits, word) {
+  for (const p of positions(word)) {
+    bits[p] = 1;
+  }
+}
+
+function test(bits, word) {
+  for (const p of positions(word)) {
+    if (bits[p] === 0) {
+      return 'definitely not';
+    }
+  }
+  return 'probably present';
+}
+
+const bits = new Array(10).fill(0);
+add(bits, 'cat');
+add(bits, 'dog');
+console.log(test(bits, 'cab'));
+console.log(test(bits, 'cog'));
+`,
+      typescript: `function positions(word: string): number[] {
+  return [word.charCodeAt(0) % 10, word.charCodeAt(word.length - 1) % 10];
+}
+
+function add(bits: number[], word: string): void {
+  for (const p of positions(word)) {
+    bits[p] = 1;
+  }
+}
+
+function test(bits: number[], word: string): string {
+  for (const p of positions(word)) {
+    if (bits[p] === 0) {
+      return 'definitely not';
+    }
+  }
+  return 'probably present';
+}
+
+const bits: number[] = new Array(10).fill(0);
+add(bits, 'cat');
+add(bits, 'dog');
+console.log(test(bits, 'cab'));
+console.log(test(bits, 'cog'));
+`,
+    },
+  },
+  {
+    id: 'b-tree-leaf-split',
+    title: 'Split an overflowing B-tree leaf',
+    code: {
+      python: `def insert_into_leaf(keys, key):
+    keys.append(key)
+    i = len(keys) - 1
+    while i > 0 and keys[i - 1] > key:
+        keys[i] = keys[i - 1]
+        i -= 1
+    keys[i] = key
+
+def split(keys):
+    mid = len(keys) // 2
+    left = keys[:mid]
+    right = keys[mid + 1:]
+    return left, keys[mid], right
+
+leaf = [20, 40, 60, 80]
+insert_into_leaf(leaf, 70)
+left, up, right = split(leaf)
+print('left:', *left)
+print('up:', up)
+print('right:', *right)
+`,
+      javascript: `function insertIntoLeaf(keys, key) {
+  keys.push(key);
+  let i = keys.length - 1;
+  while (i > 0 && keys[i - 1] > key) {
+    keys[i] = keys[i - 1];
+    i -= 1;
+  }
+  keys[i] = key;
+}
+
+function split(keys) {
+  const mid = Math.floor(keys.length / 2);
+  const left = keys.slice(0, mid);
+  const right = keys.slice(mid + 1);
+  return [left, keys[mid], right];
+}
+
+const leaf = [20, 40, 60, 80];
+insertIntoLeaf(leaf, 70);
+const [left, up, right] = split(leaf);
+console.log('left:', left.join(' '));
+console.log('up:', up);
+console.log('right:', right.join(' '));
+`,
+      typescript: `function insertIntoLeaf(keys: number[], key: number): void {
+  keys.push(key);
+  let i = keys.length - 1;
+  while (i > 0 && keys[i - 1] > key) {
+    keys[i] = keys[i - 1];
+    i -= 1;
+  }
+  keys[i] = key;
+}
+
+function split(keys: number[]): [number[], number, number[]] {
+  const mid = Math.floor(keys.length / 2);
+  const left = keys.slice(0, mid);
+  const right = keys.slice(mid + 1);
+  return [left, keys[mid], right];
+}
+
+const leaf: number[] = [20, 40, 60, 80];
+insertIntoLeaf(leaf, 70);
+const [left, up, right] = split(leaf);
+console.log('left:', left.join(' '));
+console.log('up:', up);
+console.log('right:', right.join(' '));
+`,
+    },
+  },
+  {
+    id: 'floyd-warshall-round',
+    title: 'One round of Floyd–Warshall, with k = 1',
+    code: {
+      python: `d = [[0, 4, 9], [6, 0, 2], [99, 1, 0]]
+k = 1
+for i in range(3):
+    for j in range(3):
+        if d[i][k] + d[k][j] < d[i][j]:
+            d[i][j] = d[i][k] + d[k][j]
+for row in d:
+    print(str(row[0]) + ' ' + str(row[1]) + ' ' + str(row[2]))
+`,
+      javascript: `const d = [[0, 4, 9], [6, 0, 2], [99, 1, 0]];
+const k = 1;
+for (let i = 0; i < 3; i++) {
+  for (let j = 0; j < 3; j++) {
+    if (d[i][k] + d[k][j] < d[i][j]) {
+      d[i][j] = d[i][k] + d[k][j];
+    }
+  }
+}
+for (const row of d) {
+  console.log(row[0] + ' ' + row[1] + ' ' + row[2]);
+}
+`,
+      typescript: `const d: number[][] = [[0, 4, 9], [6, 0, 2], [99, 1, 0]];
+const k = 1;
+for (let i = 0; i < 3; i++) {
+  for (let j = 0; j < 3; j++) {
+    if (d[i][k] + d[k][j] < d[i][j]) {
+      d[i][j] = d[i][k] + d[k][j];
+    }
+  }
+}
+for (const row of d) {
+  console.log(row[0] + ' ' + row[1] + ' ' + row[2]);
+}
+`,
+    },
+  },
+  {
+    id: 'secant-slopes',
+    title: 'Forward-difference slopes of x² at 3 as h halves',
+    code: {
+      python: `def f(x):
+    return x * x
+
+def secant_slope(a, h):
+    return (f(a + h) - f(a)) / h
+
+a = 3
+h = 0.5
+while h >= 0.125:
+    print(secant_slope(a, h))
+    h = h / 2
+`,
+      javascript: `function f(x) {
+  return x * x;
+}
+
+function secantSlope(a, h) {
+  return (f(a + h) - f(a)) / h;
+}
+
+const a = 3;
+let h = 0.5;
+while (h >= 0.125) {
+  console.log(secantSlope(a, h));
+  h = h / 2;
+}
+`,
+      typescript: `function f(x: number): number {
+  return x * x;
+}
+
+function secantSlope(a: number, h: number): number {
+  return (f(a + h) - f(a)) / h;
+}
+
+const a: number = 3;
+let h: number = 0.5;
+while (h >= 0.125) {
+  console.log(secantSlope(a, h));
+  h = h / 2;
+}
+`,
+    },
+  },
+  {
+    id: 'plain-vs-momentum',
+    title: 'Plain descent and momentum on x², three steps each',
+    code: {
+      python: `def descend(label, beta, steps):
+    x = 8
+    v = 0
+    for t in range(steps):
+        g = 2 * x
+        v = beta * v + g
+        x = x - 0.25 * v
+        print(label + ' ' + str(int(x)))
+
+descend('plain', 0, 3)
+descend('momentum', 0.5, 3)
+`,
+      javascript: `function descend(label, beta, steps) {
+  let x = 8;
+  let v = 0;
+  for (let t = 0; t < steps; t++) {
+    const g = 2 * x;
+    v = beta * v + g;
+    x = x - 0.25 * v;
+    console.log(label + ' ' + Math.trunc(x));
+  }
+}
+
+descend('plain', 0, 3);
+descend('momentum', 0.5, 3);
+`,
+      typescript: `function descend(label: string, beta: number, steps: number): void {
+  let x = 8;
+  let v = 0;
+  for (let t = 0; t < steps; t++) {
+    const g = 2 * x;
+    v = beta * v + g;
+    x = x - 0.25 * v;
+    console.log(label + ' ' + Math.trunc(x));
+  }
+}
+
+descend('plain', 0, 3);
+descend('momentum', 0.5, 3);
+`,
+    },
+  },
+  {
+    id: 'token-bucket-requests',
+    title: 'A token bucket answering six requests',
+    code: {
+      python: `def limit(times, capacity, rate):
+    tokens = capacity
+    last = 0
+    replies = []
+    for t in times:
+        tokens = min(capacity, tokens + rate * (t - last))
+        last = t
+        if tokens >= 1:
+            tokens -= 1
+            replies.append('ok')
+        else:
+            replies.append('429')
+    return replies
+
+result = limit([0, 0, 0, 3, 3, 3], 2, 1)
+print(' '.join(result))
+`,
+      javascript: `function limit(times, capacity, rate) {
+  let tokens = capacity;
+  let last = 0;
+  const replies = [];
+  for (const t of times) {
+    tokens = Math.min(capacity, tokens + rate * (t - last));
+    last = t;
+    if (tokens >= 1) {
+      tokens -= 1;
+      replies.push('ok');
+    } else {
+      replies.push('429');
+    }
+  }
+  return replies;
+}
+
+const result = limit([0, 0, 0, 3, 3, 3], 2, 1);
+console.log(result.join(' '));
+`,
+      typescript: `function limit(times: number[], capacity: number, rate: number): string[] {
+  let tokens = capacity;
+  let last = 0;
+  const replies: string[] = [];
+  for (const t of times) {
+    tokens = Math.min(capacity, tokens + rate * (t - last));
+    last = t;
+    if (tokens >= 1) {
+      tokens -= 1;
+      replies.push('ok');
+    } else {
+      replies.push('429');
+    }
+  }
+  return replies;
+}
+
+const result: string[] = limit([0, 0, 0, 3, 3, 3], 2, 1);
+console.log(result.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

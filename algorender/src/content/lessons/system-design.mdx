@@ -265,7 +265,7 @@ Its everyday companion, **PACELC**, adds that even without a partition, replicas
 **consistency**, which is exactly the replica lag you tuned above. Raft, from the consensus lesson, chooses consistency:
 a minority side refuses writes.
 
-One more piece: a **rate limiter** at the front turns away requests over a set rate at once, with an error the client can
+One more piece: a [rate limiter](/learn/rate-limiting) at the front turns away requests over a set rate at once, with an error the client can
 retry. During a spike, that protects everything behind it from collapsing, so the rest of the traffic still gets fast
 answers. Try one in the [sandbox](/design/sandbox).
 

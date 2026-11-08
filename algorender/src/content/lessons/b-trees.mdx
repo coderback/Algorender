@@ -1,0 +1,287 @@
+<Section step="hook" title="Hundreds of branches per node">
+
+An [AVL tree](/learn/balanced-trees) keeps a million keys within 28 levels, whatever order they arrive in. But each
+node visit buys just one comparison and a jump to somewhere new in memory. On disk, which reads a page of a few
+kilobytes at a time, every visit can cost a page read, far slower than any comparison.
+
+A **B-tree** packs many sorted keys into each node, so one visit picks one branch out of hundreds. Rudolf Bayer and
+Edward McCreight invented it at Boeing around 1970, and it and its variant, the B+ tree, still hold the indexes of many
+databases and file systems. It also stays balanced in a new way: an insert never rotates. Nodes fill up, full ones
+split, and the tree grows only at the top.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="order m">The most children a node may have, so a node holds at most m − 1 keys. A 2-3-4 tree has order 4: 1 to 3 keys a node.</Term>
+  <Term name="keys and ranges">An internal node with k sorted keys has k + 1 children. Each key separates the child on its left, with smaller keys, from the one on its right.</Term>
+  <Term name="leaf">A node with no children. In a B-tree every leaf is on the same level.</Term>
+  <Term name="split and median">A node that ends up with m keys, one too many, splits into two nodes side by side, and its middle key, the median, moves up into the parent.</Term>
+  <Term name="minimum fill">Every node except the root keeps at least ⌈m/2⌉ − 1 keys: 1 in a 2-3-4 tree, 2 at order 5.</Term>
+  <Term name="borrow and merge">How a delete repairs a node left with too few keys: take one from a sibling through the parent, or join a sibling and pull down the parent's key between them.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Pick a range, then split what overflows">
+
+This 2-3-4 tree holds 11 keys in 5 nodes. Its root, [30, 50, 80], has four children, one for each range: below 30, 30
+to 50, 50 to 80, and above 80.
+
+<Explore slug="b-tree" settings={{ start: '234' }} caption="Search 35: it lies between 30 and 50, so the search goes straight to the second child, [35, 40], and finds it there: 2 nodes visited, 3 comparisons. Then insert 15: it joins the full leaf [10, 20, 25], which splits around 20. 20 moves up and gives the root 4 keys, so the root splits around 50, and 50 becomes a new root: 3 levels now." />
+
+Inside a node, the search compares the key with the node's keys in order until it meets one at least as large (a big
+node would use [binary search](/learn/binary-search)). Then it has either found the key or learned which one child's
+range could hold it.
+
+Insert follows the same path down, and the new key always joins the **leaf** it reaches, in sorted order. A leaf that
+overflows **splits**: the keys before its median stay, the keys after it form a new node beside it, and the median moves
+up into the parent. With an even count there are two middle keys; this visualiser sends up the later one, so
+[10, 15, 20, 25] kept [10, 15] and sent up 20. Usually the parent has room and the splitting stops there.
+
+<KeyIdea>
+
+**A B-tree node holds many sorted keys that split its children into ranges, so one visit picks one branch out of
+many. A new key always joins a leaf; a node that overflows splits around its median, which moves up, and only a root
+split adds a level, at the top.** So every leaf stays on the same level, and the height is about log n to the base of
+the fan-out, the number of children per node.
+
+</KeyIdea>
+
+An AVL tree adds a leaf at the bottom, then rotates when one side grows too tall. A B-tree never lets one side get
+taller: a split adds a node beside the old one.
+
+</Section>
+
+<Section step="predict" title="Your turn: down, split, or stop?">
+
+Back to the same 2-3-4 tree. Insert 33, then 36, then 38. Before each step, predict which child the key goes down to,
+whether its leaf will split, and whether a median moving up will overflow the parent.
+
+<PredictChallenge slug="b-tree" settings={{ start: '234' }} goal={8} />
+
+</Section>
+
+<Section step="do" title="Splits in code, and deleting">
+
+Here is a split in code, on a leaf of a B-tree of order 5, which holds at most 4 keys. `insert_into_leaf` puts the new
+key in sorted order, shifting larger keys right as an [array](/learn/arrays) insert does, and `split` cuts the list
+around its middle position.
+
+<TraceCode
+  snippet="b-tree-leaf-split"
+  question="Which key does the program print on its up: line, the key that moves into the parent?"
+  choices={['70', '60', '40', '80']}
+  answer={1}
+  why="After the insert the leaf is [20, 40, 60, 70, 80]. mid = 5 // 2 = 2, so the median is keys[2] = 60: the program prints left: 20 40, up: 60 and right: 70 80. The new key, 70, would move up only if it landed in the middle."
+/>
+
+A split is O(m) work on one node, and an insert splits at most once per level on its way back up, so it touches
+O(log n) nodes. Most inserts split nothing: a split leaves two nodes about half full, so each takes about m/2 more
+keys before it can split again.
+
+<Misconception
+  id="grows-at-leaves"
+  title="A B-tree grows downwards, at its leaves"
+  probes={[
+    {
+      q: 'You insert 1 to 1,000 in increasing order into an empty 2-3-4 tree. What shape results?',
+      choices: ['A short tree with every leaf on the same level', 'A chain about 1,000 levels tall down its right side', 'A right-leaning tree that rotations straighten now and then'],
+      answer: 0,
+      trap: 1,
+      why: 'Each key joins a leaf, and a full node splits into two side by side. Only a root split adds a level, above every leaf at once: 6 levels with this visualiser’s splits.',
+    },
+    {
+      q: 'An insert overflows a leaf, and the splits ripple all the way up. Where does the tree gain its new level?',
+      choices: ['At the top: the old root splits and its median becomes a new root', 'At the bottom: the new key becomes a child of the full leaf', 'Halfway down, where the splitting stopped'],
+      answer: 0,
+      trap: 1,
+      why: 'A split adds a node beside the old one, never below it, so only a root split adds a level, to every path at once.',
+    },
+  ]}
+>
+
+A binary search tree hangs each new key below a leaf, so sorted keys make a chain. A B-tree never does: a new key joins
+an existing leaf, a full node splits into two nodes **side by side**, and only the median moves up. The tree gets
+taller only when the root splits, adding a level above every leaf at once, so every leaf stays on one level whatever
+order keys arrive in.
+
+</Misconception>
+
+The root has at least 2 children and every other internal node at least ⌈m/2⌉, so each level below the second holds at
+least ⌈m/2⌉ times as many nodes as the one above. Real B-trees size a node to fill a disk page: with up to 500 children
+a node, a million keys always take exactly 3 levels and a billion exactly 4; a binary tree needs at least 20 and 30.
+
+<Misconception
+  id="fewer-comparisons"
+  title="A B-tree is fast because it makes fewer comparisons"
+  probes={[
+    {
+      q: 'A B-tree node holds 255 sorted keys. At most how many comparisons does binary search inside it take?',
+      choices: ['8', '1: one comparison per node', '255'],
+      answer: 0,
+      trap: 1,
+      why: '2⁸ = 256, so at most 8. Three levels of such nodes hold about 16.8 million keys for about 24 comparisons, the same as a balanced binary tree’s 24 levels.',
+    },
+    {
+      q: 'Why do databases index tables with B-trees rather than balanced binary trees?',
+      choices: [
+        'A lookup over a billion rows reads 3 or 4 nodes instead of about 30, and each can be a disk page',
+        'A B-tree makes far fewer comparisons per lookup',
+        'A B-tree never has to rebalance',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Both make about log₂ n comparisons. A B-tree cuts node visits, and each can be a page read, far slower than a comparison.',
+    },
+  ]}
+>
+
+Binary search in a node of k keys takes about log₂ k comparisons, so over all the levels they add up to about log₂ n,
+as in a binary tree. What a B-tree cuts is the number of **nodes** visited: about $\log_{k+1} n$ instead of $\log_2 n$.
+Comparing keys side by side is cheap; reaching the next node, a jump in memory or a page read, is the expensive part,
+which is why even in-memory maps such as Rust's BTreeMap use B-trees.
+
+</Misconception>
+
+Delete works from a leaf too. A key in an internal node is first replaced by its **predecessor**, the largest key in its
+left subtree, which always sits in a leaf: delete 30 from the first tree and 25 takes its place in the root. A leaf
+left below the minimum fill turns to a sibling.
+
+<Explore slug="b-tree" settings={{ start: '234' }} caption="Delete 90: its leaf is left empty, below the minimum of 1, but its left sibling [60, 70] can spare a key: 80 comes down from the parent and 70 goes up to replace it. Then delete 80: the sibling, [60], has none to spare, so the two merge with 70 pulled down between them, [60, 70], and the root keeps [30, 50]." />
+
+A merge takes a key out of the parent, so the parent can come up short too, and the repair climbs as a split does.
+
+<Explore slug="b-tree" settings={{ start: 'order-5' }} caption="Order 5, where the minimum is 2 keys. Delete 5: its leaf keeps only [10], and its only sibling, [20, 25], has none to spare, so they merge with 15 from the parent: [10, 15, 20, 25]. That leaves the parent [30] short; it merges with [60, 75] and the root's 45. The empty root is dropped, and the tree is one level shorter." />
+
+<Misconception
+  id="borrow-straight-across"
+  title="A short node takes a key straight from its sibling"
+  probes={[
+    {
+      q: 'A 2-3-4 tree’s root [20, 40] has the leaves [5, 10, 15], [30] and [50]. Delete 30: the middle leaf borrows from its left sibling. What do the root and that leaf hold now?',
+      choices: ['Root [15, 40], leaf [20]', 'Root [20, 40], leaf [15]', 'Root [40], and the leaf merges into [5, 10, 15, 20]'],
+      answer: 0,
+      trap: 1,
+      why: 'The middle leaf’s keys must lie between 20 and 40, so 15 can’t move in directly: 20 comes down and 15 goes up. [5, 10, 15] can spare a key, so nothing merges.',
+    },
+    {
+      q: 'A short B-tree node borrows from its right sibling. Which key does the short node receive?',
+      choices: [
+        'The parent’s key between them; the sibling’s smallest key goes up to replace it',
+        'The sibling’s smallest key, moved straight across',
+        'The sibling’s largest key, moved straight across',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'Every key in the right sibling is larger than the parent’s key between them, so one moved straight across would sit on the wrong side of it.',
+    },
+  ]}
+>
+
+The parent's key between two siblings, their **separator**, is larger than everything in the left one and smaller than
+everything in the right, so a key moved straight across would land on the wrong side of it. A borrow turns through the
+parent instead, much like a rotation: the separator comes down into the short node and the sibling's nearest key goes up
+to replace it (with children, the child beside that key moves across too). When no sibling can spare a key, the two
+merge around the separator.
+
+</Misconception>
+
+Orders 3 and 4 are called 2-3 and 2-3-4 trees. A 2-3-4 tree is the idea behind **red-black trees**: draw each node
+holding 2 or 3 keys as a black node with one or two red children, and splits become colour flips and rotations.
+Databases mostly use the **B+ tree**, which keeps every key in linked leaves for range scans;
+[storage engines](/learn/storage-engines) builds one.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'In a B-tree of order 5, the full leaf [41, 46, 58, 63] sits under the parent [30, 70]. You insert 50. What happens?',
+      choices: [
+        'The leaf splits into [41, 46] and [58, 63], and 50 moves up: the parent becomes [30, 50, 70]',
+        '50 hangs below the full leaf as a new leaf of its own',
+        'The leaf splits into [41] and [50, 58, 63], and 46 moves up',
+        'The parent splits first, and then 50 joins the leaf',
+      ],
+      answer: 0,
+      why: '[41, 46, 50, 58, 63] is one key too many, and its median is 50, the new key, which moves up. The parent has room for a third key, so nothing else splits.',
+      traps: { 1: 'grows-at-leaves' },
+    },
+    {
+      q: 'In a B-tree of order 7, how many keys can a node other than the root hold?',
+      choices: ['3 to 6', '1 to 6', 'Exactly 6', '4 to 7'],
+      answer: 0,
+      why: 'At most m − 1 = 6 and at least ⌈7/2⌉ − 1 = 3. A node that overflows with 7 keys splits into 3, the median and 3, so both halves meet the minimum.',
+    },
+    {
+      q: 'A balanced binary search tree and an in-memory B-tree with full 15-key nodes each hold a million keys, and the B-tree binary-searches each node. Which is true?',
+      choices: [
+        'Both make about 20 comparisons, but the B-tree visits 5 nodes and the binary tree about 20',
+        'The B-tree makes about 5 comparisons, one per node',
+        'The B-tree visits more nodes, as each holds more keys',
+        'Both visit about 20 nodes',
+      ],
+      answer: 0,
+      why: 'With 16 children a node, 5 levels hold a million keys, and binary search over 15 keys takes about 4 comparisons: about 20 in all. The saving is in nodes visited.',
+      traps: { 1: 'fewer-comparisons' },
+    },
+    {
+      q: 'In a 2-3 tree, the node [38, 50] has the leaves [20], [44] and [61]. You delete 61. What do the node and its last leaf hold afterwards?',
+      choices: [
+        'The node holds [38] and its last leaf [44, 50]',
+        'The node holds [38, 44] and its last leaf [50]',
+        'The node holds [38, 50] and its last leaf [44]',
+        'The node holds [38, 50] and its last leaf is empty',
+      ],
+      answer: 0,
+      why: 'The only sibling, [44], has just the minimum of one key, so the two merge around the separator, 50: [44, 50]. Moving 44 straight across would put it right of 50, where only larger keys belong.',
+      traps: { 2: 'borrow-straight-across' },
+    },
+    {
+      q: 'In a 2-3-4 tree you delete 40 from the internal node [25, 40, 70]. The child between 25 and 40 is the leaf [28, 33, 36]. What takes 40’s place?',
+      choices: ['36', '28', '70', 'Nothing: the node shrinks to [25, 70]'],
+      answer: 0,
+      why: '40 separates two children, so it can’t just vanish. Its predecessor, 36, still divides the two sides correctly, so it moves up and the leaf becomes [28, 33].',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="b-tree-balance"
+  prompt="How does a B-tree find a key, and how does it keep every leaf on the same level as keys come and go? Why does that suit data on disk?"
+  rubric={[
+    'A node’s sorted keys split its children into ranges, so a search compares inside the node and goes down one child.',
+    'A new key joins a leaf; a node that overflows splits and its median moves up, possibly splitting the parent.',
+    'Only a root split adds a level and only an emptied root removes one, so every leaf stays on one level.',
+    'A node left short by a delete borrows from a sibling through the parent, or merges with one around the separator.',
+    'Hundreds of keys a node keep the tree a few levels tall, so a lookup reads only 3 or 4 disk pages.',
+  ]}
+  example="Sorted keys in each node divide its children into ranges, so a search compares inside one node and goes down one child. A new key joins a leaf; an overflowing node splits and its median moves up, maybe splitting the parent. Only a root split adds a level and only an emptied root removes one, so all leaves stay level. A short node borrows through the parent or merges with a sibling. With hundreds of keys a node, a billion keys fit in four levels: a few disk reads."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A B-tree of order m holds up to m − 1 sorted keys a node, and every node but the root at least ⌈m/2⌉ − 1. The keys
+  split the children into ranges, so a search goes down one child per level.
+- A new key joins a leaf. An overflowing node splits and its median moves up; only a root split adds a level, so every
+  leaf stays on one level.
+- Delete takes keys out of leaves (an internal key is swapped for its predecessor). A short node borrows through the
+  parent or merges with a sibling, and merges can climb to the root.
+- Comparisons stay about log₂ n, but node visits fall to the log of n to the base of the fan-out: with 500 children a
+  node, a billion keys take 4 levels.
+- Next: [storage engines](/learn/storage-engines) for B+ trees on disk, and **red-black trees**, 2-3-4 trees in binary
+  form. Practise with [Search a Sorted Grid](/practice/search-a-2d-matrix) and
+  [Check a Binary Search Tree](/practice/validate-binary-search-tree), try [Write binary search](/code/binary-search),
+  or open the [B-tree visualiser](/visualisers/b-tree).
+
+</Section>

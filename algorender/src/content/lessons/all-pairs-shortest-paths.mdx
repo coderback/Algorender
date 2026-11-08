@@ -1,0 +1,285 @@
+<Section step="hook" title="Every distance at once">
+
+Old road atlases end with a table of driving distances between every pair of big cities. Fifty cities make 1,225
+pairs. Running [Dijkstra's algorithm](/learn/dijkstra) once from each city would fill it, as long as no road
+has a negative length.
+
+**Floyd–Warshall** fills the whole table in one go, with three loops and a single comparison, and it copes with
+negative lengths as long as no cycle adds up below zero. Its trick comes from
+[dynamic programming](/learn/dynamic-programming): answer a smaller question first. Here the smaller question limits
+which cities a route may pass through, and each round allows one more.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="distance matrix d">A V × V table: d[i][j] is the shortest distance found so far from i, the row, to j, the column.</Term>
+  <Term name="stop-over">A node a route passes through between its two ends. A → C → D → B has two stop-overs, C and D.</Term>
+  <Term name="round k">One pass over every pair (i, j) that also allows node k as a stop-over. There are V rounds, one per node.</Term>
+  <Term name="negative cycle">A cycle whose weights add up to less than 0. Going round it once more always makes a route shorter, so a route that can take that detour has no shortest length.</Term>
+  <Term name="next-hop matrix">next[i][j], the first step on the best path from i to j, kept beside d so the paths themselves can be read back.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One more stop-over each round">
+
+Floyd–Warshall fills a dynamic programming table, built from the usual four decisions:
+
+- **State:** after round k, d[i][j] is the length of the shortest path from i to j whose stop-overs are all k or nodes
+  before it (in the visualiser, the nodes go in order A, B, C…).
+- **Base case:** before any round no stop-over is allowed, so d holds the direct edges: the weight where there is one,
+  0 on the diagonal and ∞ everywhere else.
+- **Recurrence:** the best path that may also use node k either avoids k, so d[i][j] stays, or passes through k
+  once. Then it splits into i to k and k to j, neither of which stops over at k, so both are already in the table:
+  d[i][j] = min(d[i][j], d[i][k] + d[k][j]).
+- **Fill order:** k is the outer loop. Every pair finishes round k before any pair starts round k + 1.
+
+<Explore slug="floyd-warshall" settings={{ preset: 'classic' }} caption="Four cities, seven one-way roads. 22 pairs are checked and 11 improve. d[B][D] falls from ∞ to 15 in round A (B → A → D), then to 3 in round C (B → C → D). d[B][A] falls from 8 to 7 in round C and to 5 in round D: B → C → D → A, a route with two stop-overs." />
+
+Row k and column k hold the two halves of every route through k. The visualiser checks only the pairs that could
+improve, where i reaches k and k reaches j; the plain loops make 4 × 4 × 4 = 64 tests here.
+
+<KeyIdea>
+
+**After round k, d[i][j] is the shortest path from i to j that stops over only at k and the nodes before it. Round k
+joins a best path to k with a best path from k, both already in the table: d[i][j] = min(d[i][j], d[i][k] + d[k][j]).**
+With k as the outer loop, V rounds of V² pairs find every distance in Θ(V³) time, with one V × V matrix.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: five towns, two-way roads">
+
+Five towns, A to E, joined by roads that work both ways, so the matrix stays symmetric. Before each check, predict
+whether the route through k beats the d[i][j] already in the table.
+
+<PredictChallenge slug="floyd-warshall" settings={{ preset: 'undirected' }} goal={8} />
+
+By the end, A and E are 11 apart, along A → C → B → D → E. Round E checks 12 pairs and improves none: E's only road
+leads to D, so no route between two other towns gets shorter by visiting E.
+
+</Section>
+
+<Section step="do" title="The loops in code, and what can go wrong">
+
+Here is one round in code, with k = 1, on three nodes numbered 0 to 2. 99 stands for "no edge", since it is bigger
+than any real distance here. The full algorithm wraps these two loops in a third, over k = 0, 1, 2.
+
+<TraceCode
+  snippet="floyd-warshall-round"
+  question="d[2][0] starts at 99: there is no edge from 2 to 0. What does it hold when the round ends?"
+  choices={['99', '7', '3', '6']}
+  answer={1}
+  why="At i = 2, j = 0 the test adds d[2][1] + d[1][0] = 1 + 6 = 7, which beats 99. The same round lowers d[0][2] from 9 to 4 + 2 = 6. Round 0 before it and round 2 after it change nothing, so the printed rows, 0 4 6, 6 0 2 and 7 1 0, are the final distances."
+/>
+
+The round tests row 1 and column 1 too, and never changes them. That holds in every round: d[i][k] could only become
+d[i][k] + d[k][k], and d[k][k] is 0. So every pair reads the same two halves whether other cells have been updated
+yet or not, which is why one matrix, overwritten in place, is enough.
+
+<Misconception
+  id="k-any-loop"
+  title="The three loops can go in any order"
+  probes={[
+    {
+      q: 'One-way edges B → D, D → C and C → A weigh 2 each. Code nested for i, for j, for k (nodes in the order A, B, C, D) decides d[B][A] in one pass over k. What does d[B][A] end as?',
+      choices: ['6, along B → D → C → A', '∞: no route is found', '2, the edge B → D'],
+      answer: 1,
+      trap: 0,
+      why: 'When d[B][A] is decided, d[B][C] (later in row B) and d[D][A] (in row D) are still ∞, so no k joins two known halves and the route of 6 is never found. With k outermost, it would be.',
+    },
+    {
+      q: 'Which loop must be the outermost in Floyd–Warshall?',
+      choices: ['k, the stop-over', 'i, where the route starts', 'Any of them: the loops are interchangeable'],
+      answer: 0,
+      trap: 2,
+      why: 'Round k needs d[i][k] and d[k][j] to be the best routes through the earlier nodes, which holds only if every pair finishes one round before the next begins.',
+    },
+  ]}
+>
+
+The recurrence trusts d[i][k] and d[k][j] to be the best routes through the earlier nodes, which holds only if every
+pair finished those rounds first. Put i or j outermost and each d[i][j] is settled for good from cells that haven't
+had their rounds yet. On the one-way chain A → C → D → B, each edge weighing 1, the order i, j, k reaches d[A][B]
+while d[A][D] and d[C][B] are still ∞, and never finds the route of length 3. Inside a round, i and j can go in
+either order.
+
+</Misconception>
+
+Unlike Dijkstra, Floyd–Warshall settles nothing early: every pair is tested again each round, so negative edges are
+fine.
+
+<Explore slug="floyd-warshall" settings={{ preset: 'negative' }} caption="C → B weighs −1. Round C lowers d[A][B] from 4 to 1 (A → C → B), d[A][D] from 6 to 3 and d[D][B] from 7 to 4. The finished matrix keeps d[C][B] = −1, and every cell on the diagonal is still 0." />
+
+A **negative cycle** is different: a route round it comes back cheaper than it left, so the diagonal drops below 0.
+
+<Explore slug="floyd-warshall" settings={{ preset: 'cycle' }} caption="A → B → C → A weighs 1 − 2 − 1 = −2. d[C][C] drops to −2 in round B, and d[A][A] and d[B][B] follow in round C. The matrix also says d[A][D] = 1, but going round the cycle first gives −1, and twice gives −3." />
+
+<Misconception
+  id="negative-entry-cycle"
+  title="A negative distance means a negative cycle"
+  probes={[
+    {
+      q: 'After Floyd–Warshall, d[X][Y] = −4 and every cell on the diagonal is 0. What does that tell you?',
+      choices: [
+        'A negative cycle runs through X and Y',
+        'The shortest route from X to Y has length −4, and there is no negative cycle',
+        'The algorithm went wrong, because distances can’t be negative',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Negative edges give negative distances, which are real answers. Only a diagonal cell below 0 shows a cycle that costs less than nothing.',
+    },
+    {
+      q: 'Which cells of the finished matrix show that a graph has a negative cycle?',
+      choices: ['Any cell below 0', 'A cell on the diagonal, d[i][i], below 0', 'A cell still at ∞'],
+      answer: 1,
+      trap: 0,
+      why: 'd[i][i] starts at 0 and drops only if some route leaves i and returns for a negative total, which is a negative cycle. Other negative cells just come from negative edges.',
+    },
+  ]}
+>
+
+Negative edges make negative distances, and they are correct: in Negative edge, d[C][B] stays −1. Only the diagonal
+speaks about cycles. d[i][i] starts at 0 and falls only if a route leaves i and comes back for a negative total, so
+check it after the last round: a d[i][i] below 0 means a negative cycle, and any distance whose route could detour
+round it has no true value.
+
+</Misconception>
+
+The matrix gives lengths. For the routes, keep next[i][j] too: it starts as j wherever there is an edge, and whenever
+d[i][j] improves through k it becomes next[i][k], since the new route starts the way the best route to k does. To read
+a path, start at i and keep jumping to next[·][j] until you reach j. In Four cities, next[B][A] ends as C, next[C][A]
+as D and next[D][A] as A: B → C → D → A.
+
+Swap `min` for `or` and `+` for `and`, and the same loops say whether j can be reached from i at all:
+`reach[i][j] = reach[i][j] or (reach[i][k] and reach[k][j])`. That table is the graph's **transitive closure**.
+
+Other algorithms fill the same table. [Dijkstra's algorithm](/learn/dijkstra) from every node costs O(V (V + E) log V)
+with a binary heap, if no edge is negative; [Bellman–Ford](/visualisers/bellman-ford) from every node allows negative
+edges at O(V² E). **Johnson's algorithm** combines them: one Bellman–Ford run gives each node a number h, reweighting
+every edge u → v to w + h(u) − h(v) makes all weights non-negative without changing which paths are shortest, and
+Dijkstra then runs from every node.
+
+<Misconception
+  id="fewer-edges-faster"
+  title="Floyd–Warshall is quick on a graph with few edges"
+  probes={[
+    {
+      q: 'What decides how many times the plain Floyd–Warshall code runs its test?',
+      choices: ['The number of nodes: V³ tests, whatever the edges', 'The number of edges: about V × E tests', 'The number of negative edges'],
+      answer: 0,
+      trap: 1,
+      why: 'The three loops run over nodes, so they make V × V × V tests. Missing edges only make some of those tests fail.',
+    },
+    {
+      q: 'You need every pairwise distance on a road map of 50,000 junctions and 120,000 roads, all of positive length. What should you run?',
+      choices: ['Floyd–Warshall: it is the all-pairs algorithm', 'Dijkstra’s algorithm from every junction', 'Bellman–Ford from every junction'],
+      answer: 1,
+      trap: 0,
+      why: 'Floyd–Warshall would make 50,000³, about 10¹⁴ tests. Dijkstra from every junction costs about V (V + E) log V, around 10¹¹ steps: roughly a thousand times less.',
+    },
+  ]}
+>
+
+The loops run over nodes, not edges, so the plain code makes V³ tests whatever E is: 1,000 nodes cost a billion tests
+with 2,000 edges or with 500,000. On a sparse graph with no negative edges, Dijkstra from every node costs about
+V (V + E) log V, around 30 million steps for 1,000 nodes and 2,000 edges. Floyd–Warshall wins on small or dense
+graphs, where its short loops are hard to beat.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'One-way edges A → B, B → C and C → D weigh 1 each, and A → D weighs 10. The rounds go A, B, C, D. What is d[A][D] after round B?',
+      choices: ['10', '3', '∞', '2'],
+      answer: 0,
+      why: 'After round B only A and B may be stop-overs, and no route reaches D through them alone, so d[A][D] is still the direct edge. The route of length 3 also stops at C, which round C allows.',
+    },
+    {
+      q: 'Program 1 nests its loops as for k, for i, for j; program 2 as for i, for j, for k. On which graphs without a negative cycle can their answers differ?',
+      choices: [
+        'None: both test every triple i, k, j once',
+        'Only graphs where some pair’s shortest path needs two or more stop-overs',
+        'Only graphs with a negative edge',
+        'Only undirected graphs',
+      ],
+      answer: 1,
+      why: 'Program 2 decides d[i][j] once, but d[i][k] and d[k][j] already hold the direct edges or better, so one stop-over is always found. A path with more can need cells that are not yet improved.',
+      traps: { 0: 'k-any-loop' },
+    },
+    {
+      q: 'Edges P → Q (−5), Q → R (2) and R → P (4). After Floyd–Warshall, d[P][Q] = −5 and d[P][R] = −3. Is there a negative cycle?',
+      choices: [
+        'Yes: the matrix holds negative distances',
+        'No: the only cycle weighs −5 + 2 + 4 = 1, so every d[i][i] stays 0',
+        'Yes: a cycle with a negative edge on it is a negative cycle',
+      ],
+      answer: 1,
+      why: 'Negative edges give negative distances. A negative cycle shows only on the diagonal, and going round this one costs 1, so no d[i][i] drops below 0.',
+      traps: { 0: 'negative-entry-cycle' },
+    },
+    {
+      q: 'A graph has 2,000 nodes and 3,000 edges. About how many times does the plain Floyd–Warshall code compare d[i][k] + d[k][j] with d[i][j]?',
+      choices: ['About 8 billion: 2,000³', 'About 6 million: 2,000 × 3,000', 'About 4 million: 2,000²', 'About 3,000: once per edge'],
+      answer: 0,
+      why: 'V rounds of V² pairs: 2,000 × 2,000 × 2,000 = 8 × 10⁹, with 3,000 edges or 3 million. On a graph this sparse, Dijkstra from every node does far less work.',
+      traps: { 1: 'fewer-edges-faster', 3: 'fewer-edges-faster' },
+    },
+    {
+      q: 'After a run, next[P][T] = R, next[R][T] = Q and next[Q][T] = T. What is the best path from P to T?',
+      choices: ['P → R → Q → T', 'P → T', 'P → Q → R → T', 'P → R → T'],
+      answer: 0,
+      why: 'Start at P and keep jumping to next[·][T]: P to R, R to Q, then Q to T. Each entry gives only the next step from where you are.',
+    },
+    {
+      q: 'The graph has no negative cycle. Round C is under way, and d[A][B] has just dropped from 9 to 7. Which of these cells could the same round still change?',
+      choices: ['d[A][C]', 'd[C][B]', 'd[B][A]', 'd[C][C]'],
+      answer: 2,
+      why: 'Round C never changes row C or column C: d[A][C] could only become d[A][C] + d[C][C], and d[C][C] = 0. d[B][A] is an ordinary pair, so B → C → A may still beat it.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="stop-over-rounds"
+  prompt="How does Floyd–Warshall find the shortest distance between every pair of nodes? Say what d[i][j] holds after round k, how a round changes it, why k must be the outer loop, and how a negative cycle shows up."
+  rubric={[
+    'd starts as the direct edges: the weight where there is one, 0 on the diagonal and ∞ elsewhere.',
+    'After round k, d[i][j] is the shortest path from i to j whose stop-overs are all k or nodes before it.',
+    'Round k replaces d[i][j] with d[i][k] + d[k][j] when that is smaller, joining a best path to k and one from k.',
+    'k is the outer loop, so d[i][k] and d[k][j] are finished for the earlier nodes before they are read; V rounds of V² pairs is O(V³).',
+    'A diagonal cell d[i][i] below 0 means a negative cycle, and distances that can detour round it are meaningless.',
+  ]}
+  example="d starts as the direct edges: the weight where there is one, 0 on the diagonal and infinity elsewhere. Then each node k in turn becomes an allowed stop-over: for every pair i, j, if d[i][k] + d[k][j] is shorter than d[i][j], it replaces it. After round k, d[i][j] is the shortest path whose stop-overs are all k or nodes before it, so after the last round it is the true distance. k has to be the outer loop, because a pair may only use d[i][k] and d[k][j] once the earlier rounds have finished with them. That is V rounds of V² pairs, O(V³). If some d[i][i] ends below 0, a route leaves i and comes back for less than nothing: a negative cycle, and any distance that can detour round it means nothing."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- d starts as the direct edges, 0 on the diagonal and ∞ elsewhere. Round k allows k as a stop-over:
+  d[i][j] = min(d[i][j], d[i][k] + d[k][j]).
+- After round k, d[i][j] is the shortest path stopping over only at k and the nodes before it; after all V rounds it
+  is the true distance.
+- k must be the outer loop. One matrix is enough, because round k never changes row k or column k.
+- Negative edges are fine; a negative cycle shows as a d[i][i] below 0. A next-hop matrix recovers the paths.
+- Θ(V³) time whatever the edges, Θ(V²) memory: best for small or dense graphs. On large sparse ones, run Dijkstra from
+  every node, or Johnson's algorithm if some edges are negative.
+- Next: practise with [Signal Spread Time](/practice/network-delay-time), a one-source problem for Dijkstra (what
+  would Floyd–Warshall cost with up to 500 nodes?), and try your own graph on the
+  [Floyd–Warshall](/visualisers/floyd-warshall) and [Bellman–Ford](/visualisers/bellman-ford) visualisers.
+
+</Section>

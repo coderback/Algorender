@@ -165,7 +165,7 @@ function* run({ surface, start }: RaceInput): Generator<Frame<PlotState>> {
             ? 'Momentum’s f went up: its built-up speed carried it past the low point, and it will swing back'
             : o.id === 'gd'
               ? 'plain gradient descent’s f went up: the step overshot'
-              : `${o.name}’s f went up: its steps stay about η long even near the bottom, so it jitters there`,
+              : `${o.name}’s f went up: its steps stay about η long however gentle the slope, so it stepped past a low point on its path`,
         );
       }
       if (p.diverged && k === p.xs.length) events.push(`${o.name} flew off the map`);

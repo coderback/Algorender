@@ -101,7 +101,10 @@ const drawing: TreeDrawing<BTree> = {
   },
   describe: (tree) => {
     const keys = allKeys(tree);
-    const limits = `nodes hold 1 to ${maxKeys(tree)} keys`;
+    const limits =
+      minKeys(tree) === 1
+        ? `nodes hold 1 to ${maxKeys(tree)} keys`
+        : `nodes hold ${minKeys(tree)} to ${maxKeys(tree)} keys, the root 1 to ${maxKeys(tree)}`;
     if (keys.length === 0) return `Empty ${treeName(tree.order)}: ${limits}.`;
     return `${treeName(tree.order)[0].toUpperCase()}${treeName(tree.order).slice(1)} (${limits}) with ${plural(keys.length, 'key')} in ${plural(Object.keys(tree.nodes).length, 'node')}, height ${heightOf(tree)}, root ${show(tree.nodes[tree.root!].keys)}. In order: ${keys.join(', ')}.`;
   },

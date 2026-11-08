@@ -147,6 +147,7 @@ concepts:
     summary: A few bits per item that answer "definitely not" or "probably yes".
     prereqs: [hash-tables]
     visualisers: [bloom-filter]
+    lesson: bloom-filters
 
   # ── Trees and heaps ──────────────────────────────────────────
   - id: binary-search-trees
@@ -169,6 +170,7 @@ concepts:
     summary: Wide nodes with many keys, the shape behind database indexes.
     prereqs: [balanced-trees]
     visualisers: [b-tree]
+    lesson: b-trees
   - id: heaps
     title: Heaps and priority queues
     track: trees
@@ -256,6 +258,7 @@ concepts:
     summary: Floyd–Warshall tries every node as a stepping stone between every pair.
     prereqs: [shortest-paths, dynamic-programming]
     visualisers: [floyd-warshall]
+    lesson: all-pairs-shortest-paths
   - id: minimum-spanning-trees
     title: Minimum spanning trees
     track: graphs
@@ -343,6 +346,7 @@ concepts:
     track: math
     summary: Slopes in one dimension, and the direction of steepest ascent in many.
     visualisers: [derivative]
+    lesson: derivatives-gradients
   - id: chain-rule
     title: The chain rule
     track: math
@@ -401,6 +405,7 @@ concepts:
     summary: Optimizers that remember past gradients to speed through ravines and even out step sizes.
     prereqs: [gradient-descent]
     visualisers: [optimizers]
+    lesson: optimizers
   - id: linear-regression
     title: Linear regression
     track: ml
@@ -507,6 +512,7 @@ concepts:
     summary: A token bucket lets bursts through but caps the long-run rate.
     prereqs: [queueing]
     visualisers: [token-bucket]
+    lesson: rate-limiting
   - id: concurrency
     title: Race conditions, locks and deadlock
     track: systems

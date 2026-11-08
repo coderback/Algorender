@@ -195,7 +195,7 @@ function* run(input: TokenBucketInput): Generator<Frame<PlotState>> {
   const bound = maxAccepted(input, end);
   yield plotFrame([bucketPlane(decisions.length - 1, true), countPlane(decisions.length - 1), readouts(decisions)], {
     line: null,
-    note: `${accepted} of ${decisions.length} requests got through and ${rejected} were turned away. Bursts of up to ${capacity} pass at once, but over time no more than ${fmt(rate, 2)} a second do: in ${fmt(end, 1)} s the bucket could never let through more than ${capacity} + ${fmt(rate, 2)} × ${fmt(end, 1)} = ${bound}, the dashed line.`,
+    note: `${accepted} of ${decisions.length} requests got through and ${rejected} ${rejected === 1 ? 'was' : 'were'} turned away. Bursts of up to ${capacity} pass at once, but over time no more than ${fmt(rate, 2)} a second do: in ${fmt(end, 1)} s the bucket could never let through more than ${capacity} + ${fmt(rate, 2)} × ${fmt(end, 1)} = ${bound}, the dashed line.`,
     vars: { ...vars, accepted, rejected },
     stats: { accepted, rejected },
   });

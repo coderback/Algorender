@@ -49,6 +49,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'bloom-filters',
+    title: 'Bloom filters: a sure no, or a maybe',
+    concept: 'bloom-filters',
+    summary: "How k hash functions switching on bits answer \"have I seen this?\" in about 10 bits per item, why \"definitely not\" is always right while \"probably present\" can be a false positive that grows as the filter fills, and why a filter can't list, delete or grow.",
+    minutes: 15,
+  },
+  {
     slug: 'recursion',
     title: 'Recursion: watch the call stack',
     concept: 'recursion',
@@ -81,6 +88,13 @@ export const lessons: readonly LessonMeta[] = [
     title: 'Self-balancing trees: lift the taller side',
     concept: 'balanced-trees',
     summary: "Keep every node's two sides within one level of each other: how an AVL tree finds a node at ±2 on the way back up, how one or two rotations fix it without breaking the order, and why sorted keys no longer make a chain.",
+    minutes: 15,
+  },
+  {
+    slug: 'b-trees',
+    title: 'B-trees: wide nodes, grown from the top',
+    concept: 'b-trees',
+    summary: 'Why packing many sorted keys into each node keeps a tree a few levels tall, how a full node splits and sends its median up so the tree grows only at the root, and how a delete borrows through the parent or merges to keep every leaf on one level.',
     minutes: 15,
   },
   {
@@ -210,6 +224,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'all-pairs-shortest-paths',
+    title: 'All-pairs shortest paths: one more stop-over each round',
+    concept: 'all-pairs-shortest-paths',
+    summary: 'Floyd–Warshall as dynamic programming over which nodes a route may stop at: why k must be the outer loop, why one matrix overwritten in place is enough, how a negative cycle shows on the diagonal, and when Dijkstra from every node is cheaper than Θ(V³).',
+    minutes: 15,
+  },
+  {
     slug: 'minimum-spanning-trees',
     title: 'Minimum spanning trees: the cheapest safe edge',
     concept: 'minimum-spanning-trees',
@@ -273,11 +294,25 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'derivatives-gradients',
+    title: 'Derivatives and gradients: shrink the gap',
+    concept: 'derivatives-gradients',
+    summary: 'Shrink the gap between two points until the secant becomes the tangent, estimate slopes in code without losing digits to rounding, and see why the gradient points uphill straight across the contour lines.',
+    minutes: 15,
+  },
+  {
     slug: 'gradient-descent',
     title: 'Gradient descent: how models learn',
     concept: 'gradient-descent',
     summary: 'From the slope at a point to walking downhill on a loss surface, and why the step size matters so much.',
     minutes: 20,
+  },
+  {
+    slug: 'optimizers',
+    title: 'Momentum and Adam: gradient descent with a memory',
+    concept: 'optimizers',
+    summary: 'Race four optimisers through a narrow valley to see how remembering past gradients speeds up the floor, damps the zigzag and evens out the steps.',
+    minutes: 15,
   },
   {
     slug: 'bayes',
@@ -418,6 +453,13 @@ export const lessons: readonly LessonMeta[] = [
     concept: 'queueing',
     summary: 'Why a busy server is slow long before it is full, why p99 matters more than the average, and how a token bucket keeps traffic in check.',
     minutes: 20,
+  },
+  {
+    slug: 'rate-limiting',
+    title: 'Rate limiting: one token per request',
+    concept: 'rate-limiting',
+    summary: 'Two numbers per client: why a token bucket lets a burst of up to its capacity through but never more than capacity + rate × t in any t seconds, why a fixed window can pass twice its limit, and how to hold a limit across many servers and retry with backoff and jitter.',
+    minutes: 15,
   },
   {
     slug: 'concurrency',
