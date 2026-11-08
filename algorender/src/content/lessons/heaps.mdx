@@ -120,7 +120,7 @@ A heap is only partly ordered. The heap property compares each parent with its o
 siblings, cousins or anything else, so [1, 4, 2, 9, 5, 3] is a valid min-heap even though 4 comes before 2. That is why a
 heap is cheap to keep: insert and remove repair one path, never the whole array. It is also why a heap can't binary
 search. To find out whether some value is in it, you may have to look at every node, which is O(n). To get every value
-out in order, remove the top n times; that is **heap sort**, and it costs O(n log n).
+out in order, remove the top n times; that is [heap sort](/learn/heap-sort), and it costs O(n log n).
 
 </Misconception>
 
@@ -282,7 +282,7 @@ the many nodes at the bottom are the ones with the long climb.
   better child. Both walk one path in a tree about log₂ n levels deep: O(log n).
 - Building a heap bottom-up from n values is O(n), because most nodes sit near the bottom and barely move.
 - A priority queue is the interface (insert, peek, remove the top); a binary heap is the usual implementation.
-- Next: **heap sort**, which builds a max-heap in place and keeps moving the top to the end of the array
+- Next: [heap sort](/learn/heap-sort), which builds a max-heap in place and keeps moving the top to the end of the array
   ([the heap sort visualiser](/visualisers/heap-sort)), and heaps at work in [Dijkstra's algorithm](/learn/dijkstra),
   in [Prim's algorithm](/visualisers/prims) for [minimum spanning trees](/learn/minimum-spanning-trees) and in [meeting rooms](/visualisers/meeting-rooms)
   for **intervals**. Practise with [Smash the Heaviest Stones](/practice/last-stone-weight),

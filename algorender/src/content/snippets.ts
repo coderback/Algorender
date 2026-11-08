@@ -1728,6 +1728,70 @@ linearSearch(scores, 20);
 `,
     },
   },
+  {
+    id: 'heap-sort-extract',
+    title: 'Emptying a max-heap from the back, one sift-down per pass',
+    code: {
+      python: `def sift_down(a, i, size):
+    while 2 * i + 1 < size:
+        c = 2 * i + 1
+        if c + 1 < size and a[c + 1] > a[c]:
+            c += 1
+        if a[c] <= a[i]:
+            return
+        a[i], a[c] = a[c], a[i]
+        i = c
+
+nums = [9, 7, 8, 2, 5]
+for end in range(len(nums) - 1, 0, -1):
+    nums[0], nums[end] = nums[end], nums[0]
+    sift_down(nums, 0, end)
+    print(*nums)
+`,
+      javascript: `function siftDown(a, i, size) {
+  while (2 * i + 1 < size) {
+    let c = 2 * i + 1;
+    if (c + 1 < size && a[c + 1] > a[c]) {
+      c += 1;
+    }
+    if (a[c] <= a[i]) {
+      return;
+    }
+    [a[i], a[c]] = [a[c], a[i]];
+    i = c;
+  }
+}
+
+const nums = [9, 7, 8, 2, 5];
+for (let end = nums.length - 1; end > 0; end--) {
+  [nums[0], nums[end]] = [nums[end], nums[0]];
+  siftDown(nums, 0, end);
+  console.log(nums.join(' '));
+}
+`,
+      typescript: `function siftDown(a: number[], i: number, size: number): void {
+  while (2 * i + 1 < size) {
+    let c = 2 * i + 1;
+    if (c + 1 < size && a[c + 1] > a[c]) {
+      c += 1;
+    }
+    if (a[c] <= a[i]) {
+      return;
+    }
+    [a[i], a[c]] = [a[c], a[i]];
+    i = c;
+  }
+}
+
+const nums: number[] = [9, 7, 8, 2, 5];
+for (let end = nums.length - 1; end > 0; end--) {
+  [nums[0], nums[end]] = [nums[end], nums[0]];
+  siftDown(nums, 0, end);
+  console.log(nums.join(' '));
+}
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

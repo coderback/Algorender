@@ -294,7 +294,7 @@ caller's values, so the stack holds at most about log₂ n frames.
   n(n − 1)/2 comparisons. Random pivots and median-of-three make that rare; introsort rules it out.
 - It sorts in place, but its call stack is O(log n) deep on average and up to n deep at worst; recursing into the
   smaller side caps it at O(log n). It is not stable.
-- Next: **heap sort**, which uses a [heap](/learn/heaps) to sort in place in O(n log n) even at worst
+- Next: [heap sort](/learn/heap-sort), which uses a [heap](/learn/heaps) to sort in place in O(n log n) even at worst
   ([its visualiser](/visualisers/heap-sort)), and **quickselect**, which partitions and goes into only the side holding
   the k-th position: O(n) on average. Practise with [Kth Largest Number in a List](/practice/kth-largest-element)
   and [Closest Points to the Origin](/practice/k-closest-points), or make the swaps yourself in

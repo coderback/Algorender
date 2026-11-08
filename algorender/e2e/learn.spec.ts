@@ -19,6 +19,7 @@ const lessonPaths = [
   'balanced-trees',
   'tries',
   'heaps',
+  'heap-sort',
   'two-pointers',
   'sliding-window',
   'memoization',

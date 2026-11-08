@@ -124,6 +124,7 @@ concepts:
     summary: Build a max-heap in place, then repeatedly move the maximum to the end.
     prereqs: [heaps]
     visualisers: [heap-sort]
+    lesson: heap-sort
   - id: non-comparison-sorts
     title: Sorting without comparisons
     track: searching-sorting

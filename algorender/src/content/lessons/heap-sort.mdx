@@ -1,0 +1,296 @@
+<Section step="hook" title="A guarantee with nothing to spare">
+
+[Quick sort](/learn/quick-sort) sorts a million random values in about 25 million comparisons, but the wrong order costs
+it 500 billion. [Merge sort](/learn/merge-sort) never needs more than about 20 million, but it borrows a second array as
+long as the first. The Linux kernel wants neither: its code runs on a small, fixed stack, where deep recursion and big
+buffers are unwelcome, and a sort that some input makes crawl is a weakness. So the kernel's array sort is
+**heap sort**: O(n log n) on every input, with a few variables as its only extra memory.
+
+The idea comes from the [heaps lesson](/learn/heaps): a max-heap keeps its largest value on top, so taking the top out
+again and again hands the values back largest first. The trick is where they go: each removal frees the last cell of the
+heap, and that cell is exactly where the value removed belongs.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="max-heap">A complete binary tree in the array, with the children of index i at 2i + 1 and 2i + 2 and no child larger than its parent, so the largest value is at index 0.</Term>
+  <Term name="build-heap">Sifting down every parent, from the last, at ⌊n/2⌋ − 1, back to the root, which makes the whole array a max-heap in O(n).</Term>
+  <Term name="sift down">Swapping a value with its larger child while that child is larger, so it sinks until the heap holds again.</Term>
+  <Term name="heap part and sorted part">Positions 0 to size − 1 form the heap; positions size to n − 1 hold the largest values in their final places.</Term>
+  <Term name="stable">Equal values keep their starting order, which matters when you sort records by one field.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Build a heap, then empty it from the back">
+
+Here are the quick sort lesson's 8 values. The tree is only in the index arithmetic: i marks the sinking value, c its
+larger child, and brackets under the bars show the heap part and the sorted part.
+
+<Explore slug="heap-sort" settings={{ input: '52, 18, 77, 31, 9, 64, 26, 45' }} caption="Building the heap sifts down 31, 77, 18 and 52, from the last parent, at position 3, back to the root: 77 already beats its children, the other three sink, and 77 rises to the root as 52 sinks past it, 5 swaps in all. Then each pass swaps the root into the last cell of the heap and sifts the new root down: 77 lands in position 7, then 64 in position 6, and the sorted part grows from the right. 27 comparisons and 21 swaps." />
+
+The first loop is the bottom-up build from the heaps lesson: most values sit near the bottom and barely move, so it
+costs O(n).
+
+The second loop does the sorting. The root is the largest value in the heap, so swap it with the heap's last value: it
+now sits where it belongs, since nothing left in the heap is larger. Shrink the heap by one, so that cell is never
+touched again. The value that came up to the root was a leaf, usually small, so it sinks back down, swapping with its
+larger child.
+
+A heap of n values is about log₂ n levels deep, and a sift-down makes at most two comparisons per level: one to find the
+larger child, one to compare it with the sinking value. So the n − 1 passes cost O(n log n), whatever the order of the
+input.
+
+<KeyIdea>
+
+**Build a max-heap in the array in O(n). Then, n − 1 times, swap the root, the largest value left, into the last cell
+of the heap, shrink the heap by one and sift the new root down in O(log n). The sorted part grows from the right, and
+the sort is O(n log n) on every input, with O(1) extra memory.**
+
+</KeyIdea>
+
+Sift-down is a loop, not a recursion, and every move is a swap inside the array, so there is no call stack to grow and
+no buffer. Quick sort can't promise the time, and even a careful one keeps O(log n) calls on its stack; merge sort needs
+the buffer. Here are heap sort and quick sort on sorted lists, quick sort's worst order:
+
+<Growth
+  algorithms={['heap-sort', 'quick-sort']}
+  example="sorted"
+  stat="comparisons"
+  label="Comparisons"
+  max={64}
+  step={8}
+  curves={['n²/2', 'n log₂ n']}
+  caption="Each point is a real run on a sorted list. Move along the chart, or use the arrow keys, to read the counts at any n."
+/>
+
+At n = 64 quick sort makes about 1,200 comparisons and heap sort about 590. Doubling n from 32 multiplies quick sort's
+count by about 3.4 and heap sort's by about 2.5, close to the 2.4 of n log₂ n.
+
+</Section>
+
+<Section step="predict" title="Your turn: does it sink?">
+
+Before each step, predict whether the sinking value swaps with its larger child. It swaps only if that child is strictly
+larger: the test in the code panel is `A[c] ≤ A[i]: stop`. This list holds two 81s, so one prediction is a tie; watch
+where each 81 ends up.
+
+<PredictChallenge slug="heap-sort" settings={{ input: '34, 81, 57, 81, 12, 66' }} goal={8} />
+
+</Section>
+
+<Section step="do" title="The second loop in code, and what it costs">
+
+Here is the second loop on its own, on five values that already form a max-heap: 9 above 7 and 8, and 7 above 2 and 5.
+Each pass swaps the root with nums[end], sifts the new root down through the end values still in the heap, and prints
+the array.
+
+<TraceCode
+  snippet="heap-sort-extract"
+  question="What is the second line the program prints?"
+  choices={['7 2 5 8 9', '7 5 2 8 9', '5 2 7 8 9', '2 5 7 8 9']}
+  answer={0}
+  why="The first pass leaves 8 7 5 2 9. The second swaps 8 into position 3, and 2, now the root of a heap of three, swaps with 7, its larger child, and has no children left. 8 and 9 are final; 7 2 5 is a heap, not a sorted list."
+/>
+
+The whole sort puts the build in front: a sift-down over the whole array, size n, for each parent from ⌊n/2⌋ − 1 down
+to 0. Notice which heap it builds to sort smallest first.
+
+<Misconception
+  id="ascending-needs-min-heap"
+  title="Sorting smallest first needs a min-heap"
+  probes={[
+    {
+      q: 'You sort smallest first by building a min-heap and taking its top n times. Where must each value you take go?',
+      choices: ['Into the cell the heap just gave up, at its end', 'Into a second list: the front, where it belongs, is still in the heap', 'Back into the heap'],
+      answer: 1,
+      trap: 0,
+      why: 'The heap frees cells at its end, but the smallest value belongs at the front, so a min-heap needs a second list: O(n) extra memory.',
+    },
+    {
+      q: 'Why does an in-place heap sort build a max-heap to sort in ascending order?',
+      choices: [
+        'Each pass fills the last cell of the heap, which in ascending order must get the largest value left',
+        'It doesn’t need to: a min-heap gives the same order',
+        'A max-heap is cheaper to build',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'The cell the shrinking heap gives up is the rightmost unsorted one, where the largest remaining value belongs. Either kind of heap costs O(n) to build.',
+    },
+  ]}
+>
+
+Values leave the heap from the top but land in the array from the right. Each pass frees the last cell of the heap,
+which in ascending order belongs to the largest value not yet placed, so the heap must hand over its largest: a
+max-heap. Python's heapq gets values smallest first from a min-heap (heapify, then heappop n times), but they need a
+second list, since the heap still fills the front: O(n) extra memory.
+
+</Misconception>
+
+Does a sorted input help, as it helps insertion sort? Here are the 12 sorted values that cost quick sort 66 comparisons
+in its lesson.
+
+<Explore slug="heap-sort" settings={{ preset: 'sorted', n: 12, seed: 7 }} input caption="12 values in sorted order: a min-heap, every parent smaller than its children, so the build makes 9 swaps, and the sort takes 55 comparisons. Switch the input to Reversed: largest first is already a max-heap, so the build swaps nothing, yet the sort still takes 47. Random, the same values shuffled, takes 53." />
+
+47 to 55 comparisons in three orders, where quick sort's ranged from 35 to 66. The order mostly changes the cheap build:
+each pass of the second loop brings up a value from the bottom of the heap, usually small, which sinks most of the way
+back whatever the order.
+
+The long swaps cost something else. In the Predict run, the 81 that started at position 1 was the first root swapped to
+the end and finished last, behind the 81 from position 3.
+
+<Misconception
+  id="heap-sort-stable"
+  title="Heap sort keeps equal values in their original order"
+  probes={[
+    {
+      q: 'Heap sort sorts rows by price. A mug and a pen both cost 12, and the mug comes first. Is it still first afterwards?',
+      choices: ['Yes: equal prices never cross', 'Not necessarily', 'No: equal prices always swap'],
+      answer: 1,
+      trap: 0,
+      why: 'A long swap never compares the values it jumps over, so it may or may not carry one of the two past the other, depending on where each sits in the heap.',
+    },
+    {
+      q: 'Rows sorted by name are sorted again by city. Which sort is sure to keep each city’s rows in name order?',
+      choices: ['Heap sort or merge sort', 'Merge sort, but not heap sort', 'Neither'],
+      answer: 1,
+      trap: 0,
+      why: 'Merge sort takes the left value on a tie, so it is stable. Heap sort’s long swaps can carry a row past others from the same city.',
+    },
+  ]}
+>
+
+Heap sort moves values in long jumps. The root's swap to the end of the heap carries it past every value in between,
+equal ones included, without comparing them, and nothing records which of two equal values came first, so their order
+can flip: heap sort is **not stable**. For plain numbers that's harmless. For records sorted by one field, use a stable
+sort such as merge sort or Timsort, or sort (key, original position) pairs, at O(n) extra memory.
+
+</Misconception>
+
+On the random order heap sort made 53 comparisons, and quick sort 35 on the same values. A better worst case doesn't
+make a faster sort.
+
+<Misconception
+  id="guarantee-means-faster"
+  title="A better worst case makes heap sort faster than quick sort"
+  probes={[
+    {
+      q: 'Heap sort is O(n log n) at worst and quick sort O(n²). Why do C++’s std::sort and .NET’s Array.Sort still start with quick sort?',
+      choices: [
+        'They don’t: heap sort’s worst case is better, so they use it',
+        'Quick sort is usually faster; heap sort takes over a part only if the recursion gets too deep',
+        'Quick sort needs less memory',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Both are introsorts. Quick sort makes fewer comparisons and scans memory in order; heap sort is the safety net that keeps the worst case O(n log n).',
+    },
+    {
+      q: 'A sift-down in a heap of a million values reads index 1,000, then 2,001, then 4,003. Why is that slow on real hardware?',
+      choices: ['It isn’t: every array read is O(1)', 'Each read lands far from the last, so it is rarely in the cache', 'The indices get too large to store'],
+      answer: 1,
+      trap: 0,
+      why: 'A processor fetches memory in small blocks and keeps recent ones in its cache. Neighbouring cells arrive together, but a jump from i to 2i + 1 lands in a new block almost every time.',
+    },
+  ]}
+>
+
+On random input heap sort makes more comparisons than quick sort, two per level of every sift-down, and it reads memory
+in jumps, from i to 2i + 1. A processor keeps recently used blocks of memory in a small, fast **cache**: quick sort's
+partition scans neighbouring cells and finds them there, while heap sort's jumps through a big heap mostly miss. So
+libraries use **introsort**: quick sort, switching any part whose recursion goes deeper than about 2 log₂ n levels to
+heap sort, as std::sort in the common C++ libraries and Array.Sort in .NET do. Heap sort alone is for when the guarantee
+and the O(1) memory matter more than speed, as in the kernel.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Heap sort has built the max-heap [9, 6, 8, 2, 5, 7]. What does the array hold after the first pass of the second loop?',
+      choices: ['[8, 6, 7, 2, 5, 9]', '[7, 6, 8, 2, 5, 9]', '[6, 7, 8, 2, 5, 9]', '[2, 5, 6, 7, 8, 9]'],
+      answer: 0,
+      why: '9 swaps with 7, the heap’s last value, and is final. 7 sinks below 8, its larger child, and stops at index 2, since positions 5 and 6 are outside the heap of five.',
+    },
+    {
+      q: 'At most how many comparisons does a sift-down from the root of a full heap of 15 values make, counted as the visualiser counts them?',
+      choices: ['6', '15', '4', '3'],
+      answer: 0,
+      why: '15 values fill levels of 1, 2, 4 and 8, so the root’s value sinks at most 3 levels, with two comparisons at each: the children with each other, then the larger with the sinking value.',
+    },
+    {
+      q: 'You want an array sorted largest first, in place, with heap sort’s two loops. Which heap should the first loop build?',
+      choices: [
+        'A max-heap: the largest comes out first and goes first',
+        'A min-heap: each pass moves the smallest value left to the end',
+        'Either: the second loop sorts whatever heap it is given',
+      ],
+      answer: 1,
+      why: 'Each pass fills the last cell of the heap, and in descending order the last cells belong to the smallest values, so the heap must hand over its smallest each time.',
+      traps: { 0: 'ascending-needs-min-heap' },
+    },
+    {
+      q: 'Heap sort runs on [7, 7, 3]. Call the first 7 A and the second B. In what order does it leave them?',
+      choices: ['3, A, B', '3, B, A', 'A, B, 3'],
+      answer: 1,
+      why: 'The array is already a max-heap. The first pass swaps A, the root, to position 2; 3 sinks below B, and the last pass swaps B into position 1, ahead of A.',
+      traps: { 0: 'heap-sort-stable' },
+    },
+    {
+      q: 'For which of these jobs is heap sort a better choice than quick sort?',
+      choices: [
+        'Sorting ten million random numbers as fast as possible',
+        'Sorting a playlist by artist, keeping each artist’s songs in album order',
+        'Sorting on a small device with a tiny, fixed stack, where any order of input can arrive',
+      ],
+      answer: 2,
+      why: 'Heap sort’s strengths are O(n log n) on any input and O(1) memory with no recursion. On random numbers quick sort is usually faster, and keeping album order needs a stable sort, which heap sort is not.',
+      traps: { 0: 'guarantee-means-faster', 1: 'heap-sort-stable' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="heap-sort-in-place"
+  prompt="How does heap sort sort an array in place? Why is it O(n log n) on every input, and what does it give up compared with quick sort and merge sort?"
+  rubric={[
+    'It first builds a max-heap in the array, sifting down each parent from the last one back to the root, which costs O(n).',
+    'Each pass swaps the root, the largest value left, into the last cell of the heap, shrinks the heap by one and sifts the new root down.',
+    'A sift-down walks at most about log₂ n levels, so the n − 1 passes cost O(n log n) whatever the order of the input.',
+    'It needs only a few variables: no buffer like merge sort’s and no recursion like quick sort’s.',
+    'It is not stable, and it is usually slower than quick sort, with more comparisons and scattered memory reads.',
+  ]}
+  example="Heap sort first turns the array into a max-heap by sifting down each parent from the last one back to the root, in O(n). The largest value is then at the root, so it swaps the root with the last value of the heap, shrinks the heap by one and sifts the new root down. Repeating that n − 1 times fills the array from the right. Each sift-down walks at most about log₂ n levels, so the sort is O(n log n) on any input, with no buffer and no recursion. The costs: it isn't stable, and its extra comparisons and jumps around memory make it slower than quick sort."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Heap sort builds a max-heap in the array bottom-up, in O(n), then n − 1 times swaps the root into the last cell of the
+  heap, shrinks the heap by one and sifts the new root down.
+- The sorted part grows from the right; the part on the left is a heap, never a sorted list.
+- Each sift-down walks at most about log₂ n levels, so heap sort is O(n log n) on every input, with O(1) extra memory
+  and no recursion.
+- To sort smallest first in place, build a max-heap: each pass fills the last cell of the heap, where the largest value
+  left belongs.
+- It is not stable, and more comparisons and scattered memory reads make it slower than quick sort, so introsort keeps it
+  as a fallback.
+- Next: **sorting without comparisons**, where counting sort and radix sort can beat n log n, and
+  [Comparison budget](/play/comparison-budget), which shows why no comparison sort can. Make each swap yourself in
+  [Be the algorithm](/play/be-the-algorithm/heap-sort), practise with [Smash the Heaviest Stones](/practice/last-stone-weight),
+  [Kth Largest Number in a List](/practice/kth-largest-element) and [Closest Points to the Origin](/practice/k-closest-points),
+  or open [the heap sort visualiser](/visualisers/heap-sort).
+
+</Section>

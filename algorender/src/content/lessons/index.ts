@@ -98,6 +98,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'heap-sort',
+    title: 'Heap sort: build a heap, then empty it from the back',
+    concept: 'heap-sort',
+    summary: "Why building a max-heap in place costs only O(n), why swapping its root to the end and sifting down n − 1 times sorts any input in O(n log n) with O(1) extra memory, and why it still isn't stable and usually loses to quick sort.",
+    minutes: 15,
+  },
+  {
     slug: 'two-pointers',
     title: 'Two pointers: from n² pairs to n steps',
     concept: 'two-pointers',
