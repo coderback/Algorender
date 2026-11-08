@@ -91,6 +91,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'b-trees',
+    title: 'B-trees: wide nodes, grown from the top',
+    concept: 'b-trees',
+    summary: 'Why packing many sorted keys into each node keeps a tree a few levels tall, how a full node splits and sends its median up so the tree grows only at the root, and how a delete borrows through the parent or merges to keep every leaf on one level.',
+    minutes: 15,
+  },
+  {
     slug: 'tries',
     title: 'Tries: one letter per edge',
     concept: 'tries',

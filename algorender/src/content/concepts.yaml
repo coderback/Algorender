@@ -170,6 +170,7 @@ concepts:
     summary: Wide nodes with many keys, the shape behind database indexes.
     prereqs: [balanced-trees]
     visualisers: [b-tree]
+    lesson: b-trees
   - id: heaps
     title: Heaps and priority queues
     track: trees

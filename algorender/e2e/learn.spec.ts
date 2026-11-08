@@ -18,6 +18,7 @@ const lessonPaths = [
   'binary-search',
   'binary-search-trees',
   'balanced-trees',
+  'b-trees',
   'tries',
   'heaps',
   'heap-sort',

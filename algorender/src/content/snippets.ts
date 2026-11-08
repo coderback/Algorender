@@ -2109,6 +2109,81 @@ console.log(test(bits, 'cog'));
 `,
     },
   },
+  {
+    id: 'b-tree-leaf-split',
+    title: 'Split an overflowing B-tree leaf',
+    code: {
+      python: `def insert_into_leaf(keys, key):
+    keys.append(key)
+    i = len(keys) - 1
+    while i > 0 and keys[i - 1] > key:
+        keys[i] = keys[i - 1]
+        i -= 1
+    keys[i] = key
+
+def split(keys):
+    mid = len(keys) // 2
+    left = keys[:mid]
+    right = keys[mid + 1:]
+    return left, keys[mid], right
+
+leaf = [20, 40, 60, 80]
+insert_into_leaf(leaf, 70)
+left, up, right = split(leaf)
+print('left:', *left)
+print('up:', up)
+print('right:', *right)
+`,
+      javascript: `function insertIntoLeaf(keys, key) {
+  keys.push(key);
+  let i = keys.length - 1;
+  while (i > 0 && keys[i - 1] > key) {
+    keys[i] = keys[i - 1];
+    i -= 1;
+  }
+  keys[i] = key;
+}
+
+function split(keys) {
+  const mid = Math.floor(keys.length / 2);
+  const left = keys.slice(0, mid);
+  const right = keys.slice(mid + 1);
+  return [left, keys[mid], right];
+}
+
+const leaf = [20, 40, 60, 80];
+insertIntoLeaf(leaf, 70);
+const [left, up, right] = split(leaf);
+console.log('left:', left.join(' '));
+console.log('up:', up);
+console.log('right:', right.join(' '));
+`,
+      typescript: `function insertIntoLeaf(keys: number[], key: number): void {
+  keys.push(key);
+  let i = keys.length - 1;
+  while (i > 0 && keys[i - 1] > key) {
+    keys[i] = keys[i - 1];
+    i -= 1;
+  }
+  keys[i] = key;
+}
+
+function split(keys: number[]): [number[], number, number[]] {
+  const mid = Math.floor(keys.length / 2);
+  const left = keys.slice(0, mid);
+  const right = keys.slice(mid + 1);
+  return [left, keys[mid], right];
+}
+
+const leaf: number[] = [20, 40, 60, 80];
+insertIntoLeaf(leaf, 70);
+const [left, up, right] = split(leaf);
+console.log('left:', left.join(' '));
+console.log('up:', up);
+console.log('right:', right.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

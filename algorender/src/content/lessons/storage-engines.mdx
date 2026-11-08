@@ -333,7 +333,7 @@ choosing one is choosing which to pay.
 <Section step="recap" title="What to remember">
 
 - Disks work in pages; sequential I/O is cheap and random I/O is not. Storage engines are judged in pages read and written.
-- A B+ tree is shallow and fat: one page per level, all keys in linked leaves, separators as copies above. Great for reads and ranges; writes rewrite pages in place.
+- A B+ tree, a [B-tree](/learn/b-trees) that keeps every key in its leaves, is shallow and fat: one page per level, all keys in linked leaves, separators as copies above. Great for reads and ranges; writes rewrite pages in place.
 - An LSM tree buffers writes in a memtable, flushes immutable SSTables and merges them in compaction. Reads go newest first, skipping tables by key range and Bloom filter.
 - Bloom filters say "certainly not" or "maybe": false positives, never false negatives. Deletes are tombstones, gone only when compaction reaches the bottom.
 - Write, read and space amplification can't all be low: B+ trees favour reads, LSM trees favour writes.
