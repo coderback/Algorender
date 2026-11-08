@@ -126,6 +126,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'monotonic-stack',
+    title: 'Monotonic stacks: pop what the new value beats',
+    concept: 'monotonic-stack',
+    summary: "Find every value's next greater value in one pass: why the positions waiting on the stack never rise from bottom to top, why a loop inside a loop is still O(n) when each position is pushed once and popped at most once, and why the stack keeps indices rather than values.",
+    minutes: 15,
+  },
+  {
     slug: 'memoization',
     title: 'Memoization: stop solving the same problem twice',
     concept: 'memoization',

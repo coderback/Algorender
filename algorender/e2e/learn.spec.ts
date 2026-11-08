@@ -23,6 +23,7 @@ const lessonPaths = [
   'two-pointers',
   'sliding-window',
   'intervals',
+  'monotonic-stack',
   'memoization',
   'dynamic-programming',
   'backtracking',

@@ -1925,6 +1925,57 @@ console.log(text.trim());
 `,
     },
   },
+  {
+    id: 'next-greater-stack',
+    title: 'Next greater value with a stack',
+    code: {
+      python: `def next_greater(nums):
+    answer = [-1] * len(nums)
+    stack = []
+    for i in range(len(nums)):
+        while stack and nums[stack[-1]] < nums[i]:
+            j = stack.pop()
+            answer[j] = nums[i]
+        stack.append(i)
+    return answer
+
+result = next_greater([6, 2, 4, 1, 7, 3])
+print(*result)
+`,
+      javascript: `function nextGreater(nums) {
+  const answer = new Array(nums.length).fill(-1);
+  const stack = [];
+  for (let i = 0; i < nums.length; i++) {
+    while (stack.length > 0 && nums[stack[stack.length - 1]] < nums[i]) {
+      const j = stack.pop();
+      answer[j] = nums[i];
+    }
+    stack.push(i);
+  }
+  return answer;
+}
+
+const result = nextGreater([6, 2, 4, 1, 7, 3]);
+console.log(result.join(' '));
+`,
+      typescript: `function nextGreater(nums: number[]): number[] {
+  const answer: number[] = new Array(nums.length).fill(-1);
+  const stack: number[] = [];
+  for (let i = 0; i < nums.length; i++) {
+    while (stack.length > 0 && nums[stack[stack.length - 1]] < nums[i]) {
+      const j = stack.pop()!;
+      answer[j] = nums[i];
+    }
+    stack.push(i);
+  }
+  return answer;
+}
+
+const result: number[] = nextGreater([6, 2, 4, 1, 7, 3]);
+console.log(result.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

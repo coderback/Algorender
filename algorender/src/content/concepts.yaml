@@ -212,6 +212,7 @@ concepts:
     summary: A stack kept in order, so each element is pushed and popped once.
     prereqs: [stacks-queues]
     visualisers: [monotonic-stack]
+    lesson: monotonic-stack
   - id: intervals
     title: Intervals
     track: patterns

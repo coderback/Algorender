@@ -1,0 +1,275 @@
+<Section step="hook" title="How long until it gets warmer?">
+
+A sensor logs the temperature once a minute. For each reading, how long until a warmer one? The direct way scans right
+from each reading until it meets something warmer. On a million readings that only fall, every scan runs to the end:
+n(n − 1)/2, about 500 billion comparisons. O(n²).
+
+Look at the readings still waiting for an answer. From oldest to newest they never get warmer: a newer, warmer reading
+would already have answered the older ones. So a warm reading that arrives beats the newest waiting readings first,
+all at one end. Keep them on a [stack](/learn/stacks-queues): each new reading pops every reading it answers, then
+waits itself. That is a **monotonic stack**: one pass, each reading pushed once and popped at most once, and fewer than
+2 million comparisons for the million readings.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="next greater value">For the value at position i, the first larger value to its right; −1 (or 0 days) if there is none.</Term>
+  <Term name="waiting">A position whose answer hasn't been found yet. The waiting positions are exactly the ones on the stack.</Term>
+  <Term name="monotonic stack">A stack whose values run one way from bottom to top. For next greater values they never rise: each sits on one at least as large.</Term>
+  <Term name="position, not value">The stack holds indices: nums[j] gives the value, j says which answer to fill in, and i − j how long it waited.</Term>
+  <Term name="amortised cost">The cost per step averaged over the whole run. One new value can pop many, but every pop uses up a push made earlier.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Pop what the new value beats">
+
+Take seven days of temperatures: 31, 28, 25, 29, 27, 34 and 30. The visualiser walks along them once, with a stack
+lane under the array, bottom on the left. Each new value is compared with the top: if the top is smaller, the new value
+is its answer and the top is popped; if not, popping stops and the new value is pushed to wait.
+
+<Explore slug="monotonic-stack" settings={{ input: '31, 28, 25, 29, 27, 34, 30' }} caption="28 and 25 wait until 29 arrives and pops both, 25 first; 31 stops it. Then 34 pops 27, 29 and 31, emptying the stack. 34 and 30 are left at the end, so their answers stay −1. Comparisons ends at 10 and Pushes at 7." />
+
+Two facts make this work. A value is pushed only after it has popped everything smaller than it, so it always lands
+on something at least as large: the values on the stack never rise from bottom to top. And so the first top that is
+not smaller ends the loop, because everything under it is at least as large again.
+
+The stack lane draws values, but the algorithm keeps positions, as its narration says: “Compare 29 with the top of
+the stack, 25 (from position 2).”
+
+Now count. Each comparison pops the top or stops the loop, so the 10 comparisons here are 5 pops and 5 stops.
+
+<KeyIdea>
+
+**Keep the positions still waiting for an answer on a stack, whose values never rise from bottom to top. Each new
+value pops every waiting value smaller than it, because it is their next greater value, and then waits itself. Each
+position is pushed once and popped at most once, so the pass makes fewer than 2n comparisons: O(n), however many one
+value pops.**
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: pop or stop?">
+
+Now 8, 3, 5, 5, 2, 7, 9 and 4. Before each comparison, predict whether the new value pops the top or stops. Watch
+what happens when 5 meets 5, and how far down the stack 7 gets.
+
+<PredictChallenge slug="monotonic-stack" settings={{ input: '8, 3, 5, 5, 2, 7, 9, 4' }} goal={10} />
+
+</Section>
+
+<Section step="do" title="The loop in code, and the questions it answers">
+
+Here is the same loop in code. `answer` starts as −1 everywhere, so a position never popped keeps it, and `stack`
+holds positions: `nums[stack[-1]]` is the value on top. It runs on 6, 2, 4, 1, 7 and 3.
+
+<TraceCode
+  snippet="next-greater-stack"
+  question="When i reaches 4 and nums[i] is 7, what does stack hold, bottom to top, before the while loop pops anything?"
+  choices={['0, 2, 3', '6, 4, 1', '0, 1, 2, 3', '3']}
+  answer={0}
+  why="When i was 2, the 4 popped position 1 (the 2), so the waiting positions are 0, 2 and 3. Their values, 6, 4 and 1, fall from bottom to top, but the stack holds positions. 7 pops 3, 2 and 0 and writes 7 into their answers, and the program prints 7 4 7 7 -1 -1."
+/>
+
+Popping j at position i writes answer[j], and i − j is how long j waited, which is all
+[Days Until a Warmer Day](/practice/daily-temperatures) asks for. Bare values couldn't say which cell to fill in, how
+long it waited, or, when a value repeats, which copy had been beaten.
+
+The comparison is strict: a value pops the top only if it is greater. In the challenge, the second 5 stopped at the
+first and waited on top of it, and 7 later popped both.
+
+<Misconception
+  id="equal-counts-as-greater"
+  title="An equal value counts as the next greater one"
+  probes={[
+    {
+      q: 'Days Until a Warmer Day: the temperatures are 60, 60 and 65. What is the answer for each day?',
+      choices: ['2, 1 and 0', '1, 1 and 0', '2, 1 and 1'],
+      answer: 0,
+      trap: 1,
+      why: 'Day 1 is no warmer than day 0, so day 0 waits two days, for the 65. A loop that pops on <= lets the second 60 answer the first and gives 1, 1 and 0.',
+    },
+    {
+      q: 'A next-greater loop pops while nums[top] <= nums[i]. On 3, 3, 3 it prints 3 3 -1. Is that right?',
+      choices: ['Yes: each 3 is answered by the 3 after it', 'No: no value is greater than 3, so every answer is −1'],
+      answer: 1,
+      trap: 0,
+      why: '3 is not greater than 3. Popping only on < makes each 3 stop at the one before and wait on top of it, so all three are still waiting at the end, with −1.',
+    },
+  ]}
+>
+
+Greater means strictly greater, so the loop pops only while the top is **less than** the new value. An equal value
+stops the popping and waits on top, and both are answered by the next larger value. So equal values sit together, and
+the stack never rises rather than strictly falling. If a question wants the next value that is at least as large, pop
+on ≤ instead; nothing else changes.
+
+</Misconception>
+
+One new value can pop a great deal. Here 19 falling values wait until 99 arrives.
+
+<Explore slug="monotonic-stack" settings={{ input: '95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 99' }} caption="The 18 values after 95 each make one comparison, stop, and wait. Then 99 pops all 19 at once. Comparisons ends at 37 and Pushes at 20. Scanning right from every value would make 190 comparisons, because each scan runs all the way to 99." />
+
+<Misconception
+  id="pop-loop-quadratic"
+  title="The while loop inside the for loop makes it O(n²)"
+  probes={[
+    {
+      q: 'A monotonic stack runs over 10,000 values. Across the whole run, at most how many pops can there be?',
+      choices: ['Fewer than 10,000', 'About 50 million', 'About 100 million'],
+      answer: 0,
+      trap: 1,
+      why: 'Each position is pushed once and can only be popped after its push, so there are at most 9,999 pops: the last value is never popped. 50 million is about what checking every pair would cost.',
+    },
+    {
+      q: 'A list holds 999 falling values and then one larger value, which pops all 999 at once. How many comparisons does the whole run make?',
+      choices: ['1,997', 'About 500,000', 'About 1,000,000'],
+      answer: 0,
+      trap: 1,
+      why: 'The 998 values after the first each make one comparison and stop, and the last makes 999 comparisons that pop: 1,997 in all. That one step is expensive, but the values it pops are gone for good.',
+    },
+  ]}
+>
+
+Nested loops are O(n²) when the inner one can take n steps for every step of the outer one. This one can't: each
+comparison pops a position or stops the loop. There are fewer than n pops in the whole run, because each position is
+pushed once, and at most one stop per value: fewer than 2n comparisons. A value that pops many uses up pops no later
+value can make. It is the same amortised argument as appending to a [doubling array](/learn/arrays) or moving the
+left edge of a [sliding window](/learn/sliding-window).
+
+</Misconception>
+
+The same loop answers a family of questions; only the comparison, the direction or when you read the stack changes.
+
+- **Next smaller value.** Pop while the top is *larger* than the new value, so the stack rises from bottom to top.
+- **Previous greater value.** Pop every value not larger than the new one (≤ this time); the top left behind, if
+  any, is the nearest larger value to its left. Read it before the push.
+- **A circular list,** where the first value follows the last. Go round twice, reading nums[i mod n] and pushing only
+  on the first lap, so values still waiting meet the ones before them. Still O(n).
+- **The largest rectangle under a bar chart.** A rectangle as tall as a bar stretches to the nearest lower bar on each
+  side, so keep a stack of rising heights. A lower bar arriving is where each taller bar it pops stops on the right,
+  the bar under a popped one on the stack is where it stops on the left, and a last bar of height 0 pops the rest.
+  In 2, 4, 5, 3, 1, 3, the 1 at position 4 pops the 3 at position 3, whose rectangle runs back to just after the 2 at
+  position 0: 3 × 3 = 9, the largest.
+
+<Misconception
+  id="order-matches-question"
+  title="For the next greater value, keep the stack increasing"
+  probes={[
+    {
+      q: 'A stack is finding next greater values. Which of these could it hold, bottom to top?',
+      choices: ['9, 6, 4', '4, 6, 9', '6, 9, 4'],
+      answer: 0,
+      trap: 1,
+      why: 'If 9 had arrived after 4 and 6, it would have popped them both, because it is their next greater value. So the values still waiting fall from bottom to top.',
+    },
+    {
+      q: 'To find each value’s next smaller value instead, what does a new value pop?',
+      choices: [
+        'Every waiting value larger than it, so the stack rises from bottom to top',
+        'Every waiting value smaller than it, so the stack falls from bottom to top',
+        'Only the top value, whatever it is',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'A new value is the next smaller value of every waiting value larger than it, so those are what it pops. What stays below it is no larger, so the stack rises.',
+    },
+  ]}
+>
+
+The order isn't picked to match the question; it follows from what pops. A new value pops every waiting value it
+answers and lands on one it doesn't. For the next greater value it pops smaller values, so the stack falls from bottom
+to top: a **decreasing** stack. For the next smaller value it pops larger ones, so the stack rises: an **increasing**
+stack. Ask what the new value answers, pop those, and the order takes care of itself.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A next-greater stack runs over 3, 8, 4, 6, 2. Which values are still on it when the loop ends?',
+      choices: ['8, 6 and 2', '2 only', '3, 4 and 2', 'None: every value is popped by the end'],
+      answer: 0,
+      why: '8 pops 3, and 6 pops 4. Nothing to the right of 8, 6 or 2 is larger, so all three are still waiting at the end, and their answers stay −1.',
+    },
+    {
+      q: 'Days Until a Warmer Day, with temperatures 40, 35, 37, 36 and 41 on days 0 to 4. What answer does the stack give for each day?',
+      choices: ['4, 1, 2, 1 and 0', '41, 37, 41, 41 and 0', '3, 0, 1, 0 and 0'],
+      answer: 0,
+      why: 'On day 2, 37 pops day 1: 2 − 1 = 1. On day 4, 41 pops days 3, 2 and 0: 4 − 3 = 1, 4 − 2 = 2 and 4 − 0 = 4. Day 4 is never popped, so it keeps 0. 41, 37, 41, 41 are the warmer temperatures, not the waits: each wait needs the popped day’s index, which is why the stack keeps indices.',
+    },
+    {
+      q: 'What are the next greater values of 7, 7, 3, 9?',
+      choices: ['9 9 9 −1', '7 9 9 −1', '9 −1 9 −1', '−1 −1 9 −1'],
+      answer: 0,
+      why: 'The second 7 is not greater than the first, so it stops and waits on top of it, and 3 waits on both. 9 then pops 3, 7 and 7. A loop that pops on ≤ would give the first 7 the answer 7.',
+      traps: { 1: 'equal-counts-as-greater' },
+    },
+    {
+      q: 'A run over 1,000 values pops 600 times in all. At most how many comparisons can it have made?',
+      choices: [
+        '1,599: 600 that pop, and at most one stop for each value after the first',
+        'About 500,000: the while loop can run up to 1,000 times for each value',
+        '600: one for each pop',
+      ],
+      answer: 0,
+      why: 'Every comparison pops or stops a loop. The first value meets an empty stack, so at most the other 999 stop once each: 600 + 999 = 1,599. The 600 pops are shared by the whole run, not repeated for every value.',
+      traps: { 1: 'pop-loop-quadratic' },
+    },
+    {
+      q: 'For each value of 4, 7, 5, 2 you want the next smaller value to its right. What does the stack hold, bottom to top, just before 2 arrives?',
+      choices: ['4, 5', '7, 5', '4, 7, 5', '5'],
+      answer: 0,
+      why: 'Here a new value pops every waiting value larger than it. 7 waits on 4; 5 pops 7 (its answer is 5) and waits on 4. The stack rises, 4 then 5, and 2 will pop both. 7, 5 is what the next greater rule would leave.',
+      traps: { 1: 'order-matches-question' },
+    },
+    {
+      q: 'The list 5, 1, 3 is circular: after the last value comes the first again. What is the next greater value of each?',
+      choices: ['−1, 3 and 5', '−1, 3 and −1', '1, 3 and 5', '−1, 5 and 5'],
+      answer: 0,
+      why: 'Going round, 3 is followed by 5: the second lap reads 5 again and pops 3. 1 is answered by 3 on the first lap, and nothing beats 5, so it keeps −1.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="waiting-positions"
+  prompt="How does a monotonic stack find every next greater value in one pass? Why do its values stay in order, and why is the pass O(n) though one value can pop many?"
+  rubric={[
+    'The stack holds the positions still waiting for a larger value, and their values never rise from bottom to top.',
+    'Each new value pops every waiting value smaller than it, records itself as their answer, and is then pushed to wait.',
+    'Popping stops at the first top that is not smaller, because everything below it is at least as large too.',
+    'Each position is pushed once and popped at most once, so there are fewer than 2n comparisons in all: O(n), or O(1) amortised per value.',
+  ]}
+  example="Walk left to right with a stack of the positions whose answer hasn't been found. Compare each new value with the value on top. If the top is smaller, the new value is its first larger value to the right, so record that answer and pop. Stop when the top is at least as large or the stack is empty, then push the new position. A value is pushed only after popping everything smaller, so it lands on something at least as large: the values never rise from bottom to top, and everything under a top that stops the loop is at least as large. Each position is pushed once and popped at most once, so the pass makes fewer than 2n comparisons: O(n)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Scanning right from every value is O(n²). A monotonic stack holds the positions still waiting for a larger value,
+  whose values never rise from bottom to top. Each new value pops every smaller one, as their answer, then is pushed.
+- Each position is pushed once and popped at most once: fewer than 2n comparisons, O(n) in all and O(1) amortised
+  per value, even when one value pops the whole stack.
+- Store positions, not values: they say which answer to fill in, and i − j is the distance. Pop on `<` for strictly
+  greater, so equal values wait together. Positions left at the end have no answer.
+- Flip the comparison for the next smaller value, pop on ≤ and read the top that is left for the previous greater,
+  go round twice for a circular list, and keep rising bars for the largest rectangle under a bar chart.
+- Next: practise with [Days Until a Warmer Day](/practice/daily-temperatures), then the hard one,
+  [Largest Rectangle Under a Bar Chart](/practice/largest-rectangle-in-histogram). A falling stack of bars also solves
+  [Rainwater Between Bars](/practice/trapping-rain-water), though two pointers do it in O(1) memory. To try your own
+  values, open [the monotonic stack visualiser](/visualisers/monotonic-stack).
+
+</Section>
