@@ -294,6 +294,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'derivatives-gradients',
+    title: 'Derivatives and gradients: shrink the gap',
+    concept: 'derivatives-gradients',
+    summary: 'Shrink the gap between two points until the secant becomes the tangent, estimate slopes in code without losing digits to rounding, and see why the gradient points uphill straight across the contour lines.',
+    minutes: 15,
+  },
+  {
     slug: 'gradient-descent',
     title: 'Gradient descent: how models learn',
     concept: 'gradient-descent',

@@ -2225,6 +2225,54 @@ for (const row of d) {
 `,
     },
   },
+  {
+    id: 'secant-slopes',
+    title: 'Forward-difference slopes of x² at 3 as h halves',
+    code: {
+      python: `def f(x):
+    return x * x
+
+def secant_slope(a, h):
+    return (f(a + h) - f(a)) / h
+
+a = 3
+h = 0.5
+while h >= 0.125:
+    print(secant_slope(a, h))
+    h = h / 2
+`,
+      javascript: `function f(x) {
+  return x * x;
+}
+
+function secantSlope(a, h) {
+  return (f(a + h) - f(a)) / h;
+}
+
+const a = 3;
+let h = 0.5;
+while (h >= 0.125) {
+  console.log(secantSlope(a, h));
+  h = h / 2;
+}
+`,
+      typescript: `function f(x: number): number {
+  return x * x;
+}
+
+function secantSlope(a: number, h: number): number {
+  return (f(a + h) - f(a)) / h;
+}
+
+const a: number = 3;
+let h: number = 0.5;
+while (h >= 0.125) {
+  console.log(secantSlope(a, h));
+  h = h / 2;
+}
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

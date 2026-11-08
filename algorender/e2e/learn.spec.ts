@@ -44,6 +44,7 @@ const lessonPaths = [
   'non-comparison-sorts',
   'string-matching',
   'palindromes',
+  'derivatives-gradients',
 ];
 
 async function openLesson(page: Page, slug: string) {

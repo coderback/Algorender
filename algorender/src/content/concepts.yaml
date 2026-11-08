@@ -346,6 +346,7 @@ concepts:
     track: math
     summary: Slopes in one dimension, and the direction of steepest ascent in many.
     visualisers: [derivative]
+    lesson: derivatives-gradients
   - id: chain-rule
     title: The chain rule
     track: math
