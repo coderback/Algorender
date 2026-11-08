@@ -1,0 +1,284 @@
+<Section step="hook" title="How alike are two words?">
+
+Type “recieve” and a spell checker offers “receive”. A diff tool lines up two versions of a file and shows only the
+lines that changed. Both are asking how alike two sequences are: what they share, in order, and how few changes turn
+one into the other.
+
+Trying every answer is hopeless: a word of m letters has $2^m$ subsequences, about a million for 20 letters and a
+trillion for 40. The [dynamic programming lesson](/learn/dynamic-programming) filled a table of smaller answers
+instead. With two sequences, the smaller answers are about **prefixes**: the first i letters of one and the first j of
+the other. One table holds every pair, and each cell costs a single comparison.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="subsequence and substring">A subsequence keeps some letters in their order and may skip the rest: “hat” is a subsequence of “chart”. A substring is a run of consecutive letters, such as “har”.</Term>
+  <Term name="prefix">A[1..i], the first i letters of A, counted from 1. The empty prefix, ε, has none; row 0 and column 0 stand for it.</Term>
+  <Term name="L[i,j] and D[i,j]">What one cell means. L[i,j] is the length of the longest common subsequence (LCS) of A[1..i] and B[1..j]; D[i,j] is the fewest edits that turn A[1..i] into B[1..j].</Term>
+  <Term name="edit distance">The fewest single-letter edits (insert, delete or replace) that turn one word into another, also called the Levenshtein distance.</Term>
+  <Term name="traceback">A walk from the table's corner back to its edge, following the neighbour each cell was built from, to recover the letters or edits themselves.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One comparison and three neighbours">
+
+For the longest common subsequence, the four decisions of dynamic programming are:
+
+- **State:** L[i,j] is the length of the LCS of A[1..i] and B[1..j].
+- **Base cases:** an empty prefix shares nothing, so row 0 and column 0 are all 0.
+- **Recurrence:** look only at the last letters, A[i] and B[j]. If they match, that letter can end a common
+  subsequence, so extend the best for the shorter prefixes: L[i,j] = L[i−1,j−1] + 1. If they differ, at most one of
+  them can end it, so leave out A[i] (the cell above) or B[j] (the cell to the left) and keep the better:
+  L[i,j] = max(L[i−1,j], L[i,j−1]).
+- **Fill order:** a cell reads the cells above, to the left and diagonally up-left, so fill row by row, left to right.
+
+<Explore slug="longest-common-subsequence" settings={{ preset: 'similar' }} caption="DYNAMIC against PANORAMIC: 63 cells, one comparison each. The corner reaches 5, and the walk back reads NAMIC. Its letters sit side by side in DYNAMIC, but in PANORAMIC the walk steps left past R and O, letters the subsequence skips." />
+
+The answer is the corner, L[m,n], the one cell that covers both whole words. The letters come from the walk back: a
+match steps diagonally and keeps its letter; otherwise the walk steps to the larger neighbour (up on a tie).
+
+<KeyIdea>
+
+**To compare two sequences, let each cell answer the question for a pair of prefixes: the first i items of one and
+the first j of the other. Only the last item of each prefix is new, so a cell is one comparison plus a look at three
+neighbours: above, left and diagonally up-left. Row 0 and column 0 are the empty prefixes, the answer is the
+corner, and the (m + 1) × (n + 1) table takes O(mn) time.**
+
+</KeyIdea>
+
+With a different rule, the same table gives the edit distance, D[i,j]. Turning i letters into nothing takes i
+deletes, and building j letters from nothing takes j inserts, so row 0 and column 0 count up from 0. For any other cell, think about the **last** edit of a cheapest script:
+
+- **Delete A[i]**, after turning A[1..i − 1] into B[1..j]: the cell above, plus 1.
+- **Insert B[j]**, after turning A[1..i] into B[1..j − 1]: the cell to the left, plus 1.
+- **Replace A[i] with B[j]**, after turning A[1..i − 1] into B[1..j − 1]: the diagonal, plus 1.
+
+D[i,j] is the smallest of the three. When A[i] = B[j] there is nothing to replace, so the cell copies the diagonal,
+which the other two can never beat.
+
+<Explore slug="edit-distance" settings={{ preset: 'kitten' }} caption="kitten into sitting. Row 0 counts 0 to 7 and column 0 counts 0 to 6. The corner reaches 3, and the walk back reads off the script: replace k with s, keep i, t and t, replace e with i, keep n, insert g." />
+
+</Section>
+
+<Section step="predict" title="Your turn: stop into tops">
+
+Turn “stop” into “tops”. Before each cell, predict its value or its cheapest edit: delete (from above), insert (from
+the left) or replace (from the diagonal). Then name the edit each step of the walk back stands for.
+
+<PredictChallenge slug="edit-distance" settings={{ input: 'stop, tops' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="The table in code, and one sequence on its own">
+
+Here is the LCS table in code, for “no” and “on”. Strings count from 0, so letter i of a is `a[i - 1]`. The program
+makes a table of zeros, then fills it from row 1 and column 1.
+
+<TraceCode
+  snippet="lcs-table"
+  question="The last cell, dp[2][2], compares the o of “no” with the n of “on”. What value does it get?"
+  choices={['0', '1', '2']}
+  answer={1}
+  why="The letters differ, so the cell takes the larger of dp[1][2] = 1 (n matched n) and dp[2][1] = 1 (o matched o). The diagonal, dp[1][1] = 0, is not used: it drops both letters, and each is in a match. The words share both letters in opposite orders, so a common subsequence keeps one, and the program prints 1."
+/>
+
+The table has (m + 1)(n + 1) cells at O(1) each: O(mn) time, for edit distance too. Each row reads only itself and the
+row above, so for the number alone two rows are enough: O(n) memory. The walk back can pass through any row, so
+recovering the letters or edits keeps the whole table. (Hirschberg's algorithm avoids that, at about twice the
+work.)
+
+The word **subsequence** matters: DYNAMIC and PANORAMIC share NAMIC, five letters, as a subsequence, but only AMIC,
+four, as an unbroken run.
+
+<Misconception
+  id="subsequence-is-substring"
+  title="A common subsequence has to be one unbroken run"
+  probes={[
+    {
+      q: 'What is the length of the longest common subsequence of “apple” and “ample”?',
+      choices: ['3: “ple” is the longest run they share', '4: a, p, l and e', '5'],
+      answer: 1,
+      trap: 0,
+      why: 'a, p, l and e appear in that order in both, skipping the m of “ample” and one p of “apple”. “ple” is the longest unbroken run, but a subsequence need not be unbroken.',
+    },
+    {
+      q: 'Is “tan” a subsequence of “plantain”?',
+      choices: ['Yes: t, a and n appear in that order', 'No: its letters are not next to each other there', 'No: “plantain” has no n after its t'],
+      answer: 0,
+      trap: 1,
+      why: '“plantain” has a t, then an a, then an n, so “tan” is a subsequence, though not a substring.',
+    },
+  ]}
+>
+
+A subsequence keeps the order but may skip letters; a substring skips nothing. So the LCS is at least as long as the
+longest common substring, and often longer. On a mismatch the LCS table keeps the better neighbour, where a table of
+common substrings drops back to 0 because the run is broken. The [string matching lesson](/learn/string-matching)
+looks for substrings; diff tools and DNA alignment want subsequences.
+
+</Misconception>
+
+Edit distance has a tempting shortcut too: count the positions where the letters differ.
+
+<Misconception
+  id="position-by-position"
+  title="Edit distance counts the positions where two words differ"
+  probes={[
+    {
+      q: 'Lined up from the left, “cold” and “scold” differ at every position. What is their edit distance?',
+      choices: ['5', '1', '4'],
+      answer: 1,
+      trap: 0,
+      why: 'Insert s at the front and the other four letters line up: one edit. A position-by-position count can’t shift letters, which is what an insert does.',
+    },
+    {
+      q: 'Two words of the same length differ at all 6 of their positions. What can you say about their edit distance?',
+      choices: ['It is exactly 6', 'It is at most 6, and can be much smaller', 'It is at least 6'],
+      answer: 1,
+      trap: 0,
+      why: 'Six replacements always work, so it is at most 6, but a delete and an insert can shift letters into line: “banana” and “ananab” differ at every position, and their distance is 2.',
+    },
+  ]}
+>
+
+Counting the positions that differ (the Hamming distance) only replaces letters. An insert or a delete shifts every
+later letter one place, which is often cheaper: “stop” and “tops” differ at all four positions, but deleting the s and
+adding one at the end takes 2. Every path from D[0,0] to the corner is one way of lining the words up, and the table
+keeps the cheapest.
+
+</Misconception>
+
+One sequence can be compared with itself, too. A **longest increasing subsequence** (LIS) keeps values that strictly
+rise from left to right. Whether v[i] can extend a run depends on the value the run ends with, so dp[i] is the length
+of the longest increasing run that ends **exactly at** v[i]: 1 more than the largest dp[j] over earlier positions j
+with a smaller value, or 1 if there is none. Each position looks back at every earlier one: n(n − 1)/2 comparisons,
+O(n²).
+
+<Explore slug="longest-increasing-subsequence" settings={{ input: '3, 8, 4, 9, 6, 1, 2' }} caption="dp comes out 1, 2, 2, 3, 3, 1, 2. At the 9, the runs ending at 8 and at 4 tie at length 2, and the first found, 8, is kept. The largest entry, 3, comes first at dp[3], and prev leads back through 8 to 3: the answer is 3, 8, 9, though the last entry, dp[6], is only 2. 21 comparisons." />
+
+<Misconception
+  id="last-entry-is-answer"
+  title="The answer is the last entry, dp[n − 1]"
+  probes={[
+    {
+      q: 'For 4, 7, 9, 2, dp is 1, 2, 3, 1. How long is the longest increasing subsequence?',
+      choices: ['1', '3', '4'],
+      answer: 1,
+      trap: 0,
+      why: 'dp[3] = 1 only says the best run ending at the 2 is the 2 alone. The best run, 4, 7, 9, ends at index 2: the answer is the largest entry, 3.',
+    },
+    {
+      q: 'Why does the LCS read its answer from the corner cell, while LIS takes the largest entry?',
+      choices: [
+        'L[m,n] covers both whole words, but dp[i] counts only runs ending exactly at v[i], and the best run can end anywhere',
+        'LIS fills its table from right to left',
+        'They don’t differ: in both, the answer is always the last cell',
+      ],
+      answer: 0,
+      trap: 2,
+      why: 'Every common subsequence of the two whole words counts in L[m,n]. dp[n − 1] counts only runs that end at the last value; one that ends earlier is counted in its own cell.',
+    },
+  ]}
+>
+
+dp[i] answers a narrower question than L[i,j]: not the best run among the first i + 1 values, but the best that ends
+exactly at v[i]. Fixing the end is what makes the recurrence work, but the best run can end anywhere. So the answer is
+the largest entry, and the walk back starts there.
+
+</Misconception>
+
+A faster version keeps tails[k], the smallest value so far that ends an increasing run of length k. A smaller end
+leaves more room for later values, and tails always rises, so each value finds its place by
+[binary search](/learn/binary-search): it replaces the first tail at least as large as itself or, if there is none,
+extends the longest run. That is O(n log n).
+
+<Explore slug="longest-increasing-subsequence" settings={{ input: '3, 8, 4, 9, 6, 1, 2 | fast' }} caption="The same seven values, placed by binary search: 4 replaces 8, 6 replaces 9, then 1 and 2 replace 3 and 4, so tails ends as 1, 2, 6. Its length, 3, is the answer, but 1, 2, 6 is not a subsequence (the 6 comes first); prev recovers 3, 4, 6. 10 comparisons, against 21." />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is the longest common subsequence of “baker” and “break”?',
+      choices: ['“ak”, 2 letters', '“bak”, 3 letters', '“bake”, 4 letters', '“baker”: the same five letters'],
+      answer: 1,
+      why: 'b, a and k appear in that order in both, and nothing longer does. “ak” is the longest unbroken run they share, but a subsequence may skip letters. Having the same letters doesn’t help: order counts.',
+      traps: { 0: 'subsequence-is-substring' },
+    },
+    {
+      q: 'In an edit distance table, A[i] ≠ B[j], and the cells above, to the left and diagonally up-left hold 4, 2 and 3. What is D[i,j], and which edit does it end with?',
+      choices: ['2, by copying the cell to the left', '3, by inserting B[j]', '4, by replacing A[i] with B[j]', '5, by deleting A[i]'],
+      answer: 1,
+      why: 'D[i,j] = 1 + min(4, 2, 3) = 3. The cheapest neighbour is to the left: insert B[j] after turning A[1..i] into B[1..j − 1]. Copying with nothing added is only for matching letters.',
+    },
+    {
+      q: 'What is the edit distance from “kayak” to “yak”?',
+      choices: ['2', '3', '4', '5'],
+      answer: 0,
+      why: 'Delete the k and the a at the front, and y, a and k line up: two edits. From the left, four of the five positions differ, but a delete shifts every letter after it.',
+      traps: { 2: 'position-by-position' },
+    },
+    {
+      q: 'How long is the longest increasing subsequence of 6, 2, 8, 3, 9, 1?',
+      choices: ['1', '2', '3', '4'],
+      answer: 2,
+      why: 'dp is 1, 1, 2, 2, 3, 1, so the largest entry is 3, at the 9 (6, 8, 9 is one such run). The last entry is 1 only because nothing before the 1 is smaller.',
+      traps: { 0: 'last-entry-is-answer' },
+    },
+    {
+      q: 'A spell checker needs only the edit distance to each dictionary word, not the edits. Words have at most 20 letters. About how much must it keep at once while filling one table?',
+      choices: ['The whole 21 × 21 table, to walk back from the corner', 'About two rows of up to 21 cells', 'Only the corner cell'],
+      answer: 1,
+      why: 'Each row reads only itself and the row above, so two rows give the number. The whole table is kept only to list the edits.',
+    },
+    {
+      q: 'In the faster LIS, tails is 2, 5, 9 and the next value is 6. What happens?',
+      choices: ['6 replaces 9, a smaller end for a run of length 3', 'tails becomes 2, 5, 9, 6', '6 replaces 5', 'Nothing: 6 is smaller than the last tail'],
+      answer: 0,
+      why: 'The first tail at least as large as 6 is 9, so 6 replaces it: the run of length 2 ending at 5 extends to 6, a smaller end for length 3, and tails still rises.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="prefix-table"
+  prompt="How does the edit distance table find the fewest edits that turn one word into another? Say what a cell means, how it is filled, and how you get the edits themselves."
+  rubric={[
+    'D[i,j] is the fewest edits turning the first i letters of A into the first j of B; row 0 and column 0 count up from 0.',
+    'If A[i] = B[j] the cell copies the diagonal; otherwise it is 1 plus the smallest of above (delete), left (insert) and diagonal (replace).',
+    'Filling row by row puts each cell after the three it reads, and the corner is the answer, in O(mn) time.',
+    'Listing the edits means walking back from the corner along the neighbours each cell came from, so the table is kept whole.',
+  ]}
+  example="D[i,j] holds the fewest edits that turn the first i letters of A into the first j letters of B. Row 0 and column 0 are the empty prefixes, so they count the inserts or deletes needed. Any other cell looks at the last letters. If they match, it copies the diagonal. If not, the last edit was a delete (the cell above plus 1), an insert (the cell to the left plus 1) or a replace (the diagonal plus 1), and the cell keeps the smallest. Filling row by row keeps those three ready, and the corner is the answer after O(mn) work. To list the edits, walk back from the corner along the neighbours each cell came from, which is why the whole table is kept."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Cell (i, j) answers the question for the first i items of one sequence and the first j of the other. Row 0 and
+  column 0 are the empty prefixes, and the answer is the corner.
+- LCS: a match adds 1 to the diagonal; a mismatch keeps the larger of above and left. Edit distance: the edges count
+  up from 0, and a cell is the smallest of above + 1, left + 1 and diagonal + 1, or the diagonal when the letters match.
+- Both take O(mn) time. Two rows give the number; listing the letters or edits walks back from the corner through the
+  whole table.
+- A subsequence may skip letters, so the LCS is often longer than any shared run. Inserts and deletes shift letters,
+  so edit distance can be far below the count of positions that differ.
+- LIS: dp[i] is the longest increasing run ending exactly at v[i], O(n²), and the answer is the largest entry, not the
+  last. Binary searching the smallest tail of each length makes it O(n log n).
+- Next: practise with [Longest Common Subsequence](/practice/longest-common-subsequence),
+  [Fewest Edits Between Two Words](/practice/edit-distance) and
+  [Longest Increasing Subsequence](/practice/longest-increasing-subsequence), or try your own input on the
+  [LCS](/visualisers/longest-common-subsequence), [edit distance](/visualisers/edit-distance) and
+  [LIS](/visualisers/longest-increasing-subsequence) visualisers.
+
+</Section>

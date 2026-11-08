@@ -272,7 +272,7 @@ prefix sums (the total of everything up to each position) instead, as in
   the limit. Each value enters once and leaves at most once, so it is O(n) too, even with a loop inside a loop.
 - Shrinking is only safe when growing can't fix a broken window, as with totals of values that are zero or more. With
   negative numbers, reach for prefix sums instead.
-- Next: the **monotonic stack**, which keeps its values in order so each is pushed once and popped at most once (open
+- Next: the [monotonic stack](/learn/monotonic-stack), which keeps its values in order so each is pushed once and popped at most once (open
   [its visualiser](/visualisers/monotonic-stack)); kept in a deque, the same idea gives the largest value in every
   window in O(n). Practise with [Best Single Trade](/practice/best-time-to-buy-and-sell-stock),
   [Longest Stretch Without a Repeat](/practice/longest-substring-without-repeating) and

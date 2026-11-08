@@ -1674,6 +1674,366 @@ console.log(longestPalindrome('see'));
 `,
     },
   },
+  {
+    id: 'linear-search-checks',
+    title: 'Linear search that counts its checks',
+    code: {
+      python: `def linear_search(items, target):
+    checks = 0
+    for i in range(len(items)):
+        checks += 1
+        if items[i] == target:
+            print('index ' + str(i) + ' after ' + str(checks) + ' checks')
+            return i
+    print('index -1 after ' + str(checks) + ' checks')
+    return -1
+
+scores = [31, 8, 57, 14, 42]
+linear_search(scores, 14)
+linear_search(scores, 20)
+`,
+      javascript: `function linearSearch(items, target) {
+  let checks = 0;
+  for (let i = 0; i < items.length; i++) {
+    checks += 1;
+    if (items[i] === target) {
+      console.log('index ' + i + ' after ' + checks + ' checks');
+      return i;
+    }
+  }
+  console.log('index -1 after ' + checks + ' checks');
+  return -1;
+}
+
+const scores = [31, 8, 57, 14, 42];
+linearSearch(scores, 14);
+linearSearch(scores, 20);
+`,
+      typescript: `function linearSearch(items: number[], target: number): number {
+  let checks = 0;
+  for (let i = 0; i < items.length; i++) {
+    checks += 1;
+    if (items[i] === target) {
+      console.log('index ' + i + ' after ' + checks + ' checks');
+      return i;
+    }
+  }
+  console.log('index -1 after ' + checks + ' checks');
+  return -1;
+}
+
+const scores: number[] = [31, 8, 57, 14, 42];
+linearSearch(scores, 14);
+linearSearch(scores, 20);
+`,
+    },
+  },
+  {
+    id: 'heap-sort-extract',
+    title: 'Emptying a max-heap from the back, one sift-down per pass',
+    code: {
+      python: `def sift_down(a, i, size):
+    while 2 * i + 1 < size:
+        c = 2 * i + 1
+        if c + 1 < size and a[c + 1] > a[c]:
+            c += 1
+        if a[c] <= a[i]:
+            return
+        a[i], a[c] = a[c], a[i]
+        i = c
+
+nums = [9, 7, 8, 2, 5]
+for end in range(len(nums) - 1, 0, -1):
+    nums[0], nums[end] = nums[end], nums[0]
+    sift_down(nums, 0, end)
+    print(*nums)
+`,
+      javascript: `function siftDown(a, i, size) {
+  while (2 * i + 1 < size) {
+    let c = 2 * i + 1;
+    if (c + 1 < size && a[c + 1] > a[c]) {
+      c += 1;
+    }
+    if (a[c] <= a[i]) {
+      return;
+    }
+    [a[i], a[c]] = [a[c], a[i]];
+    i = c;
+  }
+}
+
+const nums = [9, 7, 8, 2, 5];
+for (let end = nums.length - 1; end > 0; end--) {
+  [nums[0], nums[end]] = [nums[end], nums[0]];
+  siftDown(nums, 0, end);
+  console.log(nums.join(' '));
+}
+`,
+      typescript: `function siftDown(a: number[], i: number, size: number): void {
+  while (2 * i + 1 < size) {
+    let c = 2 * i + 1;
+    if (c + 1 < size && a[c + 1] > a[c]) {
+      c += 1;
+    }
+    if (a[c] <= a[i]) {
+      return;
+    }
+    [a[i], a[c]] = [a[c], a[i]];
+    i = c;
+  }
+}
+
+const nums: number[] = [9, 7, 8, 2, 5];
+for (let end = nums.length - 1; end > 0; end--) {
+  [nums[0], nums[end]] = [nums[end], nums[0]];
+  siftDown(nums, 0, end);
+  console.log(nums.join(' '));
+}
+`,
+    },
+  },
+  {
+    id: 'counting-sort-positions',
+    title: 'Counting sort: count, take running totals, then place from the right',
+    code: {
+      python: `def counting_sort(a, k):
+    count = [0] * k
+    for x in a:
+        count[x] += 1
+    print(*count)
+    for v in range(1, k):
+        count[v] += count[v - 1]
+    print(*count)
+    out = [0] * len(a)
+    for i in range(len(a) - 1, -1, -1):
+        count[a[i]] -= 1
+        out[count[a[i]]] = a[i]
+    return out
+
+marks = [2, 0, 3, 2, 1]
+result = counting_sort(marks, 4)
+print(*result)
+`,
+      javascript: `function countingSort(a, k) {
+  const count = new Array(k).fill(0);
+  for (const x of a) {
+    count[x] += 1;
+  }
+  console.log(count.join(' '));
+  for (let v = 1; v < k; v++) {
+    count[v] += count[v - 1];
+  }
+  console.log(count.join(' '));
+  const out = new Array(a.length).fill(0);
+  for (let i = a.length - 1; i >= 0; i--) {
+    count[a[i]] -= 1;
+    out[count[a[i]]] = a[i];
+  }
+  return out;
+}
+
+const marks = [2, 0, 3, 2, 1];
+const result = countingSort(marks, 4);
+console.log(result.join(' '));
+`,
+      typescript: `function countingSort(a: number[], k: number): number[] {
+  const count: number[] = new Array(k).fill(0);
+  for (const x of a) {
+    count[x] += 1;
+  }
+  console.log(count.join(' '));
+  for (let v = 1; v < k; v++) {
+    count[v] += count[v - 1];
+  }
+  console.log(count.join(' '));
+  const out: number[] = new Array(a.length).fill(0);
+  for (let i = a.length - 1; i >= 0; i--) {
+    count[a[i]] -= 1;
+    out[count[a[i]]] = a[i];
+  }
+  return out;
+}
+
+const marks: number[] = [2, 0, 3, 2, 1];
+const result = countingSort(marks, 4);
+console.log(result.join(' '));
+`,
+    },
+  },
+  {
+    id: 'merge-sorted-intervals',
+    title: 'Merge intervals sorted by start',
+    code: {
+      python: `def merge(spans):
+    merged = [[spans[0][0], spans[0][1]]]
+    for start, end in spans[1:]:
+        last = merged[-1]
+        if start <= last[1]:
+            last[1] = max(last[1], end)
+        else:
+            merged.append([start, end])
+    return merged
+
+spans = [[1, 5], [2, 3], [4, 8], [10, 12]]
+result = merge(spans)
+text = ''
+for start, end in result:
+    text += '[' + str(start) + ', ' + str(end) + '] '
+print(text.strip())
+`,
+      javascript: `function merge(spans) {
+  const merged = [[spans[0][0], spans[0][1]]];
+  for (const [start, end] of spans.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (start <= last[1]) {
+      last[1] = Math.max(last[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+  return merged;
+}
+
+const spans = [[1, 5], [2, 3], [4, 8], [10, 12]];
+const result = merge(spans);
+let text = '';
+for (const [start, end] of result) {
+  text += '[' + start + ', ' + end + '] ';
+}
+console.log(text.trim());
+`,
+      typescript: `function merge(spans: number[][]): number[][] {
+  const merged: number[][] = [[spans[0][0], spans[0][1]]];
+  for (const [start, end] of spans.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (start <= last[1]) {
+      last[1] = Math.max(last[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+  return merged;
+}
+
+const spans: number[][] = [[1, 5], [2, 3], [4, 8], [10, 12]];
+const result = merge(spans);
+let text = '';
+for (const [start, end] of result) {
+  text += '[' + start + ', ' + end + '] ';
+}
+console.log(text.trim());
+`,
+    },
+  },
+  {
+    id: 'next-greater-stack',
+    title: 'Next greater value with a stack',
+    code: {
+      python: `def next_greater(nums):
+    answer = [-1] * len(nums)
+    stack = []
+    for i in range(len(nums)):
+        while stack and nums[stack[-1]] < nums[i]:
+            j = stack.pop()
+            answer[j] = nums[i]
+        stack.append(i)
+    return answer
+
+result = next_greater([6, 2, 4, 1, 7, 3])
+print(*result)
+`,
+      javascript: `function nextGreater(nums) {
+  const answer = new Array(nums.length).fill(-1);
+  const stack = [];
+  for (let i = 0; i < nums.length; i++) {
+    while (stack.length > 0 && nums[stack[stack.length - 1]] < nums[i]) {
+      const j = stack.pop();
+      answer[j] = nums[i];
+    }
+    stack.push(i);
+  }
+  return answer;
+}
+
+const result = nextGreater([6, 2, 4, 1, 7, 3]);
+console.log(result.join(' '));
+`,
+      typescript: `function nextGreater(nums: number[]): number[] {
+  const answer: number[] = new Array(nums.length).fill(-1);
+  const stack: number[] = [];
+  for (let i = 0; i < nums.length; i++) {
+    while (stack.length > 0 && nums[stack[stack.length - 1]] < nums[i]) {
+      const j = stack.pop()!;
+      answer[j] = nums[i];
+    }
+    stack.push(i);
+  }
+  return answer;
+}
+
+const result: number[] = nextGreater([6, 2, 4, 1, 7, 3]);
+console.log(result.join(' '));
+`,
+    },
+  },
+  {
+    id: 'lcs-table',
+    title: 'LCS table',
+    code: {
+      python: `def lcs_length(a, b):
+    dp = []
+    for i in range(len(a) + 1):
+        dp.append([0] * (len(b) + 1))
+    for i in range(1, len(a) + 1):
+        for j in range(1, len(b) + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[len(a)][len(b)]
+
+print(lcs_length('no', 'on'))
+`,
+      javascript: `function lcsLength(a, b) {
+  const dp = [];
+  for (let i = 0; i <= a.length; i++) {
+    dp.push(new Array(b.length + 1).fill(0));
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+console.log(lcsLength('no', 'on'));
+`,
+      typescript: `function lcsLength(a: string, b: string): number {
+  const dp: number[][] = [];
+  for (let i = 0; i <= a.length; i++) {
+    dp.push(new Array(b.length + 1).fill(0));
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+console.log(lcsLength('no', 'on'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

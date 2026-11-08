@@ -449,10 +449,11 @@ function ListView({ list }: { list: ListPart }) {
               key={it.id}
               layout="position"
               initial={false}
-              className={cx('flex items-center gap-1 rounded-[10px] px-2 py-0.5 transition', meta ? fillFor(it.mark) : PLAIN_CELL)}
+              className={cx('flex max-w-full items-center gap-1 rounded-[10px] px-2 py-0.5 transition', meta ? fillFor(it.mark) : PLAIN_CELL)}
             >
               {meta && <span className="text-[10px] font-bold">{meta.glyph}</span>}
-              <span className="font-mono text-sm font-semibold whitespace-nowrap">{it.text}</span>
+              {/* A chip only wraps when it is wider than the whole row (a long rule on a phone). */}
+              <span className="font-mono text-sm font-semibold">{it.text}</span>
             </motion.li>
           );
         })}

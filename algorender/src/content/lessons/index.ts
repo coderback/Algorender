@@ -56,6 +56,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'linear-search',
+    title: 'Linear search: one item at a time',
+    concept: 'linear-search',
+    summary: 'Why a hit at index k costs k + 1 probes and a miss costs all n, why stopping at the match still averages O(n), and when a plain scan beats sorting for binary search.',
+    minutes: 15,
+  },
+  {
     slug: 'binary-search',
     title: 'Binary search: halve it until you find it',
     concept: 'binary-search',
@@ -91,6 +98,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'heap-sort',
+    title: 'Heap sort: build a heap, then empty it from the back',
+    concept: 'heap-sort',
+    summary: "Why building a max-heap in place costs only O(n), why swapping its root to the end and sifting down n − 1 times sorts any input in O(n log n) with O(1) extra memory, and why it still isn't stable and usually loses to quick sort.",
+    minutes: 15,
+  },
+  {
     slug: 'two-pointers',
     title: 'Two pointers: from n² pairs to n steps',
     concept: 'two-pointers',
@@ -102,6 +116,20 @@ export const lessons: readonly LessonMeta[] = [
     title: 'Sliding window: add one, drop one',
     concept: 'sliding-window',
     summary: 'Update one running total as the window slides instead of re-adding it, and grow and shrink a window to find the best run under a rule, both in O(n).',
+    minutes: 15,
+  },
+  {
+    slug: 'intervals',
+    title: 'Intervals: sort by start, then look back once',
+    concept: 'intervals',
+    summary: "Sort by start, then sweep once: why a merge only has to check the last merged interval and must keep the larger end, why touching ends are each problem's choice, and how a min-heap of end times finds the fewest meeting rooms, the most meetings running at once, in O(n log n).",
+    minutes: 15,
+  },
+  {
+    slug: 'monotonic-stack',
+    title: 'Monotonic stacks: pop what the new value beats',
+    concept: 'monotonic-stack',
+    summary: "Find every value's next greater value in one pass: why the positions waiting on the stack never rise from bottom to top, why a loop inside a loop is still O(n) when each position is pushed once and popped at most once, and why the stack keeps indices rather than values.",
     minutes: 15,
   },
   {
@@ -117,6 +145,13 @@ export const lessons: readonly LessonMeta[] = [
     concept: 'dynamic-programming',
     summary: 'Four decisions turn a problem into a table you fill in a loop: what a cell means, how it is built, where it starts, and an order that keeps every input ready.',
     minutes: 20,
+  },
+  {
+    slug: 'sequence-dp',
+    title: 'Dynamic programming on sequences: one prefix at a time',
+    concept: 'sequence-dp',
+    summary: 'How a table over prefixes finds the longest common subsequence and the edit distance of two words in O(mn), why listing the letters or edits needs the whole table, and how the longest increasing subsequence works on one sequence in O(n²) or, with binary search, O(n log n).',
+    minutes: 15,
   },
   {
     slug: 'backtracking',
@@ -200,6 +235,13 @@ export const lessons: readonly LessonMeta[] = [
     title: 'Quick sort: place the pivot, then sort each side',
     concept: 'quick-sort',
     summary: 'Why a partition puts its pivot in its final place for m − 1 comparisons, why that makes quick sort O(n log n) on average but O(n²) when every pivot is the largest value left, and what sorting in place still costs.',
+    minutes: 15,
+  },
+  {
+    slug: 'non-comparison-sorts',
+    title: 'Sorting without comparisons: count instead of compare',
+    concept: 'non-comparison-sorts',
+    summary: 'Why no comparison sort can beat about n log₂ n comparisons, how counting sort places small whole-number keys in O(n + k) with counts and running totals, why placing from the right keeps it stable, and how radix sort runs it once per digit.',
     minutes: 15,
   },
   {

@@ -88,6 +88,7 @@ concepts:
     summary: Checking every element in turn, the baseline everything else is measured against.
     prereqs: [arrays]
     visualisers: [linear-search]
+    lesson: linear-search
   - id: binary-search
     title: Binary search
     track: searching-sorting
@@ -123,12 +124,14 @@ concepts:
     summary: Build a max-heap in place, then repeatedly move the maximum to the end.
     prereqs: [heaps]
     visualisers: [heap-sort]
+    lesson: heap-sort
   - id: non-comparison-sorts
     title: Sorting without comparisons
     track: searching-sorting
     summary: Counting and radix sort beat the n log n limit by never comparing two elements.
     prereqs: [quadratic-sorts]
     visualisers: [counting-sort, radix-sort]
+    lesson: non-comparison-sorts
 
   # ── Hashing ──────────────────────────────────────────────────
   - id: hash-tables
@@ -209,12 +212,14 @@ concepts:
     summary: A stack kept in order, so each element is pushed and popped once.
     prereqs: [stacks-queues]
     visualisers: [monotonic-stack]
+    lesson: monotonic-stack
   - id: intervals
     title: Intervals
     track: patterns
     summary: Sort by start, then sweep, to merge overlaps or count rooms.
     prereqs: [merge-sort, heaps]
     visualisers: [merge-intervals, meeting-rooms]
+    lesson: intervals
 
   # ── Graphs ───────────────────────────────────────────────────
   - id: graph-representations
@@ -294,6 +299,7 @@ concepts:
     summary: Comparing two strings, or one sequence with itself, cell by cell.
     prereqs: [dynamic-programming]
     visualisers: [longest-common-subsequence, edit-distance, longest-increasing-subsequence]
+    lesson: sequence-dp
   - id: backtracking
     title: Backtracking
     track: design
