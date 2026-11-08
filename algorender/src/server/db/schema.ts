@@ -124,7 +124,7 @@ export const judgeRun = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     problem: text('problem').notNull(),
     language: text('language').notNull(),
-    /** 'run' (the examples) or 'submit' (every test). */
+    /** 'run' (the examples), 'submit' (every test) or 'custom' (the learner's own test). */
     kind: text('kind').notNull(),
     /** 'running', 'done', or 'failed' (the sandbox broke, not the learner's code). */
     status: text('status').notNull(),

@@ -8,6 +8,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { ServerLanguage } from '@/problems/languages';
 import { stub } from '@/problems/codegen';
+import { customCase, type CustomInput } from '@/problems/custom';
 import { getProblem, specFor } from '@/problems/load';
 import { dockerAvailable, dockerSandbox } from './docker';
 import { judgeInSandbox } from './sandbox';
@@ -184,6 +185,20 @@ describe.skipIf(!available)('the server judge in Docker', () => {
     expect(result.fatal).toMatchObject({ kind: 'compile', line });
     expect(result.fatal!.message).toMatch(message);
     expect(result.checked).toEqual([]);
+  }, TIMEOUT);
+
+  it.each(['java', 'cpp', 'go'] as const)('runs a learner’s own test in %s: its answer, or a design problem’s answer to each call', async (language) => {
+    const own = (slug: string, code: string, custom: CustomInput) => judgeInSandbox(dockerSandbox, specFor(getProblem(slug)!), language, code, [customCase(custom)]);
+    const twoSum = await own('two-sum', TWO_SUM[language], { input: { nums: [1, 5, 5], target: 10 } });
+    expect(twoSum.checked[0].verdict).toMatchObject({ status: 'ran', got: [1, 2] });
+    const calls: CustomInput['calls'] = [['MinStack'], ['push', 2], ['push', 1], ['getMin'], ['pop'], ['getMin']];
+    const minStack = await own('min-stack', SHAPES['min-stack'][language], { calls });
+    expect(minStack.checked[0].verdict).toMatchObject({ status: 'ran', got: [null, null, null, 1, null, 2] });
+    // top() on an empty stack: Java and Go raise (C++'s back() on an empty vector is undefined, not an error).
+    if (language === 'cpp') return;
+    const failing = await own('min-stack', SHAPES['min-stack'][language], { calls: [['MinStack'], ['push', 2], ['pop'], ['top']] });
+    expect(failing.checked[0].verdict).toMatchObject({ status: 'error', got: [null, null, null] });
+    expect(failing.checked[0].verdict.message).toMatch(language === 'go' ? /^Call 4, Top\(\), failed: / : /^Call 4, top\(\), failed: /);
   }, TIMEOUT);
 
   it.each(['java', 'cpp', 'go'] as const)('fails the generated %s stubs, as written', async (language) => {

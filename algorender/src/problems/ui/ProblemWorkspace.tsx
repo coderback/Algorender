@@ -12,15 +12,17 @@ import { CodeEditor } from '@/workspace/editor/CodeEditor';
 import { authClient } from '@/lib/auth-client';
 import type { Json, RunError, RunResult } from '@/workspace/protocol';
 import { ErrorCard, MEMORY_LEGEND, RunPicture, statusText } from '@/workspace/RunOutput';
-import { loadCode, loadProblemLanguage, saveCode, saveLanguage, saveProblemLanguage } from '@/workspace/storage';
+import { loadCode, loadOwnTest, loadProblemLanguage, saveCode, saveLanguage, saveOwnTest, saveProblemLanguage } from '@/workspace/storage';
 import { printed, type RunTrace } from '@/workspace/trace';
 import { TREE_RUN_LEGEND } from '@/workspace/traceTree';
 import { useRuntime } from '@/workspace/useRuntime';
 import { methodIn, nameIn, stub } from '../codegen';
+import { customText, readCustom, type CustomText } from '../custom';
 import { formatValue, judgeRequest, timeLimit, verdict, watchable, watchRequest, type CaseVerdict, type JudgeCase, type ProblemSpec } from '../judge';
 import { isServerLanguage, PROBLEM_LANGUAGE_IDS, PROBLEM_LANGUAGES, type ProblemLanguage, type ServerLanguage } from '../languages';
 import { receiveSubmission, recordSubmission } from '../progress';
 import { replayTrace } from '../replay';
+import { OwnTest, type OwnRun } from './OwnTest';
 import { runOnServer } from './serverJudge';
 
 /** One judged test's outcome. */
@@ -185,6 +187,11 @@ function Solver({
   const [frameLine, setFrameLine] = useState<number | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [pane, setPane] = useState<Pane>('problem');
+  /** The learner's own test as typed, or null while it is still the first example (shown in whichever language is chosen). */
+  const [ownDraft, setOwnDraft] = useState<CustomText | null>(() => loadOwnTest(codeSlot(spec.slug)));
+  const [ownErrors, setOwnErrors] = useState<Record<string, string> | null>(null);
+  const [ownRun, setOwnRun] = useState<OwnRun | null>(null);
+  const [ownNotice, setOwnNotice] = useState<'sign-in' | string | null>(null);
   // Java, C++ and Go don't run in the browser; the JavaScript runner stands by unused (it starts on its first run).
   const { runtime, runtimeState, runtimeDetail } = useRuntime(onServer ? 'javascript' : language);
 
@@ -192,6 +199,8 @@ function Solver({
   const running = progress != null;
   const busy = running || (!onServer && runtimeState === 'loading');
   const stale = judged != null && (judged.code !== code || judged.language !== language);
+  const ownText = ownDraft ?? customText(spec, language);
+  const ownStale = ownRun != null && (ownRun.code !== code || ownRun.language !== language || ownRun.text !== JSON.stringify(ownText));
 
   const setCode = (value: string) => {
     setCodes((prev) => ({ ...prev, [language]: value }));
@@ -204,6 +213,55 @@ function Solver({
     if (!isServerLanguage(l)) saveLanguage(l);
     setConfirmReset(false);
     setNotice(null);
+    setOwnNotice(null);
+  };
+
+  const editOwn = (field: string, value: string) => {
+    const next = { ...ownText, [field]: value };
+    setOwnDraft(next);
+    saveOwnTest(codeSlot(spec.slug), next);
+    setOwnErrors((prev) => {
+      if (!prev) return prev;
+      // The field's error, and any about the whole test, go once it changes.
+      const rest = Object.entries(prev).filter(([k]) => k !== field && k !== '');
+      return rest.length > 0 ? Object.fromEntries(rest) : null;
+    });
+  };
+
+  const resetOwn = () => {
+    setOwnDraft(null);
+    saveOwnTest(codeSlot(spec.slug), null);
+    setOwnErrors(null);
+  };
+
+  /** Runs the learner's own test: in the browser, or for Java, C++ and Go on the server. Nothing is recorded. */
+  const runOwn = async () => {
+    if (busy) return;
+    const read = readCustom(spec, ownText, language);
+    if (!read.ok) {
+      setOwnErrors(read.errors);
+      return;
+    }
+    setOwnErrors(null);
+    setOwnNotice(null);
+    const { test } = read;
+    const ran = { test, code, language, text: JSON.stringify(ownText) };
+    setProgress({ done: 0, total: 1 });
+    if (isServerLanguage(language)) {
+      const answer = await runOnServer(spec.slug, language, code, 'custom', { ...(test.input && { input: test.input }), ...(test.calls && { calls: test.calls }) });
+      setProgress(null);
+      if (!answer.ok) {
+        setOwnNotice(answer.status === 401 ? 'sign-in' : answer.message);
+        return;
+      }
+      const [c] = answer.body.checked;
+      setOwnRun({ ...ran, verdict: c?.verdict ?? null, output: c?.output ?? [], fatal: answer.body.fatal });
+      return;
+    }
+    const result = await runtime.run(judgeRequest(spec, test, language, code));
+    setProgress(null);
+    const fatal = unrunnable(result) ? result.error : null;
+    setOwnRun({ ...ran, verdict: fatal ? null : verdict(spec, test, result, language), output: printed(result), fatal });
   };
 
   const judge = async (kind: 'run' | 'submit') => {
@@ -382,6 +440,32 @@ function Solver({
     </section>
   );
 
+  const ownTest = (
+    <OwnTest
+      spec={spec}
+      language={language}
+      text={ownText}
+      untouched={ownDraft === null}
+      errors={ownErrors}
+      run={ownRun}
+      stale={ownStale}
+      busy={busy}
+      notice={
+        ownNotice === 'sign-in' && onServer ? (
+          <SignInCard language={language} slug={spec.slug} />
+        ) : ownNotice && ownNotice !== 'sign-in' ? (
+          <p role="alert" className="rounded-well bg-warn-soft px-4 py-3 text-sm text-warn-ink">
+            {ownNotice}
+          </p>
+        ) : null
+      }
+      onChange={editOwn}
+      onReset={resetOwn}
+      onRun={() => void runOwn()}
+      onWatch={(test, memory) => void watch(test, memory)}
+    />
+  );
+
   const side = (
     <>
       {onServer && <ServerNote language={language} signedIn={signedIn} slug={spec.slug} />}
@@ -400,7 +484,7 @@ function Solver({
           </span>
           <h2 className="text-lg font-bold">Run your code to see results</h2>
           <p className="text-sm text-ink-soft">
-            Run examples checks the examples; Submit all tests checks every test. If one fails, you can watch your own code run on it, line by line.
+            Run examples checks the examples; Submit all tests checks every test. If one fails, you can watch your own code run on it, line by line. To try an input of your own, use Your own test under the editor.
           </p>
         </section>
       )}
@@ -444,6 +528,7 @@ function Solver({
       </div>
       <Columns statement={<StatementCard panes={statement} />} side={side} pane={pane}>
         {editor}
+        {ownTest}
       </Columns>
       {watching && (
         <section id="watch" aria-labelledby="watch-title" className="flex scroll-mt-24 flex-col gap-3 px-3 pb-28 sm:px-4 md:pb-8">
@@ -565,7 +650,7 @@ function tutorResults(j: Judged): TutorResults {
   };
 }
 
-const GROUP_LABEL: Record<JudgeCase['group'], string> = { example: 'Examples', test: 'Tests', random: 'Random tests' };
+const GROUP_LABEL: Record<JudgeCase['group'], string> = { example: 'Examples', test: 'Tests', random: 'Random tests', custom: 'Your test' };
 
 function Results({
   spec,
@@ -657,6 +742,8 @@ const STATUS = {
   fail: { icon: FiX, label: 'wrong answer', className: 'bg-bad-soft text-bad-ink' },
   error: { icon: FiX, label: 'error', className: 'bg-bad-soft text-bad-ink' },
   timeout: { icon: FiClock, label: 'out of time', className: 'bg-warn-soft text-warn-ink' },
+  // Only the learner's own test, which OwnTest shows; judged tests always pass, fail or stop.
+  ran: { icon: FiCheck, label: 'finished', className: 'bg-sunken text-ink' },
 } as const;
 
 function CaseChip({ checked, selected, onSelect }: { checked: Checked; selected: boolean; onSelect: () => void }) {

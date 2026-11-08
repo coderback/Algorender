@@ -6,7 +6,9 @@
 import { and, count, eq, gt } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import { z } from 'zod';
+import { customCase, customError, type CustomInput } from '@/problems/custom';
 import type { ServerVerdicts } from '@/problems/drivers';
+import type { JudgeCase, ProblemSpec } from '@/problems/judge';
 import { isServerLanguage, type ServerLanguage } from '@/problems/languages';
 import { getProblem, specFor } from '@/problems/load';
 import type { ProgressEvent } from '@/progress/events';
@@ -32,10 +34,14 @@ const JudgeRequestSchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,80}$/),
   language: z.string().refine(isServerLanguage, 'The server judge runs Java, C++ and Go.'),
   code: z.string().min(1).max(MAX_CODE),
-  kind: z.enum(['run', 'submit']),
+  kind: z.enum(['run', 'submit', 'custom']),
+  /** A custom test's values (kind 'custom'): a function problem's arguments by name, or a design problem's calls. Checked against the signature in judge(). */
+  input: z.record(z.string(), z.unknown()).optional(),
+  calls: z.array(z.unknown()).optional(),
 });
 
-export type JudgeRequest = { slug: string; language: ServerLanguage; code: string; kind: 'run' | 'submit' };
+/** Run the examples, submit every test, or run the learner's own test ('custom', with its input or calls). */
+export type JudgeRequest = { slug: string; language: ServerLanguage; code: string; kind: 'run' | 'submit' | 'custom' } & CustomInput;
 
 /** What /api/judge answers: the verdicts, and for a submission the event recorded for it. */
 export type JudgeResponse = ServerVerdicts & { event?: ProgressEvent };
@@ -77,10 +83,11 @@ async function checkQuota(db: Database, userId: string, now: Date) {
 export async function judge(db: Database, sandbox: Sandbox, userId: string, request: JudgeRequest, now = new Date()): Promise<JudgeResponse> {
   const problem = getProblem(request.slug);
   if (!problem) throw new JudgeError('There is no such problem.', 404);
+  const spec = specFor(problem);
+  // A custom test is checked before it counts against the learner's runs.
+  const tests = testsFor(spec, request);
   await checkQuota(db, userId, now);
 
-  const spec = specFor(problem);
-  const tests = request.kind === 'run' ? spec.cases.filter((c) => c.group === 'example') : spec.cases;
   const id = uuidv7();
   await db.insert(judgeRun).values({ id, userId, problem: problem.slug, language: request.language, kind: request.kind, status: 'running', tests: tests.length, createdAt: now });
 
@@ -94,9 +101,10 @@ export async function judge(db: Database, sandbox: Sandbox, userId: string, requ
     throw new JudgeError('The judge couldn’t run your code just now. Try again in a moment.', 502);
   }
 
-  const failed = verdicts.fatal ? tests.length : verdicts.checked.filter((c) => c.verdict.status !== 'pass').length + verdicts.skipped;
+  // A custom test that ran has nothing to fail: there's no expected answer.
+  const failed = verdicts.fatal ? tests.length : verdicts.checked.filter((c) => c.verdict.status !== 'pass' && c.verdict.status !== 'ran').length + verdicts.skipped;
   await db.update(judgeRun).set({ status: 'done', failed, seconds: (Date.now() - started) / 1000 }).where(eq(judgeRun.id, id));
-  if (request.kind === 'run') return verdicts;
+  if (request.kind !== 'submit') return verdicts;
 
   const event: ProgressEvent = {
     id: uuidv7(),
@@ -106,4 +114,14 @@ export async function judge(db: Database, sandbox: Sandbox, userId: string, requ
   };
   await storeEvents(db, userId, [event]);
   return { ...verdicts, event };
+}
+
+/** The tests a request runs: the examples, every test, or the learner's own, once it fits the problem's signature. */
+function testsFor(spec: ProblemSpec, request: JudgeRequest): JudgeCase[] {
+  if (request.kind === 'run') return spec.cases.filter((c) => c.group === 'example');
+  if (request.kind === 'submit') return spec.cases;
+  const custom = { ...(request.input !== undefined && { input: request.input }), ...(request.calls !== undefined && { calls: request.calls }) };
+  const problem = customError(spec, custom, request.language);
+  if (problem) throw new JudgeError(problem, 400);
+  return [customCase(custom)];
 }

@@ -59,6 +59,10 @@ test('Java asks a signed-out learner to sign in, and keeps their code', async ({
   const card = page.locator('main').getByRole('alert').filter({ hasText: 'Sign in to run Java' });
   await expect(card).toBeVisible({ timeout: 20_000 }); // The first request also starts the database.
   await expect(card.getByRole('link', { name: /Sign in or create an account/ })).toHaveAttribute('href', '/account?next=%2Fpractice%2Ftwo-sum');
+  // Their own test asks the same, beside it.
+  const own = page.getByRole('region', { name: 'Your own test' });
+  await own.getByRole('button', { name: 'Run your test' }).click();
+  await expect(own.getByRole('alert').filter({ hasText: 'Sign in to run Java' })).toBeVisible();
   // Errors expected here: the judge's 401.
   expect(errors.filter((e) => !/401/.test(e))).toEqual([]);
 });
@@ -74,6 +78,22 @@ test('a signed-in learner solves a problem in Java on the server, and it counts 
   await expect(page.getByText('Compiled and judged on our server, in a sandbox.')).toBeVisible();
   await page.goto('/practice');
   await expect(page.getByText('Solved', { exact: true }).locator('..')).toContainText(/Solved\s*1 \//);
+});
+
+test('a signed-in learner runs their own test in Java on the server', async ({ page }) => {
+  await withJava(page.context(), TWO_SUM_JAVA);
+  await signUp(page);
+  await page.goto('/practice/two-sum');
+  const own = page.getByRole('region', { name: 'Your own test' });
+  await own.getByLabel('nums', { exact: true }).fill('[1, 5, 5]');
+  await own.getByLabel('target', { exact: true }).fill('10');
+  await own.getByRole('button', { name: 'Run your test' }).click();
+  const result = own.getByRole('group', { name: 'Your test’s result' });
+  const unavailable = page.locator('main').getByRole('alert').filter({ hasText: 'isn’t set up here' });
+  await expect(result.or(unavailable)).toBeVisible({ timeout: 90_000 });
+  test.skip(await unavailable.isVisible(), 'No server judge here: build the Docker image with npm run judge:image.');
+  await expect(result.getByRole('definition')).toHaveText('[1, 2]');
+  await expect(result).toContainText('Watching a run step by step works in Python, JavaScript and TypeScript');
 });
 
 test('a compile error shows the compiler’s message at its line, and passes axe', async ({ page }) => {
