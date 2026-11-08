@@ -56,6 +56,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'linear-search',
+    title: 'Linear search: one item at a time',
+    concept: 'linear-search',
+    summary: 'Why a hit at index k costs k + 1 probes and a miss costs all n, why stopping at the match still averages O(n), and when a plain scan beats sorting for binary search.',
+    minutes: 15,
+  },
+  {
     slug: 'binary-search',
     title: 'Binary search: halve it until you find it',
     concept: 'binary-search',

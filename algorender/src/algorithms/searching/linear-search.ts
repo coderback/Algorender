@@ -50,7 +50,7 @@ function* run(input: SearchInput) {
 
   yield s.frame({
     line: 3,
-    note: `A[${n - 1}] is not ${x} either, and nothing is left to check, so ${x} is not in the array. With no order to exploit there was no shortcut: all ${probesText(s.probes)} were needed.`,
+    note: `A[${n - 1}] is not ${x} either, and nothing is left to check, so ${x} is not in the array. Linear search never uses the order of the values, so there was no shortcut: all ${probesText(s.probes)} were needed.`,
     vars: { x },
   });
 }

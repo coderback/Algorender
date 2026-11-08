@@ -1,0 +1,283 @@
+<Section step="hook" title="One card at a time">
+
+Someone hands you a shuffled deck and asks for the queen of hearts. The deck has no order, so the card on top says
+nothing about the rest, and all you can do is turn cards over one at a time until she appears. She might be the first
+card. She might be the last, or missing altogether, and you can only say she is missing once you have turned all 52. If
+she is in the deck, you turn 26.5 cards on average.
+
+That is **linear search**, also called sequential search: check each item in turn until one matches or the items run
+out. It is the baseline every faster search is measured against, and often the right choice, because it asks nothing
+of the data: no order, no way to jump to the middle, not even knowing in advance how many items there are.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="target">The value being searched for. The search reports the index of the first element equal to it, or −1 when no element is.</Term>
+  <Term name="probe">One comparison of an element with the target. Probes are the work a search does, and the visualiser counts them.</Term>
+  <Term name="hit and miss">A hit finds the target and stops there. A miss reaches the end without finding it, so it has compared every element.</Term>
+  <Term name="best, average and worst case">The fewest probes any input of size n needs, the mean over every place the target could be, and the most any input needs.</Term>
+  <Term name="sequential access">Reading items in order, one after another, with no way to jump ahead: all a linked list or a stream of data offers.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Left to right, until it matches">
+
+This array holds 23, 7, 61, 42, 15, 88, 34 and 9, in no particular order, and the target is 15. Step through and watch
+the bracket of positions that could still hold 15: every probe that fails takes one position off its left end.
+
+<Explore slug="linear-search" settings={{ input: '23, 7, 61, 42, 15, 88, 34, 9 → 15' }} caption="15 is at position 4. The search compares A[0] = 23, A[1] = 7, A[2] = 61 and A[3] = 42 with it, rules each one out, and finds 15 with its 5th probe. Then it stops: 88, 34 and 9 are never looked at." />
+
+The whole algorithm is one loop and two returns. A failed probe tells the search only that this position does not
+hold the target: with no order, A[3] = 42 says nothing about A[4], so there is nothing to skip. A hit at index k
+therefore costs **k + 1** probes, one for each of positions 0 to k: 15, at index 4, took 5. A miss costs all n,
+because the search can only report the target absent once it has ruled out every position.
+
+<Explore slug="linear-search" settings={{ input: '23, 7, 61, 42, 15, 88, 34, 9 → 50' }} caption="The same array, now looking for 50. Nothing matches, so the search probes all 8 elements before it returns −1. The Probes list shows values below 50 and above it, and neither tells the search where to look next." />
+
+So where the target sits decides the cost. In the best case it is at index 0: one probe. In the worst it is last, or
+missing: n probes. If it is always there and equally likely to be anywhere, the costs 1, 2, …, n happen equally often,
+and their average is (n + 1)/2, about half the list. For the deck that is (52 + 1)/2 = 26.5 cards.
+
+<KeyIdea>
+
+**Linear search compares the target with A[0], A[1], A[2], … and stops at the first match. A hit at index k costs k + 1
+probes, a miss costs all n, and a target equally likely to be anywhere costs (n + 1)/2 on average. That is O(1) in the
+best case and O(n) in the average and worst cases, with O(1) extra memory: one index.**
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: which copy, and how many probes?">
+
+This array holds 47 twice, at positions 5 and 7, and 47 is the target. Before you start, decide which position the
+search will report and how many probes it will make. At each probe, say whether it is the target before the next step
+plays, then check your count at the end.
+
+<PredictChallenge slug="linear-search" settings={{ input: '18, 74, 40, 91, 25, 47, 80, 47 → 47' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Linear search in code, and when it wins">
+
+Here it is as a function. It returns the index of the first match, or −1, and counts its comparisons in `checks` so it
+can print what each search cost. The program searches five scores twice: for a value that is there, and for one that
+is not.
+
+<TraceCode
+  snippet="linear-search-checks"
+  question="What does the first call, the search for 14, print?"
+  choices={['index 3 after 3 checks', 'index 3 after 4 checks', 'index 4 after 4 checks', 'index 3 after 5 checks']}
+  answer={1}
+  why="14 is at index 3. Indices start at 0, so the loop compares 31, 8 and 57 first and then 14: four checks, k + 1 for a hit at index k. It returns at once and never looks at 42. The search for 20 matches nothing, so it compares all five scores and prints index -1 after 5 checks."
+/>
+
+The loop only ever asks for the next item. It never jumps, ignores the order, and written as `for x in items` needs
+neither indices nor the length. So linear search works where binary search can't, or gains nothing: on an unsorted
+list, on a [linked list](/learn/linked-lists), where reaching the middle means walking there anyway, and on a stream, such as
+readings from a sensor, where each item is seen once, in order.
+
+The predict run showed one more property: the search stops at the **first** match, so the 47 at position 7 was never
+compared.
+
+<Misconception
+  id="finds-every-copy"
+  title="Linear search finds every copy of the target"
+  probes={[
+    {
+      q: 'A = [4, 9, 4, 4, 2] and the target is 4. A linear search that returns at the first match reports which index?',
+      choices: ['0', '0, 2 and 3', '3'],
+      answer: 0,
+      trap: 1,
+      why: 'A[0] is already 4, so the search returns 0 after one probe. The copies at 2 and 3 are never compared.',
+    },
+    {
+      q: 'You need the index of the last 9 in a list. Is a linear search from the front that returns at the first match enough?',
+      choices: ['Yes: it passes every 9 on the way', 'No: it stops at the first 9, so search from the back instead'],
+      answer: 1,
+      trap: 0,
+      why: 'Returning at the first match means the search never sees what comes after it. A search from the back meets the last 9 first; a full scan that records each match also works.',
+    },
+  ]}
+>
+
+The return inside the loop ends the search at the first match, so a copy further along is never even compared. To find
+the last copy, search from the back. To find or count every copy, drop the early return and scan to the end: all n
+probes, whether the target is there or not.
+
+</Misconception>
+
+Order changes one thing. If the list is sorted, a miss can stop as soon as an item passes the target, since everything
+after it is bigger still. The visualiser runs the plain search, which ignores the order, so you can count what an
+early stop would save.
+
+<Explore slug="linear-search" settings={{ input: '5, 12, 19, 26, 33, 41, 58, 64 → 30' }} caption="A sorted array without 30. The plain search probes all 8 elements. From A[4] = 33 on, every entry in the Probes list says > 30, so a version that stops once an item passes the target would give up at A[4]: 5 probes instead of 8." />
+
+The early stop helps misses, not the growth: a target bigger than every item still checks them all. To get real value
+from sorted order, a search has to use it to **skip**. That is [binary search](/learn/binary-search): about log₂ n
+probes instead of n, 20 instead of a million.
+
+<Misconception
+  id="stopping-early-beats-n"
+  title="Stopping at the match makes linear search better than O(n)"
+  probes={[
+    {
+      q: 'The target is always in a list of 400 items, equally likely to be at any position. About how many probes does linear search make on average?',
+      choices: ['About 1, since it stops at the match', 'About 200', 'About 9'],
+      answer: 1,
+      trap: 0,
+      why: 'Positions 0 to 399 cost 1 to 400 probes, each equally often, so the average is (400 + 1)/2 = 200.5. Stopping at the match halves the work on average; it does not make it constant.',
+    },
+    {
+      q: 'Which is true of linear search on n items?',
+      choices: [
+        'It is O(1), because it stops as soon as it finds the target',
+        'Its best case is O(1), but its average and worst cases are O(n)',
+        'Its average case is O(log n)',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'One probe happens only when the target is first. On average a hit takes (n + 1)/2 probes and a miss always takes n, and both grow in proportion to n.',
+    },
+  ]}
+>
+
+One probe is the best case, and only when the target is first. Averaged over every position, a hit costs (n + 1)/2
+probes, and a miss costs n, early stop or not. Halving n does not change how the work grows: double the list
+and the average doubles too. That is O(n), and a Big-O with no qualifier usually means the worst case anyway: n.
+
+</Misconception>
+
+So an O(n) search is often the right one: for data searched once or a few times, for small lists, where its simple
+loop is often as fast as binary search, for jobs that want every match, and for data that can only be read in order.
+It loses when the same data is searched again and again. Then sort once and binary search, O(log n) a lookup, or use a
+[hash table](/learn/hash-tables), O(1) a lookup on average.
+
+<Misconception
+  id="sort-first-pays"
+  title="Sorting first always makes searching faster"
+  probes={[
+    {
+      q: 'An unsorted list of a million numbers will be searched 3 times. Which plan makes fewer comparisons?',
+      choices: ['Sort it once, then binary search 3 times', 'Linear search 3 times'],
+      answer: 1,
+      trap: 0,
+      why: 'Three scans make at most 3 million comparisons. Sorting alone takes about n log₂ n, some 20 million, before the binary searches even start.',
+    },
+    {
+      q: 'Sorting a million unsorted numbers costs about 20 million comparisons, and every search will be a miss. Roughly how many searches before sorting once and binary searching beats scanning each time?',
+      choices: ['1: sorting always pays off', 'About 20', 'About a million'],
+      answer: 1,
+      trap: 0,
+      why: 'Each failed scan costs a million comparisons, so 20 of them cost as much as the sort. After that, each binary search costs about 20 comparisons instead of a million, and sorting wins.',
+    },
+  ]}
+>
+
+Binary search is fast only on sorted data, and sorting costs O(n log n), on the order of n log₂ n comparisons: about
+20 million for a million items, as much as 20 failed scans. So the sort is an investment that pays for itself only when
+the same data is searched many times, roughly log₂ n failed searches' worth. For one search, or a few, scan.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A list holds 12 different values. Linear search finds the target at index 7. How many probes did that take, and how many would a value that is not in the list take?',
+      choices: ['7 and 12', '8 and 12', '8 and 11', '7 and 11'],
+      answer: 1,
+      why: 'Indices 0 to 7 are 8 positions, so the hit costs 8 probes. A miss has to rule out all 12 before it can return −1.',
+    },
+    {
+      q: 'A list of 50 numbers holds 7 at indices 3 and 40, and nowhere else. A function must return every index that holds 7. How many elements must it look at?',
+      choices: ['4: it can stop at the first 7', '41: it can stop at the last 7', '50', '2: just the two 7s'],
+      answer: 2,
+      why: 'Stopping at the first 7, after 4 probes, misses the one at index 40. And the function only knows that 40 holds the last 7 once it has checked indices 41 to 49 as well, so collecting every match looks at all 50.',
+      traps: { 0: 'finds-every-copy' },
+    },
+    {
+      q: 'The target is always in the list and equally likely to be anywhere. The list grows from 1,000 items to 4,000. What happens to the average number of probes linear search makes?',
+      choices: [
+        'It stays about the same, since the search stops at the match',
+        'It goes from about 500 to about 2,000',
+        'It goes up by about 2',
+        'It goes from about 500 to about 1,000',
+      ],
+      answer: 1,
+      why: '(n + 1)/2 goes from 500.5 to 2,000.5: four times the items, four times the work, which is O(n). Going up by about 2 when n quadruples is what binary search does, since log₂ 4 = 2.',
+      traps: { 0: 'stopping-early-beats-n' },
+    },
+    {
+      q: 'A sorted list is [3, 8, 14, 20, 27, 35] and the target is 16. A linear search that stops once an item passes the target makes how many probes?',
+      choices: ['6', '4', '3', '1'],
+      answer: 1,
+      why: '3, 8 and 14 are smaller than 16, so it carries on. 20 is bigger, and since the list is sorted, so is everything after it: 4 probes. The plain search would check all 6.',
+    },
+    {
+      q: 'A program starts, checks once whether a username is in an unsorted list of 50,000 names, and exits. What is the cheapest correct plan?',
+      choices: [
+        'Sort the names, then binary search',
+        'Scan the list once',
+        'Binary search the list as it is',
+        'Put the names in a hash set, then look the username up',
+      ],
+      answer: 1,
+      why: 'One scan makes at most 50,000 comparisons; sorting costs about 50,000 × log₂ 50,000, roughly 800,000. Building a hash set touches every name too, so it can’t beat one scan, and binary search on unsorted names can miss one that is there.',
+      traps: { 0: 'sort-first-pays' },
+    },
+    {
+      q: 'Readings arrive from a sensor one at a time, and you must report the first one above 90 as soon as it arrives. Which search fits?',
+      choices: [
+        'Binary search, after sorting the readings',
+        'Linear search: test each reading as it arrives',
+        'Neither: you have to wait for all the readings first',
+      ],
+      answer: 1,
+      why: 'A stream can only be read in order, and later readings aren’t there yet to jump to. Linear search only asks for the next item, so it answers the moment a reading above 90 arrives.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="linear-search-cost"
+  prompt="How does linear search find a target, what does it cost for a hit, a miss and on average, and why is it still often the right choice?"
+  rubric={[
+    'It compares the target with each item in turn from the front, and stops at the first match or after the last item.',
+    'A hit at index k costs k + 1 probes and a miss costs all n; the average is about (n + 1)/2, so it is O(n).',
+    'It needs no order and no jumping, only the next item, so it works on unsorted lists, linked lists and streams.',
+    'Sorting for binary search costs O(n log n), so one or a few searches are cheaper as scans; many searches favour sorting or a hash table.',
+  ]}
+  example="Linear search compares the target with the first item, then the next, and so on, and returns the index of the first match, or −1 once every item is ruled out. A hit at index k takes k + 1 comparisons, so a target at the front is the O(1) best case, but a miss takes all n, and a target equally likely to be anywhere takes (n + 1)/2 on average: O(n). It only needs the next item, so it works on unsorted data, linked lists and streams. It is often the right choice because binary search needs sorted data, and sorting costs O(n log n), more than one scan. Sorting, or a hash table, pays off only when the same data is searched many times."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Linear search checks each item in turn and stops at the first match: a hit at index k costs k + 1 probes, a miss
+  all n.
+- One probe at best, (n + 1)/2 on average for a hit, n at worst: O(n) time and O(1) extra memory.
+- It needs only the next item, so unsorted arrays, linked lists and streams all work.
+- It reports the first copy; counting or collecting every match scans all n.
+- On sorted data a miss can stop once the items pass the target, but the worst case is still n.
+- Sorting first costs O(n log n): scan for one search or a few, and for many, sort and binary search or use a hash
+  table.
+- Next: [binary search](/learn/binary-search), about log₂ n probes on sorted data, and
+  [hash tables](/learn/hash-tables), O(1) lookups on average. Practise with
+  [Spot a Repeated Number](/practice/contains-duplicate) and [Two Sum](/practice/two-sum), where a fresh scan for
+  every number costs about n²/2 comparisons and a hash set or map needs one pass, then
+  [Find a Number in a Sorted List](/practice/binary-search). Or try your own arrays on the
+  [linear search visualiser](/visualisers/linear-search).
+
+</Section>

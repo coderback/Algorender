@@ -88,6 +88,7 @@ concepts:
     summary: Checking every element in turn, the baseline everything else is measured against.
     prereqs: [arrays]
     visualisers: [linear-search]
+    lesson: linear-search
   - id: binary-search
     title: Binary search
     track: searching-sorting

@@ -1674,6 +1674,60 @@ console.log(longestPalindrome('see'));
 `,
     },
   },
+  {
+    id: 'linear-search-checks',
+    title: 'Linear search that counts its checks',
+    code: {
+      python: `def linear_search(items, target):
+    checks = 0
+    for i in range(len(items)):
+        checks += 1
+        if items[i] == target:
+            print('index ' + str(i) + ' after ' + str(checks) + ' checks')
+            return i
+    print('index -1 after ' + str(checks) + ' checks')
+    return -1
+
+scores = [31, 8, 57, 14, 42]
+linear_search(scores, 14)
+linear_search(scores, 20)
+`,
+      javascript: `function linearSearch(items, target) {
+  let checks = 0;
+  for (let i = 0; i < items.length; i++) {
+    checks += 1;
+    if (items[i] === target) {
+      console.log('index ' + i + ' after ' + checks + ' checks');
+      return i;
+    }
+  }
+  console.log('index -1 after ' + checks + ' checks');
+  return -1;
+}
+
+const scores = [31, 8, 57, 14, 42];
+linearSearch(scores, 14);
+linearSearch(scores, 20);
+`,
+      typescript: `function linearSearch(items: number[], target: number): number {
+  let checks = 0;
+  for (let i = 0; i < items.length; i++) {
+    checks += 1;
+    if (items[i] === target) {
+      console.log('index ' + i + ' after ' + checks + ' checks');
+      return i;
+    }
+  }
+  console.log('index -1 after ' + checks + ' checks');
+  return -1;
+}
+
+const scores: number[] = [31, 8, 57, 14, 42];
+linearSearch(scores, 14);
+linearSearch(scores, 20);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

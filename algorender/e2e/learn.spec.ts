@@ -13,6 +13,7 @@ const lessonPaths = [
   'stacks-queues',
   'linked-lists',
   'hash-tables',
+  'linear-search',
   'binary-search',
   'binary-search-trees',
   'balanced-trees',
