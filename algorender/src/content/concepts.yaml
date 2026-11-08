@@ -512,6 +512,7 @@ concepts:
     summary: A token bucket lets bursts through but caps the long-run rate.
     prereqs: [queueing]
     visualisers: [token-bucket]
+    lesson: rate-limiting
   - id: concurrency
     title: Race conditions, locks and deadlock
     track: systems

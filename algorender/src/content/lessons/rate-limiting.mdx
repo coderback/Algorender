@@ -1,0 +1,267 @@
+<Section step="hook" title="One client's bug, everyone's outage">
+
+An API's servers can handle about 1,000 requests a second, shared by thousands of customers. One customer ships a bug: a
+script that retries in a tight loop, 2,000 times a second. Now more work arrives than the servers can do, and the
+[queueing lesson](/learn/queueing) showed what a line does once the load passes 100%: it grows without end, until
+everyone times out.
+
+A **rate limiter** at the door turns away each client's requests over its agreed rate at once, with a short reply that
+costs almost nothing. The buggy script gets errors; everyone else gets fast answers. This lesson takes apart the
+**token bucket** the queueing lesson met in passing, then its rivals, and what a client should do when told no.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="rate limit">An agreed rate for one client, such as 100 requests a minute per API key. A **rate limiter** turns away the requests over it.</Term>
+  <Term name="token bucket">Holds up to **capacity** tokens and refills at **rate** tokens a second. A request spends one token, or is rejected if the bucket holds less than one, so a **burst** of up to capacity requests passes at once.</Term>
+  <Term name="fixed and sliding windows">Limiters that count requests per window of time. A fixed window resets on the clock, say each minute; a sliding window looks back one window from now.</Term>
+  <Term name="leaky bucket">A queue that drains at a fixed rate. Requests wait their turn, and are rejected only when the queue is full.</Term>
+  <Term name="429 Too Many Requests">The HTTP status for a rejected request, often with a **Retry-After** header saying when to try again.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Two numbers per client">
+
+A token bucket remembers two numbers per client: its **tokens**, and the time, **last**, when it counted them. No timer
+drips tokens in; when a request arrives at time t, the bucket works out what a drip would have added since:
+
+`tokens = min(capacity, tokens + rate × (t − last))`, then `last = t`.
+
+With at least one token, the request spends it and goes through; otherwise it is rejected. The `min` stops a quiet
+client saving up: however long it waits, it comes back to at most a full bucket.
+
+<Explore slug="token-bucket" settings={{ input: 'capacity = 4, rate = 2, pattern = spike, seed = 4' }} caption="A bucket of 4 tokens refilling at 2 a second. Three requests, about a second apart, each find it full. Then 12 arrive in under 2 s: the first five get through on the stored tokens and the refill, then only two of the other seven, half a second apart, as fast as the refill pays. The three after the spike find tokens again: 13 of 18 get through." />
+
+That is O(1) work per request, and a million clients' buckets fit in tens of megabytes. A bucket idle for capacity ÷
+rate seconds is full again, so a limiter can forget idle clients and hand them a full bucket when they return.
+
+<KeyIdea>
+
+**In any stretch of t seconds, a token bucket lets through at most capacity + rate × t requests.** It starts the stretch
+with at most capacity tokens, the refill adds at most rate × t, and each request that gets through spends one. So the
+capacity sets the largest burst and the rate caps the long run. The dashed line labelled capacity + rate × t on the
+second chart is that bound: 4 + 2 × 8 = 20 in 8 s, against the 13 that got through above.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: accepted or rejected?">
+
+The same spike against a smaller bucket: 3 tokens, refilling at 1 a second, so the sums are easy. The player stops at
+each close call: take the tokens left after the last request, add the seconds since, cap at 3, and ask whether that
+makes one token.
+
+<PredictChallenge slug="token-bucket" settings={{ input: 'capacity = 3, rate = 1, pattern = spike, seed = 2' }} goal={5} />
+
+8 of the 10 got through. The two turned away came mid-spike, with 0.88 tokens at 4.01 s and 0.53 at 4.66 s: at 1
+token a second, the bucket can't keep up with 3 requests a second.
+
+</Section>
+
+<Section step="do" title="The bucket in code, its rivals, and its clients">
+
+Here it is in code: capacity 2, a refill of 1 token a second, and three requests at time 0, then three at time 3, each
+answered ok or 429.
+
+<TraceCode
+  snippet="token-bucket-requests"
+  question="When the first request at time 3 arrives, what does the min line set tokens to?"
+  choices={['3', '2', '1', '0']}
+  answer={1}
+  why="Two requests at time 0 spent both tokens, and the third got a 429. Three seconds of refill would add 3, but the min stops at the capacity, 2, so the program prints ok ok 429 ok ok 429."
+/>
+
+**Choosing the numbers.** The rate is the load you will pass on for good: a client's fair share, and for a bucket
+guarding a whole service, comfortably below what it can sustain, since latency explodes near full load. The capacity is
+the burst you will absorb at once. Real clients are bursty (one page load can fire a dozen calls), so a capacity of 1
+turns honest users away, while a huge one lets a flood through before the rate bites.
+
+<Explore slug="token-bucket" settings={{ input: 'capacity = 8, rate = 2, pattern = spike, seed = 4' }} input caption="The spike from before against a bucket of 8: 17 of 18 get through. Change only the capacity: 1 lets 10 through, 4 lets 13, and 9 or more all 18. Each token of capacity passes one more request of the burst." />
+
+**Other ways to count.** The rivals differ in what they remember:
+
+- A **fixed-window counter** keeps one count per client per minute on the clock, reset when the minute turns. The
+  cheapest, but the reset is a cliff, as the first mistake below shows.
+- A **sliding-window log** keeps the time of each request it let through in the last window, and allows a new one only
+  if fewer than the limit are there. Exact, but a limit of 1,000 an hour for a million clients can mean a billion
+  timestamps.
+- A **sliding-window counter** keeps this minute's count and the last one's, weighting the old one by how much of it
+  still lies in the past 60 seconds: 15 seconds into a minute, three quarters. Two numbers, and close when traffic is
+  fairly even.
+- A **leaky bucket** sends queued requests on at a fixed rate: perfectly smooth output, but requests wait, where a token
+  bucket passes a burst at once.
+
+<Misconception
+  id="fixed-window-exact"
+  title="A fixed-window counter never lets more than the limit through in a minute"
+  probes={[
+    {
+      q: 'A fixed-window limiter allows 100 requests per minute on the clock. What is the most it can let through in some stretch of 60 seconds?',
+      choices: ['100', '200', '6,000'],
+      answer: 1,
+      trap: 0,
+      why: 'A stretch across the turn of a minute takes the end of one clock minute and the start of the next, each counted from 0: up to 200, twice the limit.',
+    },
+    {
+      q: 'A fragile backend may take at most 1,000 requests in any 60 seconds. Which limiter keeps that promise exactly?',
+      choices: ['A fixed-window counter reset at the top of each minute', 'A sliding-window log of the last 60 seconds', 'A sliding-window counter that weights the previous minute'],
+      answer: 1,
+      trap: 0,
+      why: 'Only the log counts exactly the requests in the last 60 seconds. A fixed window can pass 2,000 across a boundary, and the sliding counter is an estimate.',
+    },
+  ]}
+>
+
+A fixed window forgets its count the moment it resets, so a client can send the whole limit just before the minute turns
+and again just after: twice the limit within a second or two, though each window's count looks fine. A sliding-window
+log counts the last minute exactly, and a token bucket keeps bursts to a size you choose.
+
+</Misconception>
+
+**Many servers, one limit.** A limiter usually runs in the API gateway, keyed by API key, user or IP address (the
+crudest: many users share an address, and an attacker can use many). A big service runs many gateways, and a key's
+limit must hold across them all. Keep the buckets in a shared store, refilling, checking and spending in one
+atomic step, since a separate read and write is a race (the [concurrency lesson](/learn/concurrency)); let each machine
+enforce its share, with no extra round trip; or send each key to the one limiter that owns it, picked by
+[consistent hashing](/learn/consistent-hashing).
+
+<Misconception
+  id="limit-per-server"
+  title="Each server can enforce the whole limit on its own"
+  probes={[
+    {
+      q: 'A limit of 600 requests a minute per key must hold across 3 gateway machines, each getting a third of every key’s requests. With no shared store, what should each allow?',
+      choices: ['600 a minute', '200 a minute', '1,800 a minute'],
+      answer: 1,
+      trap: 0,
+      why: 'Each machine sees a third of a key’s requests, so 200 each adds up to 600. With 600 each, a busy key could get 1,800 through.',
+    },
+    {
+      q: 'A key’s limit must hold exactly across 12 gateway machines, and some clients’ requests all land on one machine. What keeps the limit?',
+      choices: ['Each machine allows the full limit', 'Each machine allows a twelfth of the limit', 'One count per key in a shared store, updated atomically'],
+      answer: 2,
+      trap: 0,
+      why: 'The full limit each lets up to 12 times through; a twelfth each holds a client stuck on one machine to a twelfth. A shared count is exact, at a round trip per request.',
+    },
+  ]}
+>
+
+A machine only sees the requests sent to it, so if N machines each enforce the full limit, a client spread over them
+gets up to N times the limit. Give each machine 1/N (right when requests spread evenly), share one atomic count per key,
+or send each key to one limiter.
+
+</Misconception>
+
+**What the client sees.** A rejected request gets a **429**, cheap to send and clear about why. A well-behaved client
+waits as long as its Retry-After header says. With no header it backs off **exponentially**, waiting about 1 s, then 2,
+then 4, up to a cap, so a struggling service gets more room each time. And it adds **jitter**, a random part of each
+wait, because clients rejected together would otherwise all retry together.
+
+<Misconception
+  id="retry-straight-away"
+  title="A rejected client should retry at once, or on a fixed schedule"
+  probes={[
+    {
+      q: 'A client’s token bucket is empty and refills 1 token a second. Rejected, the client retries at once in a tight loop, 1,000 times a second. When does a request next get through?',
+      choices: ['On the very next try', 'After about a second, as if it had waited, with about 1,000 429s on the way', 'Never, while it keeps trying'],
+      answer: 1,
+      trap: 0,
+      why: 'A rejected request spends no token, so the next token comes a second later however often the client asks. The loop gains nothing but load.',
+    },
+    {
+      q: 'A client gets a 429 with Retry-After: 30. What should it do?',
+      choices: ['Retry at once, in case the limit has cleared', 'Wait at least 30 seconds, then retry', 'Give up for good'],
+      answer: 1,
+      trap: 0,
+      why: 'The limiter has said when the client will be let in. Retrying sooner only earns more 429s and adds load.',
+    },
+  ]}
+>
+
+Retrying at once earns more 429s, since the bucket refills no faster for being asked, and adds load to a service already
+shedding it. A fixed schedule, even one that backs off, is no better at scale: clients rejected together retry together,
+in waves as big as the one turned away. Honour Retry-After; otherwise back off exponentially, with random jitter.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'An API key has a token bucket of capacity 60 that refills 1 token a second. Its client has been quiet for an hour. At most how many requests can it get through in the next minute?',
+      choices: ['60', '120', '3,660', '61'],
+      answer: 1,
+      why: 'The quiet hour fills the bucket only to its capacity, 60, and the refill adds 60 more over the minute: 60 + 1 × 60 = 120.',
+    },
+    {
+      q: 'Two limiters allow 60 requests a minute: a fixed-window counter on the clock, and a token bucket of capacity 10 refilling 1 a second. A quiet client sends 120 requests, spread evenly over the two seconds from 0:59 to 1:01. About how many does each let through?',
+      choices: ['The fixed window up to all 120, the bucket about 12', 'Both about 60: they share a limit', 'Both about 12', 'The fixed window about 60, the bucket all 120'],
+      answer: 0,
+      why: 'Half the requests fall in each minute, each with a fresh count of 60, so the fixed window passes them all. The bucket passes at most 10 + 1 × 2 = 12 in those 2 seconds.',
+      traps: { 1: 'fixed-window-exact', 3: 'fixed-window-exact' },
+    },
+    {
+      q: 'An autoscaler grows a gateway from 2 machines to 6 for the evening peak. Each machine gives every key its own bucket of the agreed 100 requests a minute, and requests are spread evenly. What can a client hammering the API get at the peak?',
+      choices: ['100 a minute: the agreed limit hasn’t changed', 'About 600 a minute', 'About 200 a minute, as before the peak'],
+      answer: 1,
+      why: 'Each of the 6 machines lets through 100 a minute of its sixth of the requests, so about 600 pass: the real limit grows with the fleet.',
+      traps: { 0: 'limit-per-server' },
+    },
+    {
+      q: 'After an outage, an API comes back and is swamped at once, then again a few seconds later. Its app retries failed calls after 2, 4 and 8 s. What helps most?',
+      choices: ['Retry sooner, after 1 s', 'Add a random amount to each wait', 'Retry every 2 s, steadily', 'Retry with no wait until it works'],
+      answer: 1,
+      why: 'The clients failed together and wait the same, so they return together. Jitter spreads each wave out; shorter or fixed waits only bring the waves sooner.',
+      traps: { 0: 'retry-straight-away', 2: 'retry-straight-away', 3: 'retry-straight-away' },
+    },
+    {
+      q: 'A payment provider rejects you if you send more than 10 calls in any second. A nightly batch job makes 500 calls in bursts. What should sit in front of your calls?',
+      choices: ['A token bucket of capacity 100 refilling 10 a second', 'A queue that sends the calls on at a steady 10 a second', 'A fixed-window counter of 10 calls per second on the clock', 'Nothing: the provider’s limit protects it'],
+      answer: 1,
+      why: 'A batch job can wait and the limit is strict, so smooth the calls with a leaky bucket queue. The token bucket would send 100 at once, and a fixed window can send 20 within a moment around a boundary.',
+      traps: { 2: 'fixed-window-exact' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-token-bucket-limits"
+  prompt="How does a token bucket decide whether to let a request through, what does it promise about how many get through, and how would you choose its two numbers?"
+  rubric={[
+    'It holds up to capacity tokens, refilled at the rate for the time since it last counted; a request spends a token or is rejected.',
+    'It keeps only two numbers per client, the tokens and when they were counted, so it needs no timer and no log of requests.',
+    'In any t seconds it lets through at most capacity + rate × t: the capacity bounds a burst and the rate caps the long run.',
+    'The rate goes comfortably below what the service can sustain, since latency explodes near full load; the capacity is the burst it can absorb.',
+  ]}
+  example="A token bucket keeps two numbers per client: its tokens and when it last counted them, so it needs no timer and no log. When a request arrives, it adds the rate times the seconds since, up to the capacity. A request that finds a token spends it and goes through; otherwise it is rejected. Any t seconds start with at most a full bucket and gain rate × t tokens, so at most capacity + rate × t requests pass: the capacity is the biggest burst, the rate the long-run limit. I would set the rate well below what the service can handle, since queues explode near full load, and the capacity to the bursts real clients make."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A rate limiter turns away requests over a client's agreed rate at once, with a 429, so no one client can push a
+  service to where its queues explode.
+- A token bucket keeps two numbers per client and refills lazily from the time since it last counted: O(1) per request.
+- In any t seconds it passes at most capacity + rate × t. Set the rate comfortably below what the service sustains, and
+  the capacity to the bursts you will absorb.
+- A fixed window can pass twice its limit across a boundary, a sliding log is exact but stores every request, a sliding
+  counter estimates, and a leaky bucket smooths traffic by making it wait.
+- Across machines, share one atomic count, split the limit, or route each key to one limiter. Clients honour Retry-After
+  and back off exponentially, with jitter.
+- Next: [system design](/learn/system-design) and [An API that survives a spike](/design/rate-limited-api) put a limiter
+  in front of a whole service. Practise keeping state per key and spacing out work with
+  [Least Recently Used Cache](/practice/lru-cache) and [Schedule Tasks with a Cooldown](/practice/task-scheduler).
+
+</Section>

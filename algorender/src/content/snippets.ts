@@ -2319,6 +2319,69 @@ descend('momentum', 0.5, 3);
 `,
     },
   },
+  {
+    id: 'token-bucket-requests',
+    title: 'A token bucket answering six requests',
+    code: {
+      python: `def limit(times, capacity, rate):
+    tokens = capacity
+    last = 0
+    replies = []
+    for t in times:
+        tokens = min(capacity, tokens + rate * (t - last))
+        last = t
+        if tokens >= 1:
+            tokens -= 1
+            replies.append('ok')
+        else:
+            replies.append('429')
+    return replies
+
+result = limit([0, 0, 0, 3, 3, 3], 2, 1)
+print(' '.join(result))
+`,
+      javascript: `function limit(times, capacity, rate) {
+  let tokens = capacity;
+  let last = 0;
+  const replies = [];
+  for (const t of times) {
+    tokens = Math.min(capacity, tokens + rate * (t - last));
+    last = t;
+    if (tokens >= 1) {
+      tokens -= 1;
+      replies.push('ok');
+    } else {
+      replies.push('429');
+    }
+  }
+  return replies;
+}
+
+const result = limit([0, 0, 0, 3, 3, 3], 2, 1);
+console.log(result.join(' '));
+`,
+      typescript: `function limit(times: number[], capacity: number, rate: number): string[] {
+  let tokens = capacity;
+  let last = 0;
+  const replies: string[] = [];
+  for (const t of times) {
+    tokens = Math.min(capacity, tokens + rate * (t - last));
+    last = t;
+    if (tokens >= 1) {
+      tokens -= 1;
+      replies.push('ok');
+    } else {
+      replies.push('429');
+    }
+  }
+  return replies;
+}
+
+const result: string[] = limit([0, 0, 0, 3, 3, 3], 2, 1);
+console.log(result.join(' '));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

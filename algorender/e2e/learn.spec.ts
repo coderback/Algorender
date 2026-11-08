@@ -46,6 +46,7 @@ const lessonPaths = [
   'palindromes',
   'derivatives-gradients',
   'optimizers',
+  'rate-limiting',
 ];
 
 async function openLesson(page: Page, slug: string) {

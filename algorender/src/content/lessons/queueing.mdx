@@ -227,7 +227,7 @@ to the burst it can absorb without its line exploding.
 - Latency has a long tail. Set targets on p99, not the mean, especially when one page waits for many calls.
 - Little's law, $L = \lambda W$, links the number inside, the arrival rate and the latency, for any queue.
 - One shared line beats a line per server.
-- A token bucket caps the long-run rate at its refill rate and lets bursts of up to its capacity through: keep the rate well
+- A [token bucket](/learn/rate-limiting) caps the long-run rate at its refill rate and lets bursts of up to its capacity through: keep the rate well
   under what the service can sustain.
 
 </Section>

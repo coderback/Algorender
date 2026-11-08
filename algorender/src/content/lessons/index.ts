@@ -455,6 +455,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'rate-limiting',
+    title: 'Rate limiting: one token per request',
+    concept: 'rate-limiting',
+    summary: 'Two numbers per client: why a token bucket lets a burst of up to its capacity through but never more than capacity + rate × t in any t seconds, why a fixed window can pass twice its limit, and how to hold a limit across many servers and retry with backoff and jitter.',
+    minutes: 15,
+  },
+  {
     slug: 'concurrency',
     title: 'Race conditions, locks and deadlock',
     concept: 'concurrency',
