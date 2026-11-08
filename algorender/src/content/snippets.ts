@@ -2184,6 +2184,47 @@ console.log('right:', right.join(' '));
 `,
     },
   },
+  {
+    id: 'floyd-warshall-round',
+    title: 'One round of Floyd–Warshall, with k = 1',
+    code: {
+      python: `d = [[0, 4, 9], [6, 0, 2], [99, 1, 0]]
+k = 1
+for i in range(3):
+    for j in range(3):
+        if d[i][k] + d[k][j] < d[i][j]:
+            d[i][j] = d[i][k] + d[k][j]
+for row in d:
+    print(str(row[0]) + ' ' + str(row[1]) + ' ' + str(row[2]))
+`,
+      javascript: `const d = [[0, 4, 9], [6, 0, 2], [99, 1, 0]];
+const k = 1;
+for (let i = 0; i < 3; i++) {
+  for (let j = 0; j < 3; j++) {
+    if (d[i][k] + d[k][j] < d[i][j]) {
+      d[i][j] = d[i][k] + d[k][j];
+    }
+  }
+}
+for (const row of d) {
+  console.log(row[0] + ' ' + row[1] + ' ' + row[2]);
+}
+`,
+      typescript: `const d: number[][] = [[0, 4, 9], [6, 0, 2], [99, 1, 0]];
+const k = 1;
+for (let i = 0; i < 3; i++) {
+  for (let j = 0; j < 3; j++) {
+    if (d[i][k] + d[k][j] < d[i][j]) {
+      d[i][j] = d[i][k] + d[k][j];
+    }
+  }
+}
+for (const row of d) {
+  console.log(row[0] + ' ' + row[1] + ' ' + row[2]);
+}
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

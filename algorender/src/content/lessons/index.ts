@@ -224,6 +224,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'all-pairs-shortest-paths',
+    title: 'All-pairs shortest paths: one more stop-over each round',
+    concept: 'all-pairs-shortest-paths',
+    summary: 'Floyd–Warshall as dynamic programming over which nodes a route may stop at: why k must be the outer loop, why one matrix overwritten in place is enough, how a negative cycle shows on the diagonal, and when Dijkstra from every node is cheaper than Θ(V³).',
+    minutes: 15,
+  },
+  {
     slug: 'minimum-spanning-trees',
     title: 'Minimum spanning trees: the cheapest safe edge',
     concept: 'minimum-spanning-trees',

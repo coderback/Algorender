@@ -258,6 +258,7 @@ concepts:
     summary: Floyd–Warshall tries every node as a stepping stone between every pair.
     prereqs: [shortest-paths, dynamic-programming]
     visualisers: [floyd-warshall]
+    lesson: all-pairs-shortest-paths
   - id: minimum-spanning-trees
     title: Minimum spanning trees
     track: graphs
