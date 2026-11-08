@@ -405,6 +405,7 @@ concepts:
     summary: Optimizers that remember past gradients to speed through ravines and even out step sizes.
     prereqs: [gradient-descent]
     visualisers: [optimizers]
+    lesson: optimizers
   - id: linear-regression
     title: Linear regression
     track: ml

@@ -2273,6 +2273,52 @@ while (h >= 0.125) {
 `,
     },
   },
+  {
+    id: 'plain-vs-momentum',
+    title: 'Plain descent and momentum on x², three steps each',
+    code: {
+      python: `def descend(label, beta, steps):
+    x = 8
+    v = 0
+    for t in range(steps):
+        g = 2 * x
+        v = beta * v + g
+        x = x - 0.25 * v
+        print(label + ' ' + str(int(x)))
+
+descend('plain', 0, 3)
+descend('momentum', 0.5, 3)
+`,
+      javascript: `function descend(label, beta, steps) {
+  let x = 8;
+  let v = 0;
+  for (let t = 0; t < steps; t++) {
+    const g = 2 * x;
+    v = beta * v + g;
+    x = x - 0.25 * v;
+    console.log(label + ' ' + Math.trunc(x));
+  }
+}
+
+descend('plain', 0, 3);
+descend('momentum', 0.5, 3);
+`,
+      typescript: `function descend(label: string, beta: number, steps: number): void {
+  let x = 8;
+  let v = 0;
+  for (let t = 0; t < steps; t++) {
+    const g = 2 * x;
+    v = beta * v + g;
+    x = x - 0.25 * v;
+    console.log(label + ' ' + Math.trunc(x));
+  }
+}
+
+descend('plain', 0, 3);
+descend('momentum', 0.5, 3);
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

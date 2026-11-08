@@ -308,6 +308,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 20,
   },
   {
+    slug: 'optimizers',
+    title: 'Momentum and Adam: gradient descent with a memory',
+    concept: 'optimizers',
+    summary: 'Race four optimisers through a narrow valley to see how remembering past gradients speeds up the floor, damps the zigzag and evens out the steps.',
+    minutes: 15,
+  },
+  {
     slug: 'bayes',
     title: "Bayes' rule: a 90% test that is usually wrong",
     concept: 'probability',

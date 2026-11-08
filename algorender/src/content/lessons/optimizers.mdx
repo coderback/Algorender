@@ -1,0 +1,314 @@
+<Section step="hook" title="Give gradient descent a memory">
+
+Plain gradient descent has no memory: each step measures the slope underfoot, moves against it and forgets it. In the
+[gradient descent lesson](/learn/gradient-descent) that made it zigzag across a narrow valley while it crept along the
+floor. A network's loss has millions of directions, some far steeper than others, so this is the normal case.
+
+A ball rolling down the valley does better because it keeps its speed: pushes along the floor add up, and pushes from
+side to side cancel. That is **momentum**. Shrinking the steps of directions that have been steep lately is **RMSProp**.
+Doing both is **Adam**, the usual default for training neural networks.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="velocity v">Momentum's memory: past gradients added up, each shrunk by β for every step since. Momentum steps against v, as plain descent steps against g.</Term>
+  <Term name="decay β">How much of the memory survives each step. At β = 0.9 it spans about 1/(1 − β) = 10 recent gradients.</Term>
+  <Term name="running average">An average that forgets slowly: m ← βm + (1 − β)g. RMSProp keeps one of g², Adam one of g and one of g².</Term>
+  <Term name="bias correction">Adam's averages start at 0, so they are too small at first. Dividing by 1 − βᵗ at step t scales them back up.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Four ways to turn a gradient into a step">
+
+The race below runs four optimisers from one start for 60 steps. Each step, each one measures the gradient $g$ where it
+stands ([derivatives and gradients](/learn/derivatives-gradients) shows how) and turns it into a step.
+**Plain descent** steps against it, $x \leftarrow x - \eta g$. **Momentum** shrinks its velocity by $\beta$, adds $g$,
+and steps against the velocity:
+
+$$
+\begin{aligned}
+v &\leftarrow \beta v + g \\
+x &\leftarrow x - \eta v
+\end{aligned}
+$$
+
+**RMSProp** keeps a running average $s$ of $g^2$, coordinate by coordinate (weight by weight, in a network), and
+divides each coordinate's step by $\sqrt{s}$:
+
+$$
+\begin{aligned}
+s &\leftarrow \rho s + (1 - \rho)\, g^2 \\
+x &\leftarrow x - \eta \, \frac{g}{\sqrt{s}}
+\end{aligned}
+$$
+
+**Adam** keeps a running average $m$ of $g$ as well as RMSProp's $s$, corrects both for starting at 0, and steps by
+their ratio:
+
+$$
+\begin{aligned}
+m &\leftarrow \beta_1 m + (1 - \beta_1)\, g \\
+s &\leftarrow \beta_2 s + (1 - \beta_2)\, g^2 \\
+x &\leftarrow x - \eta \, \frac{\hat m}{\sqrt{\hat s} + \epsilon}
+\end{aligned}
+$$
+
+with $\hat m = m / (1 - \beta_1^t)$ and $\hat s = s / (1 - \beta_2^t)$ at step $t$; the tiny $\epsilon$ only prevents a
+division by 0. The race uses $\beta = \beta_1 = \rho = 0.9$ and $\beta_2 = 0.999$, and its own $\eta$ per optimiser and
+surface, so read it as a picture of behaviour, not a benchmark. On the narrow valley $f = x^2/20 + 5y^2$ the gradient,
+$(x/10,\ 10y)$, changes 100 times faster across the valley than along it.
+
+<Explore slug="optimizers" settings={{ preset: 'valley' }} caption="All four start at (−3.5, 1.5). Plain descent bounces from wall to wall, then creeps along the floor; momentum swings across in slow waves as it gathers speed. RMSProp gets within 0.01 of the bottom first, at step 33, and Adam at step 42. After 60 steps Adam is 0.011 above it, momentum 0.027 and plain descent 0.069." />
+
+Step once: plain descent ($\eta = 0.18$) jumps 2.7 across the valley and 0.063 along it, while Adam moves exactly its
+$\eta$, 0.1, in each coordinate: at $t = 1$ the corrections give $\hat m = g$ and $\hat s = g^2$, so the step is
+$\eta \, g/|g|$.
+
+Momentum's velocity is a sum, not an average: on a steady slope it grows towards $g/(1 - \beta)$, ten times $g$ at
+$\beta = 0.9$, so momentum gets a smaller $\eta$ (0.03 here). Along the floor the gradient keeps its direction, so
+momentum builds up speed there: after 60 steps it is at $x = -0.41$, plain descent at $-1.18$. A gradient that flips sign
+every step adds $+g$ and $-g$ in turn, so the velocity settles at about $g/(1 + \beta)$. The price is inertia: momentum
+overshoots the floor (its $f$ rises at step 3), then swings across, a little less each time.
+
+RMSProp divides by how big each coordinate's gradients have been lately, so while a gradient holds steady,
+$g/\sqrt{s}$ is about $\pm 1$ and the step about $\eta$, steep or gentle. Adam's $m$ is momentum written as an average,
+about the size of $g$, so dividing by $\sqrt{\hat s}$ again makes each step about $\eta$: Adam walks down the steep
+wall in steps of about 0.1 instead of leaping across, though its momentum still carries it past the floor in slow swings.
+
+<KeyIdea>
+
+**Every optimiser here sees only the gradient where it stands, plus a memory of gradients it has already met.** Momentum
+remembers their sum, so steady slopes speed it up and alternating ones cancel. RMSProp remembers their size in each
+coordinate and divides by it. Adam remembers both.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: who leads the race?">
+
+On the two-valleys surface, $f = (x^2 - 1)^2 + x/3 + y^2$, the left valley is lower than the right, with a ridge near
+$x = 0$ between them. All four start at (1.8, 1.2), on the steep outer slope of the right-hand valley. Predict who will
+be lowest after step 1 and after every tenth step: think about each first step, and who could gather enough speed to
+cross the ridge.
+
+<PredictChallenge slug="optimizers" settings={{ preset: 'two-valleys' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Momentum in code, and what memory costs">
+
+Here is momentum on $f(x) = x^2$, whose gradient is $2x$. With $\beta = 0$ the velocity is just the latest gradient, so
+one function runs both: momentum with $\beta = 0$ *is* plain descent. With $\eta = 0.25$, $\beta = 0.5$ and a start at
+$x = 8$, every $x$ stays a whole number.
+
+<TraceCode
+  snippet="plain-vs-momentum"
+  question="Momentum’s second step lands exactly on the bottom, x = 0, where the gradient 2x is 0. What does its third step print?"
+  choices={['momentum 0', 'momentum -2', 'momentum 2', 'momentum -4']}
+  answer={1}
+  why="The new gradient adds nothing, but the velocity keeps half of what it had: v = 0.5 × 16 + 0 = 8, so x = 0 − 0.25 × 8 = −2. Momentum remembers the slope it came down, and overshoots. Its second step showed the good side: two agreeing gradients made v = 16, a move of 4 where plain descent moved 2."
+/>
+
+On a round bowl plain steps already point straight at the bottom, so momentum has no zigzag to cancel, and its speed
+only carries it past.
+
+<Explore slug="optimizers" settings={{ preset: 'bowl' }} input caption="f = x² + y², from (−2.5, 2). Momentum gets within 0.01 of the bottom first, at step 14, then rushes up the far side, 0.89 above the bottom at step 23, and swings back; plain descent gets there at step 33 and stays. Drag the start or type a new one." />
+
+<Misconception
+  id="momentum-is-bigger-step"
+  title="Momentum is just a bigger learning rate"
+  probes={[
+    {
+      q: 'Across a narrow valley the gradient flips sign every step: +g, −g, +g and so on. With β = 0.9, what does momentum’s velocity in that direction do?',
+      choices: [
+        'It grows towards 10g, as on a steady slope, so the zigzag gets ten times worse',
+        'The flips mostly cancel: it settles at about g/1.9',
+        'It becomes exactly 0 after two steps',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Each step keeps 0.9 of the old velocity and adds a gradient of the opposite sign, so the size settles at g/(1 + β). Only agreeing gradients build up towards g/(1 − β).',
+    },
+    {
+      q: 'After a long steady slope, momentum’s velocity in one coordinate is 10g (β = 0.9). Then the gradient flips to −g and stays there. What happens next?',
+      choices: [
+        'It reverses at once, with a step ten times plain descent’s',
+        'It keeps moving the old way for six more steps while the new gradients wear the velocity down',
+        'It stops dead on the next step',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The velocity goes 10g, 8g, 6.2g, 4.58g, 3.12g, 1.81g, 0.63g and only then −0.43g. A bigger η alone would turn round at once.',
+    },
+  ]}
+>
+
+A bigger $\eta$ scales every step alike, including the ones that already bounce across a narrow valley, and those blow up
+first. Momentum builds up only where the gradient keeps agreeing with itself, up to ten times $g$, so it runs with a
+*smaller* $\eta$ than plain descent, and its slowness to turn round is why it overshoots.
+
+</Misconception>
+
+<Misconception
+  id="optimiser-sees-surface"
+  title="A cleverer optimiser sees the shape of the surface"
+  probes={[
+    {
+      q: 'From (1.8, 1.2) on the two-valleys surface, momentum crossed the ridge into the lower valley. Start the race at (1, 1) instead, close to the higher valley. Where does momentum end?',
+      choices: [
+        'In the lower valley again: momentum seeks out the lowest point',
+        'In the higher valley: from there it never gathers enough speed to cross the ridge',
+        'On top of the ridge',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The steep start at (1.8, 1.2) gave it speed. From (1, 1) the slopes are gentler, so it settles in the higher valley like the others.',
+    },
+    {
+      q: 'Adam’s s is often called the gradient’s second moment. What is it?',
+      choices: [
+        'The second derivative of f: how sharply each coordinate curves',
+        'A running average of each coordinate’s squared gradient',
+        'The gradient from two steps ago',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Moment is the statistics word: the first moment is the mean of g, the second the mean of g². Both come from gradients alone; Adam never computes a second derivative.',
+    },
+  ]}
+>
+
+The memory holds only gradients met along each optimiser's own path. Adam's $s$ is not curvature, and none of them knows
+where the lowest valley is: momentum crossed the two-valleys ridge only because its steep start happened to give it
+speed. In a network, that is one reason the random starting weights can change where training ends up.
+
+</Misconception>
+
+Real gradients come from small random batches, so they are noisy, and the running averages smooth that too. SGD with
+momentum is still widely used beside Adam, and sometimes generalises a little better. One setting never goes away.
+
+<Misconception
+  id="adam-ignores-learning-rate"
+  title="Adam makes the learning rate unimportant"
+  probes={[
+    {
+      q: 'Adam runs twice from the same start on the same surface, once with η = 0.1 and once with η = 0.001. How do the first steps compare?',
+      choices: [
+        'They are the same: Adam works out its own step sizes from the gradients',
+        'The η = 0.001 step is 100 times shorter',
+        'The η = 0.001 step is 10 times shorter',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'After the corrections m̂ = g and ŝ = g², so Adam’s first step is η·g/|g|: exactly η in each coordinate. The gradients set the direction; η sets the length.',
+    },
+    {
+      q: 'Late in training with Adam, the loss stops falling and bounces around one level. What is the first thing to try?',
+      choices: ['Lower η, or let it shrink as training goes on', 'Leave η alone: Adam already scales its own steps', 'Raise η so it can escape'],
+      answer: 0,
+      trap: 1,
+      why: 'Adam’s steps do not shrink with the gradients: near a minimum, where they are small and noisy, each step is still a fair fraction of η. A smaller η, or a schedule that lowers it, lets it settle.',
+    },
+  ]}
+>
+
+Adam adapts the *balance* between coordinates, not the overall length of its steps: while a gradient is steady, the step
+is about $\eta$ whatever the gradient's size, so multiplying every gradient by 1,000 barely changes it. Too big an $\eta$
+and Adam jumps around the minimum; too small and it crawls. Adam's published defaults ($\eta = 0.001$,
+$\beta_1 = 0.9$, $\beta_2 = 0.999$) are only a starting point: $\eta$ is still tuned per network, and usually lowered as
+training goes on.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Momentum’s β is raised from 0.9 to 0.99. On a long, steady slope, up to about how many times plain descent’s step (at the same η) can its steps grow?',
+      choices: ['10', '100', '1.1', '1: the same'],
+      answer: 1,
+      why: 'The velocity grows towards g/(1 − β): 10g at β = 0.9, 100g at β = 0.99.',
+    },
+    {
+      q: 'Plain descent with η = 0.1 zigzags across a narrow valley but still reaches the bottom. Which run is more likely to fly off?',
+      choices: ['Plain descent with η = 1', 'Momentum with β = 0.9 and η = 0.1', 'Both equally: momentum at β = 0.9 is a ten times bigger step'],
+      answer: 0,
+      why: 'Ten times η makes every step across the valley ten times bigger; those already overshoot, so they grow without end. In momentum’s velocity the alternating gradients mostly cancel.',
+      traps: { 2: 'momentum-is-bigger-step' },
+    },
+    {
+      q: 'RMSProp has run for a while with η = 0.01. Weight a’s recent gradients have all been about 40, weight b’s about 0.04. Roughly how far does each move next?',
+      choices: ['a moves 0.4 and b moves 0.0004', 'Both move about 0.01', 'a moves about 0.01 and b hardly moves', 'Both move about 0.4'],
+      answer: 1,
+      why: '√s is about 40 for a and 0.04 for b, so g/√s is about 1 for both, and each moves about η. Plain descent would move a a thousand times further than b.',
+    },
+    {
+      q: 'Suppose Adam skipped the bias correction. With β₁ = 0.9 and β₂ = 0.999, how long would its first step be in each coordinate?',
+      choices: ['About 3.2η', 'About 0.1η, because m is only a tenth of g', 'Exactly η', '0, because m starts at 0'],
+      answer: 0,
+      why: 'After one step m = 0.1g and s = 0.001g², so √s ≈ 0.032|g| and the step is about η × 0.1 / 0.032 ≈ 3.2η. With the corrections it is exactly η.',
+    },
+    {
+      q: 'A model’s loss has two basins. Plain descent ends in the higher one; Adam, started from the same weights, ends in the lower one. What is the best explanation?',
+      choices: [
+        'Adam measured the surface and chose the lower basin',
+        'Adam turned local gradients into different steps, and its path happened to lead into the lower basin',
+        'Adam always finds the lowest point, given enough steps',
+      ],
+      answer: 1,
+      why: 'Adam’s path differs because it uses its gradients differently, not because it sees further. From another start it could end in the higher basin.',
+      traps: { 0: 'optimiser-sees-surface', 2: 'optimiser-sees-surface' },
+    },
+    {
+      q: 'A team switches from plain descent at η = 0.5 to Adam and keeps η = 0.5, since Adam “adapts the learning rate anyway”. What happens on the first step?',
+      choices: [
+        'Every weight with a non-zero gradient moves by about 0.5, small gradient or large',
+        'Adam lowers η to a safe value by itself',
+        'Nothing changes, since the gradients are the same',
+      ],
+      answer: 0,
+      why: 'Adam’s first step moves each coordinate by exactly η, so a weight with a tiny gradient jumps as far as one with a huge gradient. Adam balances the coordinates; η still sets the length.',
+      traps: { 1: 'adam-ignores-learning-rate' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="remembering-gradients"
+  prompt="How do momentum, RMSProp and Adam use past gradients to take better steps than plain gradient descent, and what can none of them do?"
+  rubric={[
+    'Plain descent uses only the current gradient; momentum keeps a velocity, a decaying sum of past gradients, and steps against it.',
+    'Agreeing gradients build up the velocity, speeding progress along a valley floor; gradients that flip sign cancel, but the built-up speed can overshoot.',
+    'RMSProp divides each coordinate’s step by the root of a running average of its squared gradients, so steep and gentle directions move at similar speeds.',
+    'Adam keeps both averages, corrects their bias from starting at zero, and steps by their ratio, so η sets each coordinate’s step length.',
+    'None of them sees the surface: they can still settle in a local minimum, and η still needs tuning.',
+  ]}
+  example="Plain gradient descent uses only the current gradient. Momentum keeps a velocity, a decaying sum of past gradients, and steps against it. Steady gradients build it up, speeding it along a valley floor, while gradients that flip sign cancel; its inertia makes it overshoot. RMSProp divides each coordinate’s step by the root of a running average of its squared gradients, so steep and shallow directions take similar steps. Adam keeps both averages, corrects them for starting at 0, and steps by their ratio, so each coordinate moves about η. None of them sees the surface, so they can still end in a local minimum, and η still has to be tuned."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Plain gradient descent uses only the current gradient; momentum, RMSProp and Adam add a memory of past ones.
+- Momentum steps against $v \leftarrow \beta v + g$: steady gradients build it up to about $1/(1 - \beta)$ times the
+  gradient (10 at $\beta = 0.9$), flipping ones cancel, and its speed makes it overshoot.
+- RMSProp divides each coordinate's step by the root of its running average of $g^2$, so steep and gentle directions
+  both step about $\eta$.
+- Adam is momentum as an average, plus RMSProp, plus bias correction.
+- None of them sees the surface: they can settle in a local minimum, and $\eta$ still has to be chosen.
+- Next: [neural networks](/learn/neural-networks) and the [neural network playground](/visualisers/mlp), which trains with
+  momentum. [Backpropagation](/learn/backpropagation) shows where the gradients come from.
+
+</Section>
