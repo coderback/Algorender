@@ -126,6 +126,13 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'greedy',
+    title: 'Greedy algorithms: take the best now, never look back',
+    concept: 'greedy',
+    summary: 'Why a sort and one pass of best-looking choices can be optimal: how an exchange argument proves that earliest finish first fits the most activities and best value per kilo first packs goods that can be cut, why shortest first and whole items break, and why the sort is usually the cost.',
+    minutes: 15,
+  },
+  {
     slug: 'graph-representations',
     title: 'Representing graphs: a list per vertex or a cell per pair',
     concept: 'graph-representations',
@@ -137,6 +144,20 @@ export const lessons: readonly LessonMeta[] = [
     title: 'Breadth-first and depth-first search: a queue or a stack',
     concept: 'bfs-dfs',
     summary: "Visit everything a start can reach with a queue or a stack: why BFS's levels are the fewest edges, why DFS finds cycles but not shortest paths, and why marking a node when it is found keeps both O(V + E).",
+    minutes: 15,
+  },
+  {
+    slug: 'topological-sort',
+    title: 'Topological sort: every prerequisite first',
+    concept: 'topological-sort',
+    summary: "List tasks so every edge points forward: how Kahn's algorithm places a node once its last prerequisite is placed, in O(V + E), why running out of ready nodes proves a cycle, why many orders are often valid, and why depth-first search must reverse its finishing order.",
+    minutes: 15,
+  },
+  {
+    slug: 'strongly-connected-components',
+    title: 'Strongly connected components: two searches, the second backwards',
+    concept: 'strongly-connected-components',
+    summary: "Groups of nodes that all reach each other: why the node a depth-first search finishes last lies in a source component, why Kosaraju's second search runs on the reversed graph, how Tarjan's low-links find the same groups in one pass, and why squashing them leaves a DAG.",
     minutes: 15,
   },
   {
@@ -152,6 +173,13 @@ export const lessons: readonly LessonMeta[] = [
     concept: 'shortest-paths',
     summary: 'Shortest paths by greedily settling nodes in order of distance, and the one assumption that makes it work.',
     minutes: 20,
+  },
+  {
+    slug: 'minimum-spanning-trees',
+    title: 'Minimum spanning trees: the cheapest safe edge',
+    concept: 'minimum-spanning-trees',
+    summary: "Connecting every node at the least total cost: why the lightest edge across any split is always safe, how Kruskal's merges components with union-find and Prim's grows one tree with a heap, and why the result is not a map of shortest routes.",
+    minutes: 15,
   },
   {
     slug: 'sorting-in-code',
@@ -179,6 +207,13 @@ export const lessons: readonly LessonMeta[] = [
     title: 'String matching: never start over',
     concept: 'string-matching',
     summary: "Why the naive search can take n·m comparisons, how KMP's table of borders slides the pattern without ever moving back in the text, and how Rabin–Karp's rolling hash skips most windows without reading a letter.",
+    minutes: 15,
+  },
+  {
+    slug: 'palindromes',
+    title: 'Palindromes: borrow from the mirror',
+    concept: 'palindromes',
+    summary: "Why checking every substring is O(n³), how expanding around the 2n − 1 centres makes it O(n²), and how Manacher's algorithm starts each centre from its mirror's radius to find every palindrome in O(n).",
     minutes: 15,
   },
   {

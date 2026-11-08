@@ -257,7 +257,7 @@ Union-find only merges, though: it has no operation that splits a set apart agai
 - union(a, b) links the two roots. Overwriting a non-root's parent splits its set instead.
 - Union by rank keeps every tree at most log₂ n tall; path compression points each path a find climbs at the root.
 - Together, m operations take O(m α(n)): nearly constant each, amortised. Sets merge but never split.
-- Next: **minimum spanning trees**, where [Kruskal's algorithm](/visualisers/kruskals) uses union-find to skip edges that
+- Next: [minimum spanning trees](/learn/minimum-spanning-trees), where [Kruskal's algorithm](/visualisers/kruskals) uses union-find to skip edges that
   would close a cycle. Practise with [Count Connected Groups](/practice/connected-components) and
   [The Extra Edge](/practice/redundant-connection), or open the [union-find visualiser](/visualisers/union-find) to try
   more operations.

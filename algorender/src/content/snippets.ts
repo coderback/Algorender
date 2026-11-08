@@ -1334,6 +1334,346 @@ console.log(search(root, 'ca'));
 `,
     },
   },
+  {
+    id: 'kahn-course-order',
+    title: "Kahn's algorithm ordering three courses, with a list and a head index as the queue",
+    code: {
+      python: `def course_order(unlocks):
+    indeg = {}
+    for u in unlocks:
+        indeg[u] = 0
+    for u in unlocks:
+        for v in unlocks[u]:
+            indeg[v] += 1
+    queue = []
+    for u in unlocks:
+        if indeg[u] == 0:
+            queue.append(u)
+    head = 0
+    while head < len(queue):
+        u = queue[head]
+        head += 1
+        for v in unlocks[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                queue.append(v)
+    return queue
+
+courses = {'maths': ['ml'], 'code': ['ml'], 'ml': []}
+plan = course_order(courses)
+print(' '.join(plan))
+print(str(len(plan)) + ' of ' + str(len(courses)))
+`,
+      javascript: `function courseOrder(unlocks) {
+  const indeg = {};
+  for (const u of Object.keys(unlocks)) {
+    indeg[u] = 0;
+  }
+  for (const u of Object.keys(unlocks)) {
+    for (const v of unlocks[u]) {
+      indeg[v] += 1;
+    }
+  }
+  const queue = [];
+  for (const u of Object.keys(unlocks)) {
+    if (indeg[u] === 0) {
+      queue.push(u);
+    }
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of unlocks[u]) {
+      indeg[v] -= 1;
+      if (indeg[v] === 0) {
+        queue.push(v);
+      }
+    }
+  }
+  return queue;
+}
+
+const courses = { maths: ['ml'], code: ['ml'], ml: [] };
+const plan = courseOrder(courses);
+console.log(plan.join(' '));
+console.log(plan.length + ' of ' + Object.keys(courses).length);
+`,
+      typescript: `function courseOrder(unlocks: Record<string, string[]>): string[] {
+  const indeg: Record<string, number> = {};
+  for (const u of Object.keys(unlocks)) {
+    indeg[u] = 0;
+  }
+  for (const u of Object.keys(unlocks)) {
+    for (const v of unlocks[u]) {
+      indeg[v] += 1;
+    }
+  }
+  const queue: string[] = [];
+  for (const u of Object.keys(unlocks)) {
+    if (indeg[u] === 0) {
+      queue.push(u);
+    }
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const u = queue[head];
+    head += 1;
+    for (const v of unlocks[u]) {
+      indeg[v] -= 1;
+      if (indeg[v] === 0) {
+        queue.push(v);
+      }
+    }
+  }
+  return queue;
+}
+
+const courses: Record<string, string[]> = { maths: ['ml'], code: ['ml'], ml: [] };
+const plan = courseOrder(courses);
+console.log(plan.join(' '));
+console.log(plan.length + ' of ' + Object.keys(courses).length);
+`,
+    },
+  },
+  {
+    id: 'dfs-finish-order',
+    title: 'Depth-first search that records the order nodes finish in',
+    code: {
+      python: `def dfs(graph, u, seen, finished):
+    seen[u] = True
+    for v in graph[u]:
+        if v not in seen:
+            dfs(graph, v, seen, finished)
+    finished.append(u)
+
+graph = {'A': ['B'], 'B': ['A'], 'C': ['A', 'D'], 'D': ['C']}
+seen = {}
+finished = []
+for u in graph:
+    if u not in seen:
+        dfs(graph, u, seen, finished)
+print(' '.join(finished))
+`,
+      javascript: `function dfs(graph, u, seen, finished) {
+  seen[u] = true;
+  for (const v of graph[u]) {
+    if (!(v in seen)) {
+      dfs(graph, v, seen, finished);
+    }
+  }
+  finished.push(u);
+}
+
+const graph = { A: ['B'], B: ['A'], C: ['A', 'D'], D: ['C'] };
+const seen = {};
+const finished = [];
+for (const u of Object.keys(graph)) {
+  if (!(u in seen)) {
+    dfs(graph, u, seen, finished);
+  }
+}
+console.log(finished.join(' '));
+`,
+      typescript: `function dfs(graph: Record<string, string[]>, u: string, seen: Record<string, boolean>, finished: string[]): void {
+  seen[u] = true;
+  for (const v of graph[u]) {
+    if (!(v in seen)) {
+      dfs(graph, v, seen, finished);
+    }
+  }
+  finished.push(u);
+}
+
+const graph: Record<string, string[]> = { A: ['B'], B: ['A'], C: ['A', 'D'], D: ['C'] };
+const seen: Record<string, boolean> = {};
+const finished: string[] = [];
+for (const u of Object.keys(graph)) {
+  if (!(u in seen)) {
+    dfs(graph, u, seen, finished);
+  }
+}
+console.log(finished.join(' '));
+`,
+    },
+  },
+  {
+    id: 'earliest-finish-first',
+    title: 'Earliest finish first',
+    code: {
+      python: `def choose_talks(talks):
+    chosen = []
+    last = 0
+    for title, start, end in talks:
+        if start >= last:
+            chosen.append(title)
+            last = end
+    return chosen
+
+bookings = [['A', 1, 3], ['B', 2, 5], ['C', 4, 6], ['D', 5, 8], ['E', 6, 9], ['F', 8, 10]]
+picked = choose_talks(bookings)
+print(' '.join(picked))
+`,
+      javascript: `function chooseTalks(talks) {
+  const chosen = [];
+  let last = 0;
+  for (const [title, start, end] of talks) {
+    if (start >= last) {
+      chosen.push(title);
+      last = end;
+    }
+  }
+  return chosen;
+}
+
+const bookings = [['A', 1, 3], ['B', 2, 5], ['C', 4, 6], ['D', 5, 8], ['E', 6, 9], ['F', 8, 10]];
+const picked = chooseTalks(bookings);
+console.log(picked.join(' '));
+`,
+      typescript: `type Talk = [string, number, number];
+
+function chooseTalks(talks: Talk[]): string[] {
+  const chosen: string[] = [];
+  let last = 0;
+  for (const [title, start, end] of talks) {
+    if (start >= last) {
+      chosen.push(title);
+      last = end;
+    }
+  }
+  return chosen;
+}
+
+const bookings: Talk[] = [['A', 1, 3], ['B', 2, 5], ['C', 4, 6], ['D', 5, 8], ['E', 6, 9], ['F', 8, 10]];
+const picked = chooseTalks(bookings);
+console.log(picked.join(' '));
+`,
+    },
+  },
+  {
+    id: 'kruskal-sorted-edges',
+    title: "Kruskal's algorithm on sorted edges, with a union-find parent list",
+    code: {
+      python: `edges = [[1, 0, 1], [2, 2, 3], [3, 1, 3], [4, 0, 2]]
+forest = [0, 1, 2, 3]
+total = 0
+for w, u, v in edges:
+    a = u
+    while forest[a] != a:
+        a = forest[a]
+    b = v
+    while forest[b] != b:
+        b = forest[b]
+    if a == b:
+        print('skip ' + str(u) + '-' + str(v))
+    else:
+        forest[b] = a
+        total += w
+        print('keep ' + str(u) + '-' + str(v))
+print(total)
+`,
+      javascript: `const edges = [[1, 0, 1], [2, 2, 3], [3, 1, 3], [4, 0, 2]];
+const forest = [0, 1, 2, 3];
+let total = 0;
+for (const [w, u, v] of edges) {
+  let a = u;
+  while (forest[a] !== a) {
+    a = forest[a];
+  }
+  let b = v;
+  while (forest[b] !== b) {
+    b = forest[b];
+  }
+  if (a === b) {
+    console.log('skip ' + u + '-' + v);
+  } else {
+    forest[b] = a;
+    total += w;
+    console.log('keep ' + u + '-' + v);
+  }
+}
+console.log(total);
+`,
+      typescript: `const edges: number[][] = [[1, 0, 1], [2, 2, 3], [3, 1, 3], [4, 0, 2]];
+const forest: number[] = [0, 1, 2, 3];
+let total = 0;
+for (const [w, u, v] of edges) {
+  let a = u;
+  while (forest[a] !== a) {
+    a = forest[a];
+  }
+  let b = v;
+  while (forest[b] !== b) {
+    b = forest[b];
+  }
+  if (a === b) {
+    console.log('skip ' + u + '-' + v);
+  } else {
+    forest[b] = a;
+    total += w;
+    console.log('keep ' + u + '-' + v);
+  }
+}
+console.log(total);
+`,
+    },
+  },
+  {
+    id: 'expand-around-centre',
+    title: 'Expanding around every centre',
+    code: {
+      python: `def longest_palindrome(s):
+    best = ''
+    for centre in range(2 * len(s) - 1):
+        lo = centre // 2
+        hi = lo + centre % 2
+        while lo >= 0 and hi < len(s) and s[lo] == s[hi]:
+            lo -= 1
+            hi += 1
+        if hi - lo - 1 > len(best):
+            best = s[lo + 1:hi]
+    return best
+
+print(longest_palindrome('see'))
+`,
+      javascript: `function longestPalindrome(s) {
+  let best = '';
+  for (let centre = 0; centre < 2 * s.length - 1; centre++) {
+    let lo = Math.floor(centre / 2);
+    let hi = lo + (centre % 2);
+    while (lo >= 0 && hi < s.length && s[lo] === s[hi]) {
+      lo -= 1;
+      hi += 1;
+    }
+    if (hi - lo - 1 > best.length) {
+      best = s.slice(lo + 1, hi);
+    }
+  }
+  return best;
+}
+
+console.log(longestPalindrome('see'));
+`,
+      typescript: `function longestPalindrome(s: string): string {
+  let best = '';
+  for (let centre = 0; centre < 2 * s.length - 1; centre++) {
+    let lo = Math.floor(centre / 2);
+    let hi = lo + (centre % 2);
+    while (lo >= 0 && hi < s.length && s[lo] === s[hi]) {
+      lo -= 1;
+      hi += 1;
+    }
+    if (hi - lo - 1 > best.length) {
+      best = s.slice(lo + 1, hi);
+    }
+  }
+  return best;
+}
+
+console.log(longestPalindrome('see'));
+`,
+    },
+  },
 ];
 
 export function getSnippet(id: string): Snippet | undefined {

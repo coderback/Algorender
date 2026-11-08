@@ -23,13 +23,18 @@ const lessonPaths = [
   'memoization',
   'dynamic-programming',
   'backtracking',
+  'greedy',
   'graph-representations',
   'bfs-dfs',
+  'topological-sort',
+  'strongly-connected-components',
   'union-find',
   'dijkstra',
+  'minimum-spanning-trees',
   'merge-sort',
   'quick-sort',
   'string-matching',
+  'palindromes',
 ];
 
 async function openLesson(page: Page, slug: string) {

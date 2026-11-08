@@ -89,7 +89,7 @@ function* trace(g: GraphInput): Generator<GraphFrame> {
   t.clearMarks();
   yield t.frame({
     line: 2,
-    note: `Reverse every edge. Inside an SCC everything still reaches everything, but edges between SCCs now point back, so a search started in the right component can’t leak out of it. S’s top, ${stack.at(-1)}, finished last and is the safe place to start.`,
+    note: `Reverse every edge. Inside an SCC everything still reaches everything, but edges between SCCs now point back, so a search started in the right component can’t leak out of it. The node on top of S finished last, which makes it the safe place to start.`,
     vars: { top: stack.at(-1)! },
   });
 

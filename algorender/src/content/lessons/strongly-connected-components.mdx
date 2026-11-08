@@ -1,0 +1,283 @@
+<Section step="hook" title="Can you get back?">
+
+In a town of one-way streets, driving from the station to the market doesn't mean you can drive back. Some junctions
+form a tangle where you can get from any of them to any other and home again; leave it by the wrong street and there may
+be no way back in.
+
+Those tangles are a directed graph's **strongly connected components**: the largest groups of nodes that can all reach
+each other. A plain [depth-first search](/learn/bfs-dfs) can't pick one out: from a node it reaches everything
+downstream, including nodes with no way back. **Kosaraju's algorithm** uses two searches, the second with every edge
+turned round; **Tarjan's** manages with one.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="strongly connected">Nodes u and v are strongly connected when a path leads from u to v and another leads back.</Term>
+  <Term name="strongly connected component (SCC)">A largest group of nodes that are all strongly connected. Every node is in exactly one; a node on no cycle is a component by itself.</Term>
+  <Term name="condensation">Each SCC squashed into one node, with an edge wherever an edge joins two components. It has no cycles: it is a DAG.</Term>
+  <Term name="source and sink">A source component has no edges coming in from other components; a sink has none going out.</Term>
+  <Term name="finishing order">The order a depth-first search finishes nodes in: each after every node its search went on to discover.</Term>
+  <Term name="reversed graph">Every edge turned round. A path from u to v becomes one from v to u, so the SCCs stay the same.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Two searches, the second one backwards">
+
+This graph has three components: A, B and C; D, E and F; G and H. B → D and G → F lead into D, E and F, and no edge
+leads out of them. Neighbours are taken in alphabetical order. In the first pass, each node goes on top of S as it
+finishes.
+
+<Explore slug="kosaraju" settings={{ preset: 'three' }} caption="The first pass searches from A, finishing C, F, E, D, B and A, then from G, finishing H and G, so G ends on top of S. Then the edges turn round and nodes are popped. G's search collects H: S1 = {G, H}. A's collects C and B: S2 = {A, B, C}. D's collects F and E and turns back at B and G, which are already placed: S3 = {D, E, F}." />
+
+A node finishes only after everything its search discovers, so D, E and F finish before B, which led into them.
+Nothing from A reaches G, so the loop starts a second search there, and G finishes last.
+
+That last finisher always lies in a **source** component, one that no other component points into. Suppose a
+component X had an edge into G's. If the first pass entered X first, it reached G's component from there and finished
+all of it before backing out of X. If it entered G's first, it could never reach X (or the two would be one
+component), so it finished G's before visiting X. Either way a node of X finishes after G.
+
+Now reverse every edge. Components keep their members, but the edges between them turn round, so the source becomes a
+**sink**: a search from G can reach only G's own component. Each later search starts from the latest finisher still
+unplaced, whose component is a source of what remains, so its reversed edges out lead only to components already
+placed. The search skips those, which is why D's search turned back at B and G.
+
+The components come out sources first, a topological order of the condensation. Each pass reads every node and edge
+once (16 node visits and 20 edges examined here), and building the reversed
+[adjacency lists](/learn/graph-representations) is one more sweep: O(V + E) in all.
+
+<KeyIdea>
+
+**The node a depth-first search finishes last lies in a source component. Reverse every edge and that component
+becomes a sink, so a search from it collects exactly its own nodes.** Popping nodes in reverse finishing order and
+searching the reversed graph from each one not yet placed peels off one SCC per search, in O(V + E).
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: who joins?">
+
+Six nodes, typed in as `A>B, B>A, C>A, C>D, D>E, E>C, E>F`. The first pass plays without questions: work out the
+finishing order and check it against S. Then predict which node is popped next, and whether each node the backwards
+search meets joins the current component.
+
+<PredictChallenge slug="kosaraju" settings={{ input: 'A>B, B>A, C>A, C>D, D>E, E>C, E>F' }} goal={8} />
+
+The first search began at A, but A and B form a sink, so they finished early. C finished last, in the source component
+C, D and E: where the first pass starts doesn't matter.
+
+</Section>
+
+<Section step="do" title="The first pass in code, and Tarjan's single pass">
+
+Here is the first pass on four nodes: A and B point at each other, so do C and D, and C → A joins the pairs. `finished`
+records each node as it finishes, and the loop at the bottom starts a search from every node not yet seen.
+
+<TraceCode
+  snippet="dfs-finish-order"
+  question="What does the last line print?"
+  choices={['A B C D', 'B A D C', 'B D C A', 'C D A B']}
+  answer={1}
+  why="A’s search reaches only B. B finishes first, since its one neighbour is already seen, then A. C is out of A’s reach, so the loop starts a new search there: D finishes, then C. C finishes last: its component, C and D, is the source. A B C D is only the order the nodes were seen."
+/>
+
+So the second pass starts at C, and the reversed edges matter as much as the order.
+
+<Misconception
+  id="skip-reversal"
+  title="The second pass can follow the original edges"
+  probes={[
+    {
+      q: 'Why does Kosaraju’s second pass search the reversed graph?',
+      choices: [
+        'So the component on top of S has no edge leading out, and the search can’t leak',
+        'To visit the nodes in a new order',
+        'It doesn’t need to: in reverse finishing order, the original edges give the same components',
+      ],
+      answer: 0,
+      trap: 2,
+      why: 'The last finisher lies in a source component, which can have edges leading out. Reversed, those edges point in, so the search stays inside.',
+    },
+    {
+      q: 'Kosaraju’s first pass finishes node T last. Which must be true of T’s component?',
+      choices: ['No edge from another component leads into it', 'No edge leads out of it to another component', 'It has more nodes than any other component'],
+      answer: 0,
+      trap: 1,
+      why: 'A component with an edge into it would have a node finishing after T, so it is a source. Edges can still lead out, which is why the second pass reverses them.',
+    },
+  ]}
+>
+
+The component on top is a source: nothing leads in, but edges may lead out, and a search along the original edges
+follows them. From G in the first graph it would collect G, H, F, D and E. Reversed, the source is a sink, and the
+search stays inside.
+
+</Misconception>
+
+**Tarjan's algorithm** finds the same components in one search. Each node gets an **index**, its place in the visit
+order, and a **low-link**: the smallest index it can get back to through the search tree below it plus one more edge,
+counting only nodes still on a stack S, where nodes stay after they finish until their component is known. A node that
+finishes with its low-link equal to its index roots a component: pop S down to it, and those nodes are one SCC.
+
+<Explore slug="tarjan" settings={{ preset: 'three' }} caption="The search from A gives A to F the indices 0 to 5. C → A drops C's low-link to 0, then B's on the way back; F → D drops F's to 3, then E's. D is the first to finish with its low-link equal to its index, so S pops down to D: {D, E, F}. A pops {A, B, C}, and a search from G pops {G, H}: 8 node visits and 10 edges examined, half Kosaraju's." />
+
+Components close sinks first, where Kosaraju's came out sources first. G → F is ignored: F's component is finished
+and can't reach back to G. Its extra memory is O(V); Kosaraju's reversed copy of the edges needs O(V + E).
+
+The condensation never has a cycle (its components would merge), so SCCs are a common first step. Packages in one
+component of a dependency graph depend on each other in a loop and must be built together; a
+[topological sort](/learn/topological-sort) of the condensation orders the groups. In a follow network, a component is a
+group of accounts that all reach each other. A 2-SAT solver turns each clause “a or b” into edges not-a → b and
+not-b → a: the clauses can all hold exactly when no variable shares a component with its negation.
+
+<Explore slug="kosaraju" settings={{ preset: 'dag' }} caption="The DAG the topological sort lesson ran DFS on. With no cycles, every node is a component of its own: the second pass pops A, C, B, D and E, one search each. That is the reverse finishing order, a topological order, since a DAG is its own condensation." />
+
+A reaches every node of that DAG, and still every node is alone.
+
+<Misconception
+  id="one-way-reach"
+  title="If u reaches v, they are in the same component"
+  probes={[
+    {
+      q: 'A directed graph is the chain A → B → C → D. How many strongly connected components does it have?',
+      choices: ['1: every node is connected', '4: one per node', '2'],
+      answer: 1,
+      trap: 0,
+      why: 'A reaches D, but no edge leads back, so no two nodes reach each other. Each node is a component by itself.',
+    },
+    {
+      q: 'In a follow network, everyone can reach a famous account, which follows nobody. Which component is it in?',
+      choices: ['The same one as everyone who reaches it', 'One of its own', 'None: it is on no cycle'],
+      answer: 1,
+      trap: 0,
+      why: 'Sharing a component needs a path both ways, and the famous account reaches no one, so it is a component by itself.',
+    },
+  ]}
+>
+
+Strongly connected means reachable **both** ways. A search from u finds everything u reaches, across many components;
+only the nodes that also reach u share its component. Ignoring the arrows gives weakly connected components instead.
+
+</Misconception>
+
+The opposite slip splits one component in two.
+
+<Misconception
+  id="overlapping-components"
+  title="A node on two cycles belongs to two components"
+  probes={[
+    {
+      q: 'A graph has the cycles P → Q → R → P and R → S → R. A program reports the components {P, Q, R} and {R, S}. What is wrong?',
+      choices: ['Nothing: R is on both cycles, so it is in both', 'R can’t be in two: P, Q, R and S form one component', 'S should be a component by itself'],
+      answer: 1,
+      trap: 0,
+      why: 'P reaches S through R, and S reaches P through R, so all four reach each other. Components never share a node.',
+    },
+    {
+      q: 'A node X lies on two cycles, X → P → X and X → Q → X. Which is true?',
+      choices: ['X, P and Q are all in one component', 'X is in two components, one per cycle', 'X is in no component: it is on two cycles'],
+      answer: 0,
+      trap: 1,
+      why: 'P reaches Q through X, and Q reaches P through X. A node is always in exactly one component.',
+    },
+  ]}
+>
+
+Reaching each other passes along: if u and v reach each other, and v and w do too, then u and w do, through v. So
+cycles that share even one node merge into one component. Components never overlap; they split the nodes into groups,
+as connected components do in an undirected graph.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Edges: A → B, B → C, C → B, C → D. Which are the strongly connected components?',
+      choices: ['{A}, {B, C} and {D}', '{A, B, C, D}: A reaches every node', '{B, C} only: A and D are on no cycle'],
+      answer: 0,
+      why: 'B and C reach each other. Nothing reaches back to A, and D reaches nothing, so each is a component by itself.',
+      traps: { 1: 'one-way-reach' },
+    },
+    {
+      q: 'Edges: A → B, B → C, C → A, C → D, D → E, E → C, E → F. How many strongly connected components are there?',
+      choices: ['2: {A, B, C, D, E} and {F}', '3: {A, B, C}, {C, D, E} and {F}', '1: A reaches all six nodes', '6: one per node'],
+      answer: 0,
+      why: 'The two cycles share C, so all five nodes reach each other through it. F reaches nothing, so it is alone.',
+      traps: { 1: 'overlapping-components', 2: 'one-way-reach' },
+    },
+    {
+      q: 'A hurried Kosaraju pops nodes in reverse finishing order but searches the original edges. On A → B, B → A, B → C, C → D, D → C, the first pass finishes D, C, B, then A. What does the second pass report?',
+      choices: ['{A, B} and {C, D}, the right components', '{A, B, C, D}: the search from A runs on through B → C', '{A}, {B}, {C} and {D}'],
+      answer: 1,
+      why: 'A and B are a source with B → C leading out. Reversed, the search from A would stop at B; along the original edges it leaks into C and D.',
+      traps: { 0: 'skip-reversal' },
+    },
+    {
+      q: 'In Tarjan’s algorithm, node u finishes with index 5 and low-link 2. What happens?',
+      choices: [
+        'u is the root of a component: pop S down to u',
+        'u stays on S: it reaches back to an older node still waiting, and joins that node’s component',
+        'u is a component by itself, since no neighbour has index 2',
+      ],
+      answer: 1,
+      why: 'Only a node whose low-link equals its index roots a component. u reaches back to the node with index 2, still on S, and is popped later with it.',
+    },
+    {
+      q: 'On a graph with 12 nodes, Kosaraju’s second pass starts 5 searches. What is true of the graph’s condensation?',
+      choices: ['It has 5 nodes and no cycles', 'It has 5 nodes and may have cycles', 'It has 12 nodes and no cycles', 'It has 7 nodes'],
+      answer: 0,
+      why: 'Each search collects one component, and each component becomes one node. A cycle through two components would make them one, so the condensation is a DAG.',
+    },
+    {
+      q: 'Each course is a node, with an edge from every prerequisite to the course that needs it, and no course is its own prerequisite. When can every course be taken?',
+      choices: ['When every strongly connected component holds a single course', 'When the whole graph is one strongly connected component', 'When some course can reach every other'],
+      answer: 0,
+      why: 'Courses in one component wait on each other round a cycle. If every component is one course, the graph is a DAG and a topological order takes them all.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="scc-two-passes"
+  prompt="What is a strongly connected component, and how does Kosaraju's algorithm find them all? Why does its second pass search the reversed graph?"
+  rubric={[
+    'An SCC is a largest set of nodes that all reach each other along directed edges; every node is in exactly one.',
+    'The first pass runs DFS from every unvisited node and records the order in which nodes finish.',
+    'The node that finishes last lies in a source component: no other component has an edge into it.',
+    'Reversing every edge turns that source into a sink, so a DFS from it in the reversed graph reaches exactly its own component.',
+    'Popping nodes in reverse finishing order and searching from each unplaced one peels off one SCC per search, in O(V + E).',
+  ]}
+  example="A strongly connected component is a largest group of nodes that can all reach each other, so each node is in exactly one. Kosaraju's algorithm runs a DFS from every unvisited node and pushes each node on a stack as it finishes. The last to finish lies in a source component, which no other component points into. Reversing every edge makes that source a sink. The second pass pops the stack and searches the reversed graph from each node not yet placed; edges out of a component now lead only to components already placed, so each search collects exactly one component. Both passes are O(V + E)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A strongly connected component is a largest group of nodes that all reach each other. Every node is in exactly one,
+  a node on no cycle is alone, and reaching one way isn't enough.
+- Squash each component to a node and the condensation is a DAG, which [topological sort](/learn/topological-sort)
+  can order.
+- Kosaraju's: the last node a DFS finishes lies in a source component. Reverse every edge and pop nodes in reverse
+  finishing order: each search of the reversed graph collects exactly one SCC, sources first.
+- Tarjan's: one DFS that gives each node an index and a low-link. A node whose low-link equals its index roots a
+  component, popped off the stack in one go, sinks first.
+- Both are O(V + E) with adjacency lists. SCCs find dependency cycles, groups in follow networks and 2-SAT answers.
+- Practise with [Can Every Course Be Taken?](/practice/course-schedule), where a cycle means a component of two or
+  more courses, and [Course Order](/practice/course-schedule-ii); write the search in
+  [Write depth-first search](/code/dfs-order), or try your own graphs in the [Kosaraju](/visualisers/kosaraju) and
+  [Tarjan](/visualisers/tarjan) visualisers.
+
+</Section>

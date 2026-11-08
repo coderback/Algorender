@@ -237,6 +237,7 @@ concepts:
     summary: Ordering tasks so every dependency comes first, or proving there is a cycle.
     prereqs: [bfs-dfs]
     visualisers: [topological-sort]
+    lesson: topological-sort
   - id: shortest-paths
     title: Shortest paths
     track: graphs
@@ -256,12 +257,14 @@ concepts:
     summary: Connecting every node at least cost, growing a tree (Prim) or merging forests (Kruskal).
     prereqs: [bfs-dfs, heaps, union-find]
     visualisers: [prims, kruskals]
+    lesson: minimum-spanning-trees
   - id: strongly-connected-components
     title: Strongly connected components
     track: graphs
     summary: Groups of nodes that can all reach each other, found with one or two depth-first passes.
     prereqs: [bfs-dfs]
     visualisers: [kosaraju, tarjan]
+    lesson: strongly-connected-components
 
   # ── Algorithm design ─────────────────────────────────────────
   - id: greedy
@@ -270,6 +273,7 @@ concepts:
     summary: Taking the best-looking choice each time, and knowing when that is safe.
     prereqs: [quadratic-sorts]
     visualisers: [activity-selection, knapsack-greedy]
+    lesson: greedy
   - id: memoization
     title: Memoization
     track: design
@@ -312,6 +316,7 @@ concepts:
     summary: Manacher's algorithm reuses mirror images to find every palindrome in linear time.
     prereqs: [string-matching]
     visualisers: [manacher]
+    lesson: palindromes
 
   # ── Math ─────────────────────────────────────────────────────
   - id: vectors-matrices

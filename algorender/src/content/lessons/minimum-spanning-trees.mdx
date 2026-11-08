@@ -1,0 +1,274 @@
+<Section step="hook" title="Six towns, nine possible cables">
+
+A county wants to join six towns, A to F, with fibre. Cable could go along nine routes, each with a cost, from 2
+between C and F up to 15 between B and D. Every town must reach every other, directly or through other towns, for the
+smallest total bill.
+
+The cheapest network never has a loop: any one cable on a cycle could be left out and every town would still be
+connected. So the answer is a tree, five cables for six towns. Trying every tree is hopeless: ten towns that could all
+be linked to each other allow 100 million of them. Instead, two greedy algorithms, **Kruskal's** and **Prim's**, keep
+taking the cheapest cable that is safe to take. This lesson is about what makes a cable safe.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="spanning tree">A set of a graph's edges that connects every node and contains no cycle. With V nodes it always has exactly V − 1 edges.</Term>
+  <Term name="minimum spanning tree (MST)">A spanning tree with the least total weight, in a connected, undirected, weighted graph. A disconnected graph gets a minimum spanning forest, one tree per component.</Term>
+  <Term name="component">A group of nodes joined by the edges chosen so far. Kruskal's starts with every node in a component of its own and tracks them with union-find.</Term>
+  <Term name="cut">A split of the nodes into two groups. An edge crosses the cut when its two ends are in different groups.</Term>
+  <Term name="key[v]">In Prim's algorithm, the weight of the cheapest single edge known from the tree to v, or ∞ while there is none.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Take the cheapest safe edge">
+
+Why should the cheapest edge be safe? Split the nodes into any two groups. Some edge must cross between them, or the
+groups could never be connected. Call the lightest crossing edge e, and suppose a cheapest tree leaves e out. Adding e
+to that tree makes a cycle, which crosses the split along e and so must cross back along another tree edge, f, at
+least as heavy as e. Swap f for e: still connected, no heavier, so a cheapest tree contains e. That swap is an
+exchange argument, as in the [greedy algorithms lesson](/learn/greedy), and it proves the **cut property**.
+
+**Kruskal's algorithm** sorts the edges by weight and tries them cheapest first. If an edge's ends are in different
+components, it keeps the edge and merges them. Every lighter edge was tried earlier and now has both ends in one
+component, so the new edge is the lightest leaving its component. If the ends are already in one component, the edge
+would close a cycle and is rejected. [Union-find](/learn/union-find) answers "same component?" in nearly constant
+amortised time.
+
+<Explore slug="kruskals" settings={{ preset: 'classic' }} caption="Kruskal's sorts the nine edges and tries them cheapest first. C–F (2), D–E (6), A–B (7) and B–C (8) each join two components. A–C (9) is rejected, because A and C are already connected through B. E–F (9) joins the last two components: five edges, total 32. C–D, A–F and B–D are never tried." />
+
+**Prim's algorithm** grows one tree instead, from a start node. Its cut is always the tree against everything else, so
+the cheapest edge leaving the tree is safe. A [min-heap](/learn/heaps) finds that edge: every node outside the tree has
+a key, and when a node joins, its edges can lower its neighbours' keys. Old heap entries are skipped as stale.
+
+<Explore slug="prims" settings={{ preset: 'classic' }} caption="Prim's grows the tree from A, adding A–B (7), B–C (8), C–F (2), F–E (9) and E–D (6). D's key falls from 15, through B, to 11, through C, then to 6, through E, as the tree grows towards it. The same five edges as Kruskal's, in a different order, total 32." />
+
+<KeyIdea>
+
+**For any split of the nodes into two groups, the lightest edge between them belongs to a minimum spanning tree.**
+Kruskal's keeps the cheapest edge that joins two of its components; Prim's adds the cheapest edge leaving its one tree.
+Every edge either takes is the lightest across some split, so both end with a minimum spanning tree, though neither
+ever undoes a choice.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: grow the tree from E">
+
+Same six towns, but now Prim's starts from E. Before each step, predict which node joins the tree next, and whether an
+edge gives a node outside the tree a cheaper link.
+
+<PredictChallenge slug="prims" settings={{ preset: 'other-start' }} goal={8} />
+
+From E, Prim's adds E–D, E–F, F–C, C–B and B–A: another order, but the same five edges as from A, since this graph has
+only one minimum spanning tree.
+
+</Section>
+
+<Section step="do" title="Kruskal's in code, and what an MST is not">
+
+Here is Kruskal's algorithm on four nodes, 0 to 3, with the edges already sorted, each as `[weight, u, v]`. `forest`
+is a union-find parent list, every node starting as its own root. For each edge the code climbs from u to its root, a,
+and from v to its root, b. Equal roots mean the edge would close a cycle; different roots mean `forest[b] = a` joins
+two components.
+
+<TraceCode
+  snippet="kruskal-sorted-edges"
+  question="When the loop reaches the edge of weight 3, between 1 and 3, what are a and b once both climbs finish?"
+  choices={['0 and 2', '1 and 3', '0 and 0', '2 and 0']}
+  answer={0}
+  why="1 climbs to 0 and 3 climbs to 2. The roots differ, so the edge joins two components, though both its ends already touch a kept edge: the program prints keep 1-3 and sets forest[2] = 0. The last edge, 0-2, then finds both roots are 0 and is skipped, since it would close the loop 0–1–3–2–0. The total is 6."
+/>
+
+To stay short, the code skips union by rank and path compression. With both, each climb is nearly O(1) amortised,
+so the sort dominates: Kruskal's is O(E log E), which is also O(E log V), since E is at most V². A real implementation
+also stops at V − 1 edges, as the visualiser does. Edge 1-3 is where a tempting shortcut goes wrong.
+
+<Misconception
+  id="both-ends-in-tree"
+  title="Kruskal's skips an edge whose ends are both already in the tree"
+  probes={[
+    {
+      q: 'Kruskal’s has kept 4 edges on 8 nodes, and every node already touches at least one of them. Can the next edge still be kept?',
+      choices: [
+        'No: every node is already in the tree, so any new edge closes a cycle',
+        'Yes: 4 edges on 8 nodes leave 4 components, and an edge between two of them is kept',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'A forest of 8 nodes and 4 edges has 8 − 4 = 4 components. Every node can touch an edge while the pieces are still apart.',
+    },
+    {
+      q: 'Which check tells Kruskal’s that the edge u–v would close a cycle?',
+      choices: ['find(u) = find(v): u and v are already in one component', 'u and v each touch an edge kept so far', 'v was reached before u'],
+      answer: 0,
+      trap: 1,
+      why: 'A cycle closes only when u and v are already connected, which is when union-find gives them the same root. Touching kept edges is not enough.',
+    },
+  ]}
+>
+
+Kruskal's doesn't grow one tree. It holds a forest of components that merge as it goes, so an edge between two nodes
+that already have edges can still join two pieces. In the six towns, B–C joins A, B to C, F, and E–F joins D, E to the
+rest, though both ends of each were already touched. The test is "are both ends in the same component?":
+find(u) = find(v).
+
+</Misconception>
+
+Stopping Kruskal's while k components remain is a simple **clustering**, the same as deleting the k − 1 heaviest edges
+of the finished tree: the closest members of different groups end up as far apart as possible. The finished tree also
+approximates the travelling salesman: when going direct is never longer than a detour, walking round it and skipping
+towns already seen gives a round trip at most twice the shortest.
+
+Prim's has the shape of [Dijkstra's algorithm](/learn/dijkstra), down to the min-heap, the stale entries and
+O(E log V) with a binary heap. What differs is the number each node holds. Dijkstra's asks whether dist[u] + w beats
+dist[v], a whole route from the start; Prim's asks whether w alone beats key[v], one edge into the tree.
+
+<Explore slug="dijkstra" settings={{ input: 'A-B:7, A-C:9, A-F:14, B-C:8, B-D:15, C-D:11, C-F:2, D-E:6, E-F:9 | start A, target F' }} caption="Dijkstra's from A on the six towns, drawn round a circle. Its prev column links B and C to A, D and F to C, and E to F: a tree weighing 38, not 32. But its route to F is A–C–F, length 11, where the minimum spanning tree's route is A–B–C–F, 7 + 8 + 2 = 17." />
+
+<Misconception
+  id="mst-shortest-paths"
+  title="The MST holds the shortest route between any two nodes"
+  probes={[
+    {
+      q: 'In a minimum spanning tree, the route from P to Q passes through three other nodes and totals 21. The graph also has an edge P–Q of weight 10, which the tree leaves out. How long is the shortest route from P to Q?',
+      choices: ['21: the tree’s route is the shortest', 'At most 10, along the edge P–Q', 'At least 21'],
+      answer: 1,
+      trap: 0,
+      why: 'The edge P–Q alone costs 10, so the shortest route is 10 or less. The tree leaves P–Q out because every edge on the tree’s route weighs 10 or less, not because that route is short.',
+    },
+    {
+      q: 'You need the quickest drive between two towns on a map of roads with lengths. Which algorithm do you run?',
+      choices: ['Dijkstra’s algorithm', 'Prim’s algorithm: its tree joins every town at least cost', 'Kruskal’s algorithm, then follow the tree'],
+      answer: 0,
+      trap: 1,
+      why: 'Dijkstra’s finds shortest routes from a start. A minimum spanning tree keeps the total length of its roads small, and its route between two towns can be far longer.',
+    },
+  ]}
+>
+
+An MST minimises one number, the total weight of its edges, and promises nothing about any single route. The six
+towns' tree has no A–C, so its route from A to D runs the whole chain, A–B–C–F–E–D, for 32, where A–C–D takes 20. For
+quickest routes, use Dijkstra's algorithm; its tree never weighs less in total than the MST, and often weighs more.
+
+</Misconception>
+
+When edges weigh the same, the order they are tried in is a tie-break, and another tie-break can give another tree.
+
+<Explore slug="kruskals" settings={{ preset: 'ties' }} caption="A square with sides of weight 1 and diagonals of weight 2. Kruskal's keeps A–B, B–C and C–D, total 3, and stops; D–A and both diagonals are never tried." />
+
+<Misconception
+  id="one-mst"
+  title="A graph has only one minimum spanning tree"
+  probes={[
+    {
+      q: 'Your Kruskal’s and a colleague’s Prim’s run on the same graph. They return different edges, both totalling 14. What follows?',
+      choices: ['One of the two programs has a bug', 'Both can be right: equal weights can let several trees share the least total'],
+      answer: 1,
+      trap: 0,
+      why: 'Every spanning tree with the least total is a minimum spanning tree. Two different ones can only exist when some weights are equal.',
+    },
+    {
+      q: 'When is a graph’s minimum spanning tree certain to be unique?',
+      choices: ['Always: there is only one least total, so there is only one tree', 'When all of its edge weights are different', 'Never: Prim’s and Kruskal’s always find different trees'],
+      answer: 1,
+      trap: 0,
+      why: 'With all weights different, the lightest edge across each split is unique and belongs to every minimum spanning tree, so only one tree qualifies.',
+    },
+  ]}
+>
+
+The least total is unique; the tree that reaches it need not be. In the square, leaving out any one side gives a tree
+of total 3, so it has four minimum spanning trees. Prim's from A keeps A–B, B–C and A–D, another of them. When every
+weight is different, the tree is unique. Equal weights don't always allow a second tree, though: the six towns have two
+edges of weight 9 and only one.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A graph’s nodes are split into the groups A, B and C, D, E. Three edges cross between them: A–C (6), B–C (4) and B–E (9). All the graph’s weights are different. Which of these edges must be in its minimum spanning tree?',
+      choices: ['A–C', 'B–C', 'B–E', 'None of them for certain'],
+      answer: 1,
+      why: 'B–C is the lightest edge across this split, so the cut property puts it in the tree. A–C and B–E may or may not be in it.',
+    },
+    {
+      q: 'Kruskal’s runs on nodes A to E, with the edges sorted as A–B (1), C–D (2), B–C (3), A–C (4) and D–E (5). Which edges does it keep?',
+      choices: ['A–B, C–D, B–C and D–E', 'A–B, C–D and D–E: B and C are both in the tree already', 'A–B, C–D, A–C and D–E', 'All five'],
+      answer: 0,
+      why: 'B–C joins the components A, B and C, D, so it is kept. A–C then has both ends in one component and would close the cycle A–B–C. D–E brings in E: four edges, total 11.',
+      traps: { 1: 'both-ends-in-tree' },
+    },
+    {
+      q: 'Prim’s tree holds A and B, and key[D] = 4, through B. Then C joins the tree with key 3, and the edge C–D weighs 2. What is key[D] now?',
+      choices: ['2, through C', '5, through C: key[C] + 2', '4: it keeps its link through B'],
+      answer: 0,
+      why: 'A key is the weight of one edge into the tree, and C–D (2) beats B–D (4). Adding key[C] would make it a Dijkstra distance, a whole route.',
+    },
+    {
+      q: 'A triangle has edges X–Y (4), Y–Z (4) and X–Z (5). How long is the route from X to Z in its minimum spanning tree?',
+      choices: ['5, along X–Z', '8, along X–Y–Z', '4', '13'],
+      answer: 1,
+      why: 'The tree keeps the two edges of weight 4, total 8, and leaves out X–Z. So its route from X to Z is 8, though the direct edge is 5.',
+      traps: { 0: 'mst-shortest-paths' },
+    },
+    {
+      q: 'A graph has edges A–B (1), B–C (2), A–C (2) and C–D (3). How many minimum spanning trees does it have?',
+      choices: ['1', '2', '3', '4'],
+      answer: 1,
+      why: 'Every one needs A–B, the lightest edge, and C–D, the only edge to D. Then either B–C or A–C completes the tree, each giving a total of 6.',
+      traps: { 0: 'one-mst' },
+    },
+    {
+      q: 'Kruskal’s runs on 10 points and is stopped as soon as 3 components remain. How many edges has it kept?',
+      choices: ['7', '9', '3', '2'],
+      answer: 0,
+      why: 'Each kept edge merges two components into one, so going from 10 components to 3 takes 7 edges. The 2 edges a full run would add next are the tree’s heaviest.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="mst-cut-property"
+  prompt="What is a minimum spanning tree? How do Kruskal’s and Prim’s algorithms each choose the next edge, and why is that greedy choice safe?"
+  rubric={[
+    'A minimum spanning tree connects every node of a connected, weighted, undirected graph with V − 1 edges, no cycle and the least total weight.',
+    'Kruskal’s tries edges cheapest first and keeps one only if union-find says its ends are in different components.',
+    'Prim’s grows one tree from a start node, using a min-heap to add the cheapest edge from the tree to a node outside it.',
+    'The cut property: the lightest edge across any split of the nodes belongs to a minimum spanning tree, so each choice is safe.',
+    'The tree minimises the total weight, not the route between two nodes; shortest routes need Dijkstra’s algorithm.',
+  ]}
+  example="A spanning tree connects all V nodes of a connected, undirected graph with V − 1 edges and no cycle; a minimum one has the least total weight. Kruskal’s tries the edges cheapest first and keeps one only when union-find says its ends are in different components, since otherwise it would close a cycle. Prim’s grows one tree from a start node, using a min-heap to add the cheapest edge leaving the tree. Both are safe by the cut property: split the nodes into two groups, and the lightest edge between them belongs to a minimum spanning tree. The tree keeps the total small, not each route, so shortest routes need Dijkstra’s."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A spanning tree joins all V nodes with V − 1 edges and no cycle; a minimum spanning tree has the least total weight.
+- The cut property: across any split of the nodes, the lightest edge belongs to a minimum spanning tree. It makes both
+  greedy algorithms correct.
+- Kruskal's tries edges cheapest first and keeps each one whose ends have different roots in union-find: O(E log E),
+  for the sort. Touched ends can still be in different components.
+- Prim's grows one tree from a start, adding the cheapest edge leaving it with a min-heap: O(E log V). It is Dijkstra's
+  shape, comparing w with key[v] instead of dist[u] + w with dist[v].
+- The tree minimises the total, not routes: its path between two nodes can be far longer than the shortest. Equal
+  weights can give several minimum spanning trees; distinct weights give exactly one.
+- Next: **clustering**, by stopping Kruskal's early or with [k-means](/learn/k-means). Practise the component check with
+  [The Extra Edge](/practice/redundant-connection) and [Count Connected Groups](/practice/connected-components), and
+  shortest routes, for contrast, with [Signal Spread Time](/practice/network-delay-time). In the
+  [Prim's](/visualisers/prims) and [Kruskal's](/visualisers/kruskals) visualisers, try Two islands.
+
+</Section>

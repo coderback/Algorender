@@ -270,7 +270,7 @@ starts. Like KMP it reuses earlier comparisons, so it is O(n + m) too.
   pointer never moves back: O(n + m) in all.
 - Rabin–Karp rolls a window's hash in O(1) and compares letters only on a hit. Hits can be spurious, so the check stays:
   expected O(n + m), O(n·m) at worst.
-- Next: **palindromes**, where Manacher's algorithm reuses mirror images as KMP reuses borders
+- Next: [palindromes](/learn/palindromes), where Manacher's algorithm reuses mirror images as KMP reuses borders
   ([its visualiser](/visualisers/manacher)), and [tries](/learn/tries), for many words at once. Practise with
   [Longest Palindromic Substring](/practice/longest-palindromic-substring) and
   [Build a Prefix Tree](/practice/implement-trie), or try your own text on the [KMP](/visualisers/kmp),
