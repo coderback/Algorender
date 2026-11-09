@@ -310,7 +310,7 @@ function Ladder({ exercise, stages, variant, tutor, aside }: { exercise: Exercis
             pointLine={pointLine}
             onRun={() => void onRun()}
           />
-          <p className="text-xs text-ink-muted">Ctrl/⌘ + Enter runs your code. Tab indents; press Esc, then Tab, to leave the editor.</p>
+          <p className="text-xs text-ink-muted">Ctrl/⌘ + Enter runs your code, and Ctrl/⌘ + F searches it. Tab indents; press Esc, then Tab, to leave the editor.</p>
         </>
       )}
       {s === 'bug' && exercise.bug && outcome && allPass(outcome) && !stale && (

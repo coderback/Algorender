@@ -4,14 +4,17 @@ import { useSyncExternalStore } from 'react';
 import { DEFAULT_SPEED, SPEEDS } from '@/engine/useTracePlayer';
 
 /**
- * Visualiser preferences, kept on this device only (like the theme): the
- * playback speed a visualiser starts at, and whether it opens in Predict mode.
- * Set on the account page; a visualiser reads them when it starts, and the
- * learner can still change either on the page. Pages render the built-in
- * defaults on the server and pick up the device's choice after hydration.
+ * Preferences kept on this device only (like the theme). For visualisers: the
+ * playback speed one starts at, and whether it opens in Predict mode (read when
+ * it starts; the learner can still change either on the page). For the code
+ * editor: whether it suggests completions, and Vim keys. Set on the account
+ * page. Pages render the built-in defaults on the server and pick up the
+ * device's choice after hydration.
  */
 const SPEED_KEY = 'algorender:speed';
 const PREDICT_KEY = 'algorender:start-in-predict';
+const AUTOCOMPLETE_KEY = 'algorender:editor-autocomplete';
+const VIM_KEY = 'algorender:editor-vim';
 const CHANGED = 'algorender:preferences';
 
 function read(key: string): string | null {
@@ -66,4 +69,30 @@ export function useStartSpeed(): number {
 
 export function useStartInPredict(): boolean {
   return useSyncExternalStore(subscribe, loadStartInPredict, () => false);
+}
+
+/** Whether the code editor suggests keywords and names as you type; on unless turned off (interview practice often has none). */
+export function loadAutocomplete(): boolean {
+  return read(AUTOCOMPLETE_KEY) !== 'off';
+}
+
+export function saveAutocomplete(on: boolean) {
+  write(AUTOCOMPLETE_KEY, on ? null : 'off');
+}
+
+/** Whether the code editor uses Vim keys; off unless turned on. */
+export function loadVim(): boolean {
+  return read(VIM_KEY) === '1';
+}
+
+export function saveVim(on: boolean) {
+  write(VIM_KEY, on ? '1' : null);
+}
+
+export function useAutocomplete(): boolean {
+  return useSyncExternalStore(subscribe, loadAutocomplete, () => true);
+}
+
+export function useVim(): boolean {
+  return useSyncExternalStore(subscribe, loadVim, () => false);
 }
