@@ -453,7 +453,9 @@ function Solver({
         minLines={16}
       />
       <div className="flex flex-wrap justify-between gap-2 px-1 text-xs text-code-muted">
-        <span>{onServer ? 'Runs on our server' : 'Runs in your browser'} · Ctrl/⌘ + Enter runs the examples</span>
+        <span>
+          {onServer ? 'Runs on our server' : 'Runs in your browser'} · Ctrl/⌘ + Enter runs the examples<span className="hidden sm:inline"> · Ctrl/⌘ + F searches</span>
+        </span>
         <span role="status">{status}</span>
       </div>
     </section>

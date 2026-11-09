@@ -106,3 +106,49 @@ for (const theme of ['light', 'dark'] as const) {
     }
   }
 }
+
+// The code editor's help on the practice and exercise editors: a syntax error
+// with completions open, then the search panel.
+const EDITORS = [
+  { name: 'problem', path: '/practice/two-sum', draft: 'algorender:code:problem:two-sum:python' },
+  { name: 'code-bug', path: '/code/bubble-sort-bug', draft: 'algorender:code:bubble-sort-bug:python' },
+];
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const vp of VIEWPORTS) {
+    for (const editor of EDITORS) {
+      test(`${editor.name} editor help at ${vp.name} in ${theme}`, async ({ page }) => {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        await page.addInitScript((key) => {
+          if (window !== window.top) return;
+          localStorage.setItem(key, 'def two_sum(nums, target):\n    total = 0\n    return total\n');
+          localStorage.setItem('algorender:language', 'python');
+          localStorage.setItem('algorender:problem-language', 'python');
+        }, editor.draft);
+        await page.goto(`${editor.path}?theme=${theme}`);
+        await expect(page.locator('.cm-editor')).toBeAttached();
+        const show = page.getByRole('group', { name: 'Show' });
+        if (await show.isVisible()) await show.getByRole('button', { name: 'Code' }).click();
+        await page.evaluate(() => document.fonts.ready);
+        const code = page.getByRole('textbox', { name: /^Your .+ code$/ });
+        await code.click();
+        await page.keyboard.press('ControlOrMeta+End');
+        await page.keyboard.type('for n in nums');
+        // Escape first, so Enter can't pick from the list that "nums" opened.
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('tot');
+        await expect(page.locator('[data-syntax-error]')).toBeVisible();
+        await expect(page.getByRole('option', { name: 'total' })).toBeVisible();
+        await page.screenshot({ path: `test-results/redesign/${editor.name}-editor-error-${vp.name}-${theme}.png` });
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('ControlOrMeta+f');
+        await page.keyboard.type('total');
+        await expect(page.locator('.cm-searchMatch').first()).toBeVisible();
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(overflow, 'horizontal page scroll').toBeLessThanOrEqual(0);
+        await page.screenshot({ path: `test-results/redesign/${editor.name}-editor-search-${vp.name}-${theme}.png` });
+      });
+    }
+  }
+}

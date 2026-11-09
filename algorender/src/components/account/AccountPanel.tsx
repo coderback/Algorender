@@ -17,7 +17,7 @@ import { TRACK_CLASSES, type TrackColour } from '@/data/tracks';
 import { DEFAULT_SPEED, SPEEDS } from '@/engine/useTracePlayer';
 import { authClient } from '@/lib/auth-client';
 import { useMinute } from '@/lib/now';
-import { saveSpeed, saveStartInPredict, useStartInPredict, useStartSpeed } from '@/lib/preferences';
+import { saveAutocomplete, saveSpeed, saveStartInPredict, saveVim, useAutocomplete, useStartInPredict, useStartSpeed, useVim } from '@/lib/preferences';
 import { useMastery, useProblemProgress, useProgressSnapshot } from '@/progress/hooks';
 import { KNOWN, type MasteryGraph } from '@/progress/mastery';
 import { badges, xpLedger, xpTotals } from '@/progress/play';
@@ -402,6 +402,7 @@ function Settings({ email, status }: { email: string; status: SyncStatus }) {
         </select>
       </div>
       <VisualiserSettings />
+      <EditorSettings />
       {/* TODO(redesign): the board also has switches for reducing motion (the system setting already applies) and a daily review reminder (it needs push or email). */}
       <div className="flex flex-col gap-3 border-t border-line-soft pt-5">
         <p className="text-[13px] text-ink-soft">Signed in as {email}. Progress is saved on this device first, so it works offline.</p>
@@ -460,6 +461,46 @@ function VisualiserSettings() {
           ]}
         />
         <p className="text-[13px] text-ink-muted">Saved on this device. A link that names a mode still opens in it.</p>
+      </div>
+    </>
+  );
+}
+
+/** Code editor preferences, kept on this device: completions, and Vim keys. */
+function EditorSettings() {
+  const complete = useAutocomplete();
+  const vimKeys = useVim();
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <span className="text-[15px] font-semibold">Autocomplete in the code editor</span>
+        <Segmented<'on' | 'off'>
+          label="Autocomplete in the code editor"
+          size="m"
+          value={complete ? 'on' : 'off'}
+          onChange={(v) => saveAutocomplete(v === 'on')}
+          className="w-full [&>button]:flex-1 [&>button]:justify-center"
+          options={[
+            { value: 'on', label: 'On' },
+            { value: 'off', label: 'Off' },
+          ]}
+        />
+        <p className="text-[13px] text-ink-muted">Suggests keywords and the names in your code. Turn it off to practise the way most interviews run.</p>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-[15px] font-semibold">Code editor keys</span>
+        <Segmented<'standard' | 'vim'>
+          label="Code editor keys"
+          size="m"
+          value={vimKeys ? 'vim' : 'standard'}
+          onChange={(v) => saveVim(v === 'vim')}
+          className="w-full [&>button]:flex-1 [&>button]:justify-center"
+          options={[
+            { value: 'standard', label: 'Standard' },
+            { value: 'vim', label: 'Vim' },
+          ]}
+        />
+        <p className="text-[13px] text-ink-muted">Saved on this device. With Vim keys, / searches, and Esc then Tab still leaves the editor.</p>
       </div>
     </>
   );
