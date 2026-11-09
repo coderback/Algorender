@@ -1,15 +1,17 @@
 'use client';
 
+import Link from 'next/link';
 import type { KeyboardEvent, ReactNode } from 'react';
-import { FiEye, FiPlay, FiRotateCcw } from 'react-icons/fi';
+import { FiCheck, FiEye, FiPlay, FiRotateCcw, FiX } from 'react-icons/fi';
 import { Button } from '@/components/ui/Button';
 import { Field, TextAreaField } from '@/components/ui/Field';
 import type { Json, RunError } from '@/workspace/protocol';
 import { ErrorCard } from '@/workspace/RunOutput';
 import { methodIn, nameIn } from '../codegen';
 import { CALLS, describe, type CustomText } from '../custom';
-import { formatValue, watchable, type CaseVerdict, type JudgeCase, type ProblemSpec } from '../judge';
+import { formatValue, ownMismatch, same, watchable, type CaseVerdict, type JudgeCase, type ProblemSpec } from '../judge';
 import { isServerLanguage, type ProblemLanguage } from '../languages';
+import type { ExpectedState } from './serverJudge';
 
 /** A run of the learner's own test: what their code gave on it. */
 export type OwnRun = {
@@ -30,7 +32,8 @@ const LISTED = 200;
 /**
  * "Your own test", under the editor: a field per parameter (or the calls, one
  * per line, for a design problem), started from the first example, and the
- * answer the code gives. There's no expected answer: the learner works it out.
+ * answer the code gives. Signed in, the expected answer (our solution's, from
+ * the server) shows beside it, and the two are compared.
  */
 export function OwnTest({
   spec,
@@ -39,6 +42,8 @@ export function OwnTest({
   untouched,
   errors,
   run,
+  expected,
+  signInHref,
   stale,
   busy,
   notice,
@@ -55,6 +60,10 @@ export function OwnTest({
   /** What's wrong with each field ('' for the whole test), after a run was tried. */
   errors: Record<string, string> | null;
   run: OwnRun | null;
+  /** The expected answer to the run's input, once asked for. */
+  expected: ExpectedState | null;
+  /** Where signing in starts, coming back to this problem. */
+  signInHref: string;
   stale: boolean;
   busy: boolean;
   /** Why the server judge didn't answer, shown here (sign in, a quota). */
@@ -80,7 +89,7 @@ export function OwnTest({
         <h2 id="own-test-title" className="text-[17px] font-bold text-ink">
           Your own test
         </h2>
-        <p className="text-sm text-ink-soft">Try any input, such as an edge case you’re unsure about. There’s no expected answer: work out what it should be, then compare.</p>
+        <p className="text-sm text-ink-soft">Try any input, such as an edge case you’re unsure about. Work out what it should give, then compare with the expected answer from our solution.</p>
       </div>
       {design ? (
         <TextAreaField
@@ -124,7 +133,7 @@ export function OwnTest({
         <span className="hidden text-xs text-ink-muted sm:inline">Ctrl/⌘ + Enter in a field runs it</span>
       </div>
       {notice}
-      {run && <OwnResult spec={spec} run={run} stale={stale} busy={busy} onWatch={onWatch} />}
+      {run && <OwnResult spec={spec} run={run} expected={expected} signInHref={signInHref} stale={stale} busy={busy} onWatch={onWatch} />}
     </section>
   );
 }
@@ -139,9 +148,30 @@ const OUTCOME = {
   timeout: { label: 'out of time', className: 'text-warn-ink' },
 } as const;
 
-function OwnResult({ spec, run, stale, busy, onWatch }: { spec: ProblemSpec; run: OwnRun; stale: boolean; busy: boolean; onWatch: (test: JudgeCase, memory: boolean) => void }) {
+function OwnResult({
+  spec,
+  run,
+  expected,
+  signInHref,
+  stale,
+  busy,
+  onWatch,
+}: {
+  spec: ProblemSpec;
+  run: OwnRun;
+  expected: ExpectedState | null;
+  signInHref: string;
+  stale: boolean;
+  busy: boolean;
+  onWatch: (test: JudgeCase, memory: boolean) => void;
+}) {
   const { verdict: v, fatal, output, test, language } = run;
   const outcome = v && OUTCOME[v.status];
+  const answer = expected?.state === 'answer' ? expected.expected : undefined;
+  // Compared only when the code finished: an error has its own message.
+  const wrong = v?.status === 'ran' && answer !== undefined ? ownMismatch(spec, test, v.got as Json, answer, language) : undefined;
+  // A problem with several right answers shows ours as one of them.
+  const expectedLabel = spec.check ? 'A right answer' : 'Expected';
   return (
     <div role="group" aria-label="Your test’s result" aria-live="polite" className="flex flex-col gap-2.5 rounded-well bg-sunken px-4 py-3.5 text-sm">
       {stale && <p className="text-warn-ink">You’ve changed the code or the test since this run. Run it again to update it.</p>}
@@ -153,18 +183,57 @@ function OwnResult({ spec, run, stale, busy, onWatch }: { spec: ProblemSpec; run
             {v.status !== 'timeout' && <span className="font-normal text-ink-muted"> · {v.ms} ms</span>}
           </p>
           {spec.design ? (
-            <CallAnswers test={test} got={Array.isArray(v.got) ? v.got : []} failed={v.status === 'error'} language={language} />
+            <CallAnswers
+              spec={spec}
+              test={test}
+              got={Array.isArray(v.got) ? v.got : []}
+              expected={Array.isArray(answer) ? answer : null}
+              failed={v.status === 'error'}
+              language={language}
+            />
           ) : (
-            v.got !== undefined && (
+            (v.got !== undefined || answer !== undefined || expected?.state === 'loading') && (
               <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
-                <dt className="text-ink-muted">Your answer</dt>
-                <dd className="font-mono text-[13px] break-words text-ink">{formatValue(v.got as Json, language, 100)}</dd>
+                {v.got !== undefined && (
+                  <>
+                    <dt className="text-ink-muted">Your answer</dt>
+                    <dd className="font-mono text-[13px] break-words text-ink">{formatValue(v.got as Json, language, 100)}</dd>
+                  </>
+                )}
+                {answer !== undefined && (
+                  <>
+                    <dt className="text-ink-muted">{expectedLabel}</dt>
+                    <dd className="font-mono text-[13px] break-words text-ink">{formatValue(answer, language, 100)}</dd>
+                  </>
+                )}
+                {expected?.state === 'loading' && (
+                  <>
+                    <dt className="text-ink-muted">{expectedLabel}</dt>
+                    <dd className="text-ink-muted">Working it out…</dd>
+                  </>
+                )}
               </dl>
             )
           )}
           {v.status !== 'ran' && <p className="text-ink-soft">{v.message}</p>}
+          {wrong === null && (
+            <p className="flex items-center gap-1.5 font-semibold text-good-ink">
+              <FiCheck aria-hidden className="shrink-0" />
+              {spec.check ? 'Right: it’s one of the right answers.' : 'Matches the expected answer.'}
+            </p>
+          )}
+          {wrong && (
+            <p className="flex items-start gap-1.5 text-bad-ink">
+              <FiX aria-hidden className="mt-0.5 shrink-0" />
+              <span>
+                <span className="font-semibold">Doesn’t match.</span> {wrong}
+              </span>
+            </p>
+          )}
         </>
       )}
+      {v && spec.design && expected?.state === 'loading' && <p className="text-xs text-ink-muted">Working out the expected answers…</p>}
+      <ExpectedNote expected={expected} signInHref={signInHref} />
       {output.length > 0 && (
         <div>
           <p className="text-xs text-ink-muted">Printed</p>
@@ -192,8 +261,37 @@ function OwnResult({ spec, run, stale, busy, onWatch }: { spec: ProblemSpec; run
   );
 }
 
-/** A design problem's calls, each with what it gave, up to the one that failed. */
-function CallAnswers({ test, got, failed, language }: { test: JudgeCase; got: Json[]; failed: boolean; language: ProblemLanguage }) {
+/** Why there's no expected answer to show: sign in, our solution has none for this input, or the server can't say now. */
+function ExpectedNote({ expected, signInHref }: { expected: ExpectedState | null; signInHref: string }) {
+  if (expected?.state === 'none') return <p className="text-ink-soft">{expected.message}</p>;
+  if (expected?.state === 'unavailable') return <p className="text-xs text-ink-muted">{expected.message}</p>;
+  if (expected?.state !== 'sign-in') return null;
+  return (
+    <p className="text-xs text-ink-muted">
+      <Link href={signInHref} className="font-medium text-accent-ink hover:underline">
+        Sign in
+      </Link>{' '}
+      to see the expected answer too: it comes from our solution, which runs on our server.
+    </p>
+  );
+}
+
+/** A design problem's calls, each with what it gave, up to the one that failed, and the expected answer where it differs. */
+function CallAnswers({
+  spec,
+  test,
+  got,
+  expected,
+  failed,
+  language,
+}: {
+  spec: ProblemSpec;
+  test: JudgeCase;
+  got: Json[];
+  expected: Json[] | null;
+  failed: boolean;
+  language: ProblemLanguage;
+}) {
   const calls = test.calls ?? [];
   const shown = calls.slice(0, Math.min(calls.length, got.length + (failed ? 1 : 0), LISTED));
   return (
@@ -216,6 +314,9 @@ function CallAnswers({ test, got, failed, language }: { test: JudgeCase; got: Js
               </>
             )}
             {i >= got.length && <span className="text-bad-ink"> failed</span>}
+            {i > 0 && expected && i < expected.length && (i >= got.length || !same(expected[i], got[i], spec.compare)) && (
+              <span className={i < got.length ? 'text-bad-ink' : 'text-ink-muted'}> · expected {formatValue(expected[i], language)}</span>
+            )}
           </li>
         ))}
       </ol>

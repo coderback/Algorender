@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RunResult } from '@/workspace/protocol';
 import { CALLS, customCase, customError, customText, LiteralError, MAX_CUSTOM, parseLiteral, readCustom, valueError, type CustomText } from './custom';
-import { verdict, type ProblemSpec } from './judge';
+import { ownMismatch, verdict, type ProblemSpec } from './judge';
 import { PROBLEM_LANGUAGE_IDS } from './languages';
 import { getProblem, loadProblems, specFor } from './load';
 
@@ -147,5 +147,31 @@ describe('running a custom test', () => {
       got: [null, null, null],
       ms: 4,
     });
+  });
+});
+
+describe('comparing your own test with the expected answer', () => {
+  it('compares as the judge does, naming what differs without repeating both answers', () => {
+    const twoSum = spec('two-sum');
+    const test = customCase({ input: { nums: [2, 7, 11], target: 9 } });
+    // Several right answers: the check decides, so either order is right.
+    expect(ownMismatch(twoSum, test, [1, 0], [0, 1], 'python')).toBeNull();
+    expect(ownMismatch(twoSum, test, [0, 2], [0, 1], 'python')).toBe('nums[0] + nums[2] is 13, not 9.');
+    const closest = spec('k-closest-points');
+    const points = customCase({ input: { points: [[1, 1], [2, 2], [5, 5]], k: 2 } });
+    expect(ownMismatch(closest, points, [[2, 2], [1, 1]], [[1, 1], [2, 2]], 'python')).toBeNull();
+    expect(ownMismatch(closest, points, [[5, 5], [1, 1]], [[1, 1], [2, 2]], 'python')).toBe('It has different items from the expected answer (the order doesn’t matter).');
+    const reverse = spec('reverse-linked-list');
+    expect(ownMismatch(reverse, customCase({ input: { head: [1, 2] } }), [1, 2], [2, 1], 'python')).toBe('It differs from the expected answer.');
+  });
+
+  it('names a design problem’s first call that differs, up to one that failed', () => {
+    const minStack = spec('min-stack');
+    const test = customCase({ calls: [['MinStack'], ['push', 3], ['push', 1], ['getMin'], ['pop'], ['getMin']] });
+    const expected = [null, null, null, 1, null, 3];
+    expect(ownMismatch(minStack, test, expected, expected, 'java')).toBeNull();
+    expect(ownMismatch(minStack, test, [null, null, null, 1, null, 1], expected, 'java')).toBe('Call 6, getMin(), should give 3, not 1.');
+    // The run stopped at call 5: only the calls before it are compared.
+    expect(ownMismatch(minStack, test, [null, null, null, 1], expected, 'python')).toBeNull();
   });
 });
