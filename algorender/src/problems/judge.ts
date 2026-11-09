@@ -192,6 +192,29 @@ function ranVerdict(spec: ProblemSpec, test: JudgeCase, result: RunResult, langu
   return error ? { status: 'error', message: where, got, ms } : { status: 'ran', message: 'Ran.', got, ms };
 }
 
+/**
+ * How the answer to the learner's own test differs from the expected one (the
+ * reference solution's, from the server), or null when it matches. A problem
+ * with several right answers runs its check, so any right answer matches. A
+ * design problem compares the calls that answered, up to one that failed.
+ */
+export function ownMismatch(spec: ProblemSpec, test: JudgeCase, got: Json, expected: Json, language: ProblemLanguage): string | null {
+  if (spec.design) {
+    const answers = Array.isArray(got) ? got : [];
+    const wanted = Array.isArray(expected) ? expected : [];
+    const calls = test.calls ?? [];
+    for (let i = 1; i < Math.min(answers.length, wanted.length, calls.length); i++) {
+      if (!same(wanted[i], answers[i], spec.compare)) {
+        return `Call ${i + 1}, ${callText(calls[i], language)}, should give ${formatValue(wanted[i], language)}, not ${formatValue(answers[i], language)}.`;
+      }
+    }
+    return null;
+  }
+  if (spec.check) return mismatch(spec, { ...test, expected }, got, language);
+  if (same(expected, got, spec.compare)) return null;
+  return spec.compare === 'unordered' || spec.compare === 'unordered-deep' ? 'It has different items from the expected answer (the order doesn’t matter).' : 'It differs from the expected answer.';
+}
+
 function callText([method, ...args]: [string, ...Json[]], language: ProblemLanguage): string {
   return `${methodIn(method, language)}(${args.map((a) => formatValue(a, language)).join(', ')})`;
 }

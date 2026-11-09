@@ -3,7 +3,7 @@
 // A submission's verdict becomes a `problem.submitted` event written here,
 // marked verified, which reaches the learner's devices like any other.
 
-import { and, count, eq, gt } from 'drizzle-orm';
+import { and, count, eq, gt, ne } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import { z } from 'zod';
 import { customCase, customError, type CustomInput } from '@/problems/custom';
@@ -67,7 +67,8 @@ export function parseJudgeRequest(body: unknown): JudgeRequest {
 
 /** Turns the request down when the learner has a run going already, or has used up their runs for the hour or the day. */
 async function checkQuota(db: Database, userId: string, now: Date) {
-  const since = (ms: number) => and(eq(judgeRun.userId, userId), gt(judgeRun.createdAt, new Date(now.getTime() - ms)));
+  // Expected answers (expected.ts) have their own limit.
+  const since = (ms: number) => and(eq(judgeRun.userId, userId), ne(judgeRun.kind, 'expected'), gt(judgeRun.createdAt, new Date(now.getTime() - ms)));
   const [[running], [hour], [day]] = await Promise.all([
     db.select({ n: count() }).from(judgeRun).where(and(since(STALE_MS), eq(judgeRun.status, 'running'))),
     db.select({ n: count() }).from(judgeRun).where(since(HOUR)),

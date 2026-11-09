@@ -17,13 +17,13 @@ import { printed, type RunTrace } from '@/workspace/trace';
 import { TREE_RUN_LEGEND } from '@/workspace/traceTree';
 import { useRuntime } from '@/workspace/useRuntime';
 import { methodIn, nameIn, stub } from '../codegen';
-import { customText, readCustom, type CustomText } from '../custom';
+import { customText, readCustom, type CustomInput, type CustomText } from '../custom';
 import { formatValue, judgeRequest, timeLimit, verdict, watchable, watchRequest, type CaseVerdict, type JudgeCase, type ProblemSpec } from '../judge';
 import { isServerLanguage, PROBLEM_LANGUAGE_IDS, PROBLEM_LANGUAGES, type ProblemLanguage, type ServerLanguage } from '../languages';
 import { receiveSubmission, recordSubmission } from '../progress';
 import { replayTrace } from '../replay';
 import { OwnTest, type OwnRun } from './OwnTest';
-import { runOnServer } from './serverJudge';
+import { fetchExpected, runOnServer, type ExpectedState } from './serverJudge';
 
 /** One judged test's outcome. */
 type Checked = { test: JudgeCase; verdict: CaseVerdict; output: string[] };
@@ -192,6 +192,8 @@ function Solver({
   const [ownErrors, setOwnErrors] = useState<Record<string, string> | null>(null);
   const [ownRun, setOwnRun] = useState<OwnRun | null>(null);
   const [ownNotice, setOwnNotice] = useState<'sign-in' | string | null>(null);
+  /** The expected answer to the learner's own test, for the input it was asked for (see ownKey). */
+  const [ownExpected, setOwnExpected] = useState<{ key: string; value: ExpectedState } | null>(null);
   // Java, C++ and Go don't run in the browser; the JavaScript runner stands by unused (it starts on its first run).
   const { runtime, runtimeState, runtimeDetail } = useRuntime(onServer ? 'javascript' : language);
 
@@ -234,6 +236,22 @@ function Solver({
     setOwnErrors(null);
   };
 
+  /**
+   * Asks the server for the expected answer to the learner's own test, beside
+   * the run. An answer for the same input is kept, so changing only the code
+   * doesn't ask again. Signed out, the card offers sign-in instead.
+   */
+  const askExpected = (test: JudgeCase) => {
+    const key = ownKey(test);
+    if (ownExpected?.key === key && ['loading', 'answer', 'none'].includes(ownExpected.value.state)) return;
+    if (!signedIn) {
+      setOwnExpected({ key, value: { state: 'sign-in' } });
+      return;
+    }
+    setOwnExpected({ key, value: { state: 'loading' } });
+    void fetchExpected(spec.slug, language, ownInput(test)).then((value) => setOwnExpected((prev) => (prev?.key === key ? { key, value } : prev)));
+  };
+
   /** Runs the learner's own test: in the browser, or for Java, C++ and Go on the server. Nothing is recorded. */
   const runOwn = async () => {
     if (busy) return;
@@ -246,9 +264,10 @@ function Solver({
     setOwnNotice(null);
     const { test } = read;
     const ran = { test, code, language, text: JSON.stringify(ownText) };
+    askExpected(test);
     setProgress({ done: 0, total: 1 });
     if (isServerLanguage(language)) {
-      const answer = await runOnServer(spec.slug, language, code, 'custom', { ...(test.input && { input: test.input }), ...(test.calls && { calls: test.calls }) });
+      const answer = await runOnServer(spec.slug, language, code, 'custom', ownInput(test));
       setProgress(null);
       if (!answer.ok) {
         setOwnNotice(answer.status === 401 ? 'sign-in' : answer.message);
@@ -450,6 +469,8 @@ function Solver({
       untouched={ownDraft === null}
       errors={ownErrors}
       run={ownRun}
+      expected={ownRun && ownExpected?.key === ownKey(ownRun.test) ? ownExpected.value : null}
+      signInHref={signInHref(spec.slug)}
       stale={ownStale}
       busy={busy}
       notice={
@@ -612,6 +633,12 @@ function SignInCard({ language, slug }: { language: ServerLanguage; slug: string
     </div>
   );
 }
+
+/** The learner's own test's values, as the server takes them. */
+const ownInput = (test: JudgeCase): CustomInput => ({ ...(test.input && { input: test.input }), ...(test.calls && { calls: test.calls }) });
+
+/** Which input an expected answer belongs to. */
+const ownKey = (test: JudgeCase) => JSON.stringify(ownInput(test));
 
 const signInHref = (slug: string) => `/account?next=${encodeURIComponent(`/practice/${slug}`)}`;
 
