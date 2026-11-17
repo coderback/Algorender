@@ -18,7 +18,9 @@ const answer = (message) => page.postMessage(message);
 async function start(harness) {
   answer({ type: 'status', status: 'loading', detail: 'Loading Python (about 6 MB, first time only)…' });
   importScripts(BASE + 'pyodide.js'); // defines loadPyodide
-  const pyodide = await self.loadPyodide({ indexURL: BASE });
+  // A fixed string hash seed: sets keep one order even when a timeout restarts
+  // the worker, so a replayed program prints what it printed before.
+  const pyodide = await self.loadPyodide({ indexURL: BASE, env: { PYTHONHASHSEED: '0' } });
   pyodide.runPython(harness);
   return pyodide.globals.get('run_request');
 }

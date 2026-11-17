@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiCornerDownLeft, FiPlay, FiSquare } from 'react-icons/fi';
 import { Button } from '@/components/ui/Button';
+import { ErrorHelp } from './ErrorHelp';
 import { DEFAULT_LIMITS, type Language, type RunResult } from './protocol';
 import { endInput, replayRequest, replayStatus, startReplay, transcript, typeLine, type ReplayState } from './replay';
 import { useRuntime } from './useRuntime';
@@ -23,7 +24,7 @@ export function ReplayConsole({
   code: string;
   /** The program's other files. */
   files?: Record<string, string>;
-  mode?: 'visual' | 'judge';
+  mode?: 'visual' | 'judge' | 'program';
 }) {
   const { runtime, runtimeState, runtimeDetail } = useRuntime(language);
   const [session, setSession] = useState<{ state: ReplayState; result: RunResult } | null>(null);
@@ -129,6 +130,7 @@ export function ReplayConsole({
           </p>
         )}
       </div>
+      {error && <ErrorHelp language={language} error={error} />}
     </div>
   );
 }

@@ -42,6 +42,20 @@ export const EVENT_DATA = {
     /** Judged on the server (Java, C++, Go) rather than in the browser. Only the server writes it: sync drops it from events a device sends. */
     verified: z.literal(true).optional(),
   }),
+  /**
+   * A language task checked (src/tasks/, /learn/tasks/<task>): its kind, the
+   * language it was done in (none for a choice), whether every case passed,
+   * and how many cases (or unit tests) ran and failed. Checked in the
+   * browser, so it is practice, like a problem submitted in Python or JS.
+   */
+  'task.checked': z.object({
+    task: slug,
+    kind: z.enum(['choice', 'output', 'program', 'function', 'tests', 'bug', 'parsons', 'fill']),
+    language: z.enum(['python', 'javascript', 'typescript']).optional(),
+    passed: z.boolean(),
+    tests: count,
+    failed: count,
+  }),
   /** A review card rated: 1 again, 2 hard, 3 good, 4 easy (FSRS's ratings). */
   'review.rated': z.object({ card: z.string().regex(CARD_ID), rating: z.number().int().min(1).max(4) }),
   /**

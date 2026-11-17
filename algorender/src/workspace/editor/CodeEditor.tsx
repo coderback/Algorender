@@ -27,6 +27,7 @@ import { useAutocomplete, useVim } from '@/lib/preferences';
 import type { ProblemLanguage } from '@/problems/languages';
 import { completionSource } from './complete';
 import { isChecked, syntaxProblems, type CheckedLanguage } from './syntax';
+import { SymbolBar } from './SymbolBar';
 import { highlight, phrases, theme } from './theme';
 
 /** 1-based lines to highlight: where the trace is, where an error was raised, and where the tutor points. */
@@ -146,6 +147,8 @@ function firstProblem(state: EditorState): (Shown & { from: number }) | null {
  * as you type (with the message on hover, and the first one in words under the
  * code); completions offer keywords and names from the file (a setting turns
  * them off); Ctrl/⌘ F searches; and Vim keys are a setting, loaded only when on.
+ * With `symbols`, phones get a bar of brackets, quotes and indent keys above
+ * the keyboard while the editor has focus (SymbolBar).
  */
 export function CodeEditor({
   value,
@@ -158,6 +161,7 @@ export function CodeEditor({
   readOnly = false,
   minLines = 12,
   onRun,
+  symbols = false,
 }: {
   value: string;
   onChange?: (value: string) => void;
@@ -174,6 +178,8 @@ export function CodeEditor({
   minLines?: number;
   /** Ctrl/Cmd+Enter. */
   onRun?: () => void;
+  /** Phones: the symbol bar above the keyboard while the editor has focus. */
+  symbols?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -186,6 +192,7 @@ export function CodeEditor({
   const complete = useAutocomplete();
   const vimKeys = useVim();
   const [problem, setProblem] = useState<Shown | null>(null);
+  const [focused, setFocused] = useState(false);
   const problemAt = useRef(0);
 
   useEffect(() => {
@@ -307,8 +314,15 @@ export function CodeEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-well bg-code text-left">
+    <div
+      className="overflow-hidden rounded-well bg-code text-left"
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
+      }}
+    >
       <div ref={host} />
+      {symbols && !readOnly && focused && <SymbolBar view={view} language={language} />}
       <div role="status">
         {problem && (
           <p className="flex items-start gap-2 border-t border-code-highlight px-3 py-2 text-[13px] leading-snug text-code-ink" data-syntax-error>

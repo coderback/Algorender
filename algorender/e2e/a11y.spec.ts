@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { visualisers } from '../src/data/visualisers.js';
 import { exercises } from '../src/content/exercises';
 import { lessons } from '../src/content/lessons';
+import { tasks } from '../src/content/tasks';
 
 // WCAG 2.2 A/AA plus axe's best practices, on every page, in both themes.
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
@@ -26,6 +27,7 @@ const pages = [
   '/design/sandbox',
   '/design/url-shortener',
   ...lessons.map((l) => `/learn/${l.slug}`),
+  ...tasks.map((t) => `/learn/tasks/${t.slug}`),
   '/compare',
   '/embed',
   '/design/estimate',

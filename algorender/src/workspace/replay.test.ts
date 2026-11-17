@@ -77,9 +77,9 @@ describe('transcript', () => {
   });
 
   it('asks for the typed lines, with input left open until it is ended', () => {
-    const state = typeLine(typeLine(startReplay(5), 'a'), '');
-    expect(replayRequest(state)).toEqual({ stdin: 'a\n\n', moreInput: true, seed: 5 });
-    expect(replayRequest(endInput(state))).toEqual({ stdin: 'a\n\n', moreInput: false, seed: 5 });
+    const state = typeLine(typeLine(startReplay(5, 1000), 'a'), '');
+    expect(replayRequest(state)).toEqual({ stdin: 'a\n\n', moreInput: true, seed: 5, clock: 1000 });
+    expect(replayRequest(endInput(state))).toEqual({ stdin: 'a\n\n', moreInput: false, seed: 5, clock: 1000 });
   });
 
   it('words where the run stands', () => {

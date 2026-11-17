@@ -72,6 +72,9 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'viz-diffusion', path: '/visualisers/diffusion?step=3' },
   // 6f: the mock interviews hub, signed out (e2e/interview.spec.ts shoots a round, its debrief and the hub signed in).
   { name: 'interviews', path: '/practice/interview' },
+  // Language tracks L1: a sample task of each kind shipped (e2e/tasks.spec.ts shoots them after a failed check).
+  { name: 'task-program', path: '/learn/tasks/py-greet-by-name' },
+  { name: 'task-output', path: '/learn/tasks/py-two-names-one-value' },
 ];
 
 const VIEWPORTS = [

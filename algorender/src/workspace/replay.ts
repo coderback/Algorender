@@ -6,8 +6,9 @@
 // what the learner has typed so far as stdin and `moreInput`: when it asks
 // for a line past the end, it stops (`waiting`), the console shows its output
 // and a prompt, and the learner's next line runs it again from the start with
-// that line added. Programs are fast and, with a seed fixed for the console's
-// session and a fresh file system every run, deterministic, so each run
+// that line added. Programs are fast and, with a seed and a clock fixed for
+// the console's session, a fresh file system every run and the Python
+// worker's string hash seed fixed, deterministic, so each run
 // replays the last and goes one read further. "End input" (Ctrl+D in a
 // terminal) runs it once more without `moreInput`, so it reaches end of file.
 //
@@ -23,10 +24,12 @@ export type ReplayState = {
   closed: boolean;
   /** Seeds random for the whole session, so every replay makes the same choices. */
   seed: number;
+  /** The program's clock for the whole session (ms since 1970), so every replay sees the same time. */
+  clock: number;
 };
 
-export function startReplay(seed = Math.floor(Math.random() * 2 ** 31)): ReplayState {
-  return { typed: [], closed: false, seed };
+export function startReplay(seed = Math.floor(Math.random() * 2 ** 31), clock = Date.now()): ReplayState {
+  return { typed: [], closed: false, seed, clock };
 }
 
 export const typeLine = (state: ReplayState, line: string): ReplayState => ({ ...state, typed: [...state.typed, line] });
@@ -34,8 +37,8 @@ export const typeLine = (state: ReplayState, line: string): ReplayState => ({ ..
 export const endInput = (state: ReplayState): ReplayState => ({ ...state, closed: true });
 
 /** What the next run adds to its request. */
-export function replayRequest(state: ReplayState): { stdin: string; moreInput: boolean; seed: number } {
-  return { stdin: state.typed.map((line) => `${line}\n`).join(''), moreInput: !state.closed, seed: state.seed };
+export function replayRequest(state: ReplayState): { stdin: string; moreInput: boolean; seed: number; clock: number } {
+  return { stdin: state.typed.map((line) => `${line}\n`).join(''), moreInput: !state.closed, seed: state.seed, clock: state.clock };
 }
 
 /** A piece of the console: what the program wrote, or a line the learner typed (echoed where it was read). */

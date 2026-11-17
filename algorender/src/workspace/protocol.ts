@@ -58,8 +58,22 @@
 // `files` adds the learner's other files beside the main one (`code`):
 // Python imports them, and reads data files with open(); JS/TS requires
 // them, or imports them once sucrase has turned imports into requires. Only
-// the main file is instrumented, stepped and drawn; code in the other files
-// runs as written.
+// the main file is stepped and drawn; code in the other files runs as
+// written, except that its lines count toward maxSteps, so an endless loop
+// there stops with a message too.
+//
+// 'program' mode checks programs (the language tracks' tasks): the code runs
+// as written, as in 'judge' mode (plain arguments and helpers, no visual
+// collections, no events at all, not even prints), but every line of the
+// learner's files counts toward maxSteps, so a beginner's endless loop stops
+// with a message instead of a timeout that restarts the runtime. It is always
+// a program: stdin defaults to '', and the result carries the streams. With
+// an entry the function is called after the top level, with plain arguments.
+// `tests` adds hidden unit tests, run after the top level (see TestResult).
+//
+// `clock` makes time deterministic, so a replayed program sees the same
+// time: the clock starts there and moves only when the program sleeps
+// (Python's time and datetime, JS's Date and performance.now).
 
 import type { VarValue } from '@/engine/types';
 
@@ -172,8 +186,10 @@ declare class ListNode {
  * reading short programs step by step: each step is a `step` event.
  * 'judge' runs the code as written and records only what it prints, for
  * checking answers on big inputs (see the top of this file).
+ * 'program' runs a program as written, counting its lines, for checking it
+ * against stdin/stdout cases and unit tests (see the top of this file).
  */
-export type RunMode = 'visual' | 'lines' | 'judge';
+export type RunMode = 'visual' | 'lines' | 'judge' | 'program';
 
 /** 'judge' mode: the most lines of printed output kept; one more line says the rest was cut. */
 export const MAX_PRINTS = 100;
@@ -226,7 +242,32 @@ export type RunRequest = {
    * The two languages' sequences differ.
    */
   seed?: number;
+  /**
+   * The program's clock, in ms since 1970: time.time(), datetime.now(),
+   * Date.now() and new Date() start here and move only as the program
+   * sleeps (time.sleep), so a replay or a check sees the same time.
+   */
+  clock?: number;
+  /**
+   * 'program' mode: hidden unit tests, run after the main file's top level,
+   * which see its top-level names. Python: every `test_*` function, with
+   * plain assert (rewritten to say what each side was) and `raises(Error)`
+   * as a context manager. JS/TS: test(name, fn) with a small expect()
+   * (toBe, toEqual, toBeCloseTo, toContain, toThrow, toBeTruthy, toBeFalsy,
+   * toBeNull, toBeUndefined, and .not). Each test's outcome is a TestResult.
+   */
+  tests?: string;
 };
+
+/**
+ * One unit test's outcome. `message` says why it failed, in the language's
+ * words; `line` is the learner's line an error came from, when it came from
+ * the main file (a failed assert is in the hidden tests, so it has none).
+ */
+export type TestResult = { name: string; passed: boolean; message?: string; line?: number | null };
+
+/** The most unit tests a run reports; more are an authoring mistake. */
+export const MAX_TESTS = 50;
 
 /** The most other files a run takes, and their characters in all. */
 export const MAX_FILES = 8;
@@ -273,6 +314,12 @@ export type StackFrame = {
   locals: [string, MemValue][];
   /** On a 'return' step, what the innermost frame is returning. */
   returning?: MemValue;
+  /**
+   * The file the frame's code is in, when it isn't the main one (as
+   * RunError.file). Not set yet: other files are stepped from L3, with the
+   * multi-file editor.
+   */
+  file?: string;
 };
 
 /**
@@ -411,8 +458,16 @@ export type RunResult = {
    * then. A console writes the line there, as a terminal echoes typing.
    */
   reads?: number[];
+  /**
+   * A program: where each input() prompt (and readline question) sits in
+   * stdout, as [start, end) in UTF-16 units, so a checker can leave prompts
+   * out and a console can show them apart.
+   */
+  prompts?: [number, number][];
   /** `moreInput`: the program asked for a line past the end of stdin, and stopped there. */
   waiting?: boolean;
+  /** 'program' mode with `tests`: each test's outcome, in the order they ran. */
+  tests?: TestResult[];
 };
 
 /** A runtime runs requests; the worker-backed ones live in runner.ts. */

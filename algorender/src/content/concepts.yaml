@@ -4,7 +4,7 @@
 # ids exist, prerequisites form no cycle, every visualiser on the site is
 # taught by at least one concept, and planned concepts have nothing to open yet.
 #
-# Each track belongs to one area (dsa, math, ml or systems): what the placement
+# Each track belongs to one area (dsa, math, ml, systems or languages): what the placement
 # check offers, what next steps spread across, and the track's colour family
 # (src/data/tracks.ts, which content.test.ts keeps in step with this file).
 #
@@ -87,6 +87,11 @@ tracks:
     title: Systems
     area: systems
     summary: How operating systems, databases and distributed systems really work.
+  - id: python
+    title: Python
+    area: languages
+    summary: Programming from zero in Python, watching every name, list and call in memory as it runs.
+    planned: true
 
 concepts:
   # ── Foundations ──────────────────────────────────────────────
@@ -1092,3 +1097,319 @@ concepts:
     prereqs: [logical-clocks]
     visualisers: [raft]
     lesson: consensus
+
+  # ── Python (the language tracks: topics arrive from L2) ──────
+  # The units of the language tracks' proposal (§1a), planned until each
+  # topic is written. DS&A concepts don't depend on them: a learner coming
+  # from another language mustn't be sent through Python first.
+  # Basics
+  - id: py-first-program
+    title: Your first program
+    track: python
+    summary: print, comments, and how Python runs a program from top to bottom.
+    planned: true
+  - id: py-variables
+    title: Variables
+    track: python
+    summary: Names that point at values, and what = really does.
+    prereqs: [py-first-program]
+    planned: true
+  - id: py-numbers
+    title: Numbers
+    track: python
+    summary: Whole numbers and floats, //, % and **, and why 0.1 + 0.2 is not quite 0.3.
+    prereqs: [py-variables]
+    planned: true
+  - id: py-strings-intro
+    title: Strings
+    track: python
+    summary: Text in quotes, joining it, f-strings, len and indexing.
+    prereqs: [py-variables]
+    planned: true
+  - id: py-input
+    title: Reading input
+    track: python
+    summary: input() and turning the text it gives into numbers, and what happens when that fails.
+    prereqs: [py-strings-intro, py-numbers]
+    planned: true
+  - id: py-booleans
+    title: True and False
+    track: python
+    summary: Comparisons, and, or, not, and which values count as true.
+    prereqs: [py-numbers]
+    planned: true
+  # Control flow
+  - id: py-if
+    title: if, elif and else
+    track: python
+    summary: Running code only when a condition holds.
+    prereqs: [py-booleans]
+    planned: true
+  - id: py-while
+    title: while loops
+    track: python
+    summary: Repeating while a condition holds, and making sure it stops.
+    prereqs: [py-if]
+    planned: true
+  - id: py-for-range
+    title: for loops and range
+    track: python
+    summary: Counting with range and walking through a sequence.
+    prereqs: [py-while]
+    planned: true
+  - id: py-break-continue
+    title: break and continue
+    track: python
+    summary: Leaving a loop early, skipping a turn, and the loop else.
+    prereqs: [py-for-range]
+    planned: true
+  - id: py-nested-loops
+    title: Loops inside loops
+    track: python
+    summary: A loop for every turn of another, and how the work multiplies.
+    prereqs: [py-for-range]
+    planned: true
+  # Functions
+  - id: py-functions
+    title: Functions
+    track: python
+    summary: def, return and None, naming a piece of work to use again.
+    prereqs: [py-if, py-for-range]
+    planned: true
+  - id: py-parameters
+    title: Parameters
+    track: python
+    summary: Defaults, keyword arguments, *args and **kwargs.
+    prereqs: [py-functions]
+    planned: true
+  - id: py-scope
+    title: Scope
+    track: python
+    summary: Which name a line means (local, enclosing, global or built-in), and global and nonlocal.
+    prereqs: [py-functions]
+    planned: true
+  - id: py-recursion
+    title: Recursion in Python
+    track: python
+    summary: A function that calls itself, frame by frame, down to a base case.
+    prereqs: [py-functions]
+    planned: true
+  - id: py-lambdas
+    title: Lambdas
+    track: python
+    summary: Small functions without a name, passed to other functions.
+    prereqs: [py-parameters]
+    planned: true
+  # Collections
+  - id: py-lists
+    title: Lists
+    track: python
+    summary: Ordered, changeable sequences, their methods, slicing and changing in place.
+    prereqs: [py-for-range, py-functions]
+    planned: true
+  - id: py-references
+    title: References and copies
+    track: python
+    summary: Two names for one list, is against ==, shallow and deep copies, and the mutable default.
+    prereqs: [py-lists]
+    planned: true
+  - id: py-tuples
+    title: Tuples
+    track: python
+    summary: Sequences that cannot change, and unpacking them into names.
+    prereqs: [py-lists]
+    planned: true
+  - id: py-dicts
+    title: Dictionaries
+    track: python
+    summary: Looking values up by key, adding, changing and walking through them.
+    prereqs: [py-lists]
+    planned: true
+  - id: py-sets
+    title: Sets
+    track: python
+    summary: Collections without duplicates, membership and set operations.
+    prereqs: [py-lists]
+    planned: true
+  - id: py-comprehensions
+    title: Comprehensions
+    track: python
+    summary: Building lists, dicts and sets in one expression.
+    prereqs: [py-lists, py-dicts]
+    planned: true
+  - id: py-sorting
+    title: Sorting
+    track: python
+    summary: sorted, sort and key=, and sorting by several things at once.
+    prereqs: [py-lists, py-lambdas]
+    planned: true
+  # Strings
+  - id: py-string-methods
+    title: String methods
+    track: python
+    summary: split, join, strip, replace and find, and why strings never change in place.
+    prereqs: [py-strings-intro, py-lists]
+    planned: true
+  - id: py-formatting
+    title: Formatting output
+    track: python
+    summary: Format specs for widths, decimals and alignment.
+    prereqs: [py-string-methods]
+    planned: true
+  - id: py-regex
+    title: Regular expressions
+    track: python
+    summary: Matching patterns in text with the re module.
+    prereqs: [py-string-methods]
+    planned: true
+  # Errors
+  - id: py-exceptions
+    title: Handling errors
+    track: python
+    summary: try, except, else and finally, and reading a traceback.
+    prereqs: [py-functions]
+    planned: true
+  - id: py-raising
+    title: Raising errors
+    track: python
+    summary: raise, and exceptions of your own.
+    prereqs: [py-exceptions]
+    planned: true
+  # Classes
+  - id: py-classes
+    title: Classes and objects
+    track: python
+    summary: __init__, self and attributes, bundling data with the code that uses it.
+    prereqs: [py-functions, py-dicts]
+    planned: true
+  - id: py-dunder
+    title: Special methods
+    track: python
+    summary: __str__, __repr__, __eq__ and __lt__, for objects that print and compare.
+    prereqs: [py-classes]
+    planned: true
+  - id: py-inheritance
+    title: Inheritance
+    track: python
+    summary: Subclasses, super and overriding a method.
+    prereqs: [py-classes]
+    planned: true
+  - id: py-dataclasses
+    title: Dataclasses
+    track: python
+    summary: Classes that are mostly data, without the boilerplate.
+    prereqs: [py-classes]
+    planned: true
+  - id: py-duck-typing
+    title: Duck typing
+    track: python
+    summary: Caring what an object can do, not what it is.
+    prereqs: [py-inheritance]
+    planned: true
+  # Files and I/O
+  - id: py-files
+    title: Files
+    track: python
+    summary: open, with, reading and writing, and the modes.
+    prereqs: [py-exceptions, py-string-methods]
+    planned: true
+  - id: py-csv-json
+    title: CSV and JSON
+    track: python
+    summary: Reading and writing data files in two common formats.
+    prereqs: [py-files, py-dicts]
+    planned: true
+  - id: py-pathlib
+    title: Paths
+    track: python
+    summary: Building and inspecting file paths with pathlib.
+    prereqs: [py-files]
+    planned: true
+  # Modules
+  - id: py-modules
+    title: Modules
+    track: python
+    summary: import and from, a program over two files, and the __name__ check.
+    prereqs: [py-functions]
+    planned: true
+  - id: py-stdlib
+    title: The standard library
+    track: python
+    summary: collections, itertools, math, random with a seed, and datetime.
+    prereqs: [py-modules]
+    planned: true
+  # Iteration
+  - id: py-iterators
+    title: Iterators
+    track: python
+    summary: iter, next and StopIteration, which is what a for loop really does.
+    prereqs: [py-classes]
+    planned: true
+  - id: py-generators
+    title: Generators
+    track: python
+    summary: yield and generator expressions, values made one at a time, only when asked for.
+    prereqs: [py-iterators]
+    planned: true
+  - id: py-itertools
+    title: itertools
+    track: python
+    summary: Chaining, grouping and combining iterables without building lists.
+    prereqs: [py-generators]
+    planned: true
+  # Testing
+  - id: py-asserts
+    title: Assertions
+    track: python
+    summary: assert, and checking your own assumptions as the code runs.
+    prereqs: [py-functions]
+    planned: true
+  - id: py-test-functions
+    title: Test functions
+    track: python
+    summary: test_ functions, and many cases for one test.
+    prereqs: [py-asserts]
+    planned: true
+  - id: py-edge-cases
+    title: Edge cases
+    track: python
+    summary: Writing tests that catch the bugs, at empty, one, many and the boundaries.
+    prereqs: [py-test-functions]
+    planned: true
+  # Idioms
+  - id: py-enumerate-zip
+    title: enumerate and zip
+    track: python
+    summary: Walking with an index, or through two sequences at once.
+    prereqs: [py-for-range, py-tuples]
+    planned: true
+  - id: py-unpacking
+    title: Unpacking
+    track: python
+    summary: Starred names, swapping, and unpacking in a for loop.
+    prereqs: [py-tuples]
+    planned: true
+  - id: py-context-managers
+    title: Context managers
+    track: python
+    summary: with, and writing a context manager of your own.
+    prereqs: [py-classes, py-files]
+    planned: true
+  - id: py-decorators
+    title: Decorators
+    track: python
+    summary: Functions that wrap functions, and the @ syntax.
+    prereqs: [py-functions, py-lambdas]
+    planned: true
+  - id: py-type-hints
+    title: Type hints
+    track: python
+    summary: Annotating what a function takes and gives back.
+    prereqs: [py-functions]
+    planned: true
+  - id: py-pythonic
+    title: Writing Pythonic code
+    track: python
+    summary: Asking forgiveness rather than permission, and loops without indexes.
+    prereqs: [py-exceptions, py-comprehensions]
+    planned: true
