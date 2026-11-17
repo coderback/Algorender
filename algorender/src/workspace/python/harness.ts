@@ -31,6 +31,14 @@
 //   tracer, so a big test runs at full speed and only the worker's timeout
 //   stops an endless loop. Arguments are plain lists, printing is capped, and
 //   the result carries every argument's final value.
+// - A program (a request with stdin; protocol.ts) gets a _Program: sys.stdin,
+//   sys.stdout and sys.stderr are replaced while it runs, input() reads a
+//   line, print() writes the raw stream too, and SystemExit sets the exit
+//   code. Its other files are written to a fresh folder in Pyodide's file
+//   system (_Files), imported from there as ordinary modules (so they run
+//   as written, untraced), and removed with their modules when it ends.
+
+import { FILE_PATH, MAX_FILE_CHARS, MAX_FILES, MAX_OUTPUT, OUTPUT_CUT } from '../protocol';
 
 export const HARNESS = String.raw`
 import ast
@@ -38,10 +46,14 @@ import builtins
 import collections
 import dis
 import functools
+import importlib
 import itertools
 import json
 import math
 import operator
+import os
+import re
+import shutil
 import sys
 import time
 import types
@@ -64,6 +76,13 @@ MAX_DEPTH = 100
 # 'judge' mode, as protocol.ts: lines of printed output kept, and characters per line.
 MAX_PRINTS = 100
 MAX_PRINT_CHARS = 1000
+# Programs, as protocol.ts: characters kept per output stream, and the
+# learner's other files.
+MAX_OUTPUT = ${MAX_OUTPUT}
+OUTPUT_CUT = ${JSON.stringify(OUTPUT_CUT)}
+MAX_FILES = ${MAX_FILES}
+MAX_FILE_CHARS = ${MAX_FILE_CHARS}
+FILE_PATH = r'${FILE_PATH.source}'
 # The longest linked list returned as JSON.
 MAX_LIST = 1000000
 # A frame left by a return or a yield ends on one of these; any other last
@@ -225,6 +244,26 @@ def _error_line(error):
             line = tb.tb_lineno
         tb = tb.tb_next
     return line
+
+
+def _where(error, files=None):
+    """(line, file) of an error: the innermost line of the learner's code in
+    its traceback, in the main file (file None) or one of its other files. A
+    syntax error in another file comes from the import, so it names its own."""
+    if files is not None and isinstance(error, SyntaxError):
+        name = files.relative(error.filename)
+        if name is not None:
+            return error.lineno, name
+    line, file = None, None
+    tb = error.__traceback__
+    while tb is not None:
+        name = tb.tb_frame.f_code.co_filename
+        if name == LEARNER:
+            line, file = tb.tb_lineno, None
+        elif files is not None and files.relative(name) is not None:
+            line, file = tb.tb_lineno, files.relative(name)
+        tb = tb.tb_next
+    return line, file
 
 
 def _message(error):
@@ -1467,7 +1506,17 @@ class _Run:
             sep = ' '
         elif not isinstance(sep, str):
             raise TypeError(f'sep must be None or a string, not {type(sep).__name__}')
-        self.emit('print', text=sep.join(str(a) for a in args))
+        text = sep.join(str(a) for a in args)
+        if self.program is None:
+            self.emit('print', text=text)
+            return
+        stream, end, shown = self.program.target(file, end)
+        if shown:
+            self.emit('print', text=text)
+        stream.write(text + end)
+
+    # Set by _run for a program (a request with stdin).
+    program = None
 
     def arg(self, spec):
         kind = spec.get('kind')
@@ -1513,22 +1562,38 @@ class _Run:
         }
 
 
-def _error(kind, message, line):
-    return {'kind': kind, 'message': message, 'line': line}
+def _error(kind, message, line, file=None):
+    error = {'kind': kind, 'message': message, 'line': line}
+    if file is not None:
+        error['file'] = file
+    return error
+
+
+def _failed(e, files):
+    """The error that ended a run: a runtime error, or a syntax error in another file."""
+    line, file = _where(e, files)
+    if isinstance(e, SyntaxError) and file is not None:
+        return _error('syntax', f'{type(e).__name__}: {e.msg}', line, file)
+    return _error('runtime', _message(e), line, file)
 
 
 def _run(request):
     global _current
     run = _Run(request)
     entry = request['entry']
+    program = _Program(request) if request.get('stdin') is not None else None
+    run.program = program
 
+    problem = _files_problem(request.get('files'))
+    if problem is not None:
+        return _ended(run.result(None, problem, 0), program)
     try:
         tree = _Statements().visit(_Instrument().visit(ast.parse(request['code'], LEARNER, 'exec')))
         code = compile(ast.fix_missing_locations(tree), LEARNER, 'exec')
     except SyntaxError as e:
-        return run.result(None, _error('syntax', f'{type(e).__name__}: {e.msg}', e.lineno), 0)
+        return _ended(run.result(None, _error('syntax', f'{type(e).__name__}: {e.msg}', e.lineno), 0), program)
     except ValueError as e:  # e.g. a null byte in the source
-        return run.result(None, _error('syntax', f'SyntaxError: {e}', None), 0)
+        return _ended(run.result(None, _error('syntax', f'SyntaxError: {e}', None), 0), program)
 
     namespace = {'__name__': '__main__', '__builtins__': builtins,
                  '_viz_cmp': _viz_cmp, '_viz_cell': _viz_cell, '_viz_named': _viz_named,
@@ -1540,9 +1605,15 @@ def _run(request):
     error = None
     real_print = builtins.print
     real_input = builtins.input
+    files = _Files(request['files']) if request.get('files') else None
+    seeded = _Seeded(request.get('seed'))
     _current = run
     builtins.print = run.print
-    builtins.input = _no_input
+    builtins.input = program.input if program else _no_input
+    if program:
+        program.install()
+    if files:
+        files.install()
     started = time.perf_counter()
     try:
         sys.settrace(run.trace_calls)
@@ -1561,13 +1632,25 @@ def _run(request):
                 returned = fn(*args)
         finally:
             sys.settrace(None)
+    except _Waiting:
+        pass  # the program's fields say so
     except _Stop as e:
         error = _error('limit', str(e), e.line if e.line is not None else _error_line(e))
+    except SystemExit as e:
+        if program is None:
+            error = _failed(e, files)
+        else:
+            program.exit(e)
     except BaseException as e:
-        error = _error('runtime', _message(e), _error_line(e))
+        error = _failed(e, files)
     finally:
         builtins.print = real_print
         builtins.input = real_input
+        if program:
+            program.restore()
+        if files:
+            files.restore()
+        seeded.restore()
         _current = None
     ms = (time.perf_counter() - started) * 1000
 
@@ -1578,7 +1661,7 @@ def _run(request):
     result = run.result(returned, error, ms)
     if request.get('calls') and returned is not None:
         result['returned'] = returned  # already JSON, call by call, even when one raised
-    return result
+    return _ended(result, program)
 
 
 def _call_methods(cls, name, calls, out):
@@ -1596,31 +1679,315 @@ def _call_methods(cls, name, calls, out):
 
 
 # ---------------------------------------------------------------------------
+# Programs: stdin, a raw stdout, exit codes, and the learner's other files
+# ---------------------------------------------------------------------------
+
+class _Waiting(_Stop):
+    """moreInput: the program read past the end of stdin, so the run stops
+    there and the console asks the learner for another line."""
+
+
+class _Out:
+    """sys.stdout or sys.stderr while a program runs: what it writes, kept to
+    MAX_OUTPUT characters. units counts UTF-16 code units, the length a
+    JavaScript string has, so the app can cut stdout where a read happened."""
+
+    def __init__(self):
+        self.parts = []
+        self.size = 0
+        self.units = 0
+        self.cut = False
+
+    def write(self, text):
+        if not isinstance(text, str):
+            raise TypeError(f'write() argument must be str, not {type(text).__name__}')
+        if self.cut:
+            return len(text)
+        if self.size + len(text) > MAX_OUTPUT:
+            self._add(text[:MAX_OUTPUT - self.size] + OUTPUT_CUT)
+            self.cut = True
+        else:
+            self._add(text)
+        return len(text)
+
+    def _add(self, text):
+        self.parts.append(text)
+        self.size += len(text)
+        self.units += len(text.encode('utf-16-le')) // 2
+
+    def text(self):
+        return ''.join(self.parts)
+
+    def flush(self):
+        pass
+
+    def isatty(self):
+        return False
+
+    def writable(self):
+        return True
+
+    def readable(self):
+        return False
+
+    encoding = 'utf-8'
+
+
+class _In:
+    """sys.stdin while a program runs: the request's stdin, a line at a time."""
+
+    def __init__(self, text, more, out):
+        text = text.replace('\r\n', '\n')
+        parts = text.split('\n')
+        self.lines = [p + '\n' for p in parts[:-1]] + ([parts[-1]] if parts[-1] else [])
+        self.next = 0
+        self.more = more
+        self.out = out
+        # How long stdout was when each line was read (in UTF-16 units), and
+        # how much of it to keep (in characters) once the program is waiting.
+        self.reads = []
+        self.waiting_at = None
+
+    def line(self):
+        """The next line, or '' at the end of input; with moreInput, the end stops the run."""
+        if self.next < len(self.lines):
+            self.reads.append(self.out.units)
+            self.next += 1
+            return self.lines[self.next - 1]
+        if self.more:
+            if self.waiting_at is None:
+                self.waiting_at = self.out.size
+            raise _Waiting('waiting for input')
+        return ''
+
+    def readline(self, size=-1):
+        return self.line()
+
+    def read(self, size=-1):
+        text = []
+        while True:
+            line = self.line()
+            if not line:
+                return ''.join(text)
+            text.append(line)
+
+    def readlines(self, hint=-1):
+        return list(iter(self.line, ''))
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        line = self.line()
+        if not line:
+            raise StopIteration
+        return line
+
+    def isatty(self):
+        return False
+
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    encoding = 'utf-8'
+
+
+class _Program:
+    """A run with stdin: input() and sys.stdin read it, and output goes to
+    a raw stdout and stderr."""
+
+    def __init__(self, request):
+        self.stdout = _Out()
+        self.stderr = _Out()
+        self.stdin = _In(request.get('stdin') or '', bool(request.get('moreInput')), self.stdout)
+        self.exit_code = 0
+        self.saved = None
+
+    def input(self, prompt=''):
+        if prompt != '':
+            sys.stdout.write(str(prompt))
+        line = self.stdin.line()
+        if not line:
+            raise EOFError('EOF when reading a line')
+        return line[:-1] if line.endswith('\n') else line
+
+    def target(self, file, end):
+        """Where print() writes: (stream, end, whether it is a print event)."""
+        if end is None:
+            end = '\n'
+        elif not isinstance(end, str):
+            raise TypeError(f'end must be None or a string, not {type(end).__name__}')
+        stream = sys.stdout if file is None else file
+        if not callable(getattr(stream, 'write', None)):
+            raise AttributeError(f"'{type(stream).__name__}' object has no attribute 'write'")
+        return stream, end, stream is self.stdout or stream is self.stderr
+
+    def install(self):
+        self.saved = (sys.stdin, sys.stdout, sys.stderr)
+        sys.stdin, sys.stdout, sys.stderr = self.stdin, self.stdout, self.stderr
+
+    def restore(self):
+        if self.saved is not None:
+            sys.stdin, sys.stdout, sys.stderr = self.saved
+            self.saved = None
+
+    def exit(self, e):
+        """sys.exit(code), as CPython ends: None is 0, a number is itself, anything else is printed and is 1."""
+        code = e.code
+        if code is None:
+            self.exit_code = 0
+        elif isinstance(code, int) and not isinstance(code, bool):
+            self.exit_code = code
+        else:
+            self.stderr.write(f'{code}\n')
+            self.exit_code = 1
+
+    def fields(self, error):
+        waiting = self.stdin.waiting_at is not None
+        if waiting:
+            exit_code = None
+        elif error is None:
+            exit_code = self.exit_code
+        else:
+            exit_code = None if error['kind'] == 'limit' else 1
+        stdout = self.stdout.text()
+        return {
+            'stdout': stdout[:self.stdin.waiting_at] if waiting else stdout,
+            'stderr': self.stderr.text(),
+            'exitCode': exit_code,
+            'reads': self.stdin.reads,
+            'waiting': waiting,
+        }
+
+
+def _ended(result, program):
+    """A result, with a program's output; a waiting program ended at its read, not in error."""
+    if program is not None:
+        result.update(program.fields(result['error']))
+        if result['waiting']:
+            result['error'] = None
+    return result
+
+
+def _files_problem(files):
+    """Why a request's other files can't be used, as an error, or None."""
+    if not files:
+        return None
+    if len(files) > MAX_FILES:
+        return _error('limit', f'A run takes at most {MAX_FILES} other files.', None)
+    if sum(len(text) for text in files.values()) > MAX_FILE_CHARS:
+        return _error('limit', f'The other files hold more than {MAX_FILE_CHARS:,} characters in all.', None)
+    for path in files:
+        if not re.fullmatch(FILE_PATH, path):
+            return _error('runtime', f'“{path}” isn’t a file name the runner takes: a name with an extension, in at most one folder.', None)
+    return None
+
+
+_runs = itertools.count(1)
+
+
+class _Files:
+    """The learner's other files, written to a fresh folder in Pyodide's file
+    system for one run. It goes first on sys.path, so the main file imports
+    them, and is the working directory, so open() finds data files. All of
+    it goes when the run ends: the next run (a replay too) starts afresh."""
+
+    def __init__(self, files):
+        self.root = f'/tmp/algorender/run{next(_runs)}'
+        self.files = files
+        self.saved = None
+
+    def relative(self, filename):
+        prefix = self.root + '/'
+        return filename[len(prefix):] if isinstance(filename, str) and filename.startswith(prefix) else None
+
+    def install(self):
+        for path, text in self.files.items():
+            full = f'{self.root}/{path}'
+            os.makedirs(os.path.dirname(full), exist_ok=True)
+            with open(full, 'w', encoding='utf-8') as f:
+                f.write(text)
+        self.saved = (os.getcwd(), set(sys.modules), sys.dont_write_bytecode)
+        sys.dont_write_bytecode = True
+        sys.path.insert(0, self.root)
+        os.chdir(self.root)
+        importlib.invalidate_caches()
+
+    def restore(self):
+        if self.saved is None:
+            return
+        cwd, modules, bytecode = self.saved
+        self.saved = None
+        os.chdir(cwd)
+        if self.root in sys.path:
+            sys.path.remove(self.root)
+        sys.dont_write_bytecode = bytecode
+        # The learner's modules go, so the next run imports its own code again.
+        for name in list(sys.modules):
+            if name not in modules and self.relative(getattr(sys.modules[name], '__file__', None)) is not None:
+                del sys.modules[name]
+        shutil.rmtree(self.root, ignore_errors=True)
+
+
+class _Seeded:
+    """A request's seed: random makes the same choices every run, so a
+    replayed program does what it did before, and its own state comes back after."""
+
+    def __init__(self, seed):
+        self.state = None
+        if seed is not None:
+            import random
+            self.state = random.getstate()
+            random.seed(seed)
+
+    def restore(self):
+        if self.state is not None:
+            import random
+            random.setstate(self.state)
+            self.state = None
+
+
+# ---------------------------------------------------------------------------
 # 'judge' mode
 # ---------------------------------------------------------------------------
 
 class _Prints:
     """What a judged run printed: the first MAX_PRINTS lines, then a note."""
 
-    def __init__(self):
+    def __init__(self, program=None):
         self.events = []
         self.count = 0
+        self.program = program
 
     def print(self, *args, sep=' ', end='\n', file=None, flush=False):
         if sep is None:
             sep = ' '
         elif not isinstance(sep, str):
             raise TypeError(f'sep must be None or a string, not {type(sep).__name__}')
+        if self.program is not None:
+            # A program's output is all there in stdout; the events keep the start, as ever.
+            text = sep.join(str(a) for a in args)
+            stream, end, shown = self.program.target(file, end)
+            stream.write(text + end)
+            if shown:
+                self.event(lambda: text)
+            return
+        self.event(lambda: sep.join(str(a) for a in args))
+
+    def event(self, text):
         if self.count > MAX_PRINTS:
             return
         self.count += 1
         if self.count > MAX_PRINTS:
-            text = '… (the rest of the output is cut)'
+            shown = '… (the rest of the output is cut)'
         else:
-            text = sep.join(str(a) for a in args)
-            if len(text) > MAX_PRINT_CHARS:
-                text = text[:MAX_PRINT_CHARS] + '…'
-        self.events.append({'kind': 'print', 'text': text, 'line': None, 'vars': {}})
+            shown = text()
+            if len(shown) > MAX_PRINT_CHARS:
+                shown = shown[:MAX_PRINT_CHARS] + '…'
+        self.events.append({'kind': 'print', 'text': shown, 'line': None, 'vars': {}})
 
 
 def _plain_table(rows, cols, fill=0):
@@ -1659,12 +2026,16 @@ def _judge_arg(spec):
 def _judge(request):
     entry = request['entry']
     calls = request.get('calls')
-    prints = _Prints()
+    program = _Program(request) if request.get('stdin') is not None else None
+    prints = _Prints(program)
 
     def result(returned, error, ms, args=()):
-        return {'events': prints.events, 'arrays': {}, 'grids': {}, 'returned': returned,
-                'error': error, 'ms': ms, 'args': [] if error else [_json(a) for a in args]}
+        return _ended({'events': prints.events, 'arrays': {}, 'grids': {}, 'returned': returned,
+                       'error': error, 'ms': ms, 'args': [] if error else [_json(a) for a in args]}, program)
 
+    problem = _files_problem(request.get('files'))
+    if problem is not None:
+        return result(None, problem, 0)
     try:
         code = compile(request['code'], LEARNER, 'exec')
     except SyntaxError as e:
@@ -1679,27 +2050,48 @@ def _judge(request):
     error = None
     real_print = builtins.print
     real_input = builtins.input
+    files = _Files(request['files']) if request.get('files') else None
+    seeded = _Seeded(request.get('seed'))
     builtins.print = prints.print
-    builtins.input = _no_input
+    builtins.input = program.input if program else _no_input
+    if program:
+        program.install()
+    if files:
+        files.install()
     started = time.perf_counter()
     try:
         exec(code, namespace)
-        fn = namespace.get(entry)
-        if not callable(fn):
+        # A program (stdin, no entry) is its top level; a function is called.
+        fn = namespace.get(entry) if entry or program is None else None
+        if (entry or program is None) and not callable(fn):
             error = _error('runtime', f"Define {'a class' if calls else 'a function'} called {entry}.", None)
+        elif fn is None:
+            pass
         elif calls:
             returned = []
             _call_methods(fn, entry, calls, returned)
         else:
             args = [_judge_arg(spec) for spec in request.get('args') or []]
             returned = _json(fn(*args))
+    except _Waiting:
+        pass  # the program's fields say so
+    except SystemExit as e:
+        if program is None:
+            error = _failed(e, files)
+        else:
+            program.exit(e)
     except BaseException as e:
-        error = _error('runtime', _message(e), _error_line(e))
+        error = _failed(e, files)
         if not calls:
             returned = None
     finally:
         builtins.print = real_print
         builtins.input = real_input
+        if program:
+            program.restore()
+        if files:
+            files.restore()
+        seeded.restore()
     ms = (time.perf_counter() - started) * 1000
     return result(returned, error, ms, args)
 

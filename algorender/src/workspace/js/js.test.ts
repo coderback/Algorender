@@ -2,7 +2,7 @@
 
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { CONTRACT, drawnSteps, entryFor, expectedSteps, stepProblems } from '../contract';
+import { CONTRACT, drawnSteps, entryFor, expectedSteps, fileStem, filesFor, stepProblems } from '../contract';
 import {
   type Arg,
   DEFAULT_LIMITS,
@@ -12,10 +12,13 @@ import {
   MAX_FROM,
   MAX_ITEMS,
   MAX_OBJECTS,
+  MAX_OUTPUT,
   type MemValue,
+  OUTPUT_CUT,
   type MethodCall,
   type RunEvent,
   type RunMode,
+  type RunRequest,
   type RunResult,
 } from '../protocol';
 import { instrument } from './instrument';
@@ -29,8 +32,9 @@ function run(
   language: Language = 'javascript',
   mode?: RunMode,
   calls?: MethodCall[],
+  program: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed'> = {},
 ): RunResult {
-  return runJs({ language, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls });
+  return runJs({ language, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls, ...program });
 }
 
 const arr = (values: number[], name = 'arr'): Arg => ({ kind: 'array', name, values });
@@ -45,7 +49,7 @@ for (const language of ['javascript', 'typescript'] as const) {
     for (const c of CONTRACT.filter((c) => c.code[language] ?? c.code.javascript)) {
       it(c.name, () => {
         const code = c.code[language] ?? c.code.javascript!;
-        const r = run(code, entryFor(c, language), c.args, c.limits, language, c.mode, c.calls);
+        const r = run(code, entryFor(c, language), c.args, c.limits, language, c.mode, c.calls, { stdin: c.stdin, moreInput: c.moreInput, files: filesFor(c, language) });
         const want = c.expect;
         if (want.events) expect(r.events).toEqual(want.events);
         else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
@@ -60,8 +64,13 @@ for (const language of ['javascript', 'typescript'] as const) {
         if (want.grids) expect(r.grids).toEqual(want.grids);
         if ('returned' in want) expect(r.returned).toEqual(want.returned);
         if (want.args) expect(r.args).toEqual(want.args);
+        for (const key of ['stdout', 'stderr', 'exitCode', 'reads', 'waiting'] as const) {
+          if (key in want) expect(r[key]).toEqual(want[key]);
+        }
+        if (c.stdin === undefined) expect(r).not.toHaveProperty('stdout');
         if (want.error) {
           expect(r.error?.kind).toBe(want.error.kind);
+          if (want.error.file) expect(fileStem(r.error?.file)).toBe(want.error.file);
           if (want.error.line !== undefined) expect(r.error?.line).toBe(want.error.line);
           if (want.error.message) expect(r.error?.message).toContain(want.error.message);
           if (want.error.hasLine) expect(r.error?.line).toEqual(expect.any(Number));
@@ -1045,5 +1054,123 @@ describe('property: grid events replay to the final grids', () => {
       }),
       { numRuns: 40 },
     );
+  });
+});
+
+describe('programs', () => {
+  const program = (code: string, extra: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed'> = {}, mode?: RunMode, language: Language = 'javascript') =>
+    run(code, '', [], {}, language, mode, undefined, { stdin: '', ...extra });
+
+  it('leaves a run without stdin, files or a seed exactly as before', () => {
+    const r = run('console.log("hi");\nconst x = typeof require;\n', '');
+    expect(r).not.toHaveProperty('stdout');
+    expect(texts(r)).toEqual(['hi']);
+    expect(run('input();\n', '').error?.message).toBe('ReferenceError: input is not defined');
+  });
+
+  it('still records print events, on their lines', () => {
+    const r = program('const x = 1;\nprocess.stdout.write("a");\nconsole.log("b", x);\n');
+    expect(only(r, 'print').map((e) => [e.line, e.text])).toEqual([[3, 'b 1']]);
+    expect(r.stdout).toBe('ab 1\n');
+  });
+
+  it("readline: 'line' events for each line once the top level is done, then 'close'", () => {
+    const r = program(
+      `const rl = require("readline").createInterface({ input: process.stdin });
+const seen = [];
+rl.on("line", (line) => seen.push(line.trim()));
+rl.on("close", () => console.log(seen.join(",")));
+console.log("top level done");
+`,
+      { stdin: 'a\n b\nc' },
+    );
+    expect(r).toMatchObject({ stdout: 'top level done\na,b,c\n', exitCode: 0, reads: [15, 15, 15] });
+  });
+
+  it('readline: question() answers in turn, and close() ends the conversation', () => {
+    const code = `const rl = require("node:readline").createInterface({ input: process.stdin, output: process.stdout });
+rl.question("Name? ", (name) => {
+  rl.question("Age? ", (age) => {
+    console.log(\`\${name} is \${age}\`);
+    rl.close();
+  });
+});
+`;
+    expect(program(code, { stdin: 'Ada\n36\nextra\n' })).toMatchObject({ stdout: 'Name? Age? Ada is 36\n', reads: [6, 11] });
+    // The replay console: it waits at the second question.
+    expect(program(code, { stdin: 'Ada\n', moreInput: true })).toMatchObject({ stdout: 'Name? Age? ', waiting: true });
+  });
+
+  it('readline: `for await` is refused with a message, not run silently', () => {
+    const r = program(`const rl = require("readline").createInterface({ input: process.stdin });\nrl[Symbol.asyncIterator]();\n`);
+    expect(r.error?.message).toContain('for await');
+  });
+
+  it('process.exitCode sets the code a program ends with', () => {
+    expect(program('process.exitCode = 2;\nconsole.log("x");\n')).toMatchObject({ exitCode: 2, error: null });
+  });
+
+  it('process.exit inside a catch-all still exits', () => {
+    expect(program('try {\n  process.exit(4);\n} catch (e) {\n  console.log("caught");\n}\n')).toMatchObject({ exitCode: 4, stdout: '' });
+  });
+
+  it('judge mode: a catch-all that swallows the wait still leaves the program waiting', () => {
+    const r = program('try {\n  input("? ");\n} catch {}\nconsole.log("after");\n', { moreInput: true }, 'judge');
+    expect(r).toMatchObject({ waiting: true, stdout: '? ', error: null });
+  });
+
+  it('cuts a stream at MAX_OUTPUT characters, saying so once', () => {
+    const r = program('for (let i = 0; i < 2000; i++) process.stdout.write("x".repeat(50) + "\\n");\n', {}, 'judge');
+    expect(r.stdout!.endsWith(OUTPUT_CUT)).toBe(true);
+    expect(r.stdout!.length).toBe(MAX_OUTPUT + OUTPUT_CUT.length);
+  });
+
+  it('a seed makes Math.random repeat itself, and leaves the rest of Math alone', () => {
+    const code = 'console.log(Math.random(), Math.random(), Math.max(3, 9), Math.PI > 3);\n';
+    expect(program(code, { seed: 42 }).stdout).toBe(program(code, { seed: 42 }).stdout);
+    expect(program(code, { seed: 42 }).stdout).not.toBe(program(code, { seed: 43 }).stdout);
+    expect(program(code, { seed: 42 }).stdout).toMatch(/ 9 true\n$/);
+  });
+
+  it('runs a module once however often it is required, and gives a cycle the exports so far', () => {
+    const files = {
+      'a.js': 'console.log("loading a");\nexports.early = 1;\nconst b = require("./b");\nexports.late = b.seen;\n',
+      'b.js': 'const a = require("./a");\nexports.seen = a.early;\n',
+    };
+    const r = program('const a1 = require("./a");\nconst a2 = require("./a.js");\nconsole.log(a1 === a2, a1.late);\n', { files });
+    expect(r.stdout).toBe('loading a\ntrue 1\n');
+  });
+
+  it('requires a .json file as its value, and module.exports replaces exports', () => {
+    const files = { 'config.json': '{"size": 3}', 'make.js': 'module.exports = (n) => "x".repeat(n);\n' };
+    expect(program('const make = require("./make");\nconsole.log(make(require("./config.json").size));\n', { files }).stdout).toBe('xxx\n');
+  });
+
+  it('imports with ES module syntax in JavaScript and TypeScript', () => {
+    const files = { 'shapes.ts': 'export default function area(w: number, h: number): number {\n  return w * h;\n}\nexport const UNIT = "cm";\n' };
+    const code = 'import area, { UNIT } from "./shapes";\nconsole.log(area(2, 3), UNIT);\n';
+    expect(program(code, { files }, undefined, 'typescript').stdout).toBe('6 cm\n');
+    expect(program(code, { files }, 'judge', 'javascript').stdout).toBe('6 cm\n');
+    expect(program(code, { files }, 'lines', 'javascript').stdout).toBe('6 cm\n');
+  });
+
+  it('refuses a bare module name it doesn’t have, as Node words it', () => {
+    expect(program('require("lodash");\n', { files: { 'a.js': '' } }).error?.message).toBe("Error: Cannot find module 'lodash'");
+  });
+
+  it('fs: what a run writes it can read back; the next run starts from the request’s files', () => {
+    const files = { 'data.txt': 'seed' };
+    const fs = 'const fs = require("fs");\n';
+    expect(program(`${fs}fs.writeFileSync("out.txt", "x");\nfs.appendFileSync("out.txt", "y");\nconsole.log(fs.readFileSync("out.txt", "utf8"));\n`, { files }).stdout).toBe('xy\n');
+    expect(program(`${fs}console.log(fs.existsSync("out.txt"), fs.existsSync("data.txt"));\n`, { files }).stdout).toBe('false true\n');
+    expect(program(`${fs}fs.readFileSync("nope.txt");\n`, { files }).error?.message).toContain('ENOENT');
+  });
+
+  it('names a file in a folder by its path, on an error inside it', () => {
+    const files = { 'geo/shapes.js': 'exports.area = () => {\n  return null.size;\n};\n' };
+    for (const mode of ['visual', 'judge', 'lines'] as const) {
+      const r = program('const { area } = require("./geo/shapes");\narea();\n', { files }, mode);
+      expect(r.error, mode).toMatchObject({ kind: 'runtime', line: 2, file: 'geo/shapes.js' });
+    }
   });
 });

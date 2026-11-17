@@ -78,10 +78,16 @@ const HELPERS = new Set(['table', 'array']);
 export type InstrumentOptions = {
   /** 'lines' mode: steps that record memory, frames around function bodies, loops that step at their line. */
   lines?: boolean;
+  /**
+   * The run has other files: import and export become require() and
+   * exports (sucrase keeps every line where it was), so the main file can
+   * import them.
+   */
+  modules?: boolean;
 };
 
-export function instrument(code: string, language: SourceLanguage, { lines = false }: InstrumentOptions = {}): { code: string } {
-  const source = language === 'typescript' ? stripTypes(code) : code;
+export function instrument(code: string, language: SourceLanguage, { lines = false, modules = false }: InstrumentOptions = {}): { code: string } {
+  const source = language === 'typescript' || modules ? stripTypes(code, language, modules) : code;
   let program: ES.Program;
   try {
     program = parse(STRICT + source, { ecmaVersion: 'latest', sourceType: 'script', locations: true }) as unknown as ES.Program;
@@ -96,8 +102,8 @@ export function instrument(code: string, language: SourceLanguage, { lines = fal
  * The code as 'judge' mode runs it: TypeScript stripped and strict mode on,
  * nothing added, on the learner's own lines. Throws LearnerSyntaxError.
  */
-export function prepare(code: string, language: SourceLanguage): string {
-  const source = STRICT + (language === 'typescript' ? stripTypes(code) : code);
+export function prepare(code: string, language: SourceLanguage, { modules = false }: { modules?: boolean } = {}): string {
+  const source = STRICT + (language === 'typescript' || modules ? stripTypes(code, language, modules) : code);
   try {
     parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
   } catch (e) {
@@ -106,9 +112,11 @@ export function prepare(code: string, language: SourceLanguage): string {
   return source;
 }
 
-function stripTypes(code: string): string {
+function stripTypes(code: string, language: SourceLanguage, modules = false): string {
+  const transforms: ('typescript' | 'imports')[] = language === 'typescript' ? ['typescript'] : [];
+  if (modules) transforms.push('imports');
   try {
-    return transform(code, { transforms: ['typescript'], disableESTransforms: true }).code;
+    return transform(code, { transforms, disableESTransforms: true }).code;
   } catch (e) {
     throw syntaxError(e);
   }

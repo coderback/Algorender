@@ -47,6 +47,19 @@
 // lists, the only events are prints, and the result also carries every
 // argument's final value, for a function that answers in place. A design
 // problem (`calls`) constructs the entry class and calls its methods in turn.
+//
+// Programs (the first step towards the language tracks' program mode): a
+// request with `stdin`, even '', runs as a program in any mode. input() reads
+// its lines (Python also sys.stdin; JS/TS also fs.readFileSync(0) and a small
+// readline), prompts and prints write a raw stdout (`end=''` and all; stderr
+// apart), and sys.exit / process.exit end the run with an exit code rather
+// than an error. Print events are recorded as before. Without `stdin` nothing
+// changes: input() explains that a function gets its values as arguments.
+// `files` adds the learner's other files beside the main one (`code`):
+// Python imports them, and reads data files with open(); JS/TS requires
+// them, or imports them once sucrase has turned imports into requires. Only
+// the main file is instrumented, stepped and drawn; code in the other files
+// runs as written.
 
 import type { VarValue } from '@/engine/types';
 
@@ -190,7 +203,44 @@ export type RunRequest = {
    * for the constructor. A thrown error stops the run there.
    */
   calls?: MethodCall[];
+  /**
+   * Standard input: set it (even to '') to run as a program (see the top of
+   * this file). The result then carries stdout, stderr and exitCode.
+   */
+  stdin?: string;
+  /**
+   * The replay console: a read past the end of `stdin` stops the run, with
+   * `waiting` set, instead of giving the program end of file. The console
+   * asks the learner for a line and runs the program again from the start.
+   */
+  moreInput?: boolean;
+  /**
+   * The learner's other files, by path: `helpers.py`, `lib/shapes.ts`,
+   * `data.csv`. At most one folder deep, MAX_FILES of them, MAX_FILE_CHARS in
+   * all (FILE_PATH). `code` is the main file.
+   */
+  files?: Record<string, string>;
+  /**
+   * Seeds Python's random and JS's Math.random for the run, so running a
+   * program again makes the same choices (the replay console relies on it).
+   * The two languages' sequences differ.
+   */
+  seed?: number;
 };
+
+/** The most other files a run takes, and their characters in all. */
+export const MAX_FILES = 8;
+export const MAX_FILE_CHARS = 64_000;
+
+/** A file's path: a name with an extension, in at most one folder, with no `..` or leading `/`. */
+export const FILE_PATH = /^(?:[A-Za-z_][\w-]*\/)?[A-Za-z_][\w-]*\.[a-z]{1,4}$/;
+
+/** A program's stdout and stderr each keep this many characters; past it, one line says the rest was cut. */
+export const MAX_OUTPUT = 64_000;
+export const OUTPUT_CUT = '\n… (the rest of the output is cut)\n';
+
+/** Python's message when input() finds no more input, which the JS runtime's input() repeats. */
+export const EOF_MESSAGE = 'EOFError: EOF when reading a line';
 
 /**
  * A value as a memory diagram draws it: a primitive inline, written the way the
@@ -329,6 +379,8 @@ export type RunError = {
   /** One line, learner-facing: "IndexError: list index out of range". */
   message: string;
   line: number | null;
+  /** The file `line` is in, when it isn't the main one. */
+  file?: string;
 };
 
 export type RunResult = {
@@ -345,6 +397,22 @@ export type RunResult = {
   error: RunError | null;
   /** Wall-clock time spent running the learner's code, in ms. */
   ms: number;
+  /** A program (a request with `stdin`): everything it wrote to standard output, as written. */
+  stdout?: string;
+  /** A program: everything it wrote to standard error. */
+  stderr?: string;
+  /**
+   * A program: sys.exit / process.exit's code, 0 when it ran to the end, 1
+   * when an error ended it; null when it didn't end (a limit, or `waiting`).
+   */
+  exitCode?: number | null;
+  /**
+   * A program: for each line of stdin it read, in order, how long stdout was
+   * then. A console writes the line there, as a terminal echoes typing.
+   */
+  reads?: number[];
+  /** `moreInput`: the program asked for a line past the end of stdin, and stopped there. */
+  waiting?: boolean;
 };
 
 /** A runtime runs requests; the worker-backed ones live in runner.ts. */

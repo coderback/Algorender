@@ -24,6 +24,10 @@
 // so a big test runs at full speed; the worker's timeout is the only limit.
 // Arguments are plain values, printing is capped, an error's line comes from
 // the stack trace, and the result carries every argument's final value.
+//
+// A program (a request with stdin, files or a seed; program.ts) gets more
+// globals after the helpers: require, module, exports, input, process and a
+// seeded Math. Without them the factory is exactly as it always was.
 
 import type { VarValue } from '@/engine/types';
 import {
@@ -51,6 +55,8 @@ import {
   type StackFrame,
 } from '../protocol';
 import { instrument, LearnerSyntaxError, prepare } from './instrument';
+import { FileSyntaxError, filesProblem, fsFor, moduleFrame, Modules, Program, seededMath } from './program';
+import { ProgramSignal, STOP, StopSignal } from './signals';
 
 /** Lists longer than this show their first items, then the length (as the Python runtime does). */
 const LIST_SHOWN = 12;
@@ -64,9 +70,6 @@ const REPORTED_OP: Record<string, CompareOp> = {
   '<': '<', '<=': '<=', '>': '>', '>=': '>=', '==': '==', '!=': '!=', '===': '==', '!==': '!=',
 };
 
-/** Ends a run at a limit. Not an Error: the learner never sees it, and it needs no stack. */
-class StopSignal {}
-const STOP = new StopSignal();
 
 /** A visual-array cell read by a comparison: which cell, and what it held. */
 class Cell {
@@ -363,6 +366,7 @@ class Run {
       return value;
     },
     rethrow: (e: unknown) => {
+      if (e instanceof ProgramSignal) throw e;
       if (e instanceof StopSignal || this.stopped || this.done) throw STOP;
     },
 
@@ -598,26 +602,33 @@ class Run {
       : `Stopped after ${n} events: the code changed the array more times than the visual can show.`;
   }
 
-  private print = (...args: unknown[]) => {
+  /** A program (a request with stdin): its streams, which prints write too. */
+  program: Program | null = null;
+
+  private printTo(stream: 'stdout' | 'stderr', args: unknown[]) {
     const text = args.map((a) => this.show(a)).join(' ');
     if (!this.judging) {
       this.emit({ kind: 'print', text, ...this.at() });
-      return;
+    } else if (this.printed <= MAX_PRINTS) {
+      // A judged run can print a lot (a loop over a big test): keep the start.
+      const kept = ++this.printed > MAX_PRINTS ? '… (the rest of the output is cut)' : text.length > MAX_PRINT_CHARS ? `${text.slice(0, MAX_PRINT_CHARS)}…` : text;
+      this.events.push({ kind: 'print', text: kept, line: null, vars: {} });
     }
-    // A judged run can print a lot (a loop over a big test): keep the start.
-    if (this.printed > MAX_PRINTS) return;
-    const kept = ++this.printed > MAX_PRINTS ? '… (the rest of the output is cut)' : text.length > MAX_PRINT_CHARS ? `${text.slice(0, MAX_PRINT_CHARS)}…` : text;
-    this.events.push({ kind: 'print', text: kept, line: null, vars: {} });
-  };
+    this.program?.write(stream, `${text}\n`);
+  }
+
+  private print = (...args: unknown[]) => this.printTo('stdout', args);
+  /** As Node's console: errors, warnings and traces go to stderr. */
+  private printError = (...args: unknown[]) => this.printTo('stderr', args);
 
   private ignore = () => {};
 
   /** Stands in for `console` in the learner's code: anything printed becomes a print event. */
   readonly console = Object.freeze({
-    log: this.print, info: this.print, warn: this.print, error: this.print, debug: this.print,
-    trace: this.print, dir: this.print, table: this.print,
+    log: this.print, info: this.print, warn: this.printError, error: this.printError, debug: this.print,
+    trace: this.printError, dir: this.print, table: this.print,
     assert: (ok: unknown, ...args: unknown[]) => {
-      if (!ok) this.print('Assertion failed:', ...args);
+      if (!ok) this.printError('Assertion failed:', ...args);
     },
     group: this.ignore, groupCollapsed: this.ignore, groupEnd: this.ignore, time: this.ignore, timeEnd: this.ignore,
     timeLog: this.ignore, count: this.ignore, countReset: this.ignore, clear: this.ignore,
@@ -1265,11 +1276,19 @@ function execute(request: RunRequest): RunResult {
     return failed('internal', `The JavaScript runner can't run ${language}.`);
   }
   const mode = request.mode ?? 'visual';
+  // A program reads stdin and writes raw streams; other files and a seed need the same extra globals.
+  const io = request.stdin !== undefined ? new Program(request) : null;
+  const files = request.files && Object.keys(request.files).length > 0 ? request.files : null;
+  const extras = io !== null || files !== null || request.seed !== undefined;
+  const ended = (result: RunResult): RunResult => (io ? withProgram(result, io) : result);
+  const problem = filesProblem(request.files);
+  if (problem) return ended(failed(problem.kind, problem.message, problem.line));
   let code: string;
   try {
-    code = mode === 'judge' ? prepare(request.code, language) : instrument(request.code, language, { lines: mode === 'lines' }).code;
+    const modules = files !== null;
+    code = mode === 'judge' ? prepare(request.code, language, { modules }) : instrument(request.code, language, { lines: mode === 'lines', modules }).code;
   } catch (e) {
-    if (e instanceof LearnerSyntaxError) return failed('syntax', e.message, e.line);
+    if (e instanceof LearnerSyntaxError) return ended(failed('syntax', e.message, e.line));
     throw e;
   }
   // The entry name is pasted into the code below, so it must be a plain name;
@@ -1278,12 +1297,25 @@ function execute(request: RunRequest): RunResult {
   const lookup = entry === '' ? 'return undefined;' : `return typeof ${entry} === "function" ? ${entry} : undefined;`;
 
   const run = new Run(request.limits, mode);
+  run.program = io;
   // The learner's top level runs inside a function: its declarations stay
   // local to this run, and `entry` is looked up once it has finished. The
   // helpers are parameters, so the learner's own `table` or `array` shadows them.
-  const factory = new Function(...FACTORY_PARAMS, wrap(code, lookup));
   const { table, array, TreeNode, ListNode } = run.helpers;
-  const program = factory(run.viz, run.console, table, array, TreeNode, ListNode) as () => unknown;
+  const helpers = [run.viz, run.console, table, array, TreeNode, ListNode];
+  let program: () => unknown;
+  if (!extras) {
+    program = new Function(...FACTORY_PARAMS, wrap(code, lookup))(...helpers) as () => unknown;
+  } else {
+    const globals = { console: run.console, input: io ? io.input : noInput, process: io?.process, Math: request.seed === undefined ? Math : seededMath(request.seed), TreeNode, ListNode };
+    const builtins: Record<string, unknown> = {};
+    const modules = new Modules(files ?? {}, globals, builtins);
+    builtins.fs = fsFor(io, modules);
+    if (io) builtins.readline = io.readline;
+    const main = { exports: {} };
+    const extra = [modules.requireFrom(''), main, main.exports, globals.input, globals.process, globals.Math];
+    program = new Function(...FACTORY_PARAMS, ...PROGRAM_PARAMS, wrap(code, lookup))(...helpers, ...extra) as () => unknown;
+  }
 
   let returned: unknown = undefined;
   let args: unknown[] = [];
@@ -1292,6 +1324,8 @@ function execute(request: RunRequest): RunResult {
   const started = performance.now();
   try {
     const fn = run.topLevel(program);
+    // readline's events, once the top level is done, as Node's event loop would.
+    io?.drain();
     if (entry === '') {
       // The top level was the whole program.
     } else if (typeof fn !== 'function') {
@@ -1304,10 +1338,18 @@ function execute(request: RunRequest): RunResult {
       returned = (fn as (...args: unknown[]) => unknown)(...args);
     }
   } catch (e) {
-    error =
-      e instanceof StopSignal
-        ? (run.stopped ?? { kind: 'internal', message: 'The run stopped without a reason.', line: null })
+    if (e instanceof ProgramSignal) {
+      // process.exit or waiting for input: the program's fields say which.
+    } else if (e instanceof FileSyntaxError) {
+      error = { kind: 'syntax', message: e.message, line: e.line, file: e.file };
+    } else if (e instanceof StopSignal) {
+      error = run.stopped ?? { kind: 'internal', message: 'The run stopped without a reason.', line: null };
+    } else {
+      const inFile = files ? moduleFrame(e, files) : null;
+      error = inFile
+        ? { kind: 'runtime', message: errorMessage(e, run), ...inFile }
         : { kind: 'runtime', message: errorMessage(e, run), line: run.judging ? stackLine(e) : run.errorLine };
+    }
   }
   const ms = performance.now() - started;
   run.done = true;
@@ -1334,8 +1376,22 @@ function execute(request: RunRequest): RunResult {
   for (const [id, data] of run.arrays) arrays[id] = [...data];
   const grids: Record<string, (number | null)[][]> = {};
   for (const [id, data] of run.grids) grids[id] = data.map((row) => [...row]);
-  return { events: run.events, arrays, grids, returned: json, error, ms, ...(run.judging && { args: error ? [] : args.map(toJson) }) };
+  return ended({ events: run.events, arrays, grids, returned: json, error, ms, ...(run.judging && { args: error ? [] : args.map(toJson) }) });
 }
+
+/** A result with a program's output; a waiting program ended at its read, not in error. */
+function withProgram(result: RunResult, io: Program): RunResult {
+  const fields = io.fields(result.error);
+  return { ...result, ...fields, error: fields.waiting ? null : result.error };
+}
+
+function noInput(): never {
+  // There is no keyboard in the worker; the function's arguments are its input.
+  throw new Error('input() isn’t available here: your function gets its values as arguments.');
+}
+
+/** A program's extra globals, after the helpers. Modules get the same ones (program.ts). */
+const PROGRAM_PARAMS = ['require', 'module', 'exports', 'input', 'process', 'Math'];
 
 /**
  * A design problem: constructs the class with the first call's arguments, then

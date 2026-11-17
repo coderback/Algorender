@@ -21,7 +21,18 @@ export type ContractCase = {
   mode?: RunMode;
   /** A design problem's calls (the entry is a class). */
   calls?: MethodCall[];
+  /** A program: its standard input, and whether a read past the end waits (the replay console). */
+  stdin?: string;
+  moreInput?: boolean;
+  /** The other files, per language (TypeScript takes JavaScript's unless it has its own). */
+  files?: Partial<Record<Language, Record<string, string>>>;
   expect: {
+    /** A program's streams, exactly; both languages must write the same. */
+    stdout?: string;
+    stderr?: string;
+    exitCode?: number | null;
+    reads?: number[];
+    waiting?: boolean;
     /** 'lines' mode: every step in order (only the first steps.length with `firstSteps`). */
     steps?: StepShape[];
     firstSteps?: boolean;
@@ -43,9 +54,17 @@ export type ContractCase = {
      * `hasLine` asks for some learner line without pinning which (a limit
      * stops wherever the loop happens to be).
      */
-    error?: Pick<RunError, 'kind'> & { line?: number | null; message?: string; hasLine?: boolean };
+    error?: Pick<RunError, 'kind'> & { line?: number | null; message?: string; hasLine?: boolean; file?: string };
   };
 };
+
+/** The case's other files for a language. */
+export function filesFor(c: ContractCase, language: Language): Record<string, string> | undefined {
+  return c.files?.[language] ?? (language === 'typescript' ? c.files?.javascript : undefined);
+}
+
+/** A file named without its extension, so 'helpers.py' and 'helpers.js' compare alike. */
+export const fileStem = (file: string | undefined) => file?.replace(/\.\w+$/, '');
 
 const at = (line: number | null, vars: Record<string, number | string | boolean | null> = {}) => ({ line, vars });
 const cell = (index: number, value: number) => ({ array: 'arr', index, value });
@@ -1696,6 +1715,349 @@ function f(nums) {
     ],
     mode: 'lines',
     expect: { returned: [null, 3, 7] },
+  },
+
+  // -------------------------------------------------------------------------
+  // Programs: stdin, a raw stdout, exit codes, and other files
+  // -------------------------------------------------------------------------
+
+  {
+    name: 'program: input() reads a line, its prompt goes to stdout, and output keeps end and sep',
+    code: {
+      python: `name = input("Name? ")
+age = int(input())
+print("Hi", name, end="! ")
+print(age + 1, "next year", sep=", ")
+`,
+      javascript: `const name = input("Name? ");
+const age = Number(input());
+process.stdout.write("Hi " + name + "! ");
+console.log(age + 1 + ", next year");
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: 'Ada\n36\n',
+    expect: { stdout: 'Name? Hi Ada! 37, next year\n', stderr: '', exitCode: 0, reads: [6, 6], waiting: false },
+  },
+  {
+    name: 'program: a line without a newline at the end is still a line, and \\r\\n counts as one newline',
+    code: {
+      python: `a = input()
+b = input()
+print(a + "|" + b + "|")
+`,
+      javascript: `const a = input();
+const b = input();
+console.log(a + "|" + b + "|");
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: 'one\r\ntwo',
+    expect: { stdout: 'one|two|\n', exitCode: 0, reads: [0, 0] },
+  },
+  {
+    name: 'program: reading past the end of input is EOFError on its line, with exit code 1 and the output so far',
+    code: {
+      python: `first = input()
+print(first)
+second = input()
+`,
+      javascript: `const first = input();
+console.log(first);
+const second = input();
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: 'only\n',
+    expect: { stdout: 'only\n', exitCode: 1, reads: [0], waiting: false, error: { kind: 'runtime', line: 3, message: 'EOFError: EOF when reading a line' } },
+  },
+  {
+    name: 'program: reading all of stdin at once',
+    code: {
+      python: `import sys
+words = sys.stdin.read().split()
+print(len(words), words[-1].upper())
+`,
+      javascript: `const fs = require("fs");
+const words = fs.readFileSync(0, "utf8").split(/\\s+/).filter(Boolean);
+console.log(words.length, words[words.length - 1].toUpperCase());
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: 'to be\nor not\nto be',
+    expect: { stdout: '6 BE\n', exitCode: 0, reads: [0, 0, 0] },
+  },
+  {
+    name: 'program: an exit code ends the run there, with no error',
+    code: {
+      python: `import sys
+print("bye")
+sys.exit(3)
+print("never")
+`,
+      javascript: `const fs = require("fs");
+console.log("bye");
+process.exit(3);
+console.log("never");
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '',
+    expect: { stdout: 'bye\n', exitCode: 3 },
+  },
+  {
+    name: 'program: errors and warnings go to stderr, apart from stdout',
+    code: {
+      python: `import sys
+print("out")
+print("err", file=sys.stderr)
+`,
+      javascript: `const fs = require("fs");
+console.log("out");
+console.error("err");
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '',
+    expect: { stdout: 'out\n', stderr: 'err\n', exitCode: 0, prints: ['out', 'err'] },
+  },
+  {
+    name: 'program: an error ends the run with exit code 1, keeping what it wrote',
+    code: {
+      python: `print("start")
+n = int(input())
+`,
+      javascript: `console.log("start");
+const n = BigInt(input());
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: 'x\n',
+    expect: { stdout: 'start\n', exitCode: 1, error: { kind: 'runtime', line: 2 } },
+  },
+  {
+    name: 'program: the replay console stops at a read past the end, even inside try, and keeps the prompt',
+    code: {
+      python: `print("Guess a number")
+try:
+    guess = input("> ")
+except Exception:
+    print("no input")
+`,
+      javascript: `console.log("Guess a number");
+try {
+  const guess = input("> ");
+} catch (e) {
+  console.log("no input");
+}
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '',
+    moreInput: true,
+    expect: { stdout: 'Guess a number\n> ', exitCode: null, reads: [], waiting: true },
+  },
+  {
+    name: 'program: the replay console reads what it was given before it waits',
+    code: {
+      python: `total = 0
+while True:
+    total += int(input("n: "))
+    print("total", total)
+`,
+      javascript: `let total = 0;
+while (true) {
+  total += Number(input("n: "));
+  console.log("total", total);
+}
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '2\n5\n',
+    moreInput: true,
+    expect: { stdout: 'n: total 2\nn: total 7\nn: ', exitCode: null, reads: [3, 14], waiting: true },
+  },
+  {
+    name: 'program: where a read happened counts as a JavaScript string does (an emoji is two)',
+    code: {
+      python: `print("😀", end="")
+x = input()
+`,
+      javascript: `process.stdout.write("😀");
+const x = input();
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: 'a\n',
+    expect: { stdout: '😀', reads: [2] },
+  },
+  {
+    name: 'program: stdin in line-by-line mode, so a program can be watched reading it',
+    code: {
+      python: `x = input()
+print(x * 2)
+`,
+      javascript: `const x = input();
+console.log(x.repeat(2));
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    stdin: 'ab\n',
+    expect: { stdout: 'abab\n', exitCode: 0, reads: [0] },
+  },
+  {
+    name: 'program: judge mode runs the top level as written',
+    code: {
+      python: `n = int(input())
+print(sum(range(n + 1)))
+`,
+      javascript: `const n = Number(input());
+console.log((n * (n + 1)) / 2);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'judge',
+    stdin: '100\n',
+    expect: { stdout: '5050\n', exitCode: 0 },
+  },
+  {
+    name: 'files: the main file imports another, and reads a data file beside it',
+    code: {
+      python: `from shapes import area
+print(area(3, 4))
+print(open("note.txt").read())
+`,
+      javascript: `const { area } = require("./shapes");
+console.log(area(3, 4));
+console.log(require("fs").readFileSync("note.txt", "utf8"));
+`,
+    },
+    files: {
+      python: { 'shapes.py': 'def area(w, h):\n    return w * h\n', 'note.txt': 'hello' },
+      javascript: { 'shapes.js': 'exports.area = (w, h) => w * h;\n', 'note.txt': 'hello' },
+      typescript: { 'shapes.ts': 'export function area(w: number, h: number): number {\n  return w * h;\n}\n', 'note.txt': 'hello' },
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '',
+    expect: { stdout: '12\nhello\n', exitCode: 0, prints: ['12', 'hello'] },
+  },
+  {
+    name: 'files: a file in a folder, importing its neighbour',
+    code: {
+      python: `from geo import square
+print(square.area(5))
+`,
+      javascript: `const square = require("./geo/square");
+console.log(square.area(5));
+`,
+    },
+    files: {
+      python: { 'geo/square.py': 'from geo.rect import area as rect\n\ndef area(s):\n    return rect(s, s)\n', 'geo/rect.py': 'def area(w, h):\n    return w * h\n' },
+      javascript: { 'geo/square.js': 'const rect = require("./rect").area;\n\nexports.area = (s) => rect(s, s);\n', 'geo/rect.js': 'exports.area = (w, h) => w * h;\n' },
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '',
+    expect: { stdout: '25\n', exitCode: 0 },
+  },
+  {
+    name: 'files: a function in the main file can use another file, in function mode too',
+    code: {
+      python: `from helpers import double
+
+def run(arr):
+    return [double(x) for x in arr]
+`,
+      javascript: `const { double } = require("./helpers");
+
+function run(arr) {
+  return arr.map((x) => double(x));
+}
+`,
+    },
+    files: {
+      python: { 'helpers.py': 'def double(x):\n    return 2 * x\n' },
+      javascript: { 'helpers.js': 'exports.double = (x) => 2 * x;\n' },
+    },
+    entry: { python: 'run', js: 'run' },
+    args: [{ kind: 'value', name: 'arr', value: [1, 2, 3] }],
+    expect: { returned: [2, 4, 6] },
+  },
+  {
+    name: 'files: an error in another file names that file and its line',
+    code: {
+      python: `from helpers import check
+check(-1)
+`,
+      javascript: `const { check } = require("./helpers");
+check(-1);
+`,
+    },
+    files: {
+      python: { 'helpers.py': 'def check(n):\n    if n < 0:\n        raise ValueError("negative")\n    return n\n' },
+      javascript: { 'helpers.js': 'exports.check = (n) => {\n  if (n < 0) {\n    throw new RangeError("negative");\n  }\n  return n;\n};\n' },
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '',
+    expect: { exitCode: 1, error: { kind: 'runtime', line: 3, file: 'helpers', message: 'negative' } },
+  },
+  {
+    name: 'files: a syntax error in another file is a syntax error there',
+    code: {
+      python: `import helpers
+`,
+      javascript: `require("./helpers");
+`,
+    },
+    files: {
+      python: { 'helpers.py': 'x = 1\ny = (2\n' },
+      javascript: { 'helpers.js': 'const x = 1;\nconst y = (2;\n' },
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    expect: { error: { kind: 'syntax', line: 2, file: 'helpers' } },
+  },
+  {
+    name: 'files: a module that does not exist is a runtime error on the line asking for it',
+    code: {
+      python: `x = 1
+import nowhere
+`,
+      javascript: `const x = 1;
+require("./nowhere");
+`,
+    },
+    files: {
+      python: { 'helpers.py': '' },
+      javascript: { 'helpers.js': '' },
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    expect: { error: { kind: 'runtime', line: 2, message: 'nowhere' } },
+  },
+  {
+    name: 'files: a path that climbs out of the folder is refused before anything runs',
+    code: { python: `print("never")\n`, javascript: `console.log("never");\n` },
+    files: { python: { '../secret.py': '' }, javascript: { '../secret.js': '' } },
+    entry: { python: '', js: '' },
+    args: [],
+    stdin: '',
+    expect: { stdout: '', exitCode: 1, error: { kind: 'runtime', line: null, message: 'isn’t a file name' } },
   },
 ];
 
