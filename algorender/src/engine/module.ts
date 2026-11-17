@@ -76,6 +76,12 @@ export type AlgorithmModule<I, S> = {
   legend: readonly LegendEntry[];
   run: (input: I) => Generator<Frame<S>>;
   content: Content;
+  /**
+   * Pretrained models the run reads (public/models/<name>.json, via
+   * `model(name)` in src/ml/weights.ts). The explorer loads them before it
+   * records a trace, so only pages that show this module fetch them.
+   */
+  models?: readonly string[];
 };
 
 // ──────────────────────────── structures ───────────────────────────
@@ -119,6 +125,8 @@ export type StructureModule<M, S> = {
   stats: readonly StatSpec[];
   legend: readonly LegendEntry[];
   content: Content;
+  /** Pretrained models its operations read, as for an algorithm. */
+  models?: readonly string[];
 };
 
 // Identity helpers: they check a module against its own concrete input/state

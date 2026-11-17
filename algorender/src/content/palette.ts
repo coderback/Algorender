@@ -1,3 +1,4 @@
+import { typeTrack } from '@/data/tracks';
 import { visualisers } from '@/data/visualisers';
 import { PATTERNS } from '@/problems/patterns';
 import { loadProblems } from '@/problems/load';
@@ -32,7 +33,6 @@ export interface PaletteEntry {
   secondary?: { label: string; href: string };
 }
 
-const TYPE_TRACK: Record<string, string> = { systems: 'systems', math: 'math' };
 
 export function paletteEntries(): PaletteEntry[] {
   const { tracks, concepts } = loadConcepts();
@@ -49,7 +49,7 @@ export function paletteEntries(): PaletteEntry[] {
     timeComplexity?: { average: string };
   }[];
   const visBySlug = new Map(vis.map((v) => [v.slug, v]));
-  const trackOfVisualiser = (slug: string, type: string) => live.find((c) => c.visualisers.includes(slug))?.track ?? TYPE_TRACK[type] ?? 'foundations';
+  const trackOfVisualiser = (slug: string, type: string) => live.find((c) => c.visualisers.includes(slug))?.track ?? (typeTrack(type) || 'foundations');
   const conceptOf = new Map(live.map((c) => [c.id, c]));
   const problemsOf = (concept: string) => problems.filter((p) => p.patterns.some((id) => PATTERNS[id].concept === concept));
 

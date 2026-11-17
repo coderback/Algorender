@@ -16,6 +16,7 @@
 
 import { meetsBar } from '@/interview/rules';
 import type { ProgressEvent } from './events';
+import { areaOfTrack } from '@/data/tracks';
 import { mistakes } from './misconceptions';
 
 /** A concept as mastery needs it: a client-safe slice of src/content/concepts.yaml. */
@@ -114,6 +115,10 @@ export function observations(events: readonly ProgressEvent[], graph: MasteryGra
     switch (e.kind) {
       case 'quiz.answered':
         push(graph.lessons[e.data.lesson], { item: `quiz:${e.data.lesson}:${e.data.quiz}:${e.data.question}`, correct: e.data.correct, at: e.at, source: 'quiz' });
+        break;
+      case 'checkpoint.answered':
+        // Like a quiz answer: a checkpoint asks lesson questions and mistakes' probes later on, which is the delayed, varied retrieval mastery needs.
+        push(e.data.concept, { item: e.data.item, correct: e.data.correct, at: e.at, source: 'quiz' });
         break;
       case 'lesson.scored':
         // Quizzes count question by question (quiz.answered); a prediction challenge counts as one answer.
@@ -260,7 +265,8 @@ export const AREAS = [
 ] as const;
 export type AreaId = (typeof AREAS)[number]['id'];
 
-export const areaOf = (track: string): AreaId => (track === 'math' ? 'math' : track === 'ml' ? 'ml' : track === 'systems' ? 'systems' : 'dsa');
+/** A track's area, read from its `area` in concepts.yaml (via src/data/tracks.ts). */
+export const areaOf = (track: string): AreaId => areaOfTrack(track);
 
 export type NextStep = { concept: MasteryConcept; reason: 'continue' | 'ready' };
 

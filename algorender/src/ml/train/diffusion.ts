@@ -16,8 +16,11 @@ export const config: TrainConfig & { version: number } = {
   seed: 1,
 };
 
-export function train(log?: (step: number, loss: number) => void): { loss: number; weights: NetJson } {
-  const { net, loss } = trainNet(config, log);
+/** A quick version for iterating on the training code (`npm run models -- diffusion --fast`), never committed. */
+export const fast: TrainConfig & { version: number } = { ...config, steps: 1500 };
+
+export function train(log?: (step: number, loss: number) => void, using: TrainConfig = config): { loss: number; weights: NetJson } {
+  const { net, loss } = trainNet(using, log);
   return {
     loss: compact(loss, 4),
     weights: { sizes: [...net.sizes], W: net.W.map((layer) => layer.map((row) => row.map((v) => compact(v)))), b: net.b.map((row) => row.map((v) => compact(v))) },

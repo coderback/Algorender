@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { watchedByLine, type Exercise, type Verdict } from '@/content/exercises';
+import { testRequest, watchedByLine, type Exercise, type Verdict } from '@/content/exercises';
 import { DEFAULT_LIMITS, LINE_LIMITS, type Language, type RunMode, type RunResult } from './protocol';
 import { traceFor, type RunTrace } from './trace';
 import { useRuntime } from './useRuntime';
@@ -44,13 +44,15 @@ export function useExerciseRun(exercise: Exercise, language: Language) {
       if (running) return null;
       setRunning(true);
       const entry = language === 'python' ? exercise.entry.python : exercise.entry.js;
-      const call = (input: unknown, m: RunMode = 'visual') =>
+      const watch = (input: unknown, m: RunMode) =>
         runtime.run({ language, code, entry, args: exercise.args(input), limits: m === 'lines' ? LINE_LIMITS : DEFAULT_LIMITS, mode: m });
+      // The tests run as the exercise says: instrumented, or in 'judge' mode within its budget.
+      const call = (input: unknown) => runtime.run(testRequest(exercise, language, code, input));
 
       // Only the run the learner watches records every line; the tests just need the effects. A graph
       // or tree is drawn from the learner's own variables, so it is always watched line by line.
       const shown = exercise.examples.find((e) => e.id === example) ?? exercise.examples[0];
-      const result = await call(shown.input, mode === 'lines' || watchedByLine(exercise, shown.input) ? 'lines' : 'visual');
+      const result = await watch(shown.input, mode === 'lines' || watchedByLine(exercise, shown.input) ? 'lines' : 'visual');
       // A syntax error or a missing function fails every test the same way; say it once.
       const unrunnable = result.error?.kind === 'syntax' || (result.error != null && result.events.length === 0);
       let verdicts: Outcome['verdicts'] = null;

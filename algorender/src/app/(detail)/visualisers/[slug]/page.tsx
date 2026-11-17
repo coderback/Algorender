@@ -15,7 +15,7 @@ import { getLesson } from '@/content/lessons';
 import { masteryGraph } from '@/content/mastery';
 import { loadProblems } from '@/problems/load';
 import { getVisualiserBySlug } from '@/data/visualisers';
-import { TRACK_CLASSES, trackColour } from '@/data/tracks';
+import { TRACK_CLASSES, trackColour, typeTrack } from '@/data/tracks';
 import { getModule, modules } from '@/registry';
 
 // Serves every visualiser ported to the trace engine.
@@ -50,7 +50,7 @@ export default async function VisualiserPage({ params }: Props) {
   const graph = masteryGraph();
   // The concept that teaches it sets the page's colour, its status and its lesson, as on its Explore tile.
   const concept = graph.concepts.find((c) => !c.planned && c.visualisers.includes(slug));
-  const colour = trackColour(concept?.track ?? (meta.type === 'systems' || meta.type === 'math' ? meta.type : ''));
+  const colour = trackColour(concept?.track ?? typeTrack(meta.type));
   const c = TRACK_CLASSES[colour];
   const lesson = concept?.lesson ? getLesson(concept.lesson) : undefined;
   const race = sorting.some((a) => a.slug === slug) ? { href: '/compare', label: 'Race it against other sorts' } : undefined;

@@ -11,12 +11,22 @@
 // Whether the learner is on track compares the schedule as it was when the
 // plan was set with what is known now: concepts scheduled for windows that
 // have ended but not yet known are behind.
+//
+// Milestones: a plan that reaches into a stage of the math and ML path
+// (src/content/stages.ts) also schedules that stage's milestone, its
+// checkpoint and (once written) its project, right after the last of the
+// stage's concepts in the plan. The window holding a milestone is filled to
+// MILESTONE_FILL of its hours, so there is room to catch up before moving on.
 
 import type { Goal } from '@/content/goals';
+import { latestRounds } from './checkpoint';
 import type { ProgressEvent } from './events';
 import { KNOWN, mastery, relatives, type ConceptMastery, type MasteryGraph } from './mastery';
+import { builtExercises } from './projects';
 
 export const REVIEW_SHARE = 0.15;
+/** A window holding a milestone is filled to this share of its hours, leaving the rest to catch up. */
+export const MILESTONE_FILL = 0.7;
 export const WEEK_MS = 7 * 86_400_000;
 export const HOUR_CHOICES = [2, 3, 5, 8, 10, 15] as const;
 /** The most hours a week a plan takes (the `plan.set` event's limit). */
@@ -70,28 +80,76 @@ export function prerequisiteOrder(ids: ReadonlySet<string>, graph: MasteryGraph,
   return out;
 }
 
-export type PlanItem = { concept: string; minutes: number };
+export type ConceptItem = { concept: string; minutes: number };
+/** A stage's milestone: its checkpoint, and its project once there is one. */
+export type MilestoneItem = { milestone: number; minutes: number };
+export type PlanItem = ConceptItem | MilestoneItem;
 export type PlanWeek = { index: number; start: string; end: string; minutes: number; items: PlanItem[] };
+
+export const isMilestone = (item: PlanItem): item is MilestoneItem => 'milestone' in item;
+export const isConcept = (item: PlanItem): item is ConceptItem => 'concept' in item;
+
+/** A stage's milestone as the server describes it (src/content/checkpoints.ts): what it covers and roughly how long it takes. */
+export type PlanMilestone = {
+  stage: number;
+  title: string;
+  /** The stage's concepts: the milestone comes after the last of them in a plan. */
+  concepts: readonly string[];
+  /** The checkpoint plus the project, if the stage has one. */
+  minutes: number;
+  /** Whether its checkpoint is open (enough of the stage has lessons). */
+  checkpoint: boolean;
+  /** The project's parts (exercise slugs), when the stage has one. */
+  parts?: readonly string[];
+};
+
+/** Whether a milestone is done: its checkpoint (if open) taken, and its project (if any) built. */
+export function milestoneDone(m: PlanMilestone, events: readonly ProgressEvent[]): boolean {
+  if (m.checkpoint && !latestRounds(events).has(m.stage)) return false;
+  const built = builtExercises(events);
+  return (m.parts ?? []).every((p) => built.has(p));
+}
 
 /**
  * Packs items, in order, into windows of `hours` a week (less the review
  * share), starting at window `first` of a plan set at `since`. An item never
- * splits: one too big for an empty window takes the window alone.
+ * splits: one too big for an empty window takes the window alone. A window
+ * holding a milestone is filled only to MILESTONE_FILL.
  */
 export function pack(items: readonly PlanItem[], hours: number, since: Date, first: number): PlanWeek[] {
   const capacity = hours * 60 * (1 - REVIEW_SHARE);
   const weeks: PlanWeek[] = [];
   let week: PlanWeek | null = null;
+  let cap = capacity;
   for (const item of items) {
-    if (!week || (week.items.length > 0 && week.minutes + item.minutes > capacity)) {
+    const limit = isMilestone(item) ? Math.min(cap, capacity * MILESTONE_FILL) : cap;
+    if (!week || (week.items.length > 0 && week.minutes + item.minutes > limit)) {
       const index = first + weeks.length;
       week = { index, start: new Date(since.getTime() + index * WEEK_MS).toISOString(), end: new Date(since.getTime() + (index + 1) * WEEK_MS).toISOString(), minutes: 0, items: [] };
       weeks.push(week);
+      cap = capacity;
     }
     week.items.push(item);
     week.minutes += item.minutes;
+    if (isMilestone(item)) cap = capacity * MILESTONE_FILL;
   }
   return weeks;
+}
+
+/**
+ * Puts each milestone that isn't done right after the last of its stage's
+ * concepts still to learn, or first when the plan has none of them left. A
+ * milestone joins a plan only when the plan reaches into its stage.
+ */
+export function withMilestones(left: readonly ConceptItem[], planned: ReadonlySet<string>, milestones: readonly PlanMilestone[], done: (m: PlanMilestone) => boolean): PlanItem[] {
+  const out: PlanItem[] = [...left];
+  const due = milestones.filter((m) => m.concepts.some((c) => planned.has(c)) && !done(m)).sort((a, b) => a.stage - b.stage);
+  let front = 0;
+  for (const m of due) {
+    const last = out.findLastIndex((i) => isConcept(i) && m.concepts.includes(i.concept));
+    out.splice(last < 0 ? front++ : last + 1, 0, { milestone: m.stage, minutes: m.minutes });
+  }
+  return out;
 }
 
 export type PlanView = {
@@ -107,7 +165,7 @@ export type PlanView = {
   week: number;
   /** When the last window ends, or null when nothing is left. */
   finish: string | null;
-  /** Concepts the original schedule put in windows that have ended, and how many of those are not yet known. */
+  /** Items (concepts and milestones) the original schedule put in windows that have ended, and how many of those are not yet known (or done). */
   due: number;
   behind: number;
   /** With a target date the finish misses: the fewest hours a week that would make it (null when on time, or when no pace would). */
@@ -115,6 +173,8 @@ export type PlanView = {
   /** The target date can't be met at any pace up to MAX_HOURS. */
   targetOutOfReach: boolean;
   mastery: Map<string, ConceptMastery>;
+  /** The milestones that are in this plan, by stage. */
+  milestones: Map<number, PlanMilestone>;
 };
 
 /** The plan as it stands at `now`, or null without one (or with an unknown goal). Events must be in time order. */
@@ -124,24 +184,33 @@ export function planView(
   goals: readonly Goal[],
   minutes: Readonly<Record<string, number>>,
   now: Date,
+  milestones: readonly PlanMilestone[] = [],
 ): PlanView | null {
   const settings = currentPlan(events);
   const goal = settings && goals.find((g) => g.id === settings.goal);
   if (!settings || !goal) return null;
   const since = new Date(settings.since);
   const order = prerequisiteOrder(goalConcepts(goal, graph), graph, goal.concepts);
-  const itemsLeft = (m: Map<string, ConceptMastery>) =>
-    order.filter((id) => !KNOWN.has(m.get(id)?.status ?? 'new')).map((concept) => ({ concept, minutes: minutes[concept] ?? 20 }));
+  const planned = new Set(order);
+  const itemsLeft = (m: Map<string, ConceptMastery>, upTo: readonly ProgressEvent[]) =>
+    withMilestones(
+      order.filter((id) => !KNOWN.has(m.get(id)?.status ?? 'new')).map((concept) => ({ concept, minutes: minutes[concept] ?? 20 })),
+      planned,
+      milestones,
+      (ms) => milestoneDone(ms, upTo),
+    );
 
   const m = mastery(events, graph);
   const known = (id: string) => KNOWN.has(m.get(id)?.status ?? 'new');
   const week = Math.max(0, Math.floor((now.getTime() - since.getTime()) / WEEK_MS));
-  const weeks = pack(itemsLeft(m), settings.hours, since, week);
+  const weeks = pack(itemsLeft(m, events), settings.hours, since, week);
 
   // The schedule as set: everything known at the moment the plan was made drops out, the rest from window 0.
   const before = events.filter((e) => e.at <= settings.since);
-  const original = pack(itemsLeft(mastery(before, graph)), settings.hours, since, 0);
-  const dueItems = original.filter((w) => w.index < week).flatMap((w) => w.items.map((i) => i.concept));
+  const original = pack(itemsLeft(mastery(before, graph), before), settings.hours, since, 0);
+  const dueItems = original.filter((w) => w.index < week).flatMap((w) => w.items);
+  const byStage = new Map(milestones.map((ms) => [ms.stage, ms]));
+  const itemDone = (i: PlanItem) => (isConcept(i) ? known(i.concept) : milestoneDone(byStage.get(i.milestone)!, events));
 
   let hoursNeeded: number | null = null;
   let targetOutOfReach = false;
@@ -168,10 +237,11 @@ export function planView(
     week,
     finish,
     due: dueItems.length,
-    behind: dueItems.filter((id) => !known(id)).length,
+    behind: dueItems.filter((i) => !itemDone(i)).length,
     hoursNeeded,
     targetOutOfReach,
     mastery: m,
+    milestones: new Map(milestones.filter((ms) => ms.concepts.some((c) => planned.has(c))).map((ms) => [ms.stage, ms])),
   };
 }
 

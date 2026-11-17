@@ -20,7 +20,7 @@ import { useLessonProgress, useMastery, useMistakes, useProblemProgress, useProg
 import { isReady, nextSteps, type ConceptMastery, type MasteryConcept, type MasteryGraph } from '@/progress/mastery';
 import { CLEAR_AFTER } from '@/progress/misconceptions';
 import { BADGES, badges } from '@/progress/play';
-import { planView, WEEK_MS, type PlanView } from '@/progress/plan';
+import { isConcept, planView, WEEK_MS, type PlanMilestone, type PlanView } from '@/progress/plan';
 import { minutesLeft, readingByLesson, type Reading } from '@/progress/reading';
 import { dueToday, nextDue, type ReviewCard } from '@/progress/review';
 import { firstUnsolved, greeting, lessonInProgress, trackMastery, weekActivity, type WeekDay } from './select';
@@ -51,6 +51,8 @@ export type TodayData = {
   concepts: Record<string, TodayConcept>;
   /** Each common mistake's review card id → its name and lesson. */
   mistakes: Record<string, { title: string; lesson: string; lessonTitle: string }>;
+  /** The math and ML stages' milestones, so this week's plan matches /plan. */
+  milestones?: readonly PlanMilestone[];
 };
 
 /** A rough guide for "about N minutes" of review. */
@@ -78,7 +80,7 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
   const problems = useProblemProgress();
   const xp = useXp();
   const minutes = useMemo(() => Object.fromEntries(Object.entries(concepts).map(([id, c]) => [id, c.minutes])), [concepts]);
-  const plan = useMemo(() => planView(events, graph, goals, minutes, now), [events, graph, goals, minutes, now]);
+  const plan = useMemo(() => planView(events, graph, goals, minutes, now, data.milestones), [events, graph, goals, minutes, now, data.milestones]);
   const byId = useMemo(() => new Map(graph.concepts.map((c) => [c.id, c])), [graph]);
   const week = weekActivity(events, now);
   const due = dueToday(cards, now);
@@ -94,7 +96,8 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
 
   // This week's plan: what is left in the current window.
   const thisWeek = plan?.weeks.find((w) => w.index === plan.week) ?? null;
-  const left = thisWeek?.items.length ?? 0;
+  const weekConcepts = thisWeek?.items.filter(isConcept) ?? [];
+  const left = weekConcepts.length;
 
   const first = learner?.name?.trim().split(/\s+/)[0];
   const planLine = plan
@@ -106,7 +109,7 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
       : 'pick up where you left off';
 
   // Problem for today: an unsolved one for this week's concept, else for what is next.
-  const focus = [...(thisWeek?.items.map((i) => i.concept) ?? []), ...(upNext ? [upNext.id] : []), ...steps.map((s) => s.concept.id)];
+  const focus = [...weekConcepts.map((i) => i.concept), ...(upNext ? [upNext.id] : []), ...steps.map((s) => s.concept.id)];
   const solved = (slug: string) => !!problems[slug]?.solved;
   let problem: {
     concept: string;
@@ -116,7 +119,7 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
   for (const [i, id] of focus.entries()) {
     const p = concepts[id] && firstUnsolved(concepts[id].problems, solved);
     if (p) {
-      problem = { concept: id, p, fromPlan: i < (thisWeek?.items.length ?? 0) };
+      problem = { concept: id, p, fromPlan: i < weekConcepts.length };
       break;
     }
   }
@@ -348,7 +351,7 @@ function PlanCard({
       return !!last && new Date(last).getTime() >= windowStart && new Date(last) <= now;
     })
     .sort((a, b) => (m.get(b)!.last ?? '').localeCompare(m.get(a)!.last ?? ''))[0];
-  const current = plan.weeks.find((w) => w.index === plan.week)?.items.map((i) => i.concept) ?? [];
+  const current = plan.weeks.find((w) => w.index === plan.week)?.items.filter(isConcept).map((i) => i.concept) ?? [];
   const rows: { id: string; state: 'done' | 'current' | 'next' }[] = [
     ...(justDone ? [{ id: justDone, state: 'done' as const }] : []),
     ...current.map((id, i) => ({

@@ -4,6 +4,7 @@ import { landingData } from '@/components/landing/data';
 import { Landing } from '@/components/landing/Landing';
 import { AppShell } from '@/components/shell/AppShell';
 import { Today, type TodayData } from '@/components/today/Today';
+import { planMilestones } from '@/content/checkpoints';
 import { loadConcepts } from '@/content/concepts';
 import { goals } from '@/content/goals';
 import { getLesson } from '@/content/lessons';
@@ -52,6 +53,7 @@ function todayData(): TodayData {
     mistakes: Object.fromEntries(
       lessonMisconceptions().map((m) => [misconceptionCard(m.lesson, m.id), { title: m.title, lesson: m.lesson, lessonTitle: getLesson(m.lesson)?.title ?? m.lesson }]),
     ),
+    milestones: planMilestones(),
   };
 }
 

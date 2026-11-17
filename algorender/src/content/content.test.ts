@@ -47,6 +47,42 @@ describe('concept graph', () => {
     const planned = new Set(concepts.filter((c) => c.planned).map((c) => c.id));
     for (const c of concepts.filter((c) => !c.planned)) for (const p of c.prereqs) expect(planned.has(p), `${c.id} needs planned ${p}`).toBe(false);
   });
+
+  it('keeps `later` for prerequisites that are still planned, and moves them to `prereqs` once they are available', () => {
+    const byId = new Map(concepts.map((c) => [c.id, c]));
+    for (const c of concepts) {
+      for (const p of c.later) {
+        expect(byId.has(p), `${c.id} later needs ${p}`).toBe(true);
+        expect(byId.get(p)?.planned, `${p} is available now: move it from ${c.id}'s later to its prereqs`).toBe(true);
+        expect(c.prereqs, `${c.id} lists ${p} twice`).not.toContain(p);
+      }
+      // A planned concept just lists what it needs.
+      if (c.planned) expect(c.later, c.id).toEqual([]);
+    }
+  });
+
+  it('has no cycles once every `later` prerequisite is in place', () => {
+    const byId = new Map(concepts.map((c) => [c.id, [...c.prereqs, ...c.later]]));
+    const state = new Map<string, 'open' | 'done'>();
+    const visit = (id: string, path: string[]) => {
+      if (state.get(id) === 'done') return;
+      expect(state.get(id), `cycle: ${[...path, id].join(' → ')}`).not.toBe('open');
+      state.set(id, 'open');
+      for (const p of byId.get(id) ?? []) visit(p, [...path, id]);
+      state.set(id, 'done');
+    };
+    for (const c of concepts) visit(c.id, []);
+  });
+
+  it('gives every track an area, and the math and ML tracks the zero-to-hero concepts', () => {
+    expect(tracks.map((t) => t.area)).not.toContain(undefined);
+    const mathMl = concepts.filter((c) => tracks.find((t) => t.id === c.track)?.area === 'math' || tracks.find((t) => t.id === c.track)?.area === 'ml');
+    // 21 that were there before the zero-to-hero path, and its 77 new ones (planned until their batch).
+    expect(mathMl.length).toBe(98);
+    expect(mathMl.filter((c) => c.planned).length).toBe(77);
+    // A planned track has nothing available yet.
+    for (const t of tracks.filter((x) => x.planned)) expect(concepts.filter((c) => c.track === t.id && !c.planned).map((c) => c.id), t.id).toEqual([]);
+  });
 });
 
 describe('lessons', () => {

@@ -5,7 +5,7 @@
 // proof: hidden tests can't be hidden from a browser.
 
 import type { LegendEntry } from '@/engine/module';
-import type { Arg, Language, RunResult } from '@/workspace/protocol';
+import { DEFAULT_LIMITS, type Arg, type Language, type RunRequest, type RunResult } from '@/workspace/protocol';
 
 export type Verdict = { pass: boolean; message: string };
 
@@ -56,7 +56,37 @@ export type Exercise<I = any> = {
   pointers: string[];
   hints: string[];
   legend: LegendEntry[];
+  /**
+   * How the judged tests run. Without it, like the example: instrumented
+   * ('visual' mode, DEFAULT_LIMITS), so a check can count comparisons and
+   * writes. With it, in 'judge' mode: as written, at full speed, stopped only
+   * by the time budget, for tests too heavy to instrument (a training loop, a
+   * forward pass on given weights). A judged check reads only `returned`,
+   * `args` and `error`; the examples are still watched as usual.
+   */
+  judge?: { budget: Budget };
 };
+
+/** 'exercise' for ordinary heavy tests; 'project' for a milestone project's parts (src/content/projects). */
+export type Budget = 'exercise' | 'project';
+
+/**
+ * Each judged test's time budget, in ms. Project parts train small models in
+ * the learner's own code, and pure-Python lists are slow, so Python gets the
+ * most (decision 5 of the math and ML plan: 30–60 s, on a smaller config).
+ */
+export const JUDGE_BUDGET_MS: Record<Budget, Record<Language, number>> = {
+  exercise: { python: 8_000, javascript: 8_000, typescript: 8_000 },
+  project: { python: 60_000, javascript: 30_000, typescript: 30_000 },
+};
+
+/** The request that runs one judged test of an exercise: 'visual' with the default limits, or 'judge' within its budget. */
+export function testRequest<I>(exercise: Exercise<I>, language: Language, code: string, input: I): RunRequest {
+  const entry = language === 'python' ? exercise.entry.python : exercise.entry.js;
+  const args = exercise.args(input);
+  if (!exercise.judge) return { language, code, entry, args, limits: DEFAULT_LIMITS, mode: 'visual' };
+  return { language, code, entry, args, mode: 'judge', limits: { ...DEFAULT_LIMITS, timeoutMs: JUDGE_BUDGET_MS[exercise.judge.budget][language] } };
+}
 
 /**
  * Whether an input is watched line by line: a graph or tree argument is drawn

@@ -17,7 +17,7 @@ import type { ProgressEvent } from '@/progress/events';
 import { record, useProgressSnapshot } from '@/progress/hooks';
 import type { MasteryGraph } from '@/progress/mastery';
 import { areaOf, type AreaId, type PlacementQuestion } from '@/progress/placement';
-import { HOUR_CHOICES, planView, REVIEW_SHARE } from '@/progress/plan';
+import { HOUR_CHOICES, isConcept, planView, REVIEW_SHARE } from '@/progress/plan';
 
 const STEPS = ['Goal', 'Time', 'Placement', 'Plan'] as const;
 const TITLES = ['What are you learning for?', 'How much time do you have?', 'What do you already know?', 'Your plan'] as const;
@@ -274,7 +274,7 @@ function PlanPreview({ view, graph, hours }: { view: ReturnType<typeof planView>
             Week 1
           </h2>
           <ol className="flex flex-col gap-3">
-            {week.items.map((item, i) => (
+            {week.items.filter(isConcept).map((item, i) => (
               <li key={item.concept} className="flex items-center gap-3">
                 <span aria-hidden className={cx('flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold', i === 0 ? 'bg-accent text-on-accent' : 'bg-surface text-ink-soft')}>
                   {i + 1}

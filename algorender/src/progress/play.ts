@@ -7,10 +7,12 @@
 // rubric, cleared mistakes, and game rounds with diminishing returns on
 // repeats. Watching, marking a lesson done and time spent earn nothing.
 
+import { projects as allProjects, type Project } from '@/content/projects';
 import { meetsBar, scoreOf } from '@/interview/rules';
 import type { ProgressEvent } from './events';
 import { EXPLAINED_AT, KNOWN, type ConceptMastery, type MasteryGraph } from './mastery';
 import { CLEAR_AFTER } from './misconceptions';
+import { completedProjects } from './projects';
 
 /** XP for each kind of evidence. */
 export const XP = {
@@ -25,6 +27,8 @@ export const XP = {
   problemSolved: 30,
   /** Meeting every target of a system-design case study, once per case. */
   designPassed: 40,
+  /** Finishing every part of a milestone project (src/content/projects), once per project. */
+  projectCompleted: 100,
   /** The first mock interview on a problem that meets the bar: without a hint, or with one level-1 hint. */
   interview: { clean: 50, oneHint: 25 },
   exercise: { parsons: 5, fill: 10, write: 20, bug: 15 },
@@ -51,7 +55,7 @@ const daysBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(f
 export type XpEntry = { at: string; xp: number; why: string };
 
 /** Every XP award, in event order. Events must be in time order. */
-export function xpLedger(events: readonly ProgressEvent[]): XpEntry[] {
+export function xpLedger(events: readonly ProgressEvent[], projects: readonly Project[] = allProjects): XpEntry[] {
   const out: XpEntry[] = [];
   const award = (at: string, xp: number, why: string) => xp > 0 && out.push({ at, xp: Math.round(xp), why });
   const seen = new Set<string>();
@@ -59,6 +63,7 @@ export function xpLedger(events: readonly ProgressEvent[]): XpEntry[] {
   const born = new Map<string, string>();
   const rightInARow = new Map<string, number>();
   const roundsToday = new Map<string, number>();
+  const built = new Set<string>();
 
   for (const e of events) {
     switch (e.kind) {
@@ -82,6 +87,12 @@ export function xpLedger(events: readonly ProgressEvent[]): XpEntry[] {
         break;
       case 'exercise.passed':
         if (once(`exercise:${e.data.exercise}:${e.data.stage}`)) award(e.at, XP.exercise[e.data.stage], 'An exercise stage passed');
+        if (e.data.stage === 'write' || e.data.stage === 'bug') {
+          built.add(e.data.exercise);
+          for (const p of projects) {
+            if (p.parts.includes(e.data.exercise) && p.parts.every((x) => built.has(x)) && once(`project:${p.slug}`)) award(e.at, XP.projectCompleted, 'A milestone project built');
+          }
+        }
         break;
       case 'design.checked':
         if (e.data.passed && once(`design:${e.data.study}`)) award(e.at, XP.designPassed, 'A design met every target');
@@ -156,7 +167,12 @@ export const LEVELS = [
 export type LevelId = (typeof LEVELS)[number]['id'];
 
 /** Which of the four levels each concept has reached (any order: a math concept has nothing to implement). */
-export function conceptLevels(events: readonly ProgressEvent[], graph: MasteryGraph, mastery: Map<string, ConceptMastery>): Map<string, Set<LevelId>> {
+export function conceptLevels(
+  events: readonly ProgressEvent[],
+  graph: MasteryGraph,
+  mastery: Map<string, ConceptMastery>,
+  projects: readonly Project[] = allProjects,
+): Map<string, Set<LevelId>> {
   const out = new Map<string, Set<LevelId>>();
   const add = (concepts: readonly string[] | string | undefined, level: LevelId) => {
     for (const c of typeof concepts === 'string' ? [concepts] : (concepts ?? [])) {
@@ -202,6 +218,9 @@ export function conceptLevels(events: readonly ProgressEvent[], graph: MasteryGr
         break;
     }
   }
+  // A finished milestone project implements every concept it builds.
+  const finished = completedProjects(events, projects);
+  for (const p of projects) if (finished.has(p.slug)) add(p.concepts, 'implement');
   for (const m of mastery.values()) {
     if (m.status === 'practised' || m.status === 'mastered') add(m.id, 'predict');
     if (m.status === 'mastered') add(m.id, 'analyze');
@@ -223,13 +242,14 @@ export const BADGES = [
   { id: 'counterexample', title: 'Counterexample', how: 'Find an amount where greedy coin change goes wrong.' },
   { id: 'worst-case', title: 'Worst case', how: 'Build quicksort’s worst-case input.' },
   { id: 'architect', title: 'Architect', how: 'Meet every target of a system-design case study.' },
+  { id: 'builder', title: 'Builder', how: 'Finish every part of a milestone project.' },
   { id: 'interview-ready', title: 'Interview ready', how: 'Meet the bar in a mock interview without a hint.' },
 ] as const;
 
 export type BadgeId = (typeof BADGES)[number]['id'];
 
 /** The badges earned, each with when. Events must be in time order. */
-export function badges(events: readonly ProgressEvent[]): Map<BadgeId, string> {
+export function badges(events: readonly ProgressEvent[], projects: readonly Project[] = allProjects): Map<BadgeId, string> {
   const out = new Map<BadgeId, string>();
   const earn = (id: BadgeId, at: string) => !out.has(id) && out.set(id, at);
   const firstAnswers = new Set<string>();
@@ -285,6 +305,8 @@ export function badges(events: readonly ProgressEvent[]): Map<BadgeId, string> {
         break;
     }
   }
+  const firstProject = [...completedProjects(events, projects).values()].sort()[0];
+  if (firstProject) earn('builder', firstProject);
   return out;
 }
 

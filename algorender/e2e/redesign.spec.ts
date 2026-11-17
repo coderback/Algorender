@@ -66,6 +66,10 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'viz-ring', path: '/visualisers/queue' },
   // Group 3: the embed page.
   { name: 'embed-builder', path: '/embed' },
+  // Math and ML B0: a stage's checkpoint (open, and not yet open) and a visualiser whose weights load on demand.
+  { name: 'checkpoint', path: '/learn/checkpoint/2' },
+  { name: 'checkpoint-closed', path: '/learn/checkpoint/7' },
+  { name: 'viz-diffusion', path: '/visualisers/diffusion?step=3' },
   // 6f: the mock interviews hub, signed out (e2e/interview.spec.ts shoots a round, its debrief and the hub signed in).
   { name: 'interviews', path: '/practice/interview' },
 ];

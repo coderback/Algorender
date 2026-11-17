@@ -3,10 +3,13 @@
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import type { TrackColour } from '@/data/tracks';
+import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
 import { getModule } from '@/registry';
 import { AlgorithmExplorer } from './AlgorithmExplorer';
 import type { ExplorerOptions } from './options';
 import { StructureExplorer } from './StructureExplorer';
+import { useModels } from './useModels';
 
 const noopSubscribe = () => () => {};
 
@@ -71,6 +74,29 @@ export function Visualiser({ slug, variant = 'page', settings, showInput = false
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [lesson, settingsKey, showInput, variant, onPrediction, colour, next, details],
   );
+
+  // A module that reads pretrained weights waits for them before recording its trace.
+  const models = useModels(visualiser.models);
+  if (!models.ready) {
+    return (
+      <div ref={rootRef} data-hydrated={false}>
+        {models.failed ? (
+          <Alert tone="bad" role="alert" title="The trained model didn’t load.">
+            <span className="flex flex-wrap items-center gap-3">
+              This visualiser needs a model trained ahead of time. Check your connection, then try again.
+              <Button kind="secondary" size="s" onClick={models.retry}>
+                Try again
+              </Button>
+            </span>
+          </Alert>
+        ) : (
+          <div role="status" className="flex h-[520px] animate-pulse items-center justify-center rounded-card bg-surface text-sm text-ink-muted">
+            Loading the trained model…
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div ref={rootRef} data-hydrated={hydrated}>

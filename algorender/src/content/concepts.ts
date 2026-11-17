@@ -8,9 +8,13 @@ import { z } from 'zod';
 
 const id = z.string().regex(/^[a-z0-9-]+$/, 'ids are lowercase-kebab-case');
 
+/** The broad areas of the map (src/progress/mastery.ts's AREAS): each track belongs to one. */
+export const AREA_IDS = ['dsa', 'math', 'ml', 'systems'] as const;
+
 const TrackSchema = z.object({
   id,
   title: z.string(),
+  area: z.enum(AREA_IDS),
   summary: z.string(),
   planned: z.boolean().default(false),
 });
@@ -21,6 +25,12 @@ const ConceptSchema = z.object({
   track: id,
   summary: z.string(),
   prereqs: z.array(id).default([]),
+  /**
+   * Prerequisites still planned: an available concept can't depend on a
+   * planned one, so these join `prereqs` in the batch that makes them
+   * available (content.test.ts says when). Nothing reads them but the tests.
+   */
+  later: z.array(id).default([]),
   visualisers: z.array(id).default([]),
   lesson: id.optional(),
   links: z.array(z.object({ href: z.string().startsWith('/'), label: z.string() })).default([]),

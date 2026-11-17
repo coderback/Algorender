@@ -139,7 +139,8 @@
   --color-bad-soft: #fbe1dd;
   --color-bad-line: #e9a2b6;
 
-  /* Track pastels: one per area of the concept map (src/data/tracks.ts). Each
+  /* Track pastels: one per family of tracks on the concept map
+     (src/data/tracks.ts; math is rose, ML lime). Each
      has a fill, an ink for body text on it and a title ink for display text.
      chip-on-track is the translucent chip that sits on a track card. */
   --color-track-lilac: #e5e0fd;
@@ -160,6 +161,9 @@
   --color-track-rose: #f8d7e0;
   --color-track-rose-ink: #85284a;
   --color-track-rose-title: #4f1229;
+  --color-track-lime: #e3f0c2;
+  --color-track-lime-ink: #3f5c0c;
+  --color-track-lime-title: #243509;
   --color-track-teal: #cdebec;
   --color-track-teal-ink: #155e63;
   --color-track-teal-title: #0b3b3e;
@@ -172,6 +176,7 @@
   --color-track-sky-bar: #4d8fd6;
   --color-track-butter-bar: #d4b021;
   --color-track-rose-bar: #e0709a;
+  --color-track-lime-bar: #86b234;
   --color-track-teal-bar: #2fa5a8;
 
   /* Shape: every top-level card, inner tiles, wells and inputs, pills. */
@@ -350,6 +355,9 @@
       --color-track-rose: #3a1c27;
       --color-track-rose-ink: #f5a9bf;
       --color-track-rose-title: #fcdce5;
+      --color-track-lime: #232c14;
+      --color-track-lime-ink: #c6e38c;
+      --color-track-lime-title: #e4f2c6;
       --color-track-teal: #15302f;
       --color-track-teal-ink: #8fdcdd;
       --color-track-teal-title: #d3f3f3;

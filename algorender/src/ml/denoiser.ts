@@ -291,7 +291,7 @@ export function generate(net: Net, shape: DiffusionShape, n: number, seed: numbe
   return { positions, predicted };
 }
 
-/** Weights as stored in src/ml/pretrained/*.json. */
+/** Weights as stored in public/models/*.json (src/ml/weights.ts). */
 export type NetJson = { sizes: number[]; W: number[][][]; b: number[][] };
 
 export const netFromJson = (j: NetJson): Net => ({ sizes: j.sizes, W: j.W, b: j.b });

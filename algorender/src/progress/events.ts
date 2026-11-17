@@ -102,6 +102,26 @@ export const EVENT_DATA = {
     cost: z.number().int().min(0).max(100_000_000),
   }),
   /**
+   * A checkpoint question answered (src/progress/checkpoint.ts): a short mixed
+   * round at the end of a stage of the math and ML path (src/content/stages.ts,
+   * /learn/checkpoint/<stage>). `item` names the question: a common mistake's
+   * probe (`probe:<lesson>:<misconception>:<n>`) or a lesson quiz question
+   * (`quiz:<lesson>:<quiz>:<n>`), asked about `concept`. `index` is its place
+   * among the round's `of` questions, so a round is taken once its last
+   * question is answered. Mastery counts it like a quiz answer; it makes no
+   * review card, and a checkpoint never blocks anything. A trapped wrong answer
+   * is also recorded as `misconception.picked` (from 'quiz': a checkpoint asks
+   * lesson questions).
+   */
+  'checkpoint.answered': z.object({
+    stage: z.number().int().min(1).max(99),
+    concept: slug,
+    item: z.string().regex(/^(probe|quiz):[a-z0-9-]{1,80}:[a-z0-9-]{1,80}:\d{1,2}$/),
+    correct: z.boolean(),
+    index: z.number().int().min(0).max(99),
+    of: z.number().int().min(1).max(100),
+  }),
+  /**
    * A study plan set (src/progress/plan.ts): a goal from src/content/goals.ts,
    * hours a week and an optional target date. The latest wins; a null goal
    * clears the plan.
