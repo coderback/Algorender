@@ -3,19 +3,24 @@
 
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { CONTRACT, drawnSteps, entryFor, expectedSteps, stepProblems } from '../contract';
+import { CONTRACT, drawnSteps, entryFor, expectedSteps, fileStem, filesFor, stepProblems } from '../contract';
 import {
   type Arg,
   DEFAULT_LIMITS,
   type Limits,
   MAX_DEPTH,
+  MAX_FILE_CHARS,
+  MAX_FILES,
   MAX_FROM,
   MAX_ITEMS,
   MAX_OBJECTS,
+  MAX_OUTPUT,
+  OUTPUT_CUT,
   type MemValue,
   type MethodCall,
   type RunEvent,
   type RunMode,
+  type RunRequest,
   type RunResult,
 } from '../protocol';
 import { HARNESS } from './harness';
@@ -30,8 +35,16 @@ beforeAll(async () => {
   runRequest = pyodide.globals.get('run_request');
 }, 120_000);
 
-function run(code: string, entry: string, args: Arg[] = [], limits: Partial<Limits> = {}, mode?: RunMode, calls?: MethodCall[]): RunResult {
-  const request = { language: 'python' as const, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls };
+function run(
+  code: string,
+  entry: string,
+  args: Arg[] = [],
+  limits: Partial<Limits> = {},
+  mode?: RunMode,
+  calls?: MethodCall[],
+  program: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed'> = {},
+): RunResult {
+  const request = { language: 'python' as const, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls, ...program };
   return JSON.parse(runRequest(JSON.stringify(request)));
 }
 
@@ -43,7 +56,7 @@ const only = <K extends RunEvent['kind']>(r: RunResult, kind: K) =>
 describe('contract', () => {
   for (const c of CONTRACT.filter((c) => c.code.python)) {
     it(c.name, () => {
-      const r = run(c.code.python!, entryFor(c, 'python'), c.args, c.limits, c.mode, c.calls);
+      const r = run(c.code.python!, entryFor(c, 'python'), c.args, c.limits, c.mode, c.calls, { stdin: c.stdin, moreInput: c.moreInput, files: filesFor(c, 'python') });
       const want = c.expect;
       if (want.events) expect(r.events).toEqual(want.events);
       else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
@@ -58,8 +71,13 @@ describe('contract', () => {
       if (want.grids) expect(r.grids).toEqual(want.grids);
       if ('returned' in want) expect(r.returned).toEqual(want.returned);
       if (want.args) expect(r.args).toEqual(want.args);
+      for (const key of ['stdout', 'stderr', 'exitCode', 'reads', 'waiting'] as const) {
+        if (key in want) expect(r[key]).toEqual(want[key]);
+      }
+      if (c.stdin === undefined) expect(r).not.toHaveProperty('stdout');
       if (want.error) {
         expect(r.error?.kind).toBe(want.error.kind);
+        if (want.error.file) expect(fileStem(r.error?.file)).toBe(want.error.file);
         if (want.error.line !== undefined) expect(r.error?.line).toBe(want.error.line);
         if (want.error.message) expect(r.error?.message).toContain(want.error.message);
         if (want.error.hasLine) expect(r.error?.line).toEqual(expect.any(Number));
@@ -737,5 +755,85 @@ describe('input()', () => {
     const r = run(`def f(arr):\n    x = input("n? ")\n`, 'f', [arr([1])]);
     expect(r.error).toMatchObject({ kind: 'runtime', line: 2 });
     expect(r.error?.message).toContain('arguments');
+  });
+});
+
+describe('programs', () => {
+  const program = (code: string, extra: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed'> = {}, mode?: RunMode) =>
+    run(code, '', [], {}, mode, undefined, { stdin: '', ...extra });
+
+  it('puts the streams back afterwards, so a run without stdin is as before', () => {
+    program('print("x")\n', { stdin: 'a\n' });
+    expect(pyodide.runPython('import sys\ntype(sys.stdout).__name__ + type(sys.stdin).__name__')).not.toContain('_Out');
+    const r = run(`print("hi")\n`, '');
+    expect(r).not.toHaveProperty('stdout');
+    expect(only(r, 'print').map((e) => e.text)).toEqual(['hi']);
+  });
+
+  it('still records print events, on their lines, with end left out', () => {
+    const r = program(`x = 1\nprint("a", end="")\nprint("b", x)\n`);
+    expect(only(r, 'print').map((e) => [e.line, e.text])).toEqual([[2, 'a'], [3, 'b 1']]);
+    expect(r.stdout).toBe('ab 1\n');
+  });
+
+  it('prints to a file object of the learner’s own without a print event', () => {
+    const r = program(`import io\nbuf = io.StringIO()\nprint("hidden", file=buf)\nprint(buf.getvalue().upper(), end="")\n`);
+    expect(r.stdout).toBe('HIDDEN\n');
+    expect(only(r, 'print').map((e) => e.text)).toEqual(['HIDDEN\n']);
+  });
+
+  it('sys.exit with a message writes it to stderr and exits 1, as CPython does', () => {
+    const r = program(`import sys\nsys.exit("bad input")\n`);
+    expect(r).toMatchObject({ stderr: 'bad input\n', exitCode: 1, error: null });
+  });
+
+  it('keeps a waiting program waiting even when a bare except swallows the stop, and cuts stdout there', () => {
+    const r = program(`try:\n    x = input("? ")\nexcept:\n    pass\nprint("after")\n`, { moreInput: true });
+    expect(r).toMatchObject({ waiting: true, stdout: '? ', exitCode: null, error: null });
+  });
+
+  it('cuts a stream at MAX_OUTPUT characters, saying so once', () => {
+    const r = program(`for i in range(2000):\n    print("x" * 50)\n`);
+    expect(r.stdout!.endsWith(OUTPUT_CUT)).toBe(true);
+    expect(r.stdout!.length).toBe(MAX_OUTPUT + OUTPUT_CUT.length);
+  });
+
+  it('a seed makes random repeat itself, and leaves random as it found it', () => {
+    const code = `import random\nprint(random.randint(1, 10**9), random.random())\n`;
+    expect(program(code, { seed: 42 }).stdout).toBe(program(code, { seed: 42 }).stdout);
+    expect(program(code, { seed: 42 }).stdout).not.toBe(program(code, { seed: 43 }).stdout);
+    const before = pyodide.runPython('import random\nrandom.getstate()[1][:4]').toJs();
+    program(code, { seed: 1 });
+    expect(pyodide.runPython('import random\nrandom.getstate()[1][:4]').toJs()).toEqual(before);
+  });
+
+  it('imports each run’s own files afresh: a module changed between runs is the new one', () => {
+    const main = `import helpers\nprint(helpers.VALUE)\n`;
+    expect(program(main, { files: { 'helpers.py': 'VALUE = 1\n' } }).stdout).toBe('1\n');
+    expect(program(main, { files: { 'helpers.py': 'VALUE = 2\n' } }).stdout).toBe('2\n');
+    // …and a run without the file can't import the last one's.
+    expect(program(main).error?.message).toContain("No module named 'helpers'");
+  });
+
+  it('starts every run on a fresh file system: what one run writes, the next can’t see', () => {
+    const files = { 'data.txt': 'seed' };
+    const write = program(`open("out.txt", "w").write("x")\nprint(open("data.txt").read())\n`, { files });
+    expect(write).toMatchObject({ stdout: 'seed\n', error: null });
+    const read = program(`import os\nprint(os.path.exists("out.txt"), os.path.exists("data.txt"))\n`, { files });
+    expect(read.stdout).toBe('False True\n');
+    expect(pyodide.runPython('import os, sys\n[p for p in sys.path if "algorender" in p] + [os.getcwd()]').toJs()).not.toContain(
+      expect.stringContaining('/tmp/algorender'),
+    );
+  });
+
+  it('refuses too many files, and too much text in them', () => {
+    const many = Object.fromEntries(Array.from({ length: MAX_FILES + 1 }, (_, k) => [`f${k}.py`, '']));
+    expect(program('print(1)\n', { files: many }).error).toMatchObject({ kind: 'limit' });
+    expect(program('print(1)\n', { files: { 'big.txt': 'x'.repeat(MAX_FILE_CHARS + 1) } }).error).toMatchObject({ kind: 'limit' });
+  });
+
+  it('names a file in a folder by its path, on an error inside it', () => {
+    const r = program(`from geo.shapes import area\narea()\n`, { files: { 'geo/shapes.py': 'def area():\n    return 1 / 0\n' } });
+    expect(r.error).toMatchObject({ kind: 'runtime', line: 2, file: 'geo/shapes.py', message: 'ZeroDivisionError: division by zero' });
   });
 });
