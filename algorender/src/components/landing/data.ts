@@ -31,7 +31,8 @@ const TOPIC_TITLE: Record<TrackColour, string> = {
   mint: 'Trees & hashing',
   sky: 'Graphs & strings',
   butter: 'Patterns & design',
-  rose: 'Math & machine learning',
+  rose: 'Math',
+  lime: 'Machine learning',
   teal: 'Systems',
 };
 

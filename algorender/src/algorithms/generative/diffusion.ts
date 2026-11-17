@@ -17,9 +17,12 @@ import {
   SHAPES,
   T,
   type DiffusionShape,
+  type Net,
+  type NetJson,
   type P2,
+  type TrainConfig,
 } from '@/ml/denoiser';
-import pretrained from '@/ml/pretrained/diffusion.json';
+import { fromModel, model } from '@/ml/weights';
 import { ask, askInOrder, plotFrame } from '@/viz/plot/frame';
 import { fmt, fmtVec } from '@/viz/plot/geometry';
 import type { PlanePart, PlotPart, PlotState, Shape, Vec } from '@/viz/plot/types';
@@ -34,7 +37,14 @@ export const FORWARD_STEPS = [1, 2, 3, 5, 7, 10, 13, 16, 20, 24, 28, 32, 36, 40]
 const DEMO_T = 20;
 const BOX = 3.5;
 
-const net = netFromJson(pretrained.weights);
+/** The denoiser, trained ahead of time (npm run models) and fetched by the pages that show this module. */
+const MODEL = 'diffusion';
+const denoiser = fromModel<Net, NetJson, TrainConfig>(MODEL, (file) => netFromJson(file.weights));
+/** How many noised examples the denoiser was trained on. */
+const trainedOn = () => {
+  const { steps, batch } = model<NetJson, TrainConfig>(MODEL).config;
+  return steps * batch;
+};
 
 const pseudocode = [
   'x₀ ← points of the data',
@@ -58,7 +68,7 @@ export function dataOf({ shape, n, seed }: DiffusionInput): { x0: P2[]; eps: P2[
 }
 
 /** The reverse run for an input: positions[t] from t = T (fresh noise) down to 0, and each step's predicted noise. */
-export const reverseOf = ({ shape, n, seed }: DiffusionInput) => generate(net, shape, n, seed);
+export const reverseOf = ({ shape, n, seed }: DiffusionInput) => generate(denoiser(), shape, n, seed);
 
 /** Indices of the followed points: the first is drawn large, the other two in tones. */
 const FOLLOW = [0, 1, 2] as const;
@@ -188,7 +198,7 @@ function* run(input: DiffusionInput): Generator<Frame<PlotState>> {
   {
     const t = DEMO_T;
     const xt = round2p(noised(x0[0], eps[0], t));
-    const guess = predictNoise(net, xt, t, shape);
+    const guess = predictNoise(denoiser(), xt, t, shape);
     calls++;
     const s = noiseLevel(t);
     const tip = (e: P2): Vec => shown([xt[0] - s * e[0], xt[1] - s * e[1]]);
@@ -208,7 +218,7 @@ function* run(input: DiffusionInput): Generator<Frame<PlotState>> {
       }),
       {
         line: 5,
-        note: `The denoiser's job. Take a clean point, noise it to t = ${t} (x is at ${fmtVec(xt)}), and ask a small network: which noise ε was added? Its answer ε̂ = ${fmtVec(guess)}; the truth was ${fmtVec(eps[0])}. Each arrow takes x back by √(1 − ᾱ_t) times a noise; with the true noise it lands exactly on √ᾱ_t·x₀. It was trained before this page loaded, on ${pretrained.config.steps * pretrained.config.batch} such examples, to make the squared error ‖ε̂ − ε‖² small (here ${fmt(err * err, 2)}).`,
+        note: `The denoiser's job. Take a clean point, noise it to t = ${t} (x is at ${fmtVec(xt)}), and ask a small network: which noise ε was added? Its answer ε̂ = ${fmtVec(guess)}; the truth was ${fmtVec(eps[0])}. Each arrow takes x back by √(1 − ᾱ_t) times a noise; with the true noise it lands exactly on √ᾱ_t·x₀. It was trained before this page loaded, on ${trainedOn()} such examples, to make the squared error ‖ε̂ − ε‖² small (here ${fmt(err * err, 2)}).`,
         vars: { t, 'ε.x': r2(eps[0][0]), 'ε.y': r2(eps[0][1]), 'ε̂.x': r2(guess[0]), 'ε̂.y': r2(guess[1]) },
         stats: stats(),
       },
@@ -311,6 +321,7 @@ export const diffusion = defineAlgorithm<DiffusionInput, PlotState>({
   kind: 'algorithm',
   slug: 'diffusion',
   view: 'plot',
+  models: [MODEL],
   input: {
     examples: [
       { id: 'spiral', label: 'Spiral', make: ({ seed, size }) => ({ shape: 'spiral', n: size, seed }) },

@@ -1,10 +1,14 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { loadConcepts } from '@/content/concepts';
 import { goals, type Goal } from '@/content/goals';
 import { masteryGraph, planCatalog } from '@/content/mastery';
 import type { EventData, EventKind, ProgressEvent } from './events';
-import { mastery, type MasteryGraph } from './mastery';
-import { currentPlan, goalConcepts, pack, planView, prerequisiteOrder, REVIEW_SHARE, WEEK_MS } from './plan';
+import { areaOf, mastery, relatives, type MasteryGraph } from './mastery';
+import { currentPlan, goalConcepts, isConcept, MILESTONE_FILL, milestoneDone, pack, planView, prerequisiteOrder, REVIEW_SHARE, WEEK_MS, withMilestones, type PlanItem, type PlanMilestone } from './plan';
+
+/** A plan item as a short id: the concept, or m<stage> for a milestone. */
+const itemId = (i: PlanItem) => (isConcept(i) ? i.concept : `m${i.milestone}`);
 
 let n = 0;
 const DAY = 86_400_000;
@@ -48,7 +52,9 @@ describe('scheduling', () => {
       const order = prerequisiteOrder(goalConcepts(goal, graph), graph);
       const pos = new Map(order.map((id, i) => [id, i]));
       for (const id of order) for (const p of graph.concepts.find((c) => c.id === id)!.prereqs) if (pos.has(p)) expect(pos.get(p)!, `${p} before ${id}`).toBeLessThan(pos.get(id)!);
-      for (const target of goal.concepts) expect(pos.has(target), `${goal.id}: ${target}`).toBe(true);
+      // Planned targets wait for their batch; every available one is in the plan.
+      for (const target of goal.concepts) expect(pos.has(target), `${goal.id}: ${target}`).toBe(!graph.concepts.find((c) => c.id === target)!.planned);
+      expect(order.length, goal.id).toBeGreaterThan(0);
     }
   });
 
@@ -75,12 +81,12 @@ describe('the plan as it stands', () => {
     const v = planView(events, tiny, [tinyGoal], hour, new Date(at(1)))!;
     // The goal lists c first, so c's chain (a, b, c) comes before d.
     expect(v.concepts).toEqual(['a', 'b', 'c', 'd']);
-    expect(v.weeks.map((w) => w.items.map((i) => i.concept))).toEqual([['a'], ['b'], ['c'], ['d']]);
+    expect(v.weeks.map((w) => w.items.map(itemId))).toEqual([['a'], ['b'], ['c'], ['d']]);
     expect(v).toMatchObject({ week: 0, due: 0, behind: 0, done: [] });
 
     const later = planView([...events, mark('a', at(2)), mark('b', at(2))], tiny, [tinyGoal], hour, new Date(at(3)))!;
     expect(later.done).toEqual(['a', 'b']);
-    expect(later.weeks.map((w) => w.items.map((i) => i.concept))).toEqual([['c'], ['d']]);
+    expect(later.weeks.map((w) => w.items.map(itemId))).toEqual([['c'], ['d']]);
   });
 
   it('re-plans from the current week, and counts what the original schedule had due', () => {
@@ -126,14 +132,93 @@ describe('the plan as it stands', () => {
   });
 });
 
+describe('milestones', () => {
+  // A "stage" of a, b and c; d is outside it.
+  const stage: PlanMilestone = { stage: 1, title: 'S', concepts: ['a', 'b', 'c'], minutes: 30, checkpoint: true };
+  const answered = (index: number, of: number, when: string) => ev('checkpoint.answered', { stage: 1, concept: 'a', item: `quiz:la:quiz:${index}`, correct: true, index, of }, when);
+  const item = (concept: string) => ({ concept, minutes: 60 });
+
+  it('come right after the last of their stage’s concepts still to learn', () => {
+    const planned = new Set(['a', 'b', 'c', 'd']);
+    expect(withMilestones([item('a'), item('b'), item('c'), item('d')], planned, [stage], () => false).map(itemId)).toEqual(['a', 'b', 'c', 'm1', 'd']);
+    expect(withMilestones([item('a'), item('d'), item('b')], planned, [stage], () => false).map(itemId)).toEqual(['a', 'd', 'b', 'm1']);
+    // Nothing of the stage left: the milestone is due now.
+    expect(withMilestones([item('d')], planned, [stage, { ...stage, stage: 2 }], () => false).map(itemId)).toEqual(['m1', 'm2', 'd']);
+    // Done, or a plan that never reaches into the stage: no milestone.
+    expect(withMilestones([item('a'), item('d')], planned, [stage], () => true).map(itemId)).toEqual(['a', 'd']);
+    expect(withMilestones([item('d')], new Set(['d']), [stage], () => false).map(itemId)).toEqual(['d']);
+  });
+
+  it('are done once the checkpoint is taken and the project (if any) is built', () => {
+    expect(milestoneDone(stage, [])).toBe(false);
+    // Half a round isn't a round.
+    expect(milestoneDone(stage, [answered(0, 2, at(1))])).toBe(false);
+    const taken = [answered(0, 2, at(1)), answered(1, 2, at(1))];
+    expect(milestoneDone(stage, taken)).toBe(true);
+    const withProject = { ...stage, parts: ['ex-a', 'ex-b'] };
+    const built = (exercise: string, stageName: 'write' | 'fill', when: string) => ev('exercise.passed', { exercise, stage: stageName }, when);
+    expect(milestoneDone(withProject, [...taken, built('ex-a', 'write', at(2))])).toBe(false);
+    expect(milestoneDone(withProject, [...taken, built('ex-a', 'write', at(2)), built('ex-b', 'fill', at(2))])).toBe(false);
+    expect(milestoneDone(withProject, [...taken, built('ex-a', 'write', at(2)), built('ex-b', 'write', at(2))])).toBe(true);
+    // A stage whose checkpoint isn't open yet is done with its project alone.
+    expect(milestoneDone({ ...withProject, checkpoint: false }, [built('ex-a', 'write', at(2)), built('ex-b', 'write', at(2))])).toBe(true);
+  });
+
+  it('fill their window only to MILESTONE_FILL, leaving room to catch up', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.oneof(fc.record({ concept: fc.constantFrom('a', 'b', 'c'), minutes: fc.integer({ min: 5, max: 300 }) }), fc.record({ milestone: fc.integer({ min: 1, max: 10 }), minutes: fc.integer({ min: 5, max: 300 }) })), { maxLength: 30 }),
+        fc.constantFrom(2, 3, 5, 8, 10, 15),
+        (items, hours) => {
+          const weeks = pack(items, hours, new Date(T0), 0);
+          const capacity = hours * 60 * (1 - REVIEW_SHARE);
+          expect(weeks.flatMap((w) => w.items)).toEqual(items);
+          for (const w of weeks) {
+            const limit = w.items.some((i) => !isConcept(i)) ? capacity * MILESTONE_FILL : capacity;
+            if (w.items.length > 1) expect(w.minutes).toBeLessThanOrEqual(limit + 1e-9);
+          }
+        },
+      ),
+    );
+  });
+
+  it('join the plan, count towards being behind, and drop out once done', () => {
+    const events = [setPlan(2, at(0))];
+    const v = planView(events, tiny, [tinyGoal], hour, new Date(at(1)), [stage])!;
+    // 2 hours leave 102 minutes a window; c and the milestone together pass 70% of that, so the milestone opens a
+    // window, and d doesn't fit in what is left of it.
+    expect(v.weeks.map((w) => w.items.map(itemId))).toEqual([['a'], ['b'], ['c'], ['m1'], ['d']]);
+    expect(v.milestones.get(1)).toBe(stage);
+    // Four weeks in, every concept known but the milestone not done: it is the one item behind.
+    const known = [...events, mark('c', at(1)), mark('d', at(1))];
+    expect(planView(known, tiny, [tinyGoal], hour, new Date(at(29)), [stage])).toMatchObject({ due: 4, behind: 1 });
+    const taken = [...known, answered(0, 1, at(21))];
+    expect(planView(taken, tiny, [tinyGoal], hour, new Date(at(29)), [stage])).toMatchObject({ due: 4, behind: 0, weeks: [] });
+  });
+});
+
 describe('the real goals', () => {
   const graph = masteryGraph();
   const catalog = planCatalog();
   const ids = new Map(graph.concepts.map((c) => [c.id, c]));
 
-  it('aim at concepts that exist and are not planned, with distinct ids', () => {
+  it('aim at concepts that exist, with distinct ids', () => {
     expect(new Set(goals.map((g) => g.id)).size).toBe(goals.length);
-    for (const g of goals) for (const c of g.concepts) expect(ids.get(c)?.planned, `${g.id}: ${c}`).toBe(false);
+    for (const g of goals) for (const c of g.concepts) expect(ids.has(c), `${g.id}: ${c}`).toBe(true);
+  });
+
+  it('only aim at planned concepts in the zero-to-hero goal, which grows as they go live', () => {
+    for (const g of goals.filter((x) => x.id !== 'ml-zero-to-hero')) for (const c of g.concepts) expect(ids.get(c)?.planned, `${g.id}: ${c}`).toBe(false);
+    const z = goals.find((x) => x.id === 'ml-zero-to-hero')!;
+    expect(z.concepts).toContain('preference-tuning');
+    expect(z.concepts).not.toContain('retrieval-rag');
+    // Once every batch is in (each `later` prerequisite in place), every math and ML concept but the
+    // electives is on the way to a target.
+    const full = loadConcepts().concepts;
+    const { ancestors } = relatives({ ...graph, concepts: graph.concepts.map((c) => ({ ...c, prereqs: [...c.prereqs, ...full.find((x) => x.id === c.id)!.later] })) });
+    const reached = new Set(z.concepts.flatMap((t) => [t, ...(ancestors.get(t) ?? [])]));
+    const mathMl = graph.concepts.filter((c) => areaOf(c.track) === 'math' || areaOf(c.track) === 'ml').map((c) => c.id);
+    expect(mathMl.filter((id) => !reached.has(id)).sort()).toEqual(['reinforcement-learning', 'retrieval-rag']);
   });
 
   it('give every concept an estimate and somewhere to learn it', () => {

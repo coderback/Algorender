@@ -12,10 +12,18 @@ import type { Goal } from '@/content/goals';
 import { TRACK_CLASSES, trackColour } from '@/data/tracks';
 import { record, useMastery, useProblemProgress, useProgressSnapshot, useReviewCards } from '@/progress/hooks';
 import { KNOWN, isReady, type MasteryGraph } from '@/progress/mastery';
-import { goalConcepts, HOUR_CHOICES, planView, REVIEW_SHARE, type PlanSettings, type PlanView, type PlanWeek } from '@/progress/plan';
+import { goalConcepts, HOUR_CHOICES, isConcept, isMilestone, planView, REVIEW_SHARE, type PlanMilestone, type PlanSettings, type PlanView, type PlanWeek } from '@/progress/plan';
 import { dueToday } from '@/progress/review';
 
-type Props = { graph: MasteryGraph; goals: readonly Goal[]; catalog: Record<string, ConceptCatalogEntry> };
+type Props = {
+  graph: MasteryGraph;
+  goals: readonly Goal[];
+  catalog: Record<string, ConceptCatalogEntry>;
+  /** The math and ML stages' milestones (src/content/checkpoints.ts), scheduled after their stage's concepts. */
+  milestones?: readonly PlanMilestone[];
+};
+
+const NO_MILESTONES: readonly PlanMilestone[] = [];
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 const hoursOf = (minutes: number) => (minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60}` : ''}`);
@@ -25,13 +33,13 @@ const hoursOf = (minutes: number) => (minutes < 60 ? `${minutes} min` : `${Math.
  * and what's left this week. Everything is computed from the learner's events
  * (src/progress/plan.ts), so it re-plans itself as concepts become known.
  */
-export function StudyPlan({ graph, goals, catalog }: Props) {
+export function StudyPlan({ graph, goals, catalog, milestones = NO_MILESTONES }: Props) {
   const { ready, events } = useProgressSnapshot();
   const [editing, setEditing] = useState(false);
   // The plan is computed for the moment the page opened; it changes with the events, not the clock.
   const [now] = useState(() => new Date());
   const minutes = useMemo(() => Object.fromEntries(Object.entries(catalog).map(([id, c]) => [id, c.minutes])), [catalog]);
-  const view = useMemo(() => planView(events, graph, goals, minutes, now), [events, graph, goals, minutes, now]);
+  const view = useMemo(() => planView(events, graph, goals, minutes, now, milestones), [events, graph, goals, minutes, now, milestones]);
   if (!ready) return <p className="text-sm text-ink-muted">Loading your progress…</p>;
   if (!view || editing) {
     return <PlanSetup graph={graph} goals={goals} minutes={minutes} current={view?.settings ?? null} onDone={() => setEditing(false)} placed={events.some((e) => e.kind === 'placement.answered')} />;
@@ -330,6 +338,17 @@ function Week({ week, now, byId, view }: { week: PlanWeek; now: boolean; byId: M
       </p>
       <ul className="flex flex-col gap-2">
         {week.items.map((item) => {
+          if (isMilestone(item)) {
+            const ms = view.milestones.get(item.milestone);
+            return (
+              <li key={`milestone-${item.milestone}`}>
+                <Link href={`/learn/checkpoint/${item.milestone}`} className="flex flex-col rounded-[14px] bg-feature px-3 py-2 text-[13px] font-semibold text-on-feature hover:underline">
+                  <span className="text-[11px] font-medium text-feature-muted">Milestone {item.milestone}</span>
+                  {ms ? `Checkpoint: ${ms.title}` : 'Checkpoint'}
+                </Link>
+              </li>
+            );
+          }
           const c = byId.get(item.concept);
           const t = TRACK_CLASSES[trackColour(c?.track ?? '')];
           const learning = view.mastery.get(item.concept)?.status === 'learning';
@@ -363,8 +382,10 @@ function ThisWeek({
   byId: Map<string, { title: string; track: string }>;
 }) {
   const solved = useProblemProgress();
-  const [first, second] = week.items;
-  const practice = week.items
+  const concepts = week.items.filter(isConcept);
+  const [first, second] = concepts;
+  const milestone = week.items.find(isMilestone);
+  const practice = concepts
     .flatMap((i) => catalog[i.concept]?.problems ?? [])
     .filter((p) => !solved[p.slug]?.solved)
     .slice(0, 3);
@@ -397,9 +418,29 @@ function ThisWeek({
             </ul>
           </div>
         )}
-        {second && <ConceptCard id={second.concept} entry={catalog[second.concept]} view={view} graph={graph} byId={byId} />}
+        {milestone ? (
+          <MilestoneCard stage={milestone.milestone} milestone={view.milestones.get(milestone.milestone)} minutes={milestone.minutes} />
+        ) : (
+          second && <ConceptCard id={second.concept} entry={catalog[second.concept]} view={view} graph={graph} byId={byId} />
+        )}
       </div>
     </Card>
+  );
+}
+
+/** A stage's milestone in this week: its checkpoint (and, once written, its project). TODO(redesign): no board for this card; it follows the feature card. */
+function MilestoneCard({ stage, milestone, minutes }: { stage: number; milestone: PlanMilestone | undefined; minutes: number }) {
+  return (
+    <FeatureCard className="gap-3 rounded-tile p-5">
+      <span className="text-eyebrow text-feature-muted uppercase">Milestone {stage}</span>
+      <h3 className="font-display text-title-card">{milestone?.title ?? `Stage ${stage}`}</h3>
+      <p className="text-sm text-feature-muted">
+        A checkpoint on the stage: a short mixed round of questions, about {hoursOf(minutes)}. It doesn’t block anything; it says what’s worth another look.
+      </p>
+      <ButtonLink href={`/learn/checkpoint/${stage}`} kind="accent" className="mt-auto self-start" trailing={<FiArrowRight aria-hidden />}>
+        Take the checkpoint
+      </ButtonLink>
+    </FeatureCard>
   );
 }
 

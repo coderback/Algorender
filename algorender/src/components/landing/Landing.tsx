@@ -149,7 +149,7 @@ export function Landing({ data }: { data: LandingData }) {
           <h2 id="topics-title" className={H2}>
             From Big-O to Raft
           </h2>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.topics.map((t) => {
               const c = TRACK_CLASSES[t.colour];
               return (

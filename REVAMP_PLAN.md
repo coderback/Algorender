@@ -934,6 +934,25 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
       - multi-head attention and positional encodings;
       - policy gradients;
       - lazy-loading modules per page, so pretrained weights stop shipping with every visualiser.
+- **4e: Math and ML, zero to hero** (accepted 2026-11-17, owner: "go with the recommendations"). A path from school maths to transformers, diffusion, interpretability and graph networks: 77 new concepts in ten stages, each stage some math and then the ML it unlocks, ending in a milestone project and a checkpoint. Built in batches B0–B17, each wired, tested and committed on its own.
+  - **Decisions:**
+    - **Tracks:** eight, each with an `area`. Math (rose): the math toolkit, linear algebra, calculus and optimisation, probability and statistics. ML (a new lime pastel): classical ML (with RL), deep learning (with generative models and graph ML), language models, interpretability.
+    - **Electives:** bandits, policy gradients and preference tuning are core; retrieval stays an elective. MAP priors, naive Bayes, RNNs, random walks and graph attention are sections of other lessons, not concepts. No GANs.
+    - **DSA in the path:** graph neural networks build on graph representations; Big-O comes before matrix multiplication; topological sort stays a link from autograd.
+    - **Data:** UCI handwritten digits for the CNN (licence to confirm), generated shapes for the autoencoders, seeded community graphs and the karate club, US baby names for bigrams, one public-domain book for the character GPT. No MNIST.
+    - **No numpy and no WebGPU** (revisit WebGPU after B13 as an opt-in Lab). Heavy exercises run in judge mode on a 30–60 s budget.
+    - **Checkpoints** are advisory, use a new `checkpoint.answered` event, prefer probes for mistakes not yet made, and can be retaken after a week. Each stage's milestone and checkpoint go in a plan window filled to about 70%.
+    - **Pricing:** everything free for now. **Writing:** the batch workflow, a cold read as a school-maths learner for stages 1–3, every quoted number measured on our own models, research framed as findings with sources.
+  - **Status (2026-11-17): B0 (infra) is built** (`claude/math-ml-b0-76794d`).
+    - **Tracks:** `area` on every track (`areaOf()` reads it through `TRACK_AREA` in `src/data/tracks.ts`), the eight math and ML tracks, and the lime pastel in both themes (contrast measured against page, surface, sunken and the track chip).
+    - **The road ahead on the map:** all 77 concepts in `concepts.yaml` as planned, with their prerequisites. The prerequisites existing concepts gain wait in a `later` list until their concept is written, so available concepts never depend on planned ones; a content test says when to move each.
+    - **Stages** (`src/content/stages.ts`): every math and ML concept in exactly one of ten stages, none needing a later stage.
+    - **Lazy weights:** pretrained models moved to `public/models/` and load only on the pages that show them (`src/ml/weights.ts`, a module's `models`); the diffusion denoiser no longer ships with every visualiser. `npm run models -- <name> --fast` trains a quick config for iterating.
+    - **Judge-mode exercise tests and budgets:** `judge: { budget }` on an exercise runs its tests uninstrumented within 8 s, or 60 s (Python) and 30 s (JS/TS) for project parts.
+    - **Projects** (`src/content/projects/`): the model and its projection from `exercise.passed`; a first completion gives XP, the "Builder" badge and the implement level. None yet: M1 arrives with B3.
+    - **Checkpoints:** the `checkpoint.answered` event, the round builder and `/learn/checkpoint/[stage]`. Stages 1 and 2 already open, from the lessons that exist.
+    - **The plan:** milestone items after each stage's concepts, in windows filled to 70%, and the `ml-zero-to-hero` goal with every target, which grows as concepts go live.
+    - **Checks:** content tests (areas, planned counts, `later`, cycles with every batch in place, stages, goal reach), unit and property tests (loader, judge mode, projects, checkpoint rounds, milestones), e2e for the checkpoint, the map's new tracks, the plan's milestone and lazy weights, with axe in both themes and screenshots at 1440 and 390.
 
 ### Phase 5 — Personalization and tutor
 

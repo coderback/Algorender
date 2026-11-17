@@ -89,7 +89,7 @@ export function kindCounts(tiles: readonly Tile[]): Record<KindFilter, number> {
 
 /** What to open first: what you're in the middle of, then what's ready, then the rest. */
 const READY_ORDER: Record<Status, number> = { learning: 0, ready: 1, practised: 2, mastered: 3, placed: 4, locked: 5 };
-const COLOUR_ORDER: Record<TrackColour, number> = { lilac: 0, peach: 1, mint: 2, sky: 3, butter: 4, rose: 5, teal: 6 };
+const COLOUR_ORDER: Record<TrackColour, number> = { lilac: 0, peach: 1, mint: 2, sky: 3, butter: 4, rose: 5, lime: 6, teal: 7 };
 
 /** Sorts tiles; ties keep the registry's order. Without statuses (before progress loads) "ready" keeps that order too. */
 export function sortTiles(tiles: readonly Tile[], sort: Sort, status: (tile: Tile) => Status | null): Tile[] {

@@ -3,43 +3,89 @@
 # Validated by src/content/concepts.ts and src/content/content.test.ts:
 # ids exist, prerequisites form no cycle, every visualiser on the site is
 # taught by at least one concept, and planned concepts have nothing to open yet.
+#
+# Each track belongs to one area (dsa, math, ml or systems): what the placement
+# check offers, what next steps spread across, and the track's colour family
+# (src/data/tracks.ts, which content.test.ts keeps in step with this file).
+#
+# The math and ML concepts marked `planned` are the zero-to-hero path, built in
+# batches B1–B17. An available concept can't depend on a planned one, so some
+# prerequisites wait for their batch: those are noted on the concept as
+# "# Bn: + id".
 
 tracks:
   - id: foundations
     title: Foundations
+    area: dsa
     summary: How to measure an algorithm, and the recursive thinking most of the rest builds on.
   - id: linear
     title: Arrays and lists
+    area: dsa
     summary: Sequences in memory, and the structures built from them.
   - id: searching-sorting
     title: Searching and sorting
+    area: dsa
     summary: Finding things fast, and putting things in order.
   - id: hashing
     title: Hashing
+    area: dsa
     summary: Turning keys into positions for constant-time lookups.
   - id: trees
     title: Trees and heaps
+    area: dsa
     summary: Hierarchies that keep data ordered or prioritised.
   - id: patterns
     title: Problem-solving patterns
+    area: dsa
     summary: Techniques that turn up again and again in interview problems.
   - id: graphs
     title: Graphs
+    area: dsa
     summary: Networks of things and the connections between them.
   - id: design
     title: Algorithm design
+    area: dsa
     summary: Greedy choices, dynamic programming and backtracking.
   - id: strings
     title: Strings
+    area: dsa
     summary: Searching text without starting over at every mismatch.
-  - id: math
-    title: Math for CS and ML
-    summary: The linear algebra, calculus and probability behind machine learning.
+  - id: math-toolkit
+    title: The math toolkit
+    area: math
+    summary: Functions, logarithms, sums and angles, the school math everything after it reads, and how computers store numbers.
+  - id: linear-algebra
+    title: Linear algebra
+    area: math
+    summary: Vectors, matrices and the decompositions behind data and models.
+  - id: calculus
+    title: Calculus and optimisation
+    area: math
+    summary: Slopes, gradients and curvature, and how models find their way downhill.
+  - id: probability
+    title: Probability and statistics
+    area: math
+    summary: Chance, distributions and evidence, and how sure a measurement lets you be.
   - id: ml
-    title: Machine learning
-    summary: From fitting a line to attention, built step by step.
+    title: Classical machine learning
+    area: ml
+    summary: From fitting a line to forests, kernels and clustering, built step by step.
+  - id: deep-learning
+    title: Deep learning
+    area: ml
+    summary: Training deep networks, convolutions and residuals, generative models, and networks on graphs.
+  - id: llms
+    title: Language models
+    area: ml
+    summary: Tokens, attention and a GPT built from scratch, then fine-tuning and honest evaluation.
+  - id: interpretability
+    title: Interpretability
+    area: ml
+    summary: Looking inside a trained transformer for the features and circuits it learned.
+    planned: true
   - id: systems
     title: Systems
+    area: systems
     summary: How operating systems, databases and distributed systems really work.
 
 concepts:
@@ -327,29 +373,158 @@ concepts:
     visualisers: [manacher]
     lesson: palindromes
 
-  # ── Math ─────────────────────────────────────────────────────
+  # ── The math toolkit ─────────────────────────────────────────
+  - id: functions-graphs
+    title: Functions and their graphs
+    track: math-toolkit
+    summary: A function as a rule from inputs to outputs, and how its knobs shift and stretch its graph.
+    planned: true
+  - id: exponents-logs
+    title: Exponents, logarithms and e
+    track: math-toolkit
+    summary: Repeated doubling and its inverse, why logs turn products into sums, and where e comes from.
+    prereqs: [functions-graphs]
+    planned: true
+  - id: sums-notation
+    title: Sums, products and reading math notation
+    track: math-toolkit
+    summary: Σ, Π, subscripts and hats read aloud, and every sum written as a loop.
+    prereqs: [functions-graphs]
+    planned: true
+  - id: trigonometry
+    title: Angles, sine and cosine
+    track: math-toolkit
+    summary: Radians, the unit circle, and sine and cosine as the shadows of a turning point.
+    prereqs: [functions-graphs]
+    planned: true
+  - id: floating-point
+    title: Floating-point numbers
+    track: math-toolkit
+    summary: How computers store real numbers in 32 bits, and why 0.1 + 0.2 isn’t quite 0.3.
+    visualisers: [floating-point]
+    lesson: floating-point
+    later: [exponents-logs] # B1
+
+  # ── Linear algebra ───────────────────────────────────────────
+  - id: vectors
+    title: Vectors
+    track: linear-algebra
+    summary: Arrows with a length and a direction, added tip to tail, and a data point as a vector.
+    prereqs: [functions-graphs, trigonometry]
+    planned: true
+  - id: dot-product
+    title: The dot product and similarity
+    track: linear-algebra
+    summary: Multiply matching parts and add them up, to measure how much two vectors point the same way.
+    prereqs: [vectors, sums-notation]
+    planned: true
+  - id: norms-distances
+    title: Lengths and distances
+    track: linear-algebra
+    summary: L1, L2 and L∞, three ways to measure how far apart two points are.
+    prereqs: [dot-product]
+    planned: true
   - id: vectors-matrices
     title: Vectors and matrices
-    track: math
+    track: linear-algebra
     summary: Matrices as transformations that warp space.
     visualisers: [linear-transformations]
     lesson: linear-transformations
+    later: [dot-product] # B2, retitled "Matrices as transformations"
+  - id: matrix-multiplication
+    title: Matrix multiplication
+    track: linear-algebra
+    summary: Each cell is a row times a column, composing two transformations, and why AB isn’t BA.
+    prereqs: [vectors-matrices, big-o]
+    planned: true
+  - id: determinants-inverses
+    title: Determinants, inverses and solving Ax = b
+    track: linear-algebra
+    summary: How much a matrix scales area, when it can be undone, and solving equations by elimination.
+    prereqs: [matrix-multiplication]
+    planned: true
+  - id: span-basis-rank
+    title: Span, basis and rank
+    track: linear-algebra
+    summary: Which points a set of vectors can reach, and how many directions a matrix really keeps.
+    prereqs: [determinants-inverses]
+    planned: true
+  - id: change-of-basis
+    title: Change of basis
+    track: linear-algebra
+    summary: One vector read on two grids, and why a transformation is simplest in its own eigenbasis.
+    prereqs: [span-basis-rank]
+    planned: true
+  - id: projections-least-squares
+    title: Projections and least squares
+    track: linear-algebra
+    summary: The best-fitting line as a shadow, dropping a point perpendicular onto a space.
+    prereqs: [span-basis-rank, supervised-learning]
+    planned: true
+  - id: orthogonality
+    title: Orthogonality and Gram–Schmidt
+    track: linear-algebra
+    summary: Perpendicular directions, and straightening any basis into a set of them.
+    prereqs: [projections-least-squares]
+    planned: true
   - id: eigenvectors
     title: Eigenvectors
-    track: math
+    track: linear-algebra
     summary: The directions a transformation only stretches.
     prereqs: [vectors-matrices]
     visualisers: [eigenvectors]
     lesson: eigenvectors
+    later: [matrix-multiplication] # B2
+  - id: symmetric-matrices-spectral
+    title: Symmetric matrices and quadratic forms
+    track: linear-algebra
+    summary: Why a symmetric matrix stretches along perpendicular axes, and the ellipses and saddles of xᵀAx.
+    prereqs: [eigenvectors, orthogonality]
+    planned: true
+  - id: svd
+    title: Singular value decomposition
+    track: linear-algebra
+    summary: Any matrix as a sum of rank-1 pieces, most important first, and why that compresses images.
+    prereqs: [eigenvectors]
+    visualisers: [svd]
+    lesson: svd
+    later: [symmetric-matrices-spectral] # B8
+  - id: tensors-shapes
+    title: Tensors, shapes and broadcasting
+    track: linear-algebra
+    summary: Batches of matrices as stacked tables, and the shape rules every model obeys.
+    prereqs: [matrix-multiplication]
+    planned: true
+  - id: high-dimensions
+    title: Geometry in high dimensions
+    track: linear-algebra
+    summary: Why random directions are nearly perpendicular, and where the volume of a ball goes.
+    prereqs: [dot-product, sampling-clt]
+    planned: true
+
+  # ── Calculus and optimisation ────────────────────────────────
+  - id: contour-maps
+    title: Functions of two variables
+    track: calculus
+    summary: Surfaces read as contour maps, and the curves you get by slicing through them.
+    prereqs: [functions-graphs, vectors]
+    planned: true
   - id: derivatives-gradients
     title: Derivatives and gradients
-    track: math
+    track: calculus
     summary: Slopes in one dimension, and the direction of steepest ascent in many.
     visualisers: [derivative]
     lesson: derivatives-gradients
+    later: [functions-graphs, contour-maps] # B1, B4
+  - id: derivative-rules
+    title: Derivative rules
+    track: calculus
+    summary: The derivatives of products, exp, log, sigmoid and ReLU, and checking them numerically.
+    prereqs: [derivatives-gradients, exponents-logs]
+    planned: true
   - id: chain-rule
     title: The chain rule
-    track: math
+    track: calculus
     summary: How changes flow through a computation graph, one link at a time.
     prereqs: [derivatives-gradients]
     visualisers: [chain-rule]
@@ -357,41 +532,142 @@ concepts:
     links:
       - href: /code/neuron-gradients
         label: 'Build micrograd: backprop through a neuron'
+    later: [derivative-rules] # B4
+  - id: taylor-approximation
+    title: Linear and quadratic approximation
+    track: calculus
+    summary: Replacing a curve by its tangent line or parabola near a point, and Newton’s method.
+    prereqs: [derivative-rules]
+    planned: true
+  - id: jacobians
+    title: 'Jacobians: the local linear map'
+    track: calculus
+    summary: Zoom in far enough and any smooth map looks like a matrix, which is what backprop multiplies.
+    prereqs: [chain-rule, matrix-multiplication]
+    planned: true
+  - id: integrals
+    title: Integrals as accumulated area
+    track: calculus
+    summary: Adding up thin slices, and how accumulated area undoes the derivative.
+    prereqs: [derivatives-gradients, sums-notation]
+    planned: true
+  - id: hessian-curvature
+    title: Curvature and the Hessian
+    track: calculus
+    summary: Second derivatives in every direction, ravines and saddles, and why descent zigzags.
+    prereqs: [taylor-approximation, jacobians, symmetric-matrices-spectral]
+    planned: true
+  - id: convexity
+    title: Convexity
+    track: calculus
+    summary: Bowls with a single bottom, where every start leads to the same minimum.
+    prereqs: [hessian-curvature, gradient-descent]
+    planned: true
+  - id: constrained-optimisation
+    title: Lagrange multipliers
+    track: calculus
+    summary: Optimising along a constraint, at the point where the two gradients line up.
+    prereqs: [convexity]
+    planned: true
+
+  # ── Probability and statistics ───────────────────────────────
+  - id: counting-combinatorics
+    title: Counting and combinations
+    track: probability
+    summary: Counting arrangements and choices, and Pascal’s triangle.
+    prereqs: [sums-notation, exponents-logs]
+    planned: true
+  - id: probability-basics
+    title: Chance, events and independence
+    track: probability
+    summary: Events as regions of outcomes, adding and multiplying chances, and when events are independent.
+    prereqs: [counting-combinatorics]
+    planned: true
   - id: probability
     title: Probability and Bayes
-    track: math
+    track: probability
     summary: Conditional probability as areas, and updating beliefs with evidence.
     visualisers: [bayes]
     lesson: bayes
+    later: [probability-basics] # B5
+  - id: random-variables
+    title: Random variables, expectation and variance
+    track: probability
+    summary: Numbers decided by chance, their average, and how far they spread.
+    prereqs: [probability-basics]
+    planned: true
+  - id: law-of-large-numbers
+    title: The law of large numbers and Monte Carlo
+    track: probability
+    summary: Why averages settle down, how fast, and estimating anything by simulation.
+    prereqs: [random-variables]
+    planned: true
+  - id: continuous-distributions
+    title: Densities and the normal distribution
+    track: probability
+    summary: Probability as area under a density curve, the CDF, and the bell curve.
+    prereqs: [random-variables, integrals]
+    planned: true
   - id: sampling-clt
     title: Sampling and the central limit theorem
-    track: math
+    track: probability
     summary: Why averages of almost anything pile up into a bell curve, and how fast they settle.
     prereqs: [probability]
     visualisers: [central-limit-theorem]
     lesson: central-limit-theorem
+    later: [law-of-large-numbers, continuous-distributions] # B5
+  - id: covariance-correlation
+    title: Covariance and correlation
+    track: probability
+    summary: How two quantities move together, and why correlation is a cosine.
+    prereqs: [random-variables, dot-product]
+    planned: true
   - id: information-theory
     title: Entropy and KL divergence
-    track: math
+    track: probability
     summary: Information as surprise in bits, and the cost of believing the wrong distribution.
     prereqs: [probability]
     visualisers: [entropy]
     lesson: entropy
-  - id: svd
-    title: Singular value decomposition
-    track: math
-    summary: Any matrix as a sum of rank-1 pieces, most important first, and why that compresses images.
-    prereqs: [eigenvectors]
-    visualisers: [svd]
-    lesson: svd
-  - id: floating-point
-    title: Floating-point numbers
-    track: math
-    summary: How computers store real numbers in 32 bits, and why 0.1 + 0.2 isn’t quite 0.3.
-    visualisers: [floating-point]
-    lesson: floating-point
+    later: [exponents-logs, random-variables] # B1, B5
+  - id: maximum-likelihood
+    title: Maximum likelihood
+    track: probability
+    summary: Choosing the parameters that make the data most probable, and why that gives squared error and cross-entropy.
+    prereqs: [random-variables, derivatives-gradients, exponents-logs]
+    planned: true
+  - id: estimation-confidence
+    title: Standard errors, confidence intervals and the bootstrap
+    track: probability
+    summary: How far an estimate could be from the truth, and what 95% really promises.
+    prereqs: [sampling-clt]
+    planned: true
+  - id: hypothesis-testing
+    title: Hypothesis tests and p-values
+    track: probability
+    summary: Whether chance alone could explain a difference, permutation tests, and the trap of testing many things at once.
+    prereqs: [estimation-confidence]
+    planned: true
+  - id: gaussian-multivariate
+    title: The multivariate Gaussian
+    track: probability
+    summary: Bell curves in many dimensions, shaped by a covariance matrix, and sampled by warping noise.
+    prereqs: [covariance-correlation, continuous-distributions, symmetric-matrices-spectral]
+    planned: true
+  - id: markov-chains
+    title: Markov chains
+    track: probability
+    summary: Random steps that depend only on where you are, the distribution they settle into, and PageRank.
+    prereqs: [probability-basics, matrix-multiplication, eigenvectors]
+    planned: true
 
-  # ── Machine learning ─────────────────────────────────────────
+  # ── Classical machine learning ───────────────────────────────
+  - id: supervised-learning
+    title: What learning from examples means
+    track: ml
+    summary: Features, labels, a model with knobs and a loss, and why a test set keeps you honest.
+    prereqs: [functions-graphs, vectors]
+    planned: true
   - id: gradient-descent
     title: Gradient descent
     track: ml
@@ -413,6 +689,19 @@ concepts:
     prereqs: [gradient-descent, vectors-matrices]
     visualisers: [linear-regression]
     lesson: linear-regression
+    later: [supervised-learning] # B3
+  - id: overfitting-bias-variance
+    title: Overfitting, validation and bias–variance
+    track: ml
+    summary: Models that memorise instead of learning, and how validation and cross-validation catch them.
+    prereqs: [linear-regression]
+    planned: true
+  - id: regularisation
+    title: Regularisation
+    track: ml
+    summary: Penalising big weights, where ridge shrinks them and lasso sets some exactly to zero, and priors as penalties.
+    prereqs: [overfitting-bias-variance, norms-distances]
+    planned: true
   - id: logistic-regression
     title: Logistic regression
     track: ml
@@ -420,6 +709,25 @@ concepts:
     prereqs: [linear-regression, information-theory]
     visualisers: [logistic-regression]
     lesson: logistic-regression
+    later: [maximum-likelihood] # B6
+  - id: softmax-regression
+    title: Softmax and many classes
+    track: ml
+    summary: Turning scores into probabilities over many classes, without overflowing.
+    prereqs: [logistic-regression, floating-point]
+    planned: true
+  - id: classification-metrics
+    title: Precision, recall and ROC
+    track: ml
+    summary: Confusion matrices, thresholds, and why accuracy lies on imbalanced data.
+    prereqs: [logistic-regression]
+    planned: true
+  - id: k-nearest-neighbours
+    title: k-nearest neighbours
+    track: ml
+    summary: Predicting from the closest examples, and why distance stops meaning much in many dimensions.
+    prereqs: [supervised-learning, norms-distances]
+    planned: true
   - id: decision-trees
     title: Decision trees and boosting
     track: ml
@@ -427,13 +735,13 @@ concepts:
     prereqs: [probability]
     visualisers: [decision-tree, gradient-boosting]
     lesson: decision-trees
-  - id: neural-networks
-    title: Neural networks and backpropagation
+    later: [supervised-learning] # B3
+  - id: stochastic-gradient-descent
+    title: Minibatches, epochs and schedules
     track: ml
-    summary: Layers of weighted sums, trained by pushing the chain rule backwards.
-    prereqs: [logistic-regression, chain-rule]
-    visualisers: [perceptron, mlp]
-    lesson: neural-networks
+    summary: Descending on a small random sample at a time, and changing the step size as training goes.
+    prereqs: [gradient-descent, sampling-clt]
+    planned: true
   - id: clustering
     title: Clustering with k-means
     track: ml
@@ -441,27 +749,31 @@ concepts:
     prereqs: [vectors-matrices]
     visualisers: [k-means]
     lesson: k-means
-  - id: convolution
-    title: Convolutional networks
+    later: [norms-distances] # B2
+  - id: pca
+    title: Principal component analysis
     track: ml
-    summary: Slide one small kernel over every position of an image to find a pattern wherever it is, then pool.
-    prereqs: [neural-networks]
-    visualisers: [convolution]
-    lesson: convolution
-  - id: attention
-    title: Attention and transformers
+    summary: The directions data varies most along, and keeping only the few that matter.
+    prereqs: [svd, covariance-correlation]
+    planned: true
+  - id: gaussian-mixtures-em
+    title: Gaussian mixtures and EM
     track: ml
-    summary: Every token weighs every other token to decide what matters.
-    prereqs: [neural-networks, vectors-matrices]
-    visualisers: [attention]
-    lesson: attention
-  - id: language-models
-    title: Tokens and text generation
+    summary: Soft clustering with overlapping bell curves, fitted by alternating two easy steps.
+    prereqs: [clustering, gaussian-multivariate, maximum-likelihood]
+    planned: true
+  - id: random-forests
+    title: Bagging and random forests
     track: ml
-    summary: How a language model splits text into learned tokens and writes one token at a time, sampling from a probability for every token.
-    prereqs: [attention, information-theory]
-    visualisers: [bpe, sampling, kv-cache]
-    lesson: language-models
+    summary: Many trees grown on resampled data, voting, so their mistakes cancel out.
+    prereqs: [decision-trees, estimation-confidence]
+    planned: true
+  - id: svm-kernels
+    title: Support vector machines and kernels
+    track: ml
+    summary: The widest margin between two classes, decided by a few points, and kernels that bend the boundary.
+    prereqs: [constrained-optimisation, logistic-regression]
+    planned: true
   - id: reinforcement-learning
     title: Reinforcement learning
     track: ml
@@ -469,13 +781,238 @@ concepts:
     prereqs: [dynamic-programming, probability]
     visualisers: [q-learning]
     lesson: q-learning
+    later: [markov-chains] # B9
+  - id: bandits
+    title: 'Bandits: explore or exploit'
+    track: ml
+    summary: Choosing between options while still learning which one pays best.
+    prereqs: [random-variables]
+    planned: true
+  - id: policy-gradients
+    title: Policy gradients
+    track: ml
+    summary: Learning a policy directly, by making the actions that were rewarded more likely.
+    prereqs: [markov-chains, bandits, maximum-likelihood, neural-networks]
+    planned: true
+
+  # ── Deep learning ────────────────────────────────────────────
+  - id: neural-networks
+    title: Neural networks and backpropagation
+    track: deep-learning
+    summary: Layers of weighted sums, trained by pushing the chain rule backwards.
+    prereqs: [logistic-regression, chain-rule]
+    visualisers: [perceptron, mlp]
+    lesson: neural-networks
+  - id: autograd
+    title: Automatic differentiation
+    track: deep-learning
+    summary: Recording a computation as a graph and running the chain rule backwards through all of it at once.
+    prereqs: [chain-rule]
+    planned: true
+  - id: activations-initialisation
+    title: Activations and initialisation
+    track: deep-learning
+    summary: Why signals vanish or explode through deep layers, and the starting weights that keep them steady.
+    prereqs: [neural-networks, random-variables]
+    planned: true
+  - id: training-dynamics
+    title: Reading loss curves, early stopping and dropout
+    track: deep-learning
+    summary: Diagnosing training from its curves, and the tricks that stop a network overfitting.
+    prereqs: [neural-networks, stochastic-gradient-descent, optimizers, regularisation]
+    planned: true
+  - id: normalisation
+    title: Batch norm and layer norm
+    track: deep-learning
+    summary: Recentring and rescaling activations so deep networks train smoothly.
+    prereqs: [activations-initialisation]
+    planned: true
+  - id: convolution
+    title: Convolutional networks
+    track: deep-learning
+    summary: Slide one small kernel over every position of an image to find a pattern wherever it is, then pool.
+    prereqs: [neural-networks]
+    visualisers: [convolution]
+    lesson: convolution
+  - id: cnn-architectures
+    title: Building a CNN
+    track: deep-learning
+    summary: Stacking convolutions, channels and pooling into a network that reads handwritten digits.
+    prereqs: [convolution, training-dynamics]
+    planned: true
+  - id: residual-networks
+    title: Residual connections
+    track: deep-learning
+    summary: Adding each layer’s input to its output, so very deep networks still train.
+    prereqs: [cnn-architectures, normalisation]
+    planned: true
+  - id: embeddings
+    title: Embeddings
+    track: deep-learning
+    summary: Learned vectors for words and things, where being close means being similar.
+    prereqs: [dot-product, neural-networks, softmax-regression]
+    planned: true
+  - id: autoencoders
+    title: Autoencoders
+    track: deep-learning
+    summary: Squeezing data through a narrow middle and rebuilding it, to learn what matters about it.
+    prereqs: [neural-networks, pca]
+    planned: true
+  - id: latent-variables-elbo
+    title: Latent variables and the ELBO
+    track: deep-learning
+    summary: Models with hidden causes, and the lower bound on the likelihood that makes them trainable.
+    prereqs: [maximum-likelihood, information-theory, integrals, gaussian-mixtures-em]
+    planned: true
+  - id: vaes
+    title: Variational autoencoders
+    track: deep-learning
+    summary: An autoencoder whose middle is a distribution, so new data can be sampled from it.
+    prereqs: [latent-variables-elbo, autoencoders, gaussian-multivariate]
+    planned: true
   - id: diffusion
     title: Diffusion models
-    track: ml
+    track: deep-learning
     summary: Generate by learning to remove noise, destroying data step by step and then running it backwards from fresh noise.
     prereqs: [neural-networks, sampling-clt]
     visualisers: [diffusion]
     lesson: diffusion
+    later: [gaussian-multivariate] # B8
+  - id: diffusion-in-depth
+    title: The DDPM objective, scores and guidance
+    track: deep-learning
+    summary: Why predicting the noise works, score fields, and steering generation with guidance.
+    prereqs: [diffusion, vaes]
+    planned: true
+  - id: graph-laplacian
+    title: The graph Laplacian
+    track: deep-learning
+    summary: A matrix that measures how much a signal on a graph changes across its edges.
+    prereqs: [graph-representations, symmetric-matrices-spectral]
+    planned: true
+  - id: spectral-graph-theory
+    title: Spectral clustering
+    track: deep-learning
+    summary: Splitting a graph into communities with the Laplacian’s eigenvectors.
+    prereqs: [graph-laplacian]
+    planned: true
+  - id: message-passing-gnns
+    title: Message passing and GCNs
+    track: deep-learning
+    summary: Neural networks on graphs, where every node updates from its neighbours’ messages, and graph attention.
+    prereqs: [spectral-graph-theory, neural-networks]
+    planned: true
+
+  # ── Language models ──────────────────────────────────────────
+  - id: ngram-models
+    title: Counting language models
+    track: llms
+    summary: Predicting the next letter from counts of pairs, sampling from them, and measuring the loss in bits.
+    prereqs: [markov-chains, information-theory, softmax-regression]
+    planned: true
+  - id: attention
+    title: Attention and transformers
+    track: llms
+    summary: Every token weighs every other token to decide what matters.
+    prereqs: [neural-networks, vectors-matrices]
+    visualisers: [attention]
+    lesson: attention
+    later: [embeddings, tensors-shapes] # B11
+  - id: language-models
+    title: Tokens and text generation
+    track: llms
+    summary: How a language model splits text into learned tokens and writes one token at a time, sampling from a probability for every token.
+    prereqs: [attention, information-theory]
+    visualisers: [bpe, sampling, kv-cache]
+    lesson: language-models
+    later: [ngram-models] # B11
+  - id: multi-head-positional
+    title: Multi-head attention and positions
+    track: llms
+    summary: Several attention patterns side by side, and how a transformer knows the order of words.
+    prereqs: [attention, trigonometry]
+    planned: true
+  - id: transformer-block
+    title: The transformer block
+    track: llms
+    summary: Attention and an MLP, each adding to a residual stream, stacked into a model.
+    prereqs: [multi-head-positional, residual-networks, normalisation]
+    planned: true
+  - id: gpt-from-scratch
+    title: A GPT, end to end
+    track: llms
+    summary: A character-level GPT built, trained and sampled from, piece by piece.
+    prereqs: [transformer-block, language-models, training-dynamics]
+    planned: true
+  - id: scaling-efficiency
+    title: Scaling laws, memory and quantisation
+    track: llms
+    summary: How loss falls with model size and data, and fitting a model into less memory.
+    prereqs: [gpt-from-scratch, floating-point]
+    planned: true
+  - id: fine-tuning-lora
+    title: Fine-tuning and LoRA
+    track: llms
+    summary: Adapting a trained model by learning a small low-rank change to its weights.
+    prereqs: [gpt-from-scratch, svd]
+    planned: true
+  - id: llm-evaluation
+    title: Evaluating models honestly
+    track: llms
+    summary: Error bars, paired comparisons, pass@k and contamination.
+    prereqs: [hypothesis-testing, language-models, counting-combinatorics]
+    planned: true
+  - id: preference-tuning
+    title: Reward models, RLHF and DPO
+    track: llms
+    summary: Training a model on which of two answers people prefer.
+    prereqs: [fine-tuning-lora, policy-gradients, logistic-regression]
+    planned: true
+  # An elective: not a target of the ml-zero-to-hero goal.
+  - id: retrieval-rag
+    title: Vector search and retrieval
+    track: llms
+    summary: Finding the nearest embeddings fast, and handing what they point at to a model to answer from.
+    prereqs: [embeddings, graph-representations]
+    planned: true
+
+  # ── Interpretability ─────────────────────────────────────────
+  - id: residual-stream-logit-lens
+    title: The residual stream and the logit lens
+    track: interpretability
+    summary: Reading a transformer’s running sum layer by layer as next-token guesses.
+    prereqs: [transformer-block, projections-least-squares, change-of-basis]
+    planned: true
+  - id: superposition
+    title: Superposition
+    track: interpretability
+    summary: How a network packs more features than it has dimensions.
+    prereqs: [high-dimensions, neural-networks, projections-least-squares]
+    planned: true
+  - id: linear-probes-steering
+    title: Probes and steering vectors
+    track: interpretability
+    summary: Finding a feature’s direction with a linear probe, and adding it to change what the model writes.
+    prereqs: [superposition, logistic-regression, residual-stream-logit-lens]
+    planned: true
+  - id: induction-heads
+    title: Circuits and induction heads
+    track: interpretability
+    summary: Two attention heads that together copy what came next last time.
+    prereqs: [residual-stream-logit-lens, multi-head-positional, svd]
+    planned: true
+  - id: activation-patching
+    title: Activation patching
+    track: interpretability
+    summary: Swapping activations between runs to find which parts of a model cause a behaviour.
+    prereqs: [induction-heads]
+    planned: true
+  - id: sparse-autoencoders
+    title: Sparse autoencoders
+    track: interpretability
+    summary: Unpacking superposed features into many sparse ones a person can read.
+    prereqs: [superposition, autoencoders, regularisation]
+    planned: true
 
   # ── Systems ──────────────────────────────────────────────────
   - id: cpu-scheduling

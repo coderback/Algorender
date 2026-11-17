@@ -9,7 +9,7 @@ import { runJs } from '@/workspace/js/runtime';
 import { HARNESS } from '@/workspace/python/harness';
 import { DEFAULT_LIMITS, LANGUAGES, LINE_LIMITS, type Language, type RunEvent, type RunMode, type RunRequest, type RunResult } from '@/workspace/protocol';
 import { traceFor } from '@/workspace/trace';
-import { exercises, stripBlanks, watchedByLine, type Exercise } from '.';
+import { exercises, stripBlanks, testRequest, watchedByLine, type Exercise } from '.';
 
 let runPython: (json: string) => string;
 
@@ -32,6 +32,12 @@ function run(exercise: Exercise, language: Language, code: string, input: unknow
   };
   return language === 'python' ? JSON.parse(runPython(JSON.stringify(request))) : runJs(request);
 }
+
+/** One judged test, as the workspace runs it (instrumented, or in judge mode within its budget). */
+const judged = (exercise: Exercise, language: Language, code: string, input: unknown): RunResult => {
+  const request = testRequest(exercise, language, code, input);
+  return language === 'python' ? JSON.parse(runPython(JSON.stringify(request))) : runJs(request);
+};
 
 /** What the learner sees happen to the array, without the language-specific lines and variables. */
 const actions = (r: RunResult) =>
@@ -62,13 +68,13 @@ describe.each(exercises.map((e) => [e.slug, e] as const))('%s', (_slug, exercise
   for (const language of LANGS) {
     it(`${language}: the solution passes every test`, () => {
       for (const test of exercise.tests) {
-        const verdict = exercise.check(test.input, run(exercise, language, exercise.solution[language], test.input));
+        const verdict = exercise.check(test.input, judged(exercise, language, exercise.solution[language], test.input));
         expect(verdict, `${test.name}: ${verdict.message}`).toMatchObject({ pass: true });
       }
     });
 
     it(`${language}: the starter doesn't pass`, () => {
-      const results = exercise.tests.map((t) => run(exercise, language, exercise.starter[language], t.input));
+      const results = exercise.tests.map((t) => judged(exercise, language, exercise.starter[language], t.input));
       // A stub runs cleanly and just doesn't do the job; a bug hunt's code may crash or never finish.
       if (exercise.kind !== 'bug') expect(results.map((r) => r.error)).toEqual(results.map(() => null));
       expect(exercise.tests.some((t, i) => !exercise.check(t.input, results[i]).pass)).toBe(true);

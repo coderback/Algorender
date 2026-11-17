@@ -14,6 +14,8 @@ const pages = [
   '/explore?kind=algorithms',
   '/learn',
   '/learn/placement',
+  '/learn/checkpoint/1',
+  '/learn/checkpoint/7',
   '/plan',
   '/play',
   '/play/be-the-algorithm',

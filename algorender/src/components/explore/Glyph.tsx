@@ -11,6 +11,7 @@ const BAR: Record<TrackColour, { on: string; off: string }> = {
   sky: { on: 'bg-track-sky-bar', off: 'bg-track-sky-bar/45' },
   butter: { on: 'bg-track-butter-bar', off: 'bg-track-butter-bar/45' },
   rose: { on: 'bg-track-rose-bar', off: 'bg-track-rose-bar/45' },
+  lime: { on: 'bg-track-lime-bar', off: 'bg-track-lime-bar/45' },
   teal: { on: 'bg-track-teal-bar', off: 'bg-track-teal-bar/45' },
 };
 

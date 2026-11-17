@@ -54,6 +54,38 @@ export const goals: readonly Goal[] = [
     summary: 'How modern models work: convolution, attention, tokens and sampling, and diffusion, with the foundations they need.',
     concepts: ['convolution', 'attention', 'language-models', 'diffusion'],
   },
+  {
+    // The zero-to-hero path: its targets are mostly planned, and plans leave
+    // planned concepts out (goalConcepts in src/progress/plan.ts), so the goal
+    // grows on its own as each batch makes its concepts available.
+    id: 'ml-zero-to-hero',
+    title: 'Machine learning from zero',
+    summary:
+      'From school math to transformers, diffusion, interpretability and graph networks: each idea seen, predicted and built from scratch. You need to be able to write a loop and a function in Python or JavaScript.',
+    concepts: [
+      'projections-least-squares',
+      'autograd',
+      'neural-networks',
+      'classification-metrics',
+      'regularisation',
+      'k-nearest-neighbours',
+      'pca',
+      'gaussian-mixtures-em',
+      'svm-kernels',
+      'random-forests',
+      'residual-networks',
+      'gpt-from-scratch',
+      'linear-probes-steering',
+      'activation-patching',
+      'sparse-autoencoders',
+      'diffusion-in-depth',
+      'scaling-efficiency',
+      'fine-tuning-lora',
+      'llm-evaluation',
+      'preference-tuning',
+      'message-passing-gnns',
+    ],
+  },
 ];
 
 export const getGoal = (id: string) => goals.find((g) => g.id === id);

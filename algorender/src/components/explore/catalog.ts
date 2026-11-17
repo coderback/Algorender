@@ -1,6 +1,6 @@
 import { masteryGraph } from '@/content/mastery';
 import { visualisers } from '@/data/visualisers';
-import { trackColour } from '@/data/tracks';
+import { trackColour, typeTrack } from '@/data/tracks';
 import { getModule } from '@/registry';
 import { glyphFor, KIND_OF_TYPE, type Tile } from './tiles';
 
@@ -19,7 +19,7 @@ export function libraryTiles(): Tile[] {
         blurb: v.description,
         cost: 'timeComplexity' in v ? v.timeComplexity.average : null,
         kind: KIND_OF_TYPE[v.type],
-        colour: trackColour(concept?.track ?? (v.type === 'systems' || v.type === 'math' ? v.type : '')),
+        colour: trackColour(concept?.track ?? typeTrack(v.type)),
         concept: concept?.id ?? null,
         glyph: glyphFor(getModule(v.slug)?.view ?? '', v.category),
       };
