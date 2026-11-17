@@ -6,6 +6,7 @@ import { arrayExercises, bugHunts, modifyExercises } from './arrays';
 import { graphExercises } from './graphs';
 import { gridExercises } from './grids';
 import { mlExercises } from './ml';
+import { toolkitExercises } from './toolkit';
 import type { Exercise } from './shared';
 import { treeExercises } from './trees';
 
@@ -17,6 +18,7 @@ export const exercises: Exercise[] = [
   ...gridExercises,
   ...graphExercises,
   ...treeExercises,
+  ...toolkitExercises,
   ...mlExercises,
   ...modifyExercises,
   ...bugHunts,

@@ -378,32 +378,36 @@ concepts:
     title: Functions and their graphs
     track: math-toolkit
     summary: A function as a rule from inputs to outputs, and how its knobs shift and stretch its graph.
-    planned: true
+    visualisers: [functions]
+    lesson: functions-graphs
   - id: exponents-logs
     title: Exponents, logarithms and e
     track: math-toolkit
     summary: Repeated doubling and its inverse, why logs turn products into sums, and where e comes from.
     prereqs: [functions-graphs]
-    planned: true
+    visualisers: [logarithms]
+    lesson: exponents-logs
   - id: sums-notation
     title: Sums, products and reading math notation
     track: math-toolkit
     summary: Σ, Π, subscripts and hats read aloud, and every sum written as a loop.
     prereqs: [functions-graphs]
-    planned: true
+    visualisers: [sigma-notation]
+    lesson: sums-notation
   - id: trigonometry
     title: Angles, sine and cosine
     track: math-toolkit
     summary: Radians, the unit circle, and sine and cosine as the shadows of a turning point.
     prereqs: [functions-graphs]
-    planned: true
+    visualisers: [unit-circle]
+    lesson: trigonometry
   - id: floating-point
     title: Floating-point numbers
     track: math-toolkit
     summary: How computers store real numbers in 32 bits, and why 0.1 + 0.2 isn’t quite 0.3.
+    prereqs: [exponents-logs]
     visualisers: [floating-point]
     lesson: floating-point
-    later: [exponents-logs] # B1
 
   # ── Linear algebra ───────────────────────────────────────────
   - id: vectors
@@ -513,9 +517,10 @@ concepts:
     title: Derivatives and gradients
     track: calculus
     summary: Slopes in one dimension, and the direction of steepest ascent in many.
+    prereqs: [functions-graphs]
     visualisers: [derivative]
     lesson: derivatives-gradients
-    later: [functions-graphs, contour-maps] # B1, B4
+    later: [contour-maps] # B4
   - id: derivative-rules
     title: Derivative rules
     track: calculus
@@ -626,10 +631,10 @@ concepts:
     title: Entropy and KL divergence
     track: probability
     summary: Information as surprise in bits, and the cost of believing the wrong distribution.
-    prereqs: [probability]
+    prereqs: [probability, exponents-logs]
     visualisers: [entropy]
     lesson: entropy
-    later: [exponents-logs, random-variables] # B1, B5
+    later: [random-variables] # B5
   - id: maximum-likelihood
     title: Maximum likelihood
     track: probability

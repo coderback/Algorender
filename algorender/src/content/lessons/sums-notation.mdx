@@ -1,0 +1,269 @@
+<Section step="hook" title="A formula is a loop in disguise">
+
+In the last lesson, an estate agent's rule guessed a flat's price from its size. How good are its guesses? Take some
+flats whose real prices you know, and find the gap between each real price and the guess. Square the gap, so a
+guess £10,000 too high counts the same as one £10,000 too low. Add up the squares, then divide by the number of flats.
+That is the **mean squared error**: the smaller it is, the better the rule.
+
+A machine learning paper writes the same recipe like this:
+
+$$
+\text{MSE} = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+$$
+
+It looks like a wall of symbols, but you have just read it in words. $n$ is the number of flats, and $i$ counts through
+them, from 1 to $n$. $y_i$ is the real price of flat $i$ and $\hat{y}_i$ ("y hat") the rule's guess. Σ means "add up",
+and $\frac{1}{n}$ divides by how many. If you can write a `for` loop, you can already compute it. This lesson teaches
+you to read every symbol, so that later formulas turn into code just as easily.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="Σ (sigma)">"Add up", from the Greek capital S. $\sum_{i=1}^{n} x_i$ is "the sum of $x_i$ for $i$ from 1 to $n$": $x_1 + x_2 + \cdots + x_n$. The visualiser writes the range as i = 1..n.</Term>
+  <Term name="index">The counter under the Σ, usually $i$, $j$ or $k$. It takes every whole number from the bottom value to the top one, both included.</Term>
+  <Term name="subscript">The small letter written low after a name: $x_i$ is "x sub i", the $i$-th item of a list $x$. In code it is `x[i]`, give or take one (see below).</Term>
+  <Term name="Π (pi)">"Multiply together", from the Greek capital P. Nothing to do with the π of circles: $\prod_{i=1}^{n} x_i = x_1 \times x_2 \times \cdots \times x_n$.</Term>
+  <Term name="bar and hat">$\bar{x}$, "x bar", is the mean (the average) of the $x$s. $\hat{y}$, "y hat", is an estimate or a prediction of $y$.</Term>
+  <Term name="σ (small sigma)">A different letter from Σ. $\sigma^2$, "sigma squared", is the usual name for the variance, a measure of spread you will build below.</Term>
+  <Term name="θ and ∈">You will meet these in later lessons. $\theta$ (theta) usually names a model's knobs, its parameters. $\in$ reads "is in": $i \in \{1, 2, 3\}$.</Term>
+</Terms>
+
+Every Σ is the same loop:
+
+```python
+total = 0
+for i in range(1, n + 1):   # i = 1, 2, …, n
+    total = total + term(i)
+```
+
+Two habits of maths writing catch programmers out. First, maths counts from 1, but lists in Python and JavaScript count
+from 0. So $x_1$ is `x[0]` and $x_n$ is `x[n - 1]`. When the term uses the counter itself, like $i^2$, loop over
+`range(1, n + 1)`. When it picks items out of a list, loop over the positions, `range(n)`. Second, when a sum clearly
+runs over a whole list, writers often leave the limits off: $\sum x_i$ just means "add up every $x_i$".
+
+So the MSE from the top of the page is this loop:
+
+```python
+total = 0
+for i in range(n):              # flats 1 to n are y[0] to y[n - 1]
+    total = total + (y[i] - y_hat[i]) ** 2
+mse = total / n
+```
+
+</Section>
+
+<Section step="see" title="Watch a sum add up">
+
+<Explore slug="sigma-notation" settings={{ preset: 'count' }} caption="Σ i for i = 1 to 10: each term is a bar, and the running total climbs beside it. The code panel is the loop." />
+
+The **Terms** chart shows each term, $1, 2, \ldots, 10$. The **Running total** chart shows the total after each one:
+$1, 3, 6, 10, \ldots$ The loop adds the term for the number on top of the Σ, then stops, here with a total of 55. This
+sum has a shortcut, $\frac{n(n+1)}{2} = \frac{10 \times 11}{2} = 55$, but most sums don't, and the loop always works.
+
+The symbols around the Σ say exactly what the loop does. The bottom, $i = 1$, is where the counter starts. The top, $n$,
+is where it stops, **included**. The expression after the Σ is the term added each time round. Change any of the three
+and you change the loop:
+
+<Explore slug="sigma-notation" settings={{ preset: 'squares' }} caption="Σ i² for i = 1 to 5: the same loop with a different term. 1 + 4 + 9 + 16 + 25 = 55, the same total as before by coincidence." />
+
+<KeyIdea>
+
+**Read a formula from the inside out, and write each Σ as a loop.** Start at the innermost bracket and work outwards. The
+term inside is the body of the loop; the Σ's limits are the loop's range; anything outside the Σ, like the $\frac{1}{n}$
+in the MSE, is done once, after the loop.
+
+</KeyIdea>
+
+Π is the same loop with × instead of +. Its running product starts at 1, not 0: a product started at 0 stays 0
+forever. $\prod_{i=1}^{6} i = 1 \times 2 \times \cdots \times 6 = 720$, written $6!$ ("six factorial").
+
+</Section>
+
+<Section step="predict" title="Your turn: add up the odd numbers">
+
+Here the term is $2i - 1$, so $i = 1, 2, 3, \ldots$ gives the odd numbers $1, 3, 5, \ldots$ Predict each running total
+before it appears. You may spot a pattern in the totals.
+
+<PredictChallenge slug="sigma-notation" settings={{ preset: 'odd' }} goal={5} />
+
+</Section>
+
+<Section step="do" title="The mean, and a sum of squares">
+
+The mean is a Σ followed by one division: $\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i$. Drag the
+bars (or focus one and use the arrow keys) to change the data, and watch the mean move:
+
+<Explore slug="sigma-notation" settings={{ preset: 'mean' }} input caption="x̄ = (2 + 4 + 9 + 5) / 4 = 5. The gaps above the mean always cancel the gaps below." />
+
+For 2, 4, 9 and 5, the gaps from the mean of 5 are $-3$, $-1$, $+4$ and $0$, which add up to 0. For any data, the gaps
+$x_i - \bar{x}$ add up to exactly 0: that is what makes the mean the balance point.
+
+So adding up the gaps can't measure how spread out the data is. Measures of spread **square** each gap first, so none
+of them is negative. The variance is the average squared gap:
+
+$$
+\sigma^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \bar{x})^2
+$$
+
+Read it inside out: a gap, squared, added up over every $i$, then divided by $n$. For 2, 4, 9 and 5 the squared gaps are
+9, 1, 16 and 0, so $\sigma^2 = 26 / 4 = 6.5$.
+
+As in school arithmetic, brackets and powers decide the order of work, so two formulas that look alike can give very
+different answers:
+
+<Explore slug="sigma-notation" settings={{ preset: 'square' }} input caption="For 1, 2, 3: square then add gives 14; add then square gives 36. Type square 5 0 0 into the box to find when they agree." />
+
+<Misconception
+  id="square-of-sum"
+  title="Σ xᵢ² is the same as (Σ xᵢ)²"
+  probes={[
+    {
+      q: 'For the data 1, 2, 3, what is Σ xᵢ²?',
+      choices: ['14', '36', '12'],
+      answer: 0,
+      trap: 1,
+      why: 'Square each value, then add: 1 + 4 + 9 = 14. Adding first and squaring the total gives (1 + 2 + 3)² = 36.',
+    },
+    {
+      q: 'x = [3, 4]. What is (Σ xᵢ)²?',
+      choices: ['25', '49', '7'],
+      answer: 1,
+      trap: 0,
+      why: 'Add first, then square: (3 + 4)² = 49. Squaring first gives 9 + 16 = 25.',
+    },
+  ]}
+>
+
+$\sum x_i^2$ squares each value, then adds. $(\sum x_i)^2$ adds first, then squares the total. Multiply out
+$(x_1 + x_2 + x_3)^2$ and you get every product $x_i x_j$, a whole table of them; $\sum x_i^2$ is only its diagonal.
+When no value is negative, the two agree only if at most one value is not 0. Otherwise $(\sum x_i)^2$ is bigger.
+
+</Misconception>
+
+<Misconception
+  id="count-terms"
+  title="Σ from i = a to b has b − a terms"
+  probes={[
+    {
+      q: 'How many terms does the sum from i = 3 to 7 add up?',
+      choices: ['4', '5', '7'],
+      answer: 1,
+      trap: 0,
+      why: 'Both ends are included: i = 3, 4, 5, 6, 7 is 5 terms, 7 − 3 + 1.',
+    },
+    {
+      q: 'Which Python loop runs the sum from i = 1 to n?',
+      choices: ['for i in range(1, n)', 'for i in range(1, n + 1)', 'for i in range(n - 1)'],
+      answer: 1,
+      trap: 0,
+      why: 'Σ includes its top value, but range stops just before its second argument, so it needs n + 1.',
+    },
+  ]}
+>
+
+The bottom and the top of a Σ are both included, so $\sum_{i=a}^{b}$ has $b - a + 1$ terms. Python's `range(a, b)`
+stops just **before** $b$, so the Σ from 1 to $n$ is `range(1, n + 1)`. Off-by-one slips like this are among the most
+common bugs in turning maths into code.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="A double sum fills a table">
+
+Two Σs written one after the other, like $\sum_{i=1}^{3} \sum_{j=1}^{4} i \cdot j$, are a loop inside a loop. The dot
+means "times". For each $i$, the inner loop runs $j$ across a whole row:
+
+```python
+total = 0
+for i in range(1, 4):           # i = 1, 2, 3
+    for j in range(1, 5):       # j = 1, 2, 3, 4
+        total = total + i * j
+```
+
+<Explore slug="sigma-notation" settings={{ preset: 'double' }} caption="Row by row: for i = 1, j runs 1 to 4; then i = 2, and j starts again at 1. The 12 cells add up to 60." />
+
+The variance has two Σs too, one of them hidden inside $\bar{x}$. But they are not nested. Every gap needs the mean, so
+the mean must be finished first: two loops, one after the other. The exercise's
+lists count from 0, so both loops run over the positions 0 to $n - 1$.
+
+<CodeExercise exercise="variance" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is the sum from i = 1 to 4 of i?',
+      choices: ['10', '4', '24', '16'],
+      answer: 0,
+      why: '1 + 2 + 3 + 4 = 10. Multiplying them instead, the product Π, gives 24.',
+    },
+    {
+      q: 'How do you read ŷ aloud, and what does it usually mean?',
+      choices: ['“y bar”, the mean of y', '“y hat”, a prediction of y', '“y sub i”, the i-th y', '“y prime”, the slope of y'],
+      answer: 1,
+      why: 'A hat marks an estimate or a prediction; a bar marks a mean.',
+    },
+    {
+      q: 'x = [1, 2, 3]. What is Σ xᵢ²?',
+      choices: ['14', '36', '6', '12'],
+      answer: 0,
+      why: 'Square, then add: 1 + 4 + 9 = 14. 36 is (1 + 2 + 3)².',
+      traps: { 1: 'square-of-sum' },
+    },
+    {
+      q: 'How many terms are in the sum from i = 0 to 9?',
+      choices: ['9', '10', '11', '0'],
+      answer: 1,
+      why: 'Both ends are included: 0, 1, …, 9 is ten numbers, 9 − 0 + 1.',
+      traps: { 0: 'count-terms' },
+    },
+    {
+      q: 'What is the product from i = 1 to 4 of i?',
+      choices: ['24', '10', '0', '4'],
+      answer: 0,
+      why: '1 × 2 × 3 × 4 = 24, which is 4!. A product starts from 1, so it never gets stuck at 0.',
+    },
+    {
+      q: 'Which says (1/n) Σ (yᵢ − ŷᵢ)² in words?',
+      choices: ['The average squared gap between the true values and the predictions', 'The square of the average gap', 'The total of the predictions', 'The largest gap, squared'],
+      answer: 0,
+      why: 'Inside out: a gap for each i, squared, added up, then divided by n. The square of the average gap would be ((1/n) Σ (yᵢ − ŷᵢ))².',
+      traps: { 1: 'square-of-sum' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="read-a-sum"
+  prompt="How do you read (1/n) Σ (xᵢ − x̄)² aloud, and how would you turn it into code?"
+  rubric={[
+    'Σ adds up a term for every value of its index, here i from 1 to n, both ends included.',
+    'xᵢ is the i-th value and x̄ is the mean of all the values.',
+    'In code it is a loop: start a total at 0 and add (xᵢ − x̄)² each time round.',
+    'The mean has to be worked out first, in its own loop, because every term needs it.',
+    'After the loop the total is divided by n, giving the average squared distance from the mean.',
+  ]}
+  example="It says: for every i from 1 to n, take the i-th value xᵢ, subtract the mean x̄, square the gap, add all those up, then divide by n. In code that is two loops. The first adds up the values and divides by n to get the mean. The second starts a total at 0 and adds (x[i] − mean) squared for each i. The 1/n is outside the Σ, so it happens once, after the loop. The result is the variance: the average squared distance from the mean."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- $\sum_{i=a}^{b}$ is a loop that adds the term for $i = a$ to $b$, both included: $b - a + 1$ terms.
+- $\prod$ multiplies instead, starting from 1. Subscripts are indexes; a bar is a mean, a hat a prediction.
+- Maths counts from 1 and lists from 0: $x_1$ is `x[0]`.
+- Read inside out: the term is the loop's body, anything outside the Σ happens once after it.
+- $\sum x_i^2 \ne (\sum x_i)^2$, and the gaps from the mean always sum to 0.
+
+</Section>

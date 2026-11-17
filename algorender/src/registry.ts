@@ -18,6 +18,7 @@ import { searching } from '@/algorithms/searching';
 import { sorting } from '@/algorithms/sorting';
 import { stringAlgorithms } from '@/algorithms/strings';
 import { systems } from '@/algorithms/systems';
+import { toolkit } from '@/algorithms/toolkit';
 import type { AnyVisualiser } from '@/engine/module';
 import { graphStructures } from '@/structures/graphs';
 import { hashStructures } from '@/structures/hashing';
@@ -44,6 +45,7 @@ for (const m of [
   ...stringAlgorithms,
   ...patterns,
   ...intervals,
+  ...toolkit,
   ...linearAlgebra,
   ...calculus,
   ...probability,
