@@ -10,7 +10,7 @@
 // - every reply is checked for solution leaks, retried once with a stricter
 //   instruction if it leaks, and replaced if it still does.
 
-import { and, eq, gte, max, sql, sum } from 'drizzle-orm';
+import { and, eq, gte, max, notInArray, sql, sum } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import { z } from 'zod';
 import { getExercise } from '@/content/exercises';
@@ -99,18 +99,24 @@ export function grounding(item: TutorRequest['item'], language: ProblemLanguage)
   return { kind: 'exercise', slug: e.slug, title: e.title, statement: e.task.join('\n\n'), hints: e.hints ?? [], solution: e.solution[language], language };
 }
 
-const startOfDay = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+export const startOfDay = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 const LADDER_WINDOW_MS = 30 * 86_400_000;
+
+/** Model calls a mock interview makes (src/server/interview/): they have their own budget and use no tutor turns. */
+export const INTERVIEW_ACTIONS = ['interview', 'debrief'];
 
 /**
  * How many turns the learner has taken today and the day's spend across
- * everyone. Every model call counts here: hints, reviews and scoring an
- * explanation (explain.ts) share one budget.
+ * everyone. Hints, reviews and scoring an explanation (explain.ts) share the
+ * turns; every model call, mock interviews' included, counts towards the spend.
  */
 export async function dailyUsage(db: Database, userId: string, now: Date) {
   const day = startOfDay(now);
   const [[mine], [all]] = await Promise.all([
-    db.select({ n: sql<number>`count(*)::int` }).from(tutorTurn).where(and(eq(tutorTurn.userId, userId), gte(tutorTurn.createdAt, day))),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(tutorTurn)
+      .where(and(eq(tutorTurn.userId, userId), gte(tutorTurn.createdAt, day), notInArray(tutorTurn.action, INTERVIEW_ACTIONS))),
     db.select({ usd: sum(tutorTurn.costUsd) }).from(tutorTurn).where(gte(tutorTurn.createdAt, day)),
   ]);
   return { turns: Number(mine.n), spent: Number(all.usd ?? 0) };

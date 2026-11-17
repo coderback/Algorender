@@ -12,12 +12,16 @@
 //   `misconception:<lesson>:<id>`, which asks that mistake's probe questions.
 //   It starts as a lapse (Again), so it comes back the next day, and picking
 //   the mistake again later sends it back to tomorrow.
+// - A mock interview that falls below the bar, or needed a level-2 hint or
+//   more, makes `problem:<slug>` due the next day: Again, as a new card or a
+//   lapse of the one solving it made.
 // Every `review.rated` event after that moves the card on.
 //
 // Scheduling is day-based (no same-day learning steps) and without fuzz, so
 // the schedule is a pure function of the events.
 
 import { createEmptyCard, fsrs, Rating, type Card, type Grade } from 'ts-fsrs';
+import { meetsBar } from '@/interview/rules';
 import type { ProgressEvent } from './events';
 import { misconceptionCard } from './misconceptions';
 
@@ -61,6 +65,12 @@ export function reviewCards(events: readonly ProgressEvent[]): Map<string, Revie
       if (!cards.has(id)) make(id, e.at, e.data.correct ? Rating.Good : Rating.Again);
     } else if (e.kind === 'misconception.picked') {
       const id = misconceptionCard(e.data.lesson, e.data.misconception);
+      const c = cards.get(id);
+      if (!c) make(id, e.at, Rating.Again);
+      else cards.set(id, { ...c, card: scheduler.next(c.card, new Date(e.at), Rating.Again).card });
+    } else if (e.kind === 'interview.finished') {
+      if (!e.data.verified || e.data.format !== 'coding' || (meetsBar(e.data.scores, e.data.hints, e.data.passed) && e.data.hints < 2)) continue;
+      const id = problemCard(e.data.item);
       const c = cards.get(id);
       if (!c) make(id, e.at, Rating.Again);
       else cards.set(id, { ...c, card: scheduler.next(c.card, new Date(e.at), Rating.Again).card });

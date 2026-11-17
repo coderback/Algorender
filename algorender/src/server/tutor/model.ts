@@ -97,6 +97,31 @@ export function fakeModel(): TutorModel {
         const mistake = said.includes('MISTAKE') ? (/id="([a-z0-9-]+)"/.exec(request.instructions)?.[1] ?? null) : null;
         return { text: JSON.stringify({ points, feedback: '(fake scorer) Add the missing points.', mistake }), inputTokens: 900, outputTokens: 150 };
       }
+      if (request.schema?.name === 'interviewer_reply') {
+        const last = request.messages.at(-1)?.content ?? '';
+        const level = /HINT LEVEL (\d)/.exec(request.instructions)?.[1];
+        const message = level
+          ? `(fake interviewer, hint level ${level}) What does each step of your idea need to remember from the steps before it?`
+          : /^The learner has stated the approach/m.test(last)
+            ? '(fake interviewer) Why that time complexity? And what does it do with an empty input?'
+            : last.includes('NAME THE PATTERN')
+              ? '(fake interviewer) Have you thought about a hash map?'
+              : '(fake interviewer) Good question. Assume only what the constraints say, and tell me what you’d assume.';
+        return { text: JSON.stringify({ message, line: null }), inputTokens: 1_500, outputTokens: 60 };
+      }
+      if (request.schema?.name === 'interview_debrief') {
+        const said = request.messages.at(-1)?.content ?? '';
+        if (said.includes('FAILDEBRIEF')) return { text: 'not json', inputTokens: 3_000, outputTokens: 10 };
+        const approach = /<learner_approach>\n([\s\S]*?)\n<\/learner_approach>/.exec(said)?.[1] ?? '';
+        const quote = approach.trim().split(/\s+/).slice(0, 3).join(' ');
+        const ids = ((request.schema.schema as { properties: { dimensions: { items: { properties: { dimension: { enum: string[] } } } } } }).properties.dimensions.items.properties.dimension.enum);
+        const dimensions = ids.map((dimension) => ({ dimension, score: 3, evidence: quote ? [quote] : [], feedback: `(fake debrief) Your ${dimension} meets the bar.` }));
+        return {
+          text: JSON.stringify({ dimensions, summary: '(fake debrief) A steady round.', workOn: ['(fake debrief) Say the complexity of each step as you go.'] }),
+          inputTokens: 3_000,
+          outputTokens: 300,
+        };
+      }
       if (request.schema?.name === 'leak_check') {
         const leaks = request.messages.some((m) => m.content.includes('LEAK'));
         return { text: JSON.stringify({ leaks, reason: leaks ? 'It contains the solution.' : '' }), inputTokens: 200, outputTokens: 10 };

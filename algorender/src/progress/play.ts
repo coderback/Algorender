@@ -7,6 +7,7 @@
 // rubric, cleared mistakes, and game rounds with diminishing returns on
 // repeats. Watching, marking a lesson done and time spent earn nothing.
 
+import { meetsBar, scoreOf } from '@/interview/rules';
 import type { ProgressEvent } from './events';
 import { EXPLAINED_AT, KNOWN, type ConceptMastery, type MasteryGraph } from './mastery';
 import { CLEAR_AFTER } from './misconceptions';
@@ -24,6 +25,8 @@ export const XP = {
   problemSolved: 30,
   /** Meeting every target of a system-design case study, once per case. */
   designPassed: 40,
+  /** The first mock interview on a problem that meets the bar: without a hint, or with one level-1 hint. */
+  interview: { clean: 50, oneHint: 25 },
   exercise: { parsons: 5, fill: 10, write: 20, bug: 15 },
   explanation: 20,
   mistakeCleared: 25,
@@ -39,6 +42,9 @@ export const XP = {
 } as const;
 
 const DAY_MS = 86_400_000;
+
+/** A coding round the server wrote: a device can't claim one (sync drops `verified` from what it sends). */
+const verifiedRound = (e: Extract<ProgressEvent, { kind: 'interview.finished' }>) => e.data.verified === true && e.data.format === 'coding';
 const dayOf = (at: string) => at.slice(0, 10);
 const daysBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / DAY_MS;
 
@@ -79,6 +85,11 @@ export function xpLedger(events: readonly ProgressEvent[]): XpEntry[] {
         break;
       case 'design.checked':
         if (e.data.passed && once(`design:${e.data.study}`)) award(e.at, XP.designPassed, 'A design met every target');
+        break;
+      case 'interview.finished':
+        if (verifiedRound(e) && meetsBar(e.data.scores, e.data.hints, e.data.passed) && e.data.hints <= 1 && once(`interview:${e.data.item}`)) {
+          award(e.at, e.data.hints === 0 ? XP.interview.clean : XP.interview.oneHint, 'A mock interview that meets the bar');
+        }
         break;
       case 'explanation.scored':
         if (e.data.total > 0 && (e.data.covered + e.data.partly / 2) / e.data.total >= EXPLAINED_AT && once(`explain:${e.data.lesson}:${e.data.prompt}`)) {
@@ -139,7 +150,7 @@ export const LEVELS = [
   { id: 'trace', label: 'Trace', hint: 'Answer a question about it, or play a round of it.' },
   { id: 'predict', label: 'Predict', hint: 'Score 70% on a prediction challenge, win a round of Be the algorithm, or practise it to “practised”.' },
   { id: 'implement', label: 'Implement', hint: 'Write it in an exercise, solve a problem that uses it, or meet a design case study’s targets.' },
-  { id: 'analyze', label: 'Analyse', hint: 'Explain it back covering most of the key points, or master it.' },
+  { id: 'analyze', label: 'Analyse', hint: 'Explain it back covering most of the key points, meet the bar on approach and complexity in a mock interview, or master it.' },
 ] as const;
 
 export type LevelId = (typeof LEVELS)[number]['id'];
@@ -185,6 +196,10 @@ export function conceptLevels(events: readonly ProgressEvent[], graph: MasteryGr
       case 'explanation.scored':
         if (e.data.total > 0 && (e.data.covered + e.data.partly / 2) / e.data.total >= EXPLAINED_AT) add(graph.lessons[e.data.lesson], 'analyze');
         break;
+      case 'interview.finished':
+        // Implement comes from the submissions inside the round; a round adds analyse.
+        if (verifiedRound(e) && scoreOf(e.data.scores, 'approach') >= 3 && scoreOf(e.data.scores, 'analysis') >= 3) add(graph.problems[e.data.item], 'analyze');
+        break;
     }
   }
   for (const m of mastery.values()) {
@@ -208,6 +223,7 @@ export const BADGES = [
   { id: 'counterexample', title: 'Counterexample', how: 'Find an amount where greedy coin change goes wrong.' },
   { id: 'worst-case', title: 'Worst case', how: 'Build quicksort’s worst-case input.' },
   { id: 'architect', title: 'Architect', how: 'Meet every target of a system-design case study.' },
+  { id: 'interview-ready', title: 'Interview ready', how: 'Meet the bar in a mock interview without a hint.' },
 ] as const;
 
 export type BadgeId = (typeof BADGES)[number]['id'];
@@ -256,6 +272,9 @@ export function badges(events: readonly ProgressEvent[]): Map<BadgeId, string> {
         break;
       case 'design.checked':
         if (e.data.passed) earn('architect', e.at);
+        break;
+      case 'interview.finished':
+        if (verifiedRound(e) && e.data.hints === 0 && meetsBar(e.data.scores, e.data.hints, e.data.passed)) earn('interview-ready', e.at);
         break;
       case 'game.played':
         if (!e.data.won) break;

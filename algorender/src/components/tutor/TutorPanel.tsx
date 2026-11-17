@@ -270,7 +270,7 @@ export function TutorPanel({
 }
 
 /** A reply as Markdown, with no links, images or HTML: it comes from a model. */
-function Reply({ text }: { text: string }) {
+export function Reply({ text }: { text: string }) {
   return (
     <div className="space-y-1.5 leading-relaxed [&_code]:rounded [&_code]:bg-sunken [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em] [&_pre]:overflow-x-auto [&_pre]:rounded-[12px] [&_pre]:bg-sunken [&_pre]:p-3">
       <ReactMarkdown allowedElements={['p', 'ul', 'ol', 'li', 'strong', 'em', 'code', 'pre', 'br']} unwrapDisallowed skipHtml>
