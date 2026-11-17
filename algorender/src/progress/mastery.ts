@@ -14,6 +14,7 @@
 // the learner knows that concept, and what it builds on; a wrong one says
 // they don't, nor what builds on it.
 
+import { meetsBar } from '@/interview/rules';
 import type { ProgressEvent } from './events';
 import { areaOfTrack } from '@/data/tracks';
 import { mistakes } from './misconceptions';
@@ -44,7 +45,7 @@ export type MasteryGraph = {
   designs?: Record<string, string>;
 };
 
-export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review' | 'explanation' | 'design';
+export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review' | 'explanation' | 'design' | 'interview';
 
 /** One piece of evidence: an item (a question, an exercise, a problem) answered right or wrong. */
 export type Observation = { concept: string; item: string; correct: boolean; at: string; source: Source };
@@ -143,6 +144,13 @@ export function observations(events: readonly ProgressEvent[], graph: MasteryGra
         push(graph.designs?.[e.data.study], { item: `design:${e.data.study}`, correct: true, at: e.at, source: 'design' });
         break;
       }
+      case 'interview.finished':
+        // A mock interview is one observation for its problem's concepts, under the problem's own item (never a second distinct item):
+        // right when it meets the bar. Only rounds the server wrote count.
+        if (e.data.verified && e.data.format === 'coding') {
+          push(graph.problems[e.data.item], { item: `problem:${e.data.item}`, correct: meetsBar(e.data.scores, e.data.hints, e.data.passed), at: e.at, source: 'interview' });
+        }
+        break;
       case 'explanation.scored':
         if (e.data.total > 0) {
           const score = (e.data.covered + e.data.partly / 2) / e.data.total;

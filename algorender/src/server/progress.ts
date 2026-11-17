@@ -87,9 +87,13 @@ export async function storeEvents(db: Database, userId: string, events: Progress
     .onConflictDoNothing();
 }
 
-/** Only the server judge marks a submission verified, so a device's claim to it is dropped (and the server's own copy, same id, stays). */
+/**
+ * Only the server marks an event verified (the judge's submissions, a mock
+ * interview's result), so a device's claim to it is dropped (and the server's
+ * own copy, same id, stays).
+ */
 function unverified(event: ProgressEvent): ProgressEvent['data'] {
-  if (event.kind !== 'problem.submitted' || !event.data.verified) return event.data;
+  if ((event.kind !== 'problem.submitted' && event.kind !== 'interview.finished') || !event.data.verified) return event.data;
   const data = { ...event.data };
   delete data.verified;
   return data;

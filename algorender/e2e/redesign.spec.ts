@@ -70,6 +70,8 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'checkpoint', path: '/learn/checkpoint/2' },
   { name: 'checkpoint-closed', path: '/learn/checkpoint/7' },
   { name: 'viz-diffusion', path: '/visualisers/diffusion?step=3' },
+  // 6f: the mock interviews hub, signed out (e2e/interview.spec.ts shoots a round, its debrief and the hub signed in).
+  { name: 'interviews', path: '/practice/interview' },
 ];
 
 const VIEWPORTS = [

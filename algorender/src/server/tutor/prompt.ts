@@ -23,7 +23,7 @@ export type Grounding = {
   language: string;
 };
 
-const LADDER: Record<Level, string> = {
+export const LADDER: Record<Level, string> = {
   1: 'Name the idea, pattern or invariant that matters here and ask one guiding question. No code, no pseudo-code, no line numbers.',
   2: "Point at the one place in the learner's code (give its line number in `line`) or the failing test where things go wrong, and say what to check there. Don't say how to fix it, and show no code.",
   3: 'Outline the approach, or the step that is wrong, as plain-language pseudo-code of at most six short lines. Not in any programming language, and not the whole solution.',

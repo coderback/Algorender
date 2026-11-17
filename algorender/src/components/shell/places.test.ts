@@ -26,6 +26,8 @@ describe('places', () => {
     expect(parentOf('/learn/recursion')).toBe('/learn');
     expect(parentOf('/practice/two-sum')).toBe('/practice');
     expect(parentOf('/code')).toBe('/practice');
+    expect(parentOf('/practice/interview')).toBe('/practice');
+    expect(parentOf('/practice/interview/0190a000-0000-7000-8000-000000000001')).toBe('/practice/interview');
     expect(parentOf('/code/bubble-sort')).toBe('/code');
     expect(parentOf('/design/estimate')).toBe('/design');
     expect(parentOf('/play/be-the-algorithm/bubble-sort')).toBe('/play/be-the-algorithm');
