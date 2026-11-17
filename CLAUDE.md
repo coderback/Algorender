@@ -277,7 +277,7 @@ State colours are theme tokens in `app/globals.css` (Okabe–Ito, colour-blind-s
 
 ## Dependencies
 
-- Next.js 16.4, React 19.3, Tailwind CSS 4.3, TypeScript 6.0 (pinned below 6.1: typescript-eslint doesn't support 7 yet, and TS 7 drops the JS compiler API Next uses)
+- Next.js 16.4.5 (with `@next/mdx` and `eslint-config-next` on the same version; 16.4.5 is the first patched release for the seven advisories of 2026-11-03, so don't go below it), React 19.3, Tailwind CSS 4.3, TypeScript 6.0 (pinned below 6.1: typescript-eslint doesn't support 7 yet, and TS 7 drops the JS compiler API Next uses)
 - Motion 14 (`motion/react`) for layout animation
 - Vitest 5 + fast-check (property tests), Playwright 1.64 (e2e), @axe-core/playwright 4.13 (accessibility scans)
 - react-icons, Radix UI (tabs), Vercel Analytics
