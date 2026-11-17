@@ -44,6 +44,7 @@ export const isHub = (pathname: string) => HUBS.has(pathname);
 export function parentOf(pathname: string): string {
   if (pathname.startsWith('/design/')) return '/design';
   if (pathname.startsWith('/code/')) return '/code';
+  if (pathname.startsWith('/practice/interview/')) return '/practice/interview';
   if (pathname.startsWith('/play/be-the-algorithm/')) return '/play/be-the-algorithm';
   if (pathname === '/review') return '/';
   const place = placeOf(pathname);

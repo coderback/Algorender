@@ -28,6 +28,7 @@ const pages = [
   '/embed',
   '/design/estimate',
   '/code',
+  '/practice/interview',
   '/account',
   '/review',
   ...exercises.map((e) => `/code/${e.slug}`),

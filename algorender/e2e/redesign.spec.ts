@@ -66,6 +66,8 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'viz-ring', path: '/visualisers/queue' },
   // Group 3: the embed page.
   { name: 'embed-builder', path: '/embed' },
+  // 6f: the mock interviews hub, signed out (e2e/interview.spec.ts shoots a round, its debrief and the hub signed in).
+  { name: 'interviews', path: '/practice/interview' },
 ];
 
 const VIEWPORTS = [

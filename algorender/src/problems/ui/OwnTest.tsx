@@ -71,7 +71,8 @@ export function OwnTest({
   onChange: (field: string, value: string) => void;
   onReset: () => void;
   onRun: () => void;
-  onWatch: (test: JudgeCase, memory: boolean) => void;
+  /** Null in a mock interview, where watching isn’t offered. */
+  onWatch: ((test: JudgeCase, memory: boolean) => void) | null;
 }) {
   const runKey = (e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -163,7 +164,7 @@ function OwnResult({
   signInHref: string;
   stale: boolean;
   busy: boolean;
-  onWatch: (test: JudgeCase, memory: boolean) => void;
+  onWatch: ((test: JudgeCase, memory: boolean) => void) | null;
 }) {
   const { verdict: v, fatal, output, test, language } = run;
   const outcome = v && OUTCOME[v.status];
@@ -241,6 +242,7 @@ function OwnResult({
         </div>
       )}
       {!fatal &&
+        onWatch &&
         (isServerLanguage(language) ? (
           <p className="text-xs text-ink-muted">Watching a run step by step works in Python, JavaScript and TypeScript, which run in your browser.</p>
         ) : watchable(test) ? (

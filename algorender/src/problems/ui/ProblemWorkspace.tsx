@@ -23,7 +23,7 @@ import { isServerLanguage, PROBLEM_LANGUAGE_IDS, PROBLEM_LANGUAGES, type Problem
 import { receiveSubmission, recordSubmission } from '../progress';
 import { replayTrace } from '../replay';
 import { OwnTest, type OwnRun } from './OwnTest';
-import { fetchExpected, runOnServer, type ExpectedState } from './serverJudge';
+import { fetchExpected, runOnServer, type ExpectedState, type ServerAnswer } from './serverJudge';
 
 /** One judged test's outcome. */
 type Checked = { test: JudgeCase; verdict: CaseVerdict; output: string[] };
@@ -45,13 +45,39 @@ type Watching = { test: JudgeCase; memory: boolean; code: string; run: RunTrace 
 const noSubscribe = () => () => {};
 const codeSlot = (slug: string) => `problem:${slug}`;
 
-/** The statement card's three panes, rendered on the server. */
-export type StatementPanes = { problem: ReactNode; hints: ReactNode; approach: ReactNode; brushUp?: ReactNode };
+/** The statement card's three panes, rendered on the server. A mock interview shows only the problem. */
+export type StatementPanes = { problem: ReactNode; hints?: ReactNode; approach?: ReactNode; brushUp?: ReactNode };
 
 /** What the focus header shows about the problem. */
 export type ProblemHeading = { title: string; difficulty: Difficulty; crumb: string };
 
 type Pane = 'problem' | 'code' | 'tests';
+
+/**
+ * The workspace under interview conditions (src/components/interview/): one
+ * language, its own code slot, no tutor, no hints, no watching; the round's
+ * phase decides what can be edited, run and submitted; a submission also
+ * goes to the round; and the right column is the interviewer.
+ */
+export type InterviewMode = {
+  /** Where the round's code and own test are kept on this device. */
+  slot: string;
+  language: ProblemLanguage;
+  back: { href: string; label: string };
+  /** Under the focus header on every screen: the phases, the clock and End. */
+  bar: ReactNode;
+  canEdit: boolean;
+  canRun: boolean;
+  canSubmit: boolean;
+  /** Why Submit is off, as its tooltip. */
+  submitHint?: string;
+  /** A browser-judged submission's counts, once every test has run. */
+  onSubmitted: (code: string, tests: number, failed: number) => void;
+  /** Java, C++ and Go: the round's own submit, judged on the server. */
+  submitOnServer: (code: string) => Promise<ServerAnswer>;
+  /** The right column, given the current code and a way to point at a line. */
+  side: (code: string, point: (line: number | null) => void) => ReactNode;
+};
 
 /**
  * The problem page: a focus header (back, where it sits, the title, the
@@ -67,6 +93,7 @@ export function ProblemWorkspace({
   statement,
   next,
   tutor = false,
+  interview,
 }: {
   spec: ProblemSpec;
   heading: ProblemHeading;
@@ -74,13 +101,15 @@ export function ProblemWorkspace({
   next?: { slug: string; title: string };
   /** The AI tutor is switched on (its server settings exist). */
   tutor?: boolean;
+  /** A mock interview round (InterviewMode). */
+  interview?: InterviewMode;
 }) {
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   return hydrated ? (
-    <Solver spec={spec} heading={heading} statement={statement} next={next} tutor={tutor} />
+    <Solver spec={spec} heading={heading} statement={statement} next={next} tutor={tutor && !interview} interview={interview} />
   ) : (
     <>
-      <FocusHeader heading={heading} />
+      <FocusHeader heading={heading} back={interview?.back} bar={interview?.bar} />
       <Columns statement={<StatementCard panes={statement} />} pane="problem">
         <div data-workspace="loading" className="rounded-card bg-code p-5">
           <pre className="font-mono text-[13.5px] leading-[1.6] whitespace-pre-wrap text-code-ink">{stub(spec, 'python')}</pre>
@@ -90,14 +119,24 @@ export function ProblemWorkspace({
   );
 }
 
-/** The focus header; `actions` are the language and judge buttons once the page is live. */
-function FocusHeader({ heading, actions }: { heading: ProblemHeading; actions?: ReactNode }) {
+/** The focus header; `actions` are the language and judge buttons once the page is live, and `bar` a row under it (a round's phases). */
+function FocusHeader({
+  heading,
+  actions,
+  back = { href: '/practice', label: 'Back to the problems' },
+  bar,
+}: {
+  heading: ProblemHeading;
+  actions?: ReactNode;
+  back?: { href: string; label: string };
+  bar?: ReactNode;
+}) {
   return (
-    <header className="px-3 pt-3 sm:px-4">
+    <header className="flex flex-col gap-2 px-3 pt-3 sm:px-4">
       <div className="flex items-center gap-3 rounded-card bg-surface py-2.5 pr-3 pl-2.5 sm:gap-4">
         <Link
-          href="/practice"
-          aria-label="Back to the problems"
+          href={back.href}
+          aria-label={back.label}
           className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-sunken text-ink transition-colors duration-150 ease-standard hover:bg-line-soft"
         >
           <FiChevronLeft aria-hidden className="size-5" />
@@ -111,6 +150,7 @@ function FocusHeader({ heading, actions }: { heading: ProblemHeading; actions?: 
         </div>
         {actions && <div className="ml-auto hidden items-center gap-2 md:flex">{actions}</div>}
       </div>
+      {bar}
     </header>
   );
 }
@@ -129,6 +169,13 @@ function Columns({ statement, children, side, pane }: { statement: ReactNode; ch
 /** Problem, Hints and Approach in one card. Every pane stays mounted, so revealed hints stay revealed. */
 function StatementCard({ panes }: { panes: StatementPanes }) {
   const [tab, setTab] = useState<'problem' | 'hints' | 'approach'>('problem');
+  if (!panes.hints && !panes.approach) {
+    return (
+      <article aria-label="The problem" className="flex flex-col gap-5 rounded-card bg-surface p-5 sm:p-6">
+        {panes.problem}
+      </article>
+    );
+  }
   return (
     <article aria-label="The problem" className="flex flex-col gap-5 rounded-card bg-surface p-5 sm:p-6">
       <Segmented
@@ -162,18 +209,21 @@ function Solver({
   statement,
   next,
   tutor,
+  interview,
 }: {
   spec: ProblemSpec;
   heading: ProblemHeading;
   statement: StatementPanes;
   next?: { slug: string; title: string };
   tutor: boolean;
+  interview?: InterviewMode;
 }) {
-  /** The line the tutor last pointed at. */
+  const slot = interview?.slot ?? codeSlot(spec.slug);
+  /** The line the tutor (or the interviewer) last pointed at. */
   const [pointLine, setPointLine] = useState<number | null>(null);
-  const [language, setLanguage] = useState<ProblemLanguage>(() => loadProblemLanguage() ?? 'python');
+  const [language, setLanguage] = useState<ProblemLanguage>(() => interview?.language ?? loadProblemLanguage() ?? 'python');
   const [codes, setCodes] = useState(
-    () => Object.fromEntries(PROBLEM_LANGUAGE_IDS.map((l) => [l, loadCode(codeSlot(spec.slug), l) ?? stub(spec, l)])) as Record<ProblemLanguage, string>,
+    () => Object.fromEntries(PROBLEM_LANGUAGE_IDS.map((l) => [l, loadCode(slot, l) ?? stub(spec, l)])) as Record<ProblemLanguage, string>,
   );
   /** Why the server judge didn't answer: the learner isn't signed in, or a message (a quota, an outage). */
   const [notice, setNotice] = useState<'sign-in' | string | null>(null);
@@ -188,7 +238,7 @@ function Solver({
   const [confirmReset, setConfirmReset] = useState(false);
   const [pane, setPane] = useState<Pane>('problem');
   /** The learner's own test as typed, or null while it is still the first example (shown in whichever language is chosen). */
-  const [ownDraft, setOwnDraft] = useState<CustomText | null>(() => loadOwnTest(codeSlot(spec.slug)));
+  const [ownDraft, setOwnDraft] = useState<CustomText | null>(() => loadOwnTest(slot));
   const [ownErrors, setOwnErrors] = useState<Record<string, string> | null>(null);
   const [ownRun, setOwnRun] = useState<OwnRun | null>(null);
   const [ownNotice, setOwnNotice] = useState<'sign-in' | string | null>(null);
@@ -206,7 +256,7 @@ function Solver({
 
   const setCode = (value: string) => {
     setCodes((prev) => ({ ...prev, [language]: value }));
-    saveCode(codeSlot(spec.slug), language, value === stub(spec, language) ? null : value);
+    saveCode(slot, language, value === stub(spec, language) ? null : value);
   };
 
   const chooseLanguage = (l: ProblemLanguage) => {
@@ -221,7 +271,7 @@ function Solver({
   const editOwn = (field: string, value: string) => {
     const next = { ...ownText, [field]: value };
     setOwnDraft(next);
-    saveOwnTest(codeSlot(spec.slug), next);
+    saveOwnTest(slot, next);
     setOwnErrors((prev) => {
       if (!prev) return prev;
       // The field's error, and any about the whole test, go once it changes.
@@ -232,7 +282,7 @@ function Solver({
 
   const resetOwn = () => {
     setOwnDraft(null);
-    saveOwnTest(codeSlot(spec.slug), null);
+    saveOwnTest(slot, null);
     setOwnErrors(null);
   };
 
@@ -284,7 +334,7 @@ function Solver({
   };
 
   const judge = async (kind: 'run' | 'submit') => {
-    if (busy) return;
+    if (busy || (interview && !(kind === 'run' ? interview.canRun : interview.canSubmit))) return;
     setNotice(null);
     setPane('tests');
     if (isServerLanguage(language)) return judgeOnServer(kind, language);
@@ -312,6 +362,7 @@ function Solver({
     if (kind === 'submit') {
       const failed = checked.filter((c) => c.verdict.status !== 'pass').length + outcome.skipped;
       recordSubmission(spec.slug, language, { passed: !fatal && failed === 0, tests: tests.length, failed: fatal ? tests.length : failed });
+      interview?.onSubmitted(code, tests.length, fatal ? tests.length : failed);
     }
   };
 
@@ -320,7 +371,7 @@ function Solver({
     setWatching(null);
     setFrameLine(null);
     setProgress({ done: 0, total: 1 });
-    const answer = await runOnServer(spec.slug, lang, code, kind);
+    const answer = kind === 'submit' && interview ? await interview.submitOnServer(code) : await runOnServer(spec.slug, lang, code, kind);
     setProgress(null);
     if (!answer.ok) {
       setNotice(answer.status === 401 ? 'sign-in' : answer.message);
@@ -338,7 +389,7 @@ function Solver({
   };
 
   const watch = async (test: JudgeCase, memory: boolean) => {
-    if (busy || isServerLanguage(language)) return;
+    if (busy || isServerLanguage(language) || interview) return;
     setProgress({ done: 0, total: 1 });
     const result = await runtime.run(watchRequest(spec, test, language, code, memory));
     setWatching({ test, memory, code, run: replayTrace(result, code, spec.view, memory), error: result.error });
@@ -356,7 +407,9 @@ function Solver({
       ? `Running test ${progress.done + 1} of ${progress.total}…`
       : statusText(runtimeState, runtimeDetail, running);
 
-  const languageSelect = (
+  const languageSelect = interview ? (
+    <span className="inline-flex h-11 items-center rounded-full bg-sunken px-4 text-sm font-semibold text-ink">{PROBLEM_LANGUAGES[language].label}</span>
+  ) : (
     <label className="flex items-center">
       <span className="sr-only">Language</span>
       <select
@@ -385,7 +438,8 @@ function Solver({
     <button
       type="button"
       onClick={() => void judge('run')}
-      disabled={busy}
+      disabled={busy || (interview && !interview.canRun)}
+      title={interview && !interview.canRun ? 'Running opens in the Code phase' : undefined}
       aria-keyshortcuts="Control+Enter Meta+Enter"
       className="inline-flex h-11 items-center gap-2 rounded-full bg-accent-soft px-[18px] text-sm font-semibold text-accent-ink transition-colors duration-150 ease-standard hover:bg-accent-line disabled:opacity-60"
     >
@@ -396,7 +450,8 @@ function Solver({
     <button
       type="button"
       onClick={() => void judge('submit')}
-      disabled={busy}
+      disabled={busy || (interview && !interview.canSubmit)}
+      title={interview && !interview.canSubmit ? interview.submitHint : undefined}
       aria-busy={busy}
       className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-[18px] text-sm font-semibold text-on-primary transition-colors duration-150 ease-standard hover:bg-primary-hover disabled:opacity-60"
     >
@@ -450,6 +505,7 @@ function Solver({
         errorLine={errorLine}
         pointLine={pointLine}
         onRun={() => void judge('run')}
+        readOnly={interview ? !interview.canEdit : false}
         minLines={16}
       />
       <div className="flex flex-wrap justify-between gap-2 px-1 text-xs text-code-muted">
@@ -485,11 +541,25 @@ function Solver({
       onChange={editOwn}
       onReset={resetOwn}
       onRun={() => void runOwn()}
-      onWatch={(test, memory) => void watch(test, memory)}
+      onWatch={interview ? null : (test, memory) => void watch(test, memory)}
     />
   );
 
-  const side = (
+  const notices = (
+    <>
+      {notice && notice !== 'sign-in' && (
+        <p role="alert" className="rounded-well bg-warn-soft px-4 py-3 text-sm text-warn-ink">
+          {notice}
+        </p>
+      )}
+      {notice === 'sign-in' && onServer && <SignInCard language={language} slug={spec.slug} />}
+    </>
+  );
+  const results = judged && <Results spec={spec} judged={judged} stale={stale} selected={selected} onSelect={setSelected} onWatch={null} busy={busy} />;
+
+  const side = interview ? (
+    interview.side(code, setPointLine)
+  ) : (
     <>
       {onServer && <ServerNote language={language} signedIn={signedIn} slug={spec.slug} />}
       {notice && notice !== 'sign-in' && (
@@ -527,6 +597,8 @@ function Solver({
     <>
       <FocusHeader
         heading={heading}
+        back={interview?.back}
+        bar={interview?.bar}
         actions={
           <>
             {languageSelect}
@@ -545,12 +617,14 @@ function Solver({
           options={[
             { value: 'problem', label: 'Problem' },
             { value: 'code', label: 'Code' },
-            { value: 'tests', label: 'Tests' },
+            { value: 'tests', label: interview ? 'Interviewer' : 'Tests' },
           ]}
         />
       </div>
       <Columns statement={<StatementCard panes={statement} />} side={side} pane={pane}>
         {editor}
+        {interview && notices}
+        {interview && results}
         {ownTest}
       </Columns>
       {watching && (
@@ -696,7 +770,8 @@ function Results({
   stale: boolean;
   selected: string | null;
   onSelect: (id: string) => void;
-  onWatch: (test: JudgeCase, memory: boolean) => void;
+  /** Null in a mock interview, where watching isn’t offered. */
+  onWatch: ((test: JudgeCase, memory: boolean) => void) | null;
   busy: boolean;
   next?: { slug: string; title: string };
 }) {
@@ -750,7 +825,7 @@ function Results({
           </p>
         </div>
       )}
-      {allPass && kind === 'submit' && (
+      {allPass && kind === 'submit' && onWatch && (
         <div className="rounded-card bg-good-soft px-5 py-4 text-sm text-good-ink">
           <p>
             <span className="font-semibold text-good-title">Well done.</span> Compare your idea with the approach in the problem description, then try another.
@@ -804,7 +879,7 @@ function CaseDetail({
   spec: ProblemSpec;
   checked: Checked;
   language: ProblemLanguage;
-  onWatch: (test: JudgeCase, memory: boolean) => void;
+  onWatch: ((test: JudgeCase, memory: boolean) => void) | null;
   busy: boolean;
 }) {
   const { test, verdict: v, output } = checked;
@@ -834,7 +909,7 @@ function CaseDetail({
           <pre className="max-h-40 overflow-auto rounded-[12px] bg-code px-3 py-2 font-mono text-[13px] whitespace-pre-wrap text-code-ink">{output.join('\n')}</pre>
         </div>
       )}
-      {isServerLanguage(language) ? (
+      {!onWatch ? null : isServerLanguage(language) ? (
         <p className="text-xs text-ink-muted">
           Watching a run step by step works in Python, JavaScript and TypeScript, which run in your browser. Write it in one of those to watch it here.
         </p>

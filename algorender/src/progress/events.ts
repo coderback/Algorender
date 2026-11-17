@@ -111,6 +111,31 @@ export const EVENT_DATA = {
     hours: z.number().int().min(1).max(40),
     target: z.iso.date().optional(),
   }),
+  /**
+   * A mock interview finished (src/interview/, src/server/interview/): a
+   * coding round on a practice problem (`item`), with a score per dimension
+   * (1 not yet, 2 partly, 3 meets the bar, 4 strong). `minutes` is the
+   * round's length on the server's clock and `limit` the time it was set
+   * for, so overtime shows. `hints` is the highest hint level used (0–3).
+   * `passed`: the last submission passed every test. `by` says who scored
+   * the dimensions code can't measure: the model, or the learner against the
+   * rubric when the model couldn't. Only the server writes it, with
+   * `verified`; sync drops `verified` from events a device sends, and the
+   * projections ignore a round without it. Design rounds ('design') come later.
+   */
+  'interview.finished': z.object({
+    format: z.enum(['coding', 'design']),
+    item: slug,
+    variant: slug.optional(),
+    language: z.enum(['python', 'javascript', 'typescript', 'java', 'cpp', 'go']).optional(),
+    minutes: z.number().int().min(0).max(240),
+    limit: z.number().int().min(10).max(120),
+    hints: z.number().int().min(0).max(3),
+    passed: z.boolean(),
+    scores: z.array(z.object({ dimension: slug, score: z.number().int().min(1).max(4) })).min(1).max(6),
+    by: z.enum(['model', 'self']),
+    verified: z.literal(true).optional(),
+  }),
 } as const;
 
 export type EventKind = keyof typeof EVENT_DATA;

@@ -4,13 +4,13 @@ import { caseStudies } from '@/content/designs';
 import { exercises } from '@/content/exercises';
 import { loadProblems } from '@/problems/load';
 
-export type PracticeTab = 'problems' | 'code' | 'drills' | 'design';
+export type PracticeTab = 'problems' | 'code' | 'drills' | 'design' | 'interview';
 
-const HREF: Record<PracticeTab, string> = { problems: '/practice', code: '/code', drills: '/practice/drills', design: '/design' };
+const HREF: Record<PracticeTab, string> = { problems: '/practice', code: '/code', drills: '/practice/drills', design: '/design', interview: '/practice/interview' };
 
 /**
  * The Practice hub's header: its title and the section tabs (Problems, Code it,
- * Pattern drills, System design), with counts from content. `aside` sits on
+ * Pattern drills, System design, Interviews), with counts from content. `aside` sits on
  * the right (the solved tiles on Problems).
  */
 export function PracticeHeader({ active, title = 'Practice', aside, intro }: { active: PracticeTab; title?: string; aside?: ReactNode; intro?: ReactNode }) {
@@ -28,6 +28,7 @@ export function PracticeHeader({ active, title = 'Practice', aside, intro }: { a
             { href: HREF.code, label: 'Code it', count: exercises.length },
             { href: HREF.drills, label: 'Pattern drills' },
             { href: HREF.design, label: 'System design', count: caseStudies.length },
+            { href: HREF.interview, label: 'Interviews' },
           ]}
         />
       </div>

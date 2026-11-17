@@ -22,15 +22,21 @@ export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 export const MIGRATIONS = path.join(process.cwd(), 'drizzle');
 
-let opened: Promise<Database> | null = null;
+/**
+ * The open database, kept on globalThis: Next can load this module more than
+ * once in one server (a page and an API route are bundled apart, in
+ * development especially), and two PGlite instances on one folder don't see
+ * each other's writes.
+ */
+const shared = globalThis as typeof globalThis & { __algorenderDatabase?: Promise<Database> | null };
 
 /** The app's database, opened (and for PGlite, migrated) on first use. */
 export function getDatabase(): Promise<Database> {
-  opened ??= open().catch((e) => {
-    opened = null; // let the next request try again
+  shared.__algorenderDatabase ??= open().catch((e) => {
+    shared.__algorenderDatabase = null; // let the next request try again
     throw e;
   });
-  return opened;
+  return shared.__algorenderDatabase;
 }
 
 async function open(): Promise<Database> {
