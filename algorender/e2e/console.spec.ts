@@ -41,7 +41,7 @@ for (const language of ['Python', 'JavaScript', 'TypeScript'] as const) {
 
     // Ending input reaches end of file at the next read.
     await page.getByRole('button', { name: 'End input' }).click();
-    await expect(page.getByRole('alert')).toContainText('EOFError: EOF when reading a line');
+    await expect(page.getByTestId('console').getByRole('alert')).toContainText('EOFError: EOF when reading a line');
     await expect(page.getByLabel('Input for the program')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
@@ -53,7 +53,7 @@ test('an error in the second file names that file and its line', async ({ page }
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await answer(page, 'Ada');
   await answer(page, '5');
-  await expect(page.getByRole('alert')).toHaveText('ZeroDivisionError: division by zero (referee.py, line 2)');
+  await expect(page.getByTestId('console').getByRole('alert')).toHaveText('ZeroDivisionError: division by zero (referee.py, line 2)');
 });
 
 test('the console page passes axe', async ({ page }) => {
