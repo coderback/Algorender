@@ -134,6 +134,16 @@ describe('progress sync', () => {
     expect(res.events.map((e) => e.id)).toEqual([good.id, future.id]);
   });
 
+  it('sends stored events of kinds it doesn’t know, rather than moving the cursor past them', async () => {
+    // A newer deployment wrote it, then was rolled back: a device that knows the kind must still get it.
+    const { id } = await signUp('rollback@example.com');
+    const newer = { id: uuidv7(), kind: 'task.checked', at: '2026-11-17T10:00:00.000Z', data: { task: 'hello-world', passed: true } };
+    await db.insert(progressEvent).values({ userId: id, ...newer });
+    const known = solved('two-sum');
+    const res = await sync(db, id, { events: [known], cursor: 0 });
+    expect(res.events).toEqual([newer, known]);
+  });
+
   it('pages a long history through the cursor', async () => {
     const { id } = await signUp('long@example.com');
     const all = Array.from({ length: MAX_PULL + 200 }, (_, i) => event('quiz.answered', { lesson: 'recursion', quiz: 'quiz', question: i % 10, correct: true }));

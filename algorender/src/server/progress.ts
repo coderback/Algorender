@@ -15,13 +15,16 @@ export const MAX_PULL = 1_000;
 
 export type SyncRequest = { events: unknown[]; cursor: number };
 
+/** An event as the server stores it, which may be of a kind this version doesn't know. */
+export type StoredEvent = { id: string; kind: string; at: string; data: unknown };
+
 export type SyncResponse = {
   /** Ids now stored (or stored already): the device can mark them sent. */
   accepted: string[];
   /** Ids of pushed events refused as malformed (from an app version that wrote them wrong); the device drops them. */
   rejected: string[];
-  /** Events after the cursor, in server order, including ones just pushed. */
-  events: ProgressEvent[];
+  /** Events after the cursor, in server order, including ones just pushed, as stored (the device parses them). */
+  events: StoredEvent[];
   cursor: number;
   /** More events wait after `cursor`: pull again. */
   more: boolean;
@@ -69,12 +72,10 @@ export async function sync(db: Database, userId: string, { events, cursor }: Syn
 
   const more = rows.length > MAX_PULL;
   const page = rows.slice(0, MAX_PULL);
-  const pulled: ProgressEvent[] = [];
-  for (const row of page) {
-    // Kinds a newer app wrote, or rows from before a format change, are skipped rather than sent malformed.
-    const event = parseEvent({ id: row.id, kind: row.kind, at: new Date(row.at).toISOString(), data: row.data });
-    if (event) pulled.push(event);
-  }
+  // Sent as stored, even a kind this server doesn't know (a newer deployment
+  // wrote it, then was rolled back): the cursor moves past it either way, so
+  // skipping it here would lose it for good. Devices keep what they can't read.
+  const pulled = page.map((row) => ({ id: row.id, kind: row.kind, at: new Date(row.at).toISOString(), data: row.data }));
   return { accepted: valid.map((e) => e.id), rejected, events: pulled, cursor: page.at(-1)?.seq ?? cursor, more };
 }
 
