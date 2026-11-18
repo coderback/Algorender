@@ -1,0 +1,127 @@
+<Section step="hook" title="Doing it again">
+
+Counting down from 10, asking for a password until it is right, adding up numbers until a 0 arrives: all of these do
+the same thing over and over until something changes. Writing the same line a hundred times won't do, especially when
+you don't know in advance how many times. A `while` loop repeats a block for as long as its condition holds.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="loop">A block that runs again and again. Each run through it is one turn, or iteration.</Term>
+  <Term name="while">`while condition:` checks the condition, runs the indented block if it is true, then goes back and checks again.</Term>
+  <Term name="+= and -=">Shorthands: `n += 1` means `n = n + 1`, and `n -= 1` means `n = n - 1`.</Term>
+</Terms>
+
+```python
+n = 3
+while n > 0:
+    print(n)
+    n -= 1
+print("Lift off!")
+```
+
+This prints 3, 2, 1 and then `Lift off!`. The condition is checked **before each turn**, never in the middle of one:
+when `n -= 1` makes `n` 0, the turn still finishes, and only then does the check fail and the loop end. If the
+condition is false the very first time, the block never runs at all.
+
+Something in the block has to move the loop towards its end. If nothing ever changes `n`, `n > 0` stays true and the
+loop never stops. Here, a run that goes on too long is stopped after a set number of steps, with a message saying so.
+
+</Section>
+
+<Section step="see" title="Watch it loop">
+
+Step through and watch `n` and `total` in the memory view. Each time the highlight comes back up to the `while` line, the
+condition is checked again with the new `n`.
+
+<TraceCode snippet="py-while" />
+
+The loop ends when `n` reaches 5, so `n` is 5 afterwards, one past the last number added. That is normal for a loop
+that counts up to a limit: it stops at the first value that fails the test.
+
+<KeyIdea>
+
+**A `while` loop checks its condition before every turn and stops the first time it is false.** The body must change
+something the condition depends on, or the loop never ends.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-doubling" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="while-checks-midway"
+  title="A loop stops the moment its condition turns false"
+  probes={[
+    {
+      q: 'n starts at 0. The loop is: while n < 3, add 1 to n, then print n. What is the last number printed?',
+      choices: ['3', '2', '4'],
+      answer: 0,
+      trap: 1,
+      why: 'When n becomes 3 in the body, the turn still finishes and prints 3. The check only happens back at the top.',
+    },
+    {
+      q: 'x is 5. The loop is: while x > 0, set x to x - 10, then print "after", x. What happens?',
+      choices: ['It prints after -5 once', 'It prints nothing: x drops below 0 straight away', 'It prints after -5 forever'],
+      answer: 0,
+      trap: 1,
+      why: 'x > 0 is true at the first check, so the whole body runs once, printing after -5. The next check fails.',
+    },
+  ]}
+>
+
+The condition of a `while` loop is checked only at the top, before each turn. Once a turn starts, every line in the
+block runs, even if one of them makes the condition false. The loop ends at the next check.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'k starts at 0. The loop is: while k < 2, add 1 to k, then print k. What does it print?',
+      choices: ['1, then 2', '1 only', '0, then 1'],
+      answer: 0,
+      why: 'Turn one makes k 1 and prints it; k < 2 still holds, so turn two makes k 2 and prints it. Then the check fails.',
+      traps: { 1: 'while-checks-midway' },
+    },
+    {
+      q: 'n is 10. The loop is: while n > 0, print n. What happens?',
+      choices: ['It never stops: n never changes', 'It prints 10 once', 'It prints 10 down to 1'],
+      answer: 0,
+      why: 'Nothing in the body changes n, so n > 0 is true at every check.',
+    },
+    {
+      q: 'How many times does the body of a loop that starts while False: run?',
+      choices: ['0', '1', 'Forever'],
+      answer: 0,
+      why: 'The condition is checked before the first turn too, and False fails it straight away.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-while" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `while condition:` repeats its block while the condition is true.
+- The check happens before each turn, never in the middle of one.
+- Something in the block must change what the condition tests.
+- `n += 1` is short for `n = n + 1`.
+
+</Section>

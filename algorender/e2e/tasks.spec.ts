@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { collectErrors } from './errors';
+import { seed } from './seed';
 
 // The language tracks' tasks (L1, program mode): the sample tasks on their
 // own pages under Learn, checked in the real sandboxed Python worker. A
@@ -83,7 +84,7 @@ test('an output task: a wrong prediction shows what it really prints', async ({ 
   await check(page).click();
   await expect(results(page)).toHaveAttribute('data-verdict', 'failed', { timeout: 60_000 });
   await expect(results(page).locator('tr[data-first]')).toContainText('4·3⏎');
-  await answer.fill('4 3\nababab\n');
+  await answer.fill('4 3\n4 6\n');
   await check(page).click();
   await expect(results(page)).toHaveAttribute('data-verdict', 'passed');
 });
@@ -114,6 +115,77 @@ test('@mobile the symbol bar types brackets and indents into the editor', async 
   await expect(page.locator('.cm-editor')).toHaveClass(/cm-focused/);
   // No horizontal page scroll with the bar showing.
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
+// L2: the Python topics. A topic asks its prediction in the page, then lists its tasks in a strip that
+// shows which are done; each task's page leads back to the topic and on to the next task.
+test('a topic: the prediction in the page, then a strip of tasks that marks what is done', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/learn/py-variables');
+  const strip = page.getByRole('region', { name: 'This topic’s tasks' });
+  await expect(strip).toContainText('0 of 5 done');
+  await expect(strip.getByRole('link')).toHaveCount(5);
+  await page.getByLabel('What does it print?').fill('4 3\n4 6');
+  await check(page).click();
+  await expect(results(page)).toHaveAttribute('data-verdict', 'passed', { timeout: 60_000 });
+  await expect(strip).toContainText('1 of 5 done');
+  await expect(strip.locator('[data-task-state="done"]')).toHaveCount(1);
+
+  // The next task in the strip opens on its own page, which leads on and back.
+  await strip.getByRole('link', { name: /Pens and notebooks/ }).click();
+  await expect(page).toHaveURL(/\/learn\/tasks\/py-total-cost$/);
+  await expect(page.getByText('Task 2 of 5', { exact: false })).toBeVisible();
+  const nav = page.getByRole('navigation', { name: 'This topic’s tasks' });
+  await expect(nav.getByRole('link', { name: /Previous task: Two names, one value/ })).toBeVisible();
+  await nav.getByRole('link', { name: /Next task: Swap two values/ }).click();
+  await expect(page).toHaveURL(/py-swap-with-a-spare$/);
+  await page.getByRole('link', { name: 'Back to Variables' }).click();
+  await expect(page).toHaveURL(/\/learn\/py-variables$/);
+  expect(errors).toEqual([]);
+});
+
+test('a prediction comes back in review as another variant, checked against what that one prints', async ({ page }) => {
+  await page.goto('/explore');
+  await seed(page, [['task.checked', { task: 'py-doubling', kind: 'output', language: 'python', passed: true, tests: 1, failed: 0 }, 4]]);
+  await page.goto('/review');
+  await expect(page.getByRole('heading', { name: 'What does this print?' })).toBeVisible({ timeout: 30_000 });
+  // The topic showed the limit of 20; the review asks the next variant, a limit of 100.
+  await expect(page.getByLabel('The Python program')).toContainText('while x < 100:');
+  await page.getByLabel('What does it print?').fill('32 5');
+  await page.getByRole('button', { name: 'Check', exact: true }).click();
+  await expect(page.locator('[data-verdict="failed"]')).toContainText('Not quite.');
+  await expect(page.locator('[data-output-diff] tr[data-first]')).toContainText('128·7⏎');
+  // A wrong prediction can only come back tomorrow.
+  await expect(page.getByRole('group', { name: 'Rate your recall' }).getByRole('button')).toHaveCount(1);
+  await page.getByRole('group', { name: 'Rate your recall' }).getByRole('button', { name: /Next/ }).click();
+  await expect(page.getByRole('heading', { name: 'All done for today: 1 reviewed.' })).toBeVisible();
+});
+
+test('Learn filters to the language tracks, and the placement check can start on them', async ({ page }) => {
+  await page.goto('/learn');
+  const areas = page.getByRole('navigation', { name: 'Areas' });
+  await areas.getByRole('link', { name: 'Languages' }).click();
+  await expect(page).toHaveURL(/area=languages/);
+  await expect(areas.getByRole('link', { name: 'Languages' })).toHaveAttribute('aria-current', 'true');
+  await expect(page.locator('#py-first-program')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#arrays')).toHaveCount(0);
+  await page.goto('/learn?tab=lessons&area=languages');
+  await expect(page.getByRole('link', { name: /Your first program/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Arrays: one block of memory/ })).toHaveCount(0);
+
+  await page.goto('/learn/placement?area=languages');
+  await expect(page.getByRole('checkbox', { name: /Programming languages/ })).toBeChecked({ timeout: 30_000 });
+  await expect(page.getByRole('checkbox', { name: /Data structures and algorithms/ })).not.toBeChecked();
+});
+
+test('the "Python from zero" plan starts at the first program', async ({ page }) => {
+  await page.goto('/plan');
+  await expect(page.getByRole('button', { name: 'Make my plan' })).toBeVisible({ timeout: 30_000 });
+  await page.getByLabel('Python from zero').check();
+  await page.getByRole('button', { name: 'Make my plan' }).click();
+  await expect(page.getByRole('heading', { name: 'Python from zero' })).toBeVisible();
+  const upNext = page.locator('article', { has: page.getByText('Up next', { exact: true }) });
+  await expect(upNext.getByRole('heading', { level: 3 })).toHaveText('Your first program');
 });
 
 const VIEWPORTS = [

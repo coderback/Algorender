@@ -19,6 +19,7 @@ const graph: MasteryGraph = {
   lessons: { ls: 'sorting', lb: 'bayes' },
   exercises: { 'bubble-ex': ['sorting'] },
   problems: { 'sort-colors': ['sorting'] },
+  tasks: { 'predict-it': 'sorting', 'write-it': 'sorting', 'order-it': 'bayes' },
 };
 
 const quiz = (question: number, correct: boolean, when: string, lesson = 'ls') => ev('quiz.answered', { lesson, quiz: 'quiz', question, correct }, when);
@@ -79,6 +80,36 @@ describe('mastery XP', () => {
   it('adds up today’s XP separately', () => {
     const ledger = xpLedger([quiz(0, true, at(0)), quiz(1, true, at(2)), quiz(2, true, at(2))]);
     expect(xpTotals(ledger, new Date(at(2, 20)))).toEqual({ total: 30, today: 20 });
+  });
+});
+
+describe('language tasks', () => {
+  const task = (slug: string, kind: EventData<'task.checked'>['kind'], passed: boolean, when: string) =>
+    ev('task.checked', { task: slug, kind, ...(kind !== 'choice' && { language: 'python' as const }), passed, tests: 2, failed: passed ? 0 : 1 }, when);
+
+  it('pays a prediction only when right the first time, and code once, the first time it passes', () => {
+    expect(total([task('predict-it', 'output', false, at(0)), task('predict-it', 'output', true, at(0))])).toBe(0);
+    expect(total([task('predict-it', 'output', true, at(0)), task('predict-it', 'output', true, at(1))])).toBe(XP.task.output);
+    expect(total([task('write-it', 'program', false, at(0)), task('write-it', 'program', true, at(0)), task('write-it', 'program', true, at(1))])).toBe(XP.task.program);
+  });
+
+  it('pays for recalling a prediction card later, like any card', () => {
+    const events = [task('predict-it', 'output', true, at(0)), ev('review.rated', { card: 'task:predict-it', rating: 3 }, at(2))];
+    expect(xpLedger(events).map((x) => x.xp)).toEqual([XP.task.output, 15]);
+  });
+
+  it('reaches trace by reading code and implement by writing it', () => {
+    const events = [task('predict-it', 'output', true, at(0)), task('order-it', 'parsons', true, at(0)), task('write-it', 'program', false, at(0))];
+    const levels = conceptLevels(events, graph, mastery(events, graph));
+    expect([...(levels.get('sorting') ?? [])]).toEqual(['trace']);
+    expect([...(levels.get('bayes') ?? [])]).toEqual(['trace']);
+    const passed = [...events, task('write-it', 'program', true, at(1))];
+    expect(conceptLevels(passed, graph, mastery(passed, graph)).get('sorting')?.has('implement')).toBe(true);
+  });
+
+  it('counts a prediction card’s review as evidence about the task’s concept', () => {
+    const events = [task('predict-it', 'output', true, at(0)), ev('review.rated', { card: 'task:predict-it', rating: 3 }, at(2))];
+    expect(mastery(events, graph).get('sorting')?.observations).toBe(2);
   });
 });
 

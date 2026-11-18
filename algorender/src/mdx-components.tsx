@@ -8,6 +8,7 @@ import { ExplainBack } from '@/components/lesson/ExplainBack';
 import { Explore, PredictChallenge } from '@/components/lesson/Explore';
 import { Growth } from '@/components/lesson/Growth';
 import { Quiz } from '@/components/lesson/Quiz';
+import { TopicTask, TopicTasks } from '@/components/lesson/TaskWidgets';
 import { KeyIdea, Misconception, Section, Term, Terms } from '@/components/lesson/Section';
 
 // Styles for lesson prose, and the widgets lessons can use without importing them.
@@ -46,6 +47,8 @@ const components: MDXComponents = {
   TraceCode,
   EstimationDrill,
   DesignLab,
+  TopicTask,
+  TaskStrip: TopicTasks,
 };
 
 export function useMDXComponents(): MDXComponents {

@@ -1,0 +1,137 @@
+<Section step="hook" title="A program is a list of instructions">
+
+A program is a list of instructions written in a language the computer can carry out. Python is one of those
+languages, and one of the easiest to read: most lines say what they do. This track starts from nothing at all. You
+will write every program here, in your browser, and you can run any of them line by line to watch what each line
+does.
+
+Already know some Python? [Take the placement check](/learn/placement?area=languages) and skip what you know.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="statement">One instruction, usually one line. Python carries them out one at a time, from the top of the file to the bottom.</Term>
+  <Term name="print">Shows something on the screen. `print("Hi")` shows `Hi`, then moves to a new line.</Term>
+  <Term name="string">Text in quotes, like `"Hi"` or `'Hi'`. Python shows it exactly as written.</Term>
+  <Term name="comment">Anything after a `#` on a line, outside quotes. Python skips it: it is a note for people reading the code.</Term>
+</Terms>
+
+`print` can show numbers and sums as well as text. Give it several things, separated by commas, and it puts one space
+between them:
+
+```python
+print("Hello!")          # Hello!
+print(2 + 3)             # 5
+print(4 * 2)             # 8: * multiplies
+print("2 + 3 is", 2 + 3) # 2 + 3 is 5
+print()                  # an empty line
+```
+
+The quotes make all the difference. Without them, `2 + 3` is a sum that Python works out before it prints. Inside
+quotes, `"2 + 3"` is just five characters of text.
+
+</Section>
+
+<Section step="see" title="Watch it run">
+
+Step through this program. The highlighted line is the one Python is about to carry out, and the output grows one line at a
+time. Notice that the comments are never stopped on.
+
+<TraceCode snippet="py-first-program" />
+
+<KeyIdea>
+
+**Python runs a program one statement at a time, top to bottom.** Each `print` writes one line. Text in quotes is
+shown as it is; a sum without quotes is worked out first.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+Read this program from the top, then type what it prints. Check runs it in your browser and compares.
+
+<TopicTask task="py-print-order" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="quotes-calculate"
+  title="A sum in quotes still gets worked out"
+  probes={[
+    {
+      q: 'What does print("4 * 2") show?',
+      choices: ['8', '4 * 2', 'An error'],
+      answer: 1,
+      trap: 0,
+      why: 'Inside quotes, 4 * 2 is text, five characters long, and print shows text exactly as written.',
+    },
+    {
+      q: 'Which line shows 12?',
+      choices: ['print("7 + 5")', 'print(7 + 5)', 'print(7, 5)'],
+      answer: 1,
+      trap: 0,
+      why: 'Only print(7 + 5) works the sum out. print("7 + 5") shows the text 7 + 5, and print(7, 5) shows 7 5.',
+    },
+  ]}
+>
+
+Quotes turn whatever is inside them into text. `print("2 + 3")` shows `2 + 3`, not `5`: Python doesn't look inside a
+string for sums. To get the answer, leave the quotes off: `print(2 + 3)`.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'What does print("3 + 4") show?',
+      choices: ['7', '3 + 4', '"3 + 4"'],
+      answer: 1,
+      why: 'The quotes make 3 + 4 text, so it is shown exactly as written. The quotes themselves are not shown.',
+      traps: { 0: 'quotes-calculate' },
+    },
+    {
+      q: 'A program has three print lines. In what order does their output appear?',
+      choices: ['Top to bottom, in the order the lines are written', 'Shortest line first', 'In any order'],
+      answer: 0,
+      why: 'Python carries out statements one at a time, from the top of the program down, so the output comes in the same order.',
+    },
+    {
+      q: 'What happens to a line that starts with #?',
+      choices: ['Python skips it: it is a comment', 'Python prints it', 'Python stops with an error'],
+      answer: 0,
+      why: 'Everything after # on a line is a comment, a note for people. Python ignores it.',
+    },
+    {
+      q: 'What does print("a", "b", "c") show?',
+      choices: ['a b c', 'abc', 'a,b,c'],
+      answer: 0,
+      why: 'Given several things, print shows them in order with one space between each.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+Each task is checked in your browser as soon as you press Check. Do them in order, or stop after any of them.
+
+<TaskStrip concept="py-first-program" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A program is statements, carried out one at a time from the top down.
+- `print(...)` writes one line. Several things, separated by commas, come out with spaces between them.
+- Text goes in quotes and is shown as it is. A sum without quotes is worked out first.
+- `#` starts a comment, which Python skips.
+
+</Section>

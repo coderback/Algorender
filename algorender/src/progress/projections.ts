@@ -72,5 +72,21 @@ export function problemProgress(events: readonly ProgressEvent[]): Record<string
   return out;
 }
 
+/** A language task (src/tasks/): when it first passed, and how many checks it took. */
+export type TaskProgress = { passed?: string; checks: number; failedFirst: number };
+
+/** Every language task checked at least once, by slug. */
+export function taskProgress(events: readonly ProgressEvent[]): Record<string, TaskProgress> {
+  const out: Record<string, TaskProgress> = {};
+  for (const e of events) {
+    if (e.kind !== 'task.checked') continue;
+    const t = (out[e.data.task] ??= { checks: 0, failedFirst: 0 });
+    t.checks += 1;
+    if (e.data.passed) t.passed ??= e.at;
+    else if (!t.passed) t.failedFirst += 1;
+  }
+  return out;
+}
+
 /** Events sorted into the order they happened. */
 export const inOrder = (events: Iterable<ProgressEvent>) => [...events].sort(byTime);

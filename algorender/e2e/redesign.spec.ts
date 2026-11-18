@@ -86,6 +86,11 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   // Language tracks L1: a sample task of each kind shipped (e2e/tasks.spec.ts shoots them after a failed check).
   { name: 'task-program', path: '/learn/tasks/py-greet-by-name' },
   { name: 'task-output', path: '/learn/tasks/py-two-names-one-value' },
+  // Language tracks L2 batch 1: a Python topic (theory, a prediction, the task strip), Learn filtered to languages, a fill task.
+  { name: 'l2-topic', path: '/learn/py-variables' },
+  { name: 'l2-topic-loops', path: '/learn/py-nested-loops' },
+  { name: 'l2-learn-languages', path: '/learn?area=languages' },
+  { name: 'l2-task-fill', path: '/learn/tasks/py-is-even' },
 ];
 
 const VIEWPORTS = [

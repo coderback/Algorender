@@ -170,7 +170,8 @@ export function observations(events: readonly ProgressEvent[], graph: MasteryGra
       case 'review.rated': {
         const [kind, slug] = e.data.card.split(':');
         // Quiz and mistake cards name their lesson second.
-        const concepts = kind === 'quiz' || kind === 'misconception' ? graph.lessons[slug] : kind === 'problem' ? graph.problems[slug] : undefined;
+        const concepts =
+          kind === 'quiz' || kind === 'misconception' ? graph.lessons[slug] : kind === 'problem' ? graph.problems[slug] : kind === 'task' ? graph.tasks?.[slug] : undefined;
         // Again is a lapse; Hard, Good and Easy are recalled.
         push(concepts, { item: e.data.card, correct: e.data.rating >= 2, at: e.at, source: 'review' });
         break;

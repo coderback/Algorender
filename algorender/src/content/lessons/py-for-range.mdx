@@ -1,0 +1,126 @@
+<Section step="hook" title="Once for each">
+
+Many loops know exactly how many turns they need: once for each number from 1 to 10, once for each letter of a word.
+A `while` loop can do that, but you have to set up the counter, test it and move it yourself, and forgetting one
+of the three is the classic bug. A `for` loop does all three for you.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="for">`for name in something:` runs its block once for each item, with `name` pointing at that item.</Term>
+  <Term name="range">Makes a run of whole numbers: `range(5)` is 0, 1, 2, 3, 4.</Term>
+  <Term name="end=">`print(x, end=" ")` finishes with a space instead of a new line, so the next print carries on the same line.</Term>
+</Terms>
+
+`range` stops **just before** the number you give it, so `range(5)` has five numbers, 0 to 4. Give it two numbers and
+it starts at the first; give it a third and that is the step:
+
+- `range(5)` gives 0 1 2 3 4
+- `range(1, 5)` gives 1 2 3 4
+- `range(1, 11)` gives 1 to 10
+- `range(0, 10, 3)` gives 0 3 6 9
+- `range(5, 0, -1)` counts down: 5 4 3 2 1
+
+A range is for looping over: `for i in range(5):` runs its block with `i` as 0, then 1, and so on up to 4.
+
+A `for` loop can walk through a string too, one character at a time:
+
+```python
+for ch in "hey":
+    print(ch)     # h, then e, then y, each on its own line
+```
+
+</Section>
+
+<Section step="see" title="Watch it count">
+
+Step through and watch `i` take each value from the range in turn. Then the second loop walks through a string.
+
+<TraceCode snippet="py-for-range" />
+
+<KeyIdea>
+
+**`for x in range(a, b):` runs once for each whole number from `a` up to, but not including, `b`.** A `for` loop can
+also walk through the characters of a string.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-range-steps" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="range-includes-end"
+  title="range(n) goes up to n"
+  probes={[
+    {
+      q: 'What is the last number range(5) gives?',
+      choices: ['4', '5', '6'],
+      answer: 0,
+      trap: 1,
+      why: 'range stops just before its end: range(5) is 0, 1, 2, 3, 4.',
+    },
+    {
+      q: 'for i in range(2, 6): print(i). How many lines does it print?',
+      choices: ['4', '5', '6'],
+      answer: 0,
+      trap: 1,
+      why: 'It prints 2, 3, 4 and 5: from 2 up to, but not including, 6.',
+    },
+  ]}
+>
+
+`range` never includes its end. `range(5)` is the five numbers 0 to 4, and `range(1, 5)` is 1 to 4. To go up to `n`
+itself, stop one later: `range(1, n + 1)`. A useful check: `range(a, b)` has `b - a` numbers in it.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'for i in range(1, 4): print(i). What prints?',
+      choices: ['1, 2, 3 on three lines', '1, 2, 3, 4 on four lines', '0, 1, 2, 3 on four lines'],
+      answer: 0,
+      why: 'range(1, 4) starts at 1 and stops just before 4.',
+      traps: { 1: 'range-includes-end' },
+    },
+    {
+      q: 'for ch in "hi": print(ch). What prints?',
+      choices: ['h, then i, on two lines', 'hi on one line', 'h i on one line'],
+      answer: 0,
+      why: 'The loop runs once per character, and each print ends its line.',
+    },
+    {
+      q: 'Which numbers does range(10, 0, -3) give?',
+      choices: ['10, 7, 4, 1', '10, 7, 4, 1, 0', '0, 3, 6, 9'],
+      answer: 0,
+      why: 'It starts at 10 and steps down by 3, stopping before it reaches 0.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-for-range" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `for x in range(n):` runs `n` times, with `x` from 0 to `n - 1`.
+- `range(a, b)` stops just before `b`; `range(1, n + 1)` reaches `n`. A third number is the step.
+- `for ch in text:` visits each character in turn.
+- `print(..., end=" ")` keeps the next print on the same line.
+
+</Section>

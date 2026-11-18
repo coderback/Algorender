@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { AreaFilter } from '@/components/learn/AreaFilter';
 import { LearnHeader } from '@/components/learn/LearnHeader';
 import { LessonList, type LessonGroup } from '@/components/learn/LessonList';
 import { LearnPath, PathLegend, type PathData } from '@/components/learn/Path';
@@ -7,7 +8,9 @@ import { goals } from '@/content/goals';
 import { getLesson, lessons } from '@/content/lessons';
 import { lessonMisconceptions } from '@/content/lessons/assessment';
 import { masteryGraph, planCatalog } from '@/content/mastery';
+import { units } from '@/content/units';
 import { PATTERN_IDS, PATTERNS } from '@/problems/patterns';
+import { AREAS, type AreaId } from '@/progress/mastery';
 import { misconceptionCard } from '@/progress/misconceptions';
 
 export const metadata: Metadata = {
@@ -15,9 +18,18 @@ export const metadata: Metadata = {
   description: 'Every concept in the order it builds on the others, from Big-O to graphs and dynamic programming, with lessons and interactive visualisers.',
 };
 
-function pathData(): PathData {
+/** The areas with something to learn yet: what the filter offers. */
+function liveAreas(): AreaId[] {
   const { tracks, concepts } = loadConcepts();
+  const live = new Set(tracks.filter((t) => concepts.some((c) => c.track === t.id && !c.planned)).map((t) => t.area));
+  return AREAS.map((a) => a.id).filter((a) => live.has(a));
+}
+
+function pathData(area: AreaId | null): PathData {
+  const { tracks: all, concepts } = loadConcepts();
+  const tracks = area ? all.filter((t) => t.area === area) : all;
   const depth = depths();
+  const unitOrder = new Map(units.flatMap((u) => u.concepts).map((id, i) => [id, i]));
   const catalog = planCatalog();
   const patternOf = (concept: string) => PATTERN_IDS.find((id) => PATTERNS[id].concept === concept);
   const ordered = [...tracks].sort((a, b) => Number(a.planned) - Number(b.planned));
@@ -30,7 +42,8 @@ function pathData(): PathData {
       planned: t.planned,
       concepts: concepts
         .filter((c) => c.track === t.id)
-        .sort((a, b) => depth.get(a.id)! - depth.get(b.id)! || a.title.localeCompare(b.title))
+        // A language track reads in the order of its units; the others by depth in the graph.
+        .sort((a, b) => (unitOrder.has(a.id) && unitOrder.has(b.id) ? unitOrder.get(a.id)! - unitOrder.get(b.id)! : depth.get(a.id)! - depth.get(b.id)! || a.title.localeCompare(b.title)))
         .map((c) => c.id),
     })),
     concepts: Object.fromEntries(
@@ -60,8 +73,9 @@ function pathData(): PathData {
   };
 }
 
-function lessonGroups(): LessonGroup[] {
-  const { tracks, concepts } = loadConcepts();
+function lessonGroups(area: AreaId | null): LessonGroup[] {
+  const { tracks: all, concepts } = loadConcepts();
+  const tracks = area ? all.filter((t) => t.area === area) : all;
   const trackOf = new Map(concepts.map((c) => [c.id, c.track]));
   return tracks
     .map((t) => ({
@@ -72,13 +86,20 @@ function lessonGroups(): LessonGroup[] {
     .filter((g) => g.lessons.length > 0);
 }
 
-export default async function LearnPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[]; concept?: string | string[] }> }) {
-  const { tab, concept } = await searchParams;
+export default async function LearnPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[]; concept?: string | string[]; area?: string | string[] }> }) {
+  const { tab, concept, area: asked } = await searchParams;
   const lessonsTab = tab === 'lessons';
+  const areas = liveAreas();
+  const area = areas.find((a) => a === asked) ?? null;
   return (
     <main className="flex flex-col gap-6 px-4 pb-6 md:px-0 md:pt-2">
       <LearnHeader active={lessonsTab ? 'lessons' : 'path'} aside={lessonsTab ? undefined : <PathLegend />} />
-      {lessonsTab ? <LessonList groups={lessonGroups()} /> : <LearnPath data={pathData()} linked={typeof concept === 'string' ? concept : undefined} />}
+      <AreaFilter areas={areas} active={area} tab={lessonsTab ? 'lessons' : 'path'} />
+      {lessonsTab ? (
+        <LessonList groups={lessonGroups(area)} />
+      ) : (
+        <LearnPath key={area ?? 'all'} data={pathData(area)} linked={typeof concept === 'string' ? concept : undefined} filtered={area !== null} />
+      )}
     </main>
   );
 }
