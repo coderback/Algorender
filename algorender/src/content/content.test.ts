@@ -77,9 +77,9 @@ describe('concept graph', () => {
   it('gives every track an area, and the math and ML tracks the zero-to-hero concepts', () => {
     expect(tracks.map((t) => t.area)).not.toContain(undefined);
     const mathMl = concepts.filter((c) => tracks.find((t) => t.id === c.track)?.area === 'math' || tracks.find((t) => t.id === c.track)?.area === 'ml');
-    // 21 that were there before the zero-to-hero path, and its 77 new ones, planned until their batch: B1 wrote 4.
+    // 21 that were there before the zero-to-hero path, and its 77 new ones, planned until their batch: B1 wrote 4 and B2 4 more.
     expect(mathMl.length).toBe(98);
-    expect(mathMl.filter((c) => c.planned).length).toBe(73);
+    expect(mathMl.filter((c) => c.planned).length).toBe(69);
     // A planned track has nothing available yet.
     for (const t of tracks.filter((x) => x.planned)) expect(concepts.filter((c) => c.track === t.id && !c.planned).map((c) => c.id), t.id).toEqual([]);
   });
