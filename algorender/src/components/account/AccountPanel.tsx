@@ -418,6 +418,12 @@ function Settings({ email, status }: { email: string; status: SyncStatus }) {
             Sign out
           </Button>
         </div>
+        {status.pending > 0 && (
+          <p className="text-[13px] text-ink-soft">
+            {status.pending === 1 ? 'One change hasn’t' : `${status.pending} changes haven’t`} reached your account yet. Signing out keeps{' '}
+            {status.pending === 1 ? 'it' : 'them'} on this device, out of sight, and {status.pending === 1 ? 'it syncs' : 'they sync'} when you sign in here again.
+          </p>
+        )}
         <DeleteAccount />
       </div>
     </Card>
@@ -558,7 +564,7 @@ function DeleteAccount() {
       setError(failed.message ?? 'The account wasn’t deleted.');
       return;
     }
-    await progressStore().setOwner(null, { explicit: true });
+    await progressStore().setOwner(null, { explicit: true, everything: true });
   };
 
   if (!open) {

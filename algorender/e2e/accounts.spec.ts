@@ -187,6 +187,34 @@ test.describe('offline', () => {
   });
 });
 
+test('signing out keeps work the server hasn’t got, out of sight, until the learner signs in again', async ({ page, browser }) => {
+  await withCode(page.context(), 'two-sum', TWO_SUM_JS);
+  const email = freshEmail();
+  await signUp(page, email);
+
+  // The server can't take the solve, so it waits on the device, and the account page says what signing out does with it.
+  await page.route('**/api/progress', (route) => route.fulfill({ status: 503, body: '{}' }));
+  await solveTwoSum(page);
+  await page.goto('/account');
+  await expect(page.getByText(/reached your account yet. Signing out keeps/)).toBeVisible();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByRole('button', { name: 'Create an account' })).toBeVisible();
+  await page.goto('/practice');
+  await expect(solvedTile(page)).toContainText('0 /');
+
+  // Signed in here again, with the server back: the solve syncs, and another device sees it.
+  await page.unroute('**/api/progress');
+  await signIn(page, email);
+  await synced(page);
+  await expect(page.getByRole('link', { name: /Problems solved/ })).toContainText('1');
+  const other = await browser.newContext();
+  const phone = await other.newPage();
+  await signIn(phone, email);
+  await synced(phone);
+  await expect(phone.getByRole('link', { name: /Problems solved/ })).toContainText('1');
+  await other.close();
+});
+
 test('deleting the account removes it', async ({ page }) => {
   const email = freshEmail();
   await signUp(page, email);

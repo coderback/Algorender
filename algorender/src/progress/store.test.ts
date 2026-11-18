@@ -25,6 +25,7 @@ beforeAll(async () => {
     { id: 'u4', name: 'Barbara', email: 'barbara@example.com' },
     { id: 'u5', name: 'Frances', email: 'frances@example.com' },
     { id: 'u6', name: 'Kathleen', email: 'kathleen@example.com' },
+    { id: 'u7', name: 'Margaret', email: 'margaret@example.com' },
   ]);
 }, 60_000);
 
@@ -164,6 +165,51 @@ describe('the device store', () => {
     await s.syncNow();
     expect(s.getSnapshot().events.length).toBe(before + 1);
     await s.close();
+  });
+
+  it('keeps work the server doesn’t have when the learner signs out, but not when the account is deleted', async () => {
+    const session = { user: 'u7' as string | null };
+    const network = { up: true };
+    const storage = new MemoryStorage();
+    const env = { dbName: 'signing-out-offline', storage, syncDelay: 5, ...server(session, network) };
+    const s = new ProgressStore(env);
+    await s.setOwner('u7');
+    const sent = solve(s, 'two-sum');
+    await s.syncNow();
+
+    // Offline, more work, then a sign-out: the last sync can't reach the server.
+    network.up = false;
+    const unsent = solve(s, 'valid-anagram');
+    await new Promise((r) => setTimeout(r, 30));
+    await s.signOut();
+    expect(s.getSnapshot()).toMatchObject({ owner: null, events: [], sync: { state: 'local' } });
+    await s.close();
+
+    // Only the unsent event is left on the device, hidden from anyone signed out.
+    const raw = new Dexie('signing-out-offline');
+    raw.version(1).stores({ events: 'id, owner, [owner+synced]', meta: 'key' });
+    expect((await raw.table('events').toArray()).map((e) => e.id)).toEqual([unsent.id]);
+    raw.close();
+
+    // Back online, the same learner signs in here again: it syncs, and the rest comes back.
+    network.up = true;
+    const again = new ProgressStore(env);
+    await again.start();
+    await again.setOwner('u7');
+    await again.syncNow();
+    expect(again.getSnapshot().events.map((e) => e.id).sort()).toEqual([sent.id, unsent.id].sort());
+    expect(again.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 0 });
+
+    // Deleting the account removes everything, sent or not.
+    network.up = false;
+    solve(again, 'contains-duplicate');
+    await new Promise((r) => setTimeout(r, 30));
+    await again.setOwner(null, { explicit: true, everything: true });
+    await again.close();
+    const after = new Dexie('signing-out-offline');
+    after.version(1).stores({ events: 'id, owner, [owner+synced]', meta: 'key' });
+    expect(await after.table('events').toArray()).toEqual([]);
+    after.close();
   });
 
   it('says so when the server has signed the learner out', async () => {

@@ -7,8 +7,10 @@
 // claims the device's anonymous events for the account and pushes them, so
 // work done before signing up isn't lost; pulling brings the account's events
 // from other devices. Signing out (after a last sync) removes the account's
-// events from the device. A session that simply expires keeps them, hidden,
-// until the same learner signs in again: nothing unsynced is lost.
+// events from the device, except any the server doesn't have yet (offline,
+// or held): those stay, hidden, like a session that simply expires keeps
+// them, until the same learner signs in again. Nothing unsynced is lost;
+// only deleting the account removes everything.
 //
 // Pulls page through the server's events from a cursor. An event this app
 // version can't read (a kind or field a newer version added, while an old
@@ -202,9 +204,11 @@ export class ProgressStore {
   /**
    * The signed-in user changed: an id after signing in (or on every page load
    * while signed in), null when the session is gone. `explicit` is a sign-out
-   * the learner asked for, which removes their events from the device.
+   * the learner asked for, which removes their events from the device: those
+   * already on the server, or with `everything` (the account was deleted) all
+   * of them.
    */
-  async setOwner(userId: string | null, { explicit = false } = {}): Promise<void> {
+  async setOwner(userId: string | null, { explicit = false, everything = false } = {}): Promise<void> {
     await this.start();
     const current = this.snapshot.owner;
     if (userId === current) {
@@ -215,7 +219,7 @@ export class ProgressStore {
       // This device's anonymous work joins the account.
       await this.claim(userId);
     } else if (current && explicit) {
-      await this.removeOwner(current);
+      await this.removeOwner(current, everything);
     }
     this.write(OWNER_KEY, userId);
     await this.load(userId);
@@ -223,7 +227,7 @@ export class ProgressStore {
     if (userId) this.scheduleSync(0);
   }
 
-  /** Syncs, then forgets this device's copy of the account: call before signing out. */
+  /** Syncs, then forgets this device's copy of the account, keeping (hidden) what didn't reach the server: call before signing out. */
   async signOut(): Promise<void> {
     await this.syncNow();
     await this.setOwner(null, { explicit: true });
@@ -414,12 +418,14 @@ export class ProgressStore {
     await this.db!.events.where('owner').equals(ANON).modify({ owner: userId, synced: 0 });
   }
 
-  private async removeOwner(owner: string) {
+  /** Removes the owner's events from the device: those on the server, or with `everything`, all of them. */
+  private async removeOwner(owner: string, everything: boolean) {
+    const gone = (e: Stored) => e.owner === owner && (everything || e.synced === 1);
     if (this.memory) {
-      this.memory = this.memory.filter((e) => e.owner !== owner);
+      this.memory = this.memory.filter((e) => !gone(e));
       for (const key of [...this.memoryMeta.keys()]) if (key.startsWith(unreadPrefix(owner))) this.memoryMeta.delete(key);
     } else {
-      await this.db!.events.where('owner').equals(owner).delete();
+      await this.db!.events.where('owner').equals(owner).filter(gone).delete();
       await this.db!.meta.where('key').startsWith(unreadPrefix(owner)).delete();
     }
     await this.setMeta(cursorKey(owner), 0);
