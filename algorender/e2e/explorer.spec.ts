@@ -141,6 +141,29 @@ test('custom input runs and updates the shareable URL', async ({ page }) => {
   await expect(page.getByRole('alert').filter({ hasText: 'whole number' })).toBeVisible();
 });
 
+test('New values shows only where it would change the input', async ({ page }) => {
+  const shuffle = () => page.getByRole('button', { name: 'New random input' });
+  const newValues = () => page.getByRole('button', { name: 'New values' });
+
+  // A random example: both buttons draw new values.
+  await open(page, '/visualisers/breadth-first-search?preset=random&n=6&seed=3');
+  await expect(shuffle()).toBeVisible();
+  await newValues().click();
+  await expect(page).not.toHaveURL(/seed=3(&|$)/);
+
+  // A hand-placed graph on the same page ignores the seed: neither shows.
+  await page.getByRole('button', { name: 'Small network', exact: true }).click();
+  await expect(page).toHaveURL(/preset=network/);
+  await expect(newValues()).toHaveCount(0);
+  await expect(shuffle()).toHaveCount(0);
+
+  // Every example of the functions visualiser is fixed.
+  await open(page, '/visualisers/functions');
+  await expect(page.getByRole('button', { name: 'Run' })).toBeVisible();
+  await expect(newValues()).toHaveCount(0);
+  await expect(shuffle()).toHaveCount(0);
+});
+
 test('@mobile the visual, narration and controls fit without horizontal scroll', async ({ page }) => {
   await open(page, '/visualisers/merge-sort?preset=random&n=32&seed=2');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

@@ -1,4 +1,4 @@
-import type { InputSpec } from '@/engine/module';
+import type { InputExample, InputSpec } from '@/engine/module';
 
 /**
  * Where an algorithm's input comes from: a named example (with size and seed,
@@ -50,6 +50,38 @@ export function inputFor<I>(source: InputSource, spec: InputSpec<I>): I {
   const s = source.kind === 'example' ? source : (defaultSource(spec) as Extract<InputSource, { kind: 'example' }>);
   const example = spec.examples.find((e) => e.id === s.example) ?? spec.examples[0];
   return example.make({ seed: s.seed, size: s.size });
+}
+
+/** Seeds tried to tell whether an example uses its seed: a random one differs between some two of them. */
+const PROBE_SEEDS = [1, 2, 3, 4];
+const probed = new WeakMap<object, Map<number, boolean>>();
+
+/**
+ * Whether a new seed changes what this example makes at this size. Fixed
+ * examples (a hand-placed graph, a lesson's worked numbers) ignore it, so
+ * "New values" would do nothing. Found by building the example from a few
+ * seeds, once per example and size.
+ */
+export function usesSeed<I>(example: InputExample<I>, size: number): boolean {
+  let bySize = probed.get(example);
+  if (!bySize) probed.set(example, (bySize = new Map()));
+  let uses = bySize.get(size);
+  if (uses === undefined) {
+    const [first, ...rest] = PROBE_SEEDS.map((seed) => JSON.stringify(example.make({ seed, size })));
+    uses = rest.some((made) => made !== first);
+    bySize.set(size, uses);
+  }
+  return uses;
+}
+
+/**
+ * Whether "New values" would change the input: it draws the shown example
+ * again with a new seed (the first example, when the input is the learner's
+ * own), so it only appears when that example uses its seed.
+ */
+export function canDrawNewValues<I>(source: InputSource, spec: InputSpec<I>): boolean {
+  const example = (source.kind === 'example' && spec.examples.find((e) => e.id === source.example)) || spec.examples[0];
+  return usesSeed(example, source.kind === 'example' ? source.size : (spec.size?.default ?? 0));
 }
 
 /** NaN when absent, so a missing param falls back to the default (Number(null) would be 0). */

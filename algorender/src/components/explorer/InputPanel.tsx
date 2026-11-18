@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { FiShuffle } from 'react-icons/fi';
 import type { InputSpec } from '@/engine/module';
 import { randomSeed } from '@/engine/random';
-import type { InputSource } from './source';
+import { canDrawNewValues, type InputSource } from './source';
 
 export function InputPanel<I>({
   spec,
@@ -59,15 +59,18 @@ export function InputPanel<I>({
               {example.label}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() =>
-              onChange({ kind: 'example', example: activeExample ?? spec.examples[0].id, size, seed: randomSeed() })
-            }
-            className="inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold text-ink ring-[1.5px] ring-line ring-inset transition-shadow duration-150 ease-standard hover:ring-line-strong"
-          >
-            <FiShuffle aria-hidden /> New values
-          </button>
+          {/* Only where a new seed changes something: fixed examples ignore it. */}
+          {canDrawNewValues(source, spec) && (
+            <button
+              type="button"
+              onClick={() =>
+                onChange({ kind: 'example', example: activeExample ?? spec.examples[0].id, size, seed: randomSeed() })
+              }
+              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold text-ink ring-[1.5px] ring-line ring-inset transition-shadow duration-150 ease-standard hover:ring-line-strong"
+            >
+              <FiShuffle aria-hidden /> New values
+            </button>
+          )}
         </div>
       </fieldset>
 
