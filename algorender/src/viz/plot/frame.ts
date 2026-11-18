@@ -24,13 +24,15 @@ export function plotFrame(
 /**
  * A checkpoint's choices: the answer and up to three distinct wrong ones,
  * sorted so the answer's position gives nothing away. Null when the wrong
- * ones all coincide with the answer (nothing to ask).
+ * ones all coincide with the answer (nothing to ask). Choices that are all
+ * plain numbers sort by value (−5 before 8), the rest as text.
  */
 export function choices(answer: string, wrong: readonly string[], count = 4): Pick<Checkpoint, 'choices' | 'answer'> | null {
   const set = new Set([answer]);
   for (const w of wrong) if (set.size < count) set.add(w);
   if (set.size < 2) return null;
-  const sorted = [...set].sort();
+  const value = (s: string) => (/^[−-]?\d+(\.\d+)?$/.test(s) ? Number(s.replace('−', '-')) : NaN);
+  const sorted = [...set].every((s) => !Number.isNaN(value(s))) ? [...set].sort((a, b) => value(a) - value(b)) : [...set].sort();
   return { choices: sorted, answer: sorted.indexOf(answer) };
 }
 

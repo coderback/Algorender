@@ -67,6 +67,17 @@ describe('scheduling', () => {
     for (const id of toolkit.slice(1)) expect(order.indexOf(id), id).toBeGreaterThan(order.indexOf('functions-graphs'));
   });
 
+  it('reaches B2’s vectors, dot product, norms and matrix multiplication from the zero-to-hero goal, each after what it builds on', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    const chain = ['trigonometry', 'vectors', 'dot-product', 'norms-distances'];
+    for (const id of [...chain, 'vectors-matrices', 'matrix-multiplication']) expect(order, id).toContain(id);
+    for (let i = 1; i < chain.length; i++) expect(order.indexOf(chain[i]), chain[i]).toBeGreaterThan(order.indexOf(chain[i - 1]));
+    expect(order.indexOf('vectors-matrices')).toBeGreaterThan(order.indexOf('dot-product'));
+    expect(order.indexOf('matrix-multiplication')).toBeGreaterThan(order.indexOf('vectors-matrices'));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {

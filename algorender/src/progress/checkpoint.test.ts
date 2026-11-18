@@ -180,6 +180,14 @@ describe('the real checkpoints', () => {
     }
   });
 
+  it('asks stage 1 about B2’s vectors, dot product, norms and matrix multiplication too', () => {
+    const p = checkpointPools(1);
+    for (const id of ['vectors', 'dot-product', 'norms-distances', 'matrix-multiplication']) {
+      expect(p.probes.some((q) => q.concept === id), id).toBe(true);
+      expect(p.quiz.some((q) => q.concept === id), id).toBe(true);
+    }
+  });
+
   it('opens the first two stages today, from the lessons already written', () => {
     const open = openCheckpoints().map((c) => c.stage);
     expect(open).toContain(1);

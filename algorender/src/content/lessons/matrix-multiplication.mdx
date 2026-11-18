@@ -1,0 +1,231 @@
+<Section step="hook" title="The calculation AI hardware is built for">
+
+A layer of a neural network mixes its inputs with a grid of numbers. A game turns a character and then stretches it,
+and wants both moves done in one step. Both are **matrix multiplication**: combining two grids of numbers into a third.
+Training and running a large language model is mostly this one operation, repeated billions of times, which is why the
+chips that run AI are designed around it.
+
+You already have the two ideas it needs. From the dot product: multiply matching parts and add. From the lesson on
+matrices moving space: a matrix's columns are where î and ĵ land. This lesson puts them together, counts the cost, and
+shows why the order of a product matters.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="m×n matrix">A grid of numbers with $m$ rows and $n$ columns, said “m by n”. Rows first, always. A square matrix has as many rows as columns.</Term>
+  <Term name="entry Aᵢⱼ">The number in row $i$, column $j$ of $A$, counting from 1. (Code counts from 0, so $A_{12}$ is `A[0][1]`.)</Term>
+  <Term name="product AB">The matrix $C$ whose entry $C_{ij}$ is row $i$ of $A$ dotted with column $j$ of $B$.</Term>
+  <Term name="identity I">The square matrix with 1s down its diagonal and 0s elsewhere. It changes nothing: $AI = A$.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Each cell is a row times a column">
+
+<Explore slug="matrix-multiplication" settings={{ preset: 'cells' }} caption="A is 2×3 and B is 3×2, so C = AB is 2×2. Each cell lights up the row of A and the column of B it is built from." />
+
+$A$ has 2 rows and 3 columns; $B$ has 3 rows and 2 columns. To fill $C_{11}$, take row 1 of $A$, $(1, 2, 0)$, and
+column 1 of $B$, $(2, 0, 1)$, and dot them:
+
+$$
+C_{11} = 1 \times 2 + 2 \times 0 + 0 \times 1 = 2
+$$
+
+Every other cell works the same way: $C_{12} = 7$, $C_{21} = 8$ and $C_{22} = -2$.
+
+$$
+\begin{bmatrix} 1 & 2 & 0 \\ 3 & -1 & 2 \end{bmatrix}
+\begin{bmatrix} 2 & 1 \\ 0 & 3 \\ 1 & -1 \end{bmatrix}
+=
+\begin{bmatrix} 2 & 7 \\ 8 & -2 \end{bmatrix}
+$$
+
+For the row and the column to pair up, a row of $A$ must be as long as a column of $B$. That is the **shape rule**: an
+$m \times n$ matrix times an $n \times p$ one gives an $m \times p$ result. The inner numbers must match, and they
+disappear: $2 \times 3$ times $3 \times 2$ gives $2 \times 2$.
+
+<KeyIdea>
+
+**$C_{ij}$ is row $i$ of $A$ dotted with column $j$ of $B$.** So $(m \times n)(n \times p) = m \times p$, and if the
+inner numbers differ, $AB$ doesn't exist.
+
+</KeyIdea>
+
+<Explore slug="matrix-multiplication" settings={{ preset: 'mismatch' }} caption="A 3×2 matrix times a 3×2 one: a row of A has 2 numbers and a column of B has 3, so they can't be paired." />
+
+<Misconception
+  id="cellwise"
+  title="Multiply matrices by multiplying the matching cells"
+  probes={[
+    {
+      q: 'What is [[1, 2], [3, 4]] times the identity [[1, 0], [0, 1]]?',
+      choices: ['[[1, 0], [0, 4]]', '[[1, 2], [3, 4]]', '[[2, 2], [3, 5]]'],
+      answer: 1,
+      trap: 0,
+      why: 'Row 1 of A dotted with column 2 of I is 1 × 0 + 2 × 1 = 2, and so on: the identity changes nothing. Multiplying matching cells would wipe out the 2 and the 3.',
+    },
+    {
+      q: 'Which numbers does C₂₁ of C = AB use?',
+      choices: ['Only A₂₁ and B₂₁', 'All of row 2 of A and all of column 1 of B', 'All of column 2 of A and row 1 of B'],
+      answer: 1,
+      trap: 0,
+      why: 'C₂₁ is row 2 of A dotted with column 1 of B: every number in that row and that column.',
+    },
+  ]}
+>
+
+Adding matrices does work cell by cell, so it is natural to expect multiplying to work that way too. It doesn't: each
+cell of $AB$ is a whole row of $A$ dotted with a whole column of $B$. That is why the shapes don't have to be the same,
+only the inner numbers, and why multiplying by the identity leaves a matrix unchanged.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: fill C cell by cell">
+
+Two $2 \times 2$ matrices this time, $A = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}$ and
+$B = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix}$. Before each step, predict the next cell, or which row and column it
+uses.
+
+<PredictChallenge slug="matrix-multiplication" settings={{ preset: 'square' }} goal={5} />
+
+The result is $AB = \begin{bmatrix} 2 & 1 \\ 4 & 3 \end{bmatrix}$: $A$ with its columns swapped.
+
+**The cost.** Each cell took 2 multiplications and there are 4 cells, so 8 in all. In general $C$ has $m \times p$
+cells and each takes $n$ multiplications: $m \cdot n \cdot p$. The first example took $2 \cdot 3 \cdot 2 = 12$. For two
+$n \times n$ matrices it is $n^3$, so in Big-O terms the simple method is $O(n^3)$: doubling $n$ makes 8 times the work,
+and two $1000 \times 1000$ matrices need a billion multiplications.
+
+</Section>
+
+<Section step="do" title="Two moves in one matrix">
+
+In the lesson on matrices moving space, a $2 \times 2$ matrix moved the whole plane, and its columns were where
+$î$ and $ĵ$ landed. Applying $B$ and then $A$ to a vector $v$ gives $A(Bv)$, and the product $AB$ is the single matrix
+that does both: $(AB)v = A(Bv)$. $B$ is the one next to $v$, so it acts first.
+
+<Explore slug="matrix-multiplication" settings={{ preset: 'compose' }} input caption="B stretches across by 2, then A turns a quarter turn: î ends at (0, 2). Doing A first and then B sends î to (0, 1)." />
+
+Here $B = \begin{bmatrix} 2 & 0 \\ 0 & 1 \end{bmatrix}$ stretches the plane across by 2, and
+$A = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}$ turns it a quarter turn anticlockwise. $B$ sends $î$ to its first
+column, $(2, 0)$. Then $A$ moves that. Each part of $A(2, 0)$ is a row of $A$ dotted with $(2, 0)$:
+$0 \times 2 + (-1) \times 0 = 0$ and $1 \times 2 + 0 \times 0 = 2$, so $î$ ends at $(0, 2)$, the first column of $AB$.
+Every column of $AB$ is $A$ times a column of $B$, worked out with rows dotted with columns, which is exactly the
+cell-by-cell rule:
+
+$$
+AB = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix} \begin{bmatrix} 2 & 0 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} 0 & -1 \\ 2 & 0 \end{bmatrix}
+$$
+
+Now do them the other way round. $A$ first turns $î$ to $(0, 1)$, then $B$ stretches only the across direction, so
+$(0, 1)$ stays put. $BA$ sends $î$ to $(0, 1)$, not $(0, 2)$: a different matrix, a different picture.
+
+<Misconception
+  id="ab-equals-ba"
+  title="AB and BA are the same, as with ordinary numbers"
+  probes={[
+    {
+      q: 'A swaps the axes and B stretches the plane up by 3. AB sends î = (1, 0) to (0, 1). Where does BA send î?',
+      choices: ['(0, 1)', '(0, 3)', '(3, 0)'],
+      answer: 1,
+      trap: 0,
+      why: 'BA means A first: î goes to (0, 1), then B stretches up by 3, giving (0, 3). AB stretched first, when î had nothing up to stretch.',
+    },
+    {
+      q: 'A = [[1, 1], [0, 1]] and B = [[1, 0], [1, 1]], and AB = [[2, 1], [1, 1]]. What is BA?',
+      choices: ['[[2, 1], [1, 1]]', '[[1, 1], [1, 2]]', '[[1, 0], [0, 1]]'],
+      answer: 1,
+      trap: 0,
+      why: 'Row 1 of B, (1, 0), dotted with A’s columns gives (1, 1); row 2, (1, 1), gives (1, 2). BA ≠ AB.',
+    },
+  ]}
+>
+
+With ordinary numbers $3 \times 5 = 5 \times 3$, so it is easy to assume matrices behave the same. They usually don't:
+$AB$ means “B, then A”, and doing two moves of the plane in the other order usually ends somewhere else. Some pairs do
+agree (two turns, or anything with the identity), but that is the exception. Grouping is safe, though:
+$(AB)C = A(BC)$, because both mean “C, then B, then A”. Swapping is not.
+
+</Misconception>
+
+Now write the triple loop yourself. As your code runs, each step lights up the numbers of $A$ and $B$ it reads and the
+cell of $C$ it writes.
+
+<CodeExercise exercise="matrix-multiply" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A is 3×4 and B is 4×2. What shape is AB?',
+      choices: ['3×2', '4×4', '3×4', '2×3'],
+      answer: 0,
+      why: 'The inner 4s match and disappear: (3×4)(4×2) = 3×2.',
+    },
+    {
+      q: 'A is 2×3 and B is 2×3. Can AB be worked out?',
+      choices: ['No', 'Yes, it is 2×3', 'Yes, it is 2×2', 'Yes, it is 3×3'],
+      answer: 0,
+      why: 'A row of A has 3 numbers but a column of B has only 2, so they can’t be paired.',
+    },
+    {
+      q: 'What is C₁₂ of [[1, 2], [3, 4]] times [[5, 6], [7, 8]]?',
+      choices: ['22', '12', '19', '34'],
+      answer: 0,
+      why: 'Row 1 of A dotted with column 2 of B: 1 × 6 + 2 × 8 = 22.',
+      traps: { 1: 'cellwise' },
+    },
+    {
+      q: 'How many multiplications does the simple method take for two 10×10 matrices?',
+      choices: ['1000', '100', '20', '10 000'],
+      answer: 0,
+      why: '100 cells, each a dot product of 10 pairs: 10 × 10 × 10 = 1000, n³.',
+    },
+    {
+      q: 'In (AB)v, which matrix acts on v first?',
+      choices: ['B', 'A', 'Both at once'],
+      answer: 0,
+      why: '(AB)v = A(Bv): B is next to v, so it acts first, then A. Read right to left.',
+    },
+    {
+      q: 'A = [[0, 1], [1, 0]] swaps the axes, B = [[2, 0], [0, 1]] stretches across, and AB = [[0, 1], [2, 0]]. What is BA?',
+      choices: ['[[0, 1], [2, 0]]', '[[0, 2], [1, 0]]', '[[2, 0], [0, 1]]', '[[0, 1], [1, 0]]'],
+      answer: 1,
+      why: 'Row 1 of B, (2, 0), dotted with A’s columns gives (0, 2); row 2, (0, 1), gives (1, 0). Stretching then swapping isn’t swapping then stretching.',
+      traps: { 0: 'ab-equals-ba' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="matmul-meaning"
+  prompt="How do you work out a cell of a matrix product AB, and why isn't AB usually the same as BA?"
+  rubric={[
+    'Each cell Cᵢⱼ is row i of A dotted with column j of B: multiply the pairs and add them.',
+    'So A’s rows must be as long as B’s columns: (m×n)(n×p) = m×p.',
+    'As moves of the plane, AB means do B first, then A.',
+    'Doing two moves in the other order usually gives a different result, so AB ≠ BA in general.',
+  ]}
+  example="To get the cell in row i and column j of AB, you take row i of A and column j of B, multiply their numbers in pairs and add the products, a dot product. That only works if a row of A is as long as a column of B, so an m by n matrix times an n by p one gives an m by p result. Thinking of matrices as moves of the plane, AB means do B first and then A. Doing two moves the other way round, like turning and then stretching instead of stretching and then turning, usually lands somewhere else, so AB and BA are usually different."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- $C_{ij}$ = row $i$ of $A$ · column $j$ of $B$. Shapes: $(m \times n)(n \times p) = m \times p$; inner numbers must match.
+- It costs $m \cdot n \cdot p$ multiplications, $n^3$ for two $n \times n$ matrices.
+- $(AB)v = A(Bv)$: $B$ acts first. Each column of $AB$ is $A$ times a column of $B$.
+- $AB \neq BA$ in general, but $(AB)C = A(BC)$, and $AI = IA = A$ for an identity of the right size.
+
+</Section>

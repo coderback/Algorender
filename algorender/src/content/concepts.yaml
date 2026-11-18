@@ -420,32 +420,36 @@ concepts:
     track: linear-algebra
     summary: Arrows with a length and a direction, added tip to tail, and a data point as a vector.
     prereqs: [functions-graphs, trigonometry]
-    planned: true
+    visualisers: [vectors]
+    lesson: vectors
   - id: dot-product
     title: The dot product and similarity
     track: linear-algebra
     summary: Multiply matching parts and add them up, to measure how much two vectors point the same way.
     prereqs: [vectors, sums-notation]
-    planned: true
+    visualisers: [dot-product]
+    lesson: dot-product
   - id: norms-distances
     title: Lengths and distances
     track: linear-algebra
     summary: L1, L2 and L∞, three ways to measure how far apart two points are.
     prereqs: [dot-product]
-    planned: true
+    visualisers: [norms]
+    lesson: norms-distances
   - id: vectors-matrices
-    title: Vectors and matrices
+    title: Matrices as transformations
     track: linear-algebra
     summary: Matrices as transformations that warp space.
+    prereqs: [dot-product]
     visualisers: [linear-transformations]
     lesson: linear-transformations
-    later: [dot-product] # B2, retitled "Matrices as transformations"
   - id: matrix-multiplication
     title: Matrix multiplication
     track: linear-algebra
     summary: Each cell is a row times a column, composing two transformations, and why AB isn’t BA.
     prereqs: [vectors-matrices, big-o]
-    planned: true
+    visualisers: [matrix-multiplication]
+    lesson: matrix-multiplication
   - id: determinants-inverses
     title: Determinants, inverses and solving Ax = b
     track: linear-algebra
@@ -480,10 +484,9 @@ concepts:
     title: Eigenvectors
     track: linear-algebra
     summary: The directions a transformation only stretches.
-    prereqs: [vectors-matrices]
+    prereqs: [vectors-matrices, matrix-multiplication]
     visualisers: [eigenvectors]
     lesson: eigenvectors
-    later: [matrix-multiplication] # B2
   - id: symmetric-matrices-spectral
     title: Symmetric matrices and quadratic forms
     track: linear-algebra
@@ -756,10 +759,9 @@ concepts:
     title: Clustering with k-means
     track: ml
     summary: Find groups in unlabelled data by alternating between assigning points and moving centres.
-    prereqs: [vectors-matrices]
+    prereqs: [vectors-matrices, norms-distances]
     visualisers: [k-means]
     lesson: k-means
-    later: [norms-distances] # B2
   - id: pca
     title: Principal component analysis
     track: ml
