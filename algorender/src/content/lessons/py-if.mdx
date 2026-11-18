@@ -1,0 +1,131 @@
+<Section step="hook" title="Programs that choose">
+
+A ticket machine charges children less. A game says "you win" only when you have. Until now every line of a program
+ran, every time. With `if`, a program can decide which lines run, using the `True` and `False` answers from the last
+topic.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="condition">The question between `if` (or `elif`) and the colon: `age < 12` in `if age < 12:`.</Term>
+  <Term name="block">The lines indented under the condition, by convention four spaces in. They run only when the condition is true.</Term>
+  <Term name="elif and else">`elif` ("else if") asks another question when the ones above were false. `else` catches everything left.</Term>
+</Terms>
+
+```python
+age = int(input())
+if age < 12:
+    print("child ticket")
+elif age >= 65:
+    print("senior ticket")
+else:
+    print("adult ticket")
+print("enjoy the show")   # not indented: runs whatever the age
+```
+
+Python tests the conditions from the top. The first one that is true has its block run, and then the whole chain is
+done: the rest are skipped without even being tested. So exactly one of the three tickets is printed. If none is true
+and there is no `else`, nothing in the chain runs.
+
+Indentation is how Python knows which lines belong to which condition. The colon at the end of the `if` line says "a
+block follows", and the block is every line indented under it. The first line back at the left edge is outside the
+chain again.
+
+</Section>
+
+<Section step="see" title="Watch it choose">
+
+The temperature is 18. Step through and watch which lines get highlighted, and which are jumped over.
+
+<TraceCode snippet="py-if" />
+
+The first test, `temp > 25`, is false, so Python skips its block and tries the `elif`. `temp > 15` is true, so that
+block runs and the `else` is never looked at. The second `if` is a separate decision of its own: tested, false, skipped.
+
+<KeyIdea>
+
+**An `if`/`elif`/`else` chain runs exactly the first block whose condition is true**, or the `else` block when none
+is. Indentation says which lines belong to it.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-grade-bands" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="elif-all-run"
+  title="Every branch whose condition is true runs"
+  probes={[
+    {
+      q: 'n is 100. The code is: if n > 10, print "big"; elif n > 50, print "huge". What prints?',
+      choices: ['big', 'big, then huge', 'huge'],
+      answer: 0,
+      trap: 1,
+      why: 'n > 10 is true, so that block runs and the chain ends. The elif is never tested, even though it is true too.',
+    },
+    {
+      q: 'x is 5. The code is: if x > 1, print "a"; elif x > 2, print "b"; else print "c". What prints?',
+      choices: ['a', 'a, then b', 'c'],
+      answer: 0,
+      trap: 1,
+      why: 'Only the first true branch of a chain runs. x > 1 is true, so only a is printed.',
+    },
+  ]}
+>
+
+In an `if`/`elif`/`else` chain, Python stops at the first condition that is true. Later conditions are not even
+tested, so their blocks can't run, true or not. Put the narrowest condition first: `if temp > 25` before
+`elif temp > 10`. Two separate `if`s, on the other hand, are two separate decisions, and both can run.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'age is 70. The code is: if age >= 18, print "adult"; elif age >= 65, print "senior". What prints?',
+      choices: ['adult', 'senior', 'adult, then senior'],
+      answer: 0,
+      why: 'age >= 18 is true, so "adult" prints and the chain ends there. To print "senior", test age >= 65 first.',
+      traps: { 2: 'elif-all-run' },
+    },
+    {
+      q: 'How does Python know which lines belong to an if?',
+      choices: ['They are indented under it', 'They end with a colon', 'They are in brackets'],
+      answer: 0,
+      why: 'The lines indented under the if line are its block. The colon only ends the if line itself.',
+    },
+    {
+      q: 'When does an else block run?',
+      choices: ['When none of the conditions above it in the chain were true', 'Every time, after the if block', 'When the first condition is true'],
+      answer: 0,
+      why: 'else catches whatever the if and elifs above it didn’t.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-if" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `if condition:` runs its indented block only when the condition is true.
+- In a chain, only the first true branch runs; `else` catches the rest.
+- Put narrower conditions before wider ones.
+- Indentation (four spaces, by convention) decides which lines belong to which branch.
+
+</Section>

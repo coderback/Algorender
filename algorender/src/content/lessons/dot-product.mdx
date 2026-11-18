@@ -1,0 +1,260 @@
+<Section step="hook" title="One number that says “how alike”">
+
+A music app suggests a song like the one you just played. A search engine finds pages about your question even when
+they use other words. A chatbot looks up the passages most related to what you asked. Under all three sits one small
+calculation on vectors: multiply the matching parts of two vectors and add the results.
+
+That is the **dot product**. It turns two vectors into a single number that is positive when they point roughly the
+same way, zero when they are at right angles, and negative when they point apart. A neuron in a neural network does the
+same sum: each input times a weight, all added up. This lesson builds the dot product from the parts, then from the
+picture, and then uses it to say which words are alike.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="dot product u·v">Multiply the matching parts and add: $u \cdot v = u_1 v_1 + u_2 v_2 + \dots + u_n v_n$. Said “u dot v”. The answer is one number.</Term>
+  <Term name="angle θ">The angle between two arrows drawn from the same point, measured the shorter way round, so it is between 0° and 180°.</Term>
+  <Term name="perpendicular (orthogonal)">At right angles, 90°. Two vectors are perpendicular exactly when their dot product is 0.</Term>
+  <Term name="shadow (projection)">How far one vector goes in another's direction: the shadow it casts on the other's line when light falls at right angles to that line. Drawn as an arrow along the line, it is called the projection.</Term>
+  <Term name="cosine similarity">The dot product divided by both lengths: $\cos\theta$, between $-1$ and $1$. It compares direction only.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Multiply the parts, add them up">
+
+<Explore slug="dot-product" settings={{ preset: 'parts' }} caption="u = (2, −1, 3) and v = (1, 4, −1): each product becomes a bar, and the running total ends at −5." />
+
+The dot product of $u = (2, -1, 3)$ and $v = (1, 4, -1)$ takes the parts in pairs, first with first, second with
+second, third with third:
+
+$$
+\begin{aligned}
+u \cdot v &= 2 \times 1 + (-1) \times 4 + 3 \times (-1) \\
+&= 2 - 4 - 3 = -5
+\end{aligned}
+$$
+
+A pair whose parts agree in sign adds to the total; a pair that disagrees pulls it down. With the Σ notation from
+the sums lesson it is one short line, and in code one loop with a running total:
+
+$$
+u \cdot v = \sum_{i=1}^{n} u_i v_i
+$$
+
+You have done this at a till. Buy 3, 1 and 2 of three things priced £2, £5 and £1.50, and the bill is the dot product
+of the quantities and the prices: $3 \times 2 + 1 \times 5 + 2 \times 1.5 = 14$.
+
+<Explore slug="dot-product" settings={{ preset: 'bill' }} caption="Quantities (3, 1, 2) dotted with prices (2, 5, 1.5): a bill of 14." />
+
+Dot a vector with itself and every product is a square, so $u \cdot u = |u|^2$: the length squared, from Pythagoras.
+That works with any number of parts: $(2, -1, 3)$ has length $\sqrt{2^2 + (-1)^2 + 3^2} = \sqrt{14}$.
+
+<KeyIdea>
+
+**$u \cdot v$ multiplies matching parts and adds them up: two vectors in, one number out.** The vectors must have the
+same number of parts, and $u \cdot v = v \cdot u$.
+
+</KeyIdea>
+
+<Misconception
+  id="dot-is-vector"
+  title="The dot product of two vectors is a vector"
+  probes={[
+    {
+      q: 'What is (1, 2) · (3, 4)?',
+      choices: ['(3, 8)', '11', '(4, 6)'],
+      answer: 1,
+      trap: 0,
+      why: 'Multiply the matching parts, then add the products: 1 × 3 + 2 × 4 = 3 + 8 = 11. (3, 8) is the products before they are added.',
+    },
+    {
+      q: 'u and v each have 5 parts. What kind of thing is u · v?',
+      choices: ['A vector with 5 parts', 'A single number', 'A vector with 10 parts'],
+      answer: 1,
+      trap: 0,
+      why: 'The five products are added into one total, so u · v is a single number however many parts the vectors have.',
+    },
+  ]}
+>
+
+Multiplying the parts gives a list of products, and it is tempting to stop there. The dot product doesn't: it adds the
+products into **one number**. That is the point of it. A single number can say how much two vectors agree, and can be
+compared with another single number.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: the sign as v turns">
+
+Here $u = (3, 1)$ stays still and $v$, of length 2, starts pointing the same way, then turns away from $u$ in 30°
+steps. Before each step, predict the sign of $u \cdot v$.
+
+<PredictChallenge slug="dot-product" settings={{ preset: 'angle' }} goal={6} />
+
+Pointing together, $u \cdot v = 6.325$, its largest value. It shrinks as $v$ turns, is exactly 0 at 90°, and is
+$-6.325$ when $v$ points straight back. Every value matched one rule:
+
+$$
+u \cdot v = |u|\,|v|\cos\theta
+$$
+
+To see why, first notice that turning both arrows by the same angle doesn't change their dot product. Try it with
+$(3, 1)$ and $(1, 2)$: their dot product is $3 + 2 = 5$. A quarter turn sends $(x, y)$ to $(-y, x)$, as in the sine and
+cosine lesson, so the turned pair is $(-1, 3)$ and $(-2, 1)$, and $2 + 3 = 5$ again. Writing out the turning rule for
+any angle shows the same happens every time. So turn the whole picture until $u$ lies along the x-axis. Now
+$u = (|u|, 0)$, and from the unit circle, $v = (|v|\cos\theta,\ |v|\sin\theta)$. Multiply the parts and add:
+$|u|\,|v|\cos\theta + 0$. Here $|u| = \sqrt{10} \approx 3.162$ and $|v| = 2$, so the largest value is
+$3.162 \times 2 \approx 6.325$.
+
+Since $\cos\theta$ is positive below 90°, zero at 90° and negative beyond, so is the dot product. That gives a test
+for a right angle that needs no protractor: **$u \cdot v = 0$ exactly when $u$ and $v$ are perpendicular.**
+
+</Section>
+
+<Section step="do" title="Shadows and similar words">
+
+**Shadows.** Shine light onto $u$'s line so that it falls at right angles to the line. $v$ casts a shadow along it, and
+its length is $\frac{u \cdot v}{|u|}$. With $u = (4, 0)$ and $v = (2, 3)$, that is $\frac{8}{4} = 2$: just $v$'s
+across part, as you'd expect when $u$ lies along the x-axis.
+
+<Explore slug="dot-product" settings={{ preset: 'shadow' }} input caption="v = (2, 3) casts a shadow 2 long on u's line. The rest of v, (0, 3), is at right angles to u. Drag u or v." />
+
+On a tilted line it works the same way. With $u = (3, 1)$ and $v = (1, 2)$, $u \cdot v = 5$ and $|u| = 3.162$, so the
+shadow is $5 / 3.162 = 1.581$ long. As an arrow along $u$, the shadow is
+$\frac{u \cdot v}{u \cdot u}\,u = \frac{5}{10}(3, 1) = (1.5, 0.5)$. What is left of $v$,
+$(1, 2) - (1.5, 0.5) = (-0.5, 1.5)$, has a dot product of 0 with $u$: it is at right angles. Later in the course,
+splitting a vector into a part along a line and a part at right angles to it is how we'll find the best-fitting line
+through data.
+
+<Explore slug="dot-product" settings={{ preset: 'tilted' }} input caption="u = (3, 1), v = (1, 2): the shadow is 1.581 long, and the leftover part (−0.5, 1.5) is at right angles to u." />
+
+Turn the shadow rule round and it says what the dot product measures: $u \cdot v = |u| \times$ the shadow of $v$, that
+is, how far $v$ goes in $u$'s direction, scaled by $u$'s length.
+
+**Similar words.** Language models store each word as a vector, and words used in similar ways get vectors pointing in
+similar directions. The four word vectors below are toys, placed by hand to make the picture clear; real ones have
+hundreds of parts and are learned from text. Which is most like *puppy* = (2, 1)?
+
+<Explore slug="dot-product" settings={{ preset: 'similar' }} input caption="Rank the four toy words by dot product, then by direction. Drag puppy to move it." />
+
+The dot product picks *elephant*, with 18, but only because its arrow is long: a long vector multiplies everything up.
+Divide by both lengths and only the direction is left:
+
+$$
+\cos\theta = \frac{u \cdot v}{|u|\,|v|}
+$$
+
+This **cosine similarity** is 1 for vectors pointing the same way, 0 for vectors at right angles and $-1$ for
+opposites. *dog* points exactly along *puppy*, so its cosine is 1, while *elephant* drops to 0.949. *car* points more
+than 90° away, so its cosine is negative.
+
+<Misconception
+  id="dot-means-similar"
+  title="A bigger dot product always means more alike"
+  probes={[
+    {
+      q: 'Query q = (0, 1). a = (8, 6) and b = (0, 3). Which points more nearly in q’s direction?',
+      choices: ['a: its dot product with q is bigger', 'b: it points exactly along q', 'Both equally'],
+      answer: 1,
+      trap: 0,
+      why: 'q · a = 6 and q · b = 3, but b points exactly along q (cosine 1) while a’s cosine is only 6 / 10 = 0.6. a wins the dot product by being long.',
+    },
+    {
+      q: 'Two word vectors have dot products 40 and 6 with a query. Can you tell which points more nearly the query’s way?',
+      choices: ['Yes: the one with 40', 'Not without their lengths', 'Yes: the one with 6'],
+      answer: 1,
+      trap: 0,
+      why: 'The dot product grows with both lengths. Divide by them to get the cosine, which compares direction alone.',
+    },
+  ]}
+>
+
+The dot product mixes two things: how much the vectors point the same way, and how long they are. A long vector can
+beat a short one that points exactly the right way. To compare direction alone, divide by both lengths and use the
+cosine similarity.
+
+</Misconception>
+
+Now write the dot product, the cosine similarity and a search for the most similar vector.
+
+<CodeExercise exercise="nearest-vector" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is (3, −2) · (4, 5)?',
+      choices: ['2', '(12, −10)', '22', '−2'],
+      answer: 0,
+      why: '3 × 4 + (−2) × 5 = 12 − 10 = 2: the products added into one number.',
+      traps: { 1: 'dot-is-vector' },
+    },
+    {
+      q: 'The angle between u and v is 120°. What is the sign of u · v?',
+      choices: ['Negative', 'Positive', 'Zero', 'It depends on their lengths'],
+      answer: 0,
+      why: 'u · v = |u||v| cos θ, and cos 120° = −0.5 is negative. Lengths are never negative, so they can’t change the sign.',
+    },
+    {
+      q: 'u = (2, 1). Which vector is at right angles to u?',
+      choices: ['(−1, 2)', '(1, 2)', '(2, 1)', '(−2, −1)'],
+      answer: 0,
+      why: '(2, 1) · (−1, 2) = −2 + 2 = 0, and a dot product of 0 means perpendicular.',
+    },
+    {
+      q: 'What is u · u for u = (3, 4)?',
+      choices: ['25', '5', '7', '(9, 16)'],
+      answer: 0,
+      why: '3 × 3 + 4 × 4 = 25, the length squared: |u| = 5, so u · u = 5².',
+    },
+    {
+      q: 'Query q = (1, 0). Which vector has the largest cosine similarity with q?',
+      choices: ['(10, 10)', '(2, 0)', '(0, 5)', '(−3, 0)'],
+      answer: 1,
+      why: '(2, 0) points exactly along q, so its cosine is 1. (10, 10) has the largest dot product, 10, but is 45° off: its cosine is about 0.707.',
+      traps: { 0: 'dot-means-similar' },
+    },
+    {
+      q: 'u = (3, 4) and v = (2, 1). How long is v’s shadow on u’s line?',
+      choices: ['2', '10', '5', '2.236'],
+      answer: 0,
+      why: 'u · v = 6 + 4 = 10 and |u| = 5, so the shadow is 10 / 5 = 2 long.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="dot-product-meaning"
+  prompt="How do you work out a dot product, and what does its value tell you about two vectors?"
+  rubric={[
+    'Multiply the matching parts of the two vectors and add the products: the result is a single number.',
+    'It equals |u||v| cos θ, so it is positive when the angle is under 90°, zero at a right angle and negative beyond.',
+    'It also grows with the lengths of the vectors.',
+    'Dividing by both lengths gives the cosine similarity, which compares direction only.',
+  ]}
+  example="You multiply the first parts together, the second parts together and so on, then add all the products into one number. It equals the two lengths times the cosine of the angle between the vectors, so it is positive when they point roughly the same way, zero when they are at right angles and negative when they point apart. Because it also grows with the lengths, to compare only the directions you divide by both lengths, which gives the cosine similarity between −1 and 1."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- $u \cdot v = u_1 v_1 + u_2 v_2 + \dots + u_n v_n$: two vectors in, one number out. In code, one loop with a running
+  total.
+- $u \cdot v = |u|\,|v|\cos\theta$: positive below 90°, zero at a right angle, negative beyond. $u \cdot u = |u|^2$.
+- $u \cdot v = 0$ means perpendicular. The shadow of $v$ on $u$'s line is $\frac{u \cdot v}{|u|}$ long (negative if it
+  falls behind the origin).
+- The dot product grows with length; the cosine similarity $\frac{u \cdot v}{|u|\,|v|}$ compares direction alone.
+
+</Section>

@@ -5,14 +5,17 @@ import { Placement } from '@/components/learn/Placement';
 import { TrackCard, trackTitle } from '@/components/ui/Card';
 import { cx } from '@/components/ui/cx';
 import { masteryGraph, placementQuestions } from '@/content/mastery';
-import { MAX_QUESTIONS } from '@/progress/placement';
+import { AREAS, MAX_QUESTIONS, type AreaId } from '@/progress/placement';
 
 export const metadata: Metadata = {
   title: 'Placement check | Algorender',
   description: 'A few adaptive questions that find what you already know on the concept map, so you start at the edge of what you know.',
 };
 
-export default function PlacementPage() {
+/** `?area=languages` starts the check on that area (a track's "Already know some?" links). */
+export default async function PlacementPage({ searchParams }: { searchParams: Promise<{ area?: string | string[] }> }) {
+  const { area } = await searchParams;
+  const initial = AREAS.find((a) => a.id === area)?.id;
   return (
     <main className="flex flex-col gap-6 px-4 pb-6 md:px-0 md:pt-2">
       <LearnHeader active="placement" title={false} />
@@ -27,7 +30,7 @@ export default function PlacementPage() {
             Up to {MAX_QUESTIONS} questions. Get one right and the check skips what it builds on; a miss steps back to what it needs. Nothing counts against you.
           </p>
         </TrackCard>
-        <Placement graph={masteryGraph()} questions={placementQuestions()} />
+        <Placement key={initial ?? 'default'} graph={masteryGraph()} questions={placementQuestions()} {...(initial && { initialAreas: [initial] as AreaId[] })} />
       </div>
     </main>
   );

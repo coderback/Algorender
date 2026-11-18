@@ -1,3 +1,5 @@
+import { PYTHON_TOPICS } from './python';
+
 /**
  * Every lesson, with the metadata pages and tests need. The body lives in
  * src/content/lessons/<slug>.mdx and follows the learning loop: hook → key
@@ -392,6 +394,34 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'vectors',
+    title: 'Vectors: moves you can add and stretch',
+    concept: 'vectors',
+    summary: 'An arrow is a move, not a place: add moves tip to tail, stretch and flip them, measure them by Pythagoras, and treat data points as vectors.',
+    minutes: 15,
+  },
+  {
+    slug: 'dot-product',
+    title: 'The dot product: one number for “how alike”',
+    concept: 'dot-product',
+    summary: 'Multiply matching parts and add them up: the sign tells the angle, a shadow tells how far one vector goes along another, and the cosine compares words.',
+    minutes: 20,
+  },
+  {
+    slug: 'norms-distances',
+    title: 'Lengths and distances: three rulers',
+    concept: 'norms-distances',
+    summary: 'Measure a gap as a straight line, in city blocks or by its biggest step, and see the nearest point change with the ruler.',
+    minutes: 15,
+  },
+  {
+    slug: 'matrix-multiplication',
+    title: 'Matrix multiplication: rows times columns',
+    concept: 'matrix-multiplication',
+    summary: 'Fill AB cell by cell, each a row of A dotted with a column of B, count its n³ cost, and see why doing B then A isn’t doing A then B.',
+    minutes: 20,
+  },
+  {
     slug: 'floating-point',
     title: 'Floating point: why 0.1 + 0.2 isn’t 0.3',
     concept: 'floating-point',
@@ -531,6 +561,8 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'How a cluster of servers agrees on one log while machines crash and the network splits: terms, elections, replication and the majority rule that keeps committed entries safe.',
     minutes: 25,
   },
+  // The language tracks' topics, one file per track.
+  ...PYTHON_TOPICS,
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

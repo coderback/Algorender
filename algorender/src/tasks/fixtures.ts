@@ -22,9 +22,11 @@ export const FIXTURES: TaskInput[] = [
     title: 'A loop that counts down',
     concept: 'py-while',
     prompt: 'Type what this prints.',
+    // Two variants: the count starts at 3, or (in a review) at 2.
+    vary: { start: ['3', '2'] },
     code: {
-      python: 'n = 3\nwhile n > 0:\n    print(n, end=" ")\n    n -= 1\nprint("go")\n',
-      javascript: 'let n = 3;\nlet line = "";\nwhile (n > 0) {\n  line += n + " ";\n  n -= 1;\n}\nconsole.log(line + "go");\n',
+      python: 'n = «start»\nwhile n > 0:\n    print(n, end=" ")\n    n -= 1\nprint("go")\n',
+      javascript: 'let n = «start»;\nlet line = "";\nwhile (n > 0) {\n  line += n + " ";\n  n -= 1;\n}\nconsole.log(line + "go");\n',
     },
   },
   {

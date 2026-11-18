@@ -102,7 +102,7 @@ function plotNoun(p: PlotPart): string | null {
     case 'plane':
       return p.equal === false ? 'chart' : 'plane';
     case 'image':
-      return `${p.width} × ${p.height} image`;
+      return p.matrix ? `${p.height} × ${p.width} matrix` : `${p.width} × ${p.height} image`;
     case 'network':
       return `network of ${count(p.nodes.length, 'node')}`;
     case 'bits':

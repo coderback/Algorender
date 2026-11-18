@@ -1,0 +1,217 @@
+<Section step="hook" title="How far is “near”?">
+
+A shop recommends things bought by customers like you. A spam filter compares a new email with emails it has seen. A
+simple but strong kind of model, **nearest neighbours**, labels a new example by finding the training examples closest
+to it. Grouping data into clusters works the same way. All of them need one thing first: a way to measure how far apart
+two examples are.
+
+On paper the answer seems obvious: a ruler. But a taxi in a city of square blocks can't drive through buildings, and a
+chess king moves diagonally as cheaply as straight. Each is a different, sensible way to measure distance, and choosing
+between them can change which example counts as nearest. This lesson builds three of them from the vectors you know.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="gap d = q − p">The vector from point $p$ to point $q$. Every distance below measures its size.</Term>
+  <Term name="L2 (straight line)">$\sqrt{d_1^2 + d_2^2}$: Pythagoras, the length $|d|$ from the vectors lesson. Also called the Euclidean distance.</Term>
+  <Term name="L1 (city blocks)">$|d_1| + |d_2|$: the sizes of the parts added up. Also called the Manhattan or taxicab distance.</Term>
+  <Term name="L∞ (biggest step)">$\max(|d_1|, |d_2|)$, where max picks the larger number: only the biggest part counts. Said “L infinity”; the name is explained below.</Term>
+  <Term name="norm">A way of measuring a vector's size. The distance from $p$ to $q$ is the norm of the gap $q - p$. Written with double bars and the ruler's name: $\lVert d \rVert_1$, $\lVert d \rVert_2$, $\lVert d \rVert_\infty$.</Term>
+</Terms>
+
+The bars $|d_1|$ around a single number mean its size without the sign: $|-4| = 4$.
+
+</Section>
+
+<Section step="see" title="One gap, three rulers">
+
+<Explore slug="norms" settings={{ preset: 'distance' }} caption="p = (−2, −1) and q = (1, 3). Predict each distance before you step, then drag either point." />
+
+From $p = (-2, -1)$ to $q = (1, 3)$ the gap is $d = q - p = (3, 4)$: 3 right and 4 up. Measured three ways:
+
+- **L2**, the straight line: $\sqrt{3^2 + 4^2} = 5$. It is also $\sqrt{d \cdot d}$, since $d \cdot d$ adds the squares.
+- **L1**, along the grid lines: $3 + 4 = 7$. Every route that never doubles back is this long.
+- **L∞**, a king's steps: it steps diagonally, covering both directions at once, until the shorter one (3) runs out,
+  then goes straight on, so it needs $\max(3, 4) = 4$ steps.
+
+<KeyIdea>
+
+**Measure the gap $d = q - p$, then pick a ruler: L2 is the straight line, L1 adds the parts' sizes, L∞ takes the
+biggest.** For every gap, $L\infty \le L2 \le L1$, and all three agree when the gap runs along one axis.
+
+</KeyIdea>
+
+Why that order? The straight line is the shortest route on paper, so L1's grid route can't beat L2. And the straight
+line is the long side of a right-angled triangle whose short sides are $|d_1|$ and $|d_2|$, so it is at least as long
+as the longer of them, which is L∞. With more parts nothing changes: add up all the squares, all the sizes, or take the
+biggest of them all.
+
+<Misconception
+  id="signed-gaps"
+  title="Add up the gaps as they are, signs and all"
+  probes={[
+    {
+      q: 'What is the L1 distance between (1, 5) and (6, 2)?',
+      choices: ['2', '8', '5.831'],
+      answer: 1,
+      trap: 0,
+      why: 'The gap is (5, −3). L1 adds the sizes: |5| + |−3| = 8. Adding 5 + (−3) = 2 lets the two directions cancel.',
+    },
+    {
+      q: 'The gaps between two rows of data are 2, −5 and 1. What is the L1 distance?',
+      choices: ['−2', '8', '5'],
+      answer: 1,
+      trap: 0,
+      why: '|2| + |−5| + |1| = 8. Signs say which way, not how far, so drop them first.',
+    },
+  ]}
+>
+
+A gap of $-3$ means “3 the other way”, which is still 3 away. If the signs are left in, a step right and a step left
+cancel, and two different points can come out at distance 0. Every distance measures the parts' sizes: L1 adds
+$|d_i|$, L2 squares (which hides the sign anyway), and L∞ takes the largest $|d_i|$.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: which point is nearest?">
+
+A query point $q = (0, 0)$ and two training points, $A = (3, 0)$ and $B = (2, 2)$. Before each step, predict which is
+nearer to $q$ under that ruler.
+
+<PredictChallenge slug="norms" settings={{ preset: 'nearest' }} goal={3} />
+
+By the straight line, $B$ is nearer: $\sqrt{8} = 2.828$ against 3. Along the grid, $A$ wins, 3 against 4. A king picks $B$
+again, 2 against 3. Same three points, a different nearest neighbour, so a nearest-neighbour model could give $q$ a
+different label depending on the ruler.
+
+<Misconception
+  id="one-true-nearest"
+  title="The nearest point is the same whichever distance you use"
+  probes={[
+    {
+      q: 'q = (0, 0), A = (4, 0) and B = (3, 3). Is the nearest point to q the same under L1 and L∞?',
+      choices: ['Yes: a distance is a distance', 'No: L1 picks A, L∞ picks B', 'No: L1 picks B, L∞ picks A'],
+      answer: 1,
+      trap: 0,
+      why: 'Under L1, A is 4 away and B is 6. Under L∞, A is 4 and B only 3.',
+    },
+    {
+      q: 'A nearest-neighbour model is switched from L2 to L1 distance. Can its answer for a new point change?',
+      choices: ['No: the nearest training point stays the same', 'Yes: a different training point can become nearest'],
+      answer: 1,
+      trap: 0,
+      why: 'The rulers rank points differently when gaps are diagonal, so the nearest training point, and its label, can change.',
+    },
+  ]}
+>
+
+The rulers agree about gaps along one axis but rank diagonal gaps differently: L1 punishes them most and L∞ least. So
+whenever the candidates lie in different directions, the nearest one can change with the ruler. Choosing the distance is
+part of designing the model, not a detail.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Unit balls, then code">
+
+Collect every point at distance 1 or less from the origin and you get the ruler's **unit ball** (in three dimensions,
+L2's is a real ball). The pictures draw its outline, the points at distance exactly 1. Before you step, guess the shape
+of each ruler's outline.
+
+<Explore slug="norms" settings={{ preset: 'balls' }} input caption="Predict each outline's shape, then drag t across them and watch which ones it leaves." />
+
+Under L2 the outline is the circle of radius 1. Under L1 the points with $|x| + |y| = 1$ make a diamond, with its
+corners on the axes. Under L∞ the points whose bigger part is 1 make a square. The point $t = (0.6, 0.6)$ has L1 length
+1.2, L2 0.849 and L∞ 0.6: it is outside the diamond ($0.6 + 0.6 = 1.2$), inside the circle
+($\sqrt{0.72} \approx 0.849$) and inside the square.
+
+All three belong to one family, $L_p = (|x|^p + |y|^p)^{1/p}$. The power $\frac{1}{p}$ means the $p$-th root, so
+$p = 2$ gives the square root of $x^2 + y^2$, which is L2, and $p = 1$ gives L1. As $p$ grows, the diamond puffs out
+into the circle and on towards the square, and as $p$ grows without limit the formula ends up picking just the biggest
+part: that is why the biggest-step ruler is called L∞. Later in the course, the diamond's sharp corners explain why one
+training trick switches some of a model's inputs off completely.
+
+Now write one loop that measures a gap all three ways, for points with any number of parts. The gaps
+$|a_i - b_i|$ are the parts of $d$, as before.
+
+<CodeExercise exercise="three-distances" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is the L2 (straight-line) distance from (1, 1) to (4, 5)?',
+      choices: ['5', '7', '4', '25'],
+      answer: 0,
+      why: 'The gap is (3, 4), and √(3² + 4²) = 5.',
+    },
+    {
+      q: 'What is the L1 distance from (2, 6) to (5, 3)?',
+      choices: ['0', '6', '3', '4.243'],
+      answer: 1,
+      why: 'The gap is (3, −3): |3| + |−3| = 6. Adding the signed gaps gives 0, as if the points were the same.',
+      traps: { 0: 'signed-gaps' },
+    },
+    {
+      q: 'What is the L∞ distance from (0, 0) to (−5, 2)?',
+      choices: ['5', '−5', '7', '2'],
+      answer: 0,
+      why: 'The biggest part’s size: max(|−5|, |2|) = 5.',
+    },
+    {
+      q: 'For any gap, which order is always true?',
+      choices: ['L∞ ≤ L2 ≤ L1', 'L1 ≤ L2 ≤ L∞', 'L2 ≤ L1 ≤ L∞', 'They are always equal'],
+      answer: 0,
+      why: 'L2, the straight line, is the shortest route, so it is never more than L1; and as the long side of a right-angled triangle it is never less than the longer short side, L∞.',
+    },
+    {
+      q: 'Which shape is made by all the points at L1 distance 1 from the origin?',
+      choices: ['A diamond', 'A circle', 'A square', 'A line'],
+      answer: 0,
+      why: '|x| + |y| = 1 joins (1, 0), (0, 1), (−1, 0) and (0, −1) with straight edges: a diamond.',
+    },
+    {
+      q: 'q = (0, 0), A = (5, 0) and B = (3, 3). Which is nearer to q under L1?',
+      choices: ['A', 'B', 'They are tied'],
+      answer: 0,
+      why: 'Under L1, A is 5 away and B is 3 + 3 = 6. B is nearer only by the straight line (4.243 against 5).',
+      traps: { 1: 'one-true-nearest' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="three-distances"
+  prompt="Describe the L1, L2 and L∞ distances between two points, and why the choice between them matters."
+  rubric={[
+    'Each starts from the gap between the points, part by part, ignoring the signs.',
+    'L2 is the straight line, √ of the sum of squares; L1 adds the sizes; L∞ takes the biggest.',
+    'L∞ ≤ L2 ≤ L1 for every gap.',
+    'Different rulers can rank points differently, so the nearest point (and a nearest-neighbour answer) can change.',
+  ]}
+  example="Take the gap between the two points, part by part, and ignore the signs. L2 is the straight-line distance, the square root of the sum of the squared gaps, by Pythagoras. L1 adds up the gaps, like walking along city blocks. L∞ just takes the biggest gap, like a chess king's steps. L∞ is never more than L2, and L2 never more than L1. The choice matters because the rulers rank diagonal gaps differently, so the point that counts as nearest can change, and with it a nearest-neighbour model's answer."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The distance from $p$ to $q$ is the norm of the gap $d = q - p$: $\lVert d \rVert_2 = \sqrt{\sum d_i^2} = \sqrt{d \cdot d}$,
+  $\lVert d \rVert_1 = \sum |d_i|$, $\lVert d \rVert_\infty = \max |d_i|$.
+- Drop the signs: a gap of $-3$ is still 3 away.
+- $L\infty \le L2 \le L1$ always. Their unit balls: L∞ a square, L2 a circle, L1 a diamond.
+- The nearest point can change with the ruler, so choosing the distance is part of designing a model.
+
+</Section>

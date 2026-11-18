@@ -1,0 +1,244 @@
+<Section step="hook" title="A short list of numbers">
+
+A game moves a character 3 steps right and 2 steps up every second. A weather station records each day as a
+temperature and a rainfall. A machine learning model sees a house as its number of rooms, its floor area and its age.
+In each case one thing is described by a short list of numbers, and the same few things keep being done to those lists:
+add two of them, stretch one, measure how big one is.
+
+A list of numbers used this way is called a **vector**. This lesson draws vectors as arrows, so that adding, stretching
+and measuring become things you can see, and then treats data points as vectors too.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="vector">A move written as a list of numbers, such as $v = (3, 2)$: 3 across, then 2 up. In general $v = (x, y)$. Drawn as an arrow from a tail to a tip.</Term>
+  <Term name="parts (components)">The numbers in the list. $v_1 = 3$ is the first part of $v$ and $v_2 = 2$ the second.</Term>
+  <Term name="scalar">An ordinary single number, such as $2$ or $-1.5$, used to scale (stretch) a vector. Written $k$.</Term>
+  <Term name="length |v|">How far the move takes you in a straight line, read “the length of v”. For a single number the same bars mean the size without the sign, $|-3| = 3$, so this is the same idea for a vector.</Term>
+  <Term name="origin">The point $(0, 0)$, where an arrow is usually drawn from.</Term>
+</Terms>
+
+The pictures here are flat, so every vector has two parts. Nothing below depends on that: a vector can have three parts,
+or a hundred, and every rule works part by part in the same way.
+
+</Section>
+
+<Section step="see" title="An arrow is a move, not a place">
+
+<Explore slug="vectors" settings={{ preset: 'arrow' }} caption="v = (3, 2) drawn from the origin, then the same move made from P = (−2, 1). Drag the tip or the start." />
+
+Drawn from the origin, $v = (3, 2)$ ends on the point $(3, 2)$, so it is easy to think of a vector as that point. But
+start the same move at $P = (-2, 1)$ instead: go 3 right and 2 up and you land at $Q = (1, 3)$. The arrow from $P$ to
+$Q$ is the same vector $v$. A vector records only how far and which way, never where it is drawn.
+
+That gives a rule for the arrow between two points: subtract the start from the end, part by part.
+
+$$
+Q - P = (1, 3) - (-2, 1) = (3, 2)
+$$
+
+Going back the other way, $P - Q = (-3, -2)$: the same length, pointing the opposite way. We write it $-v$.
+
+<KeyIdea>
+
+**A vector is a move: so far across, so far up.** The same move drawn anywhere is the same vector, and the vector from
+a point $P$ to a point $Q$ is $Q - P$.
+
+</KeyIdea>
+
+<Misconception
+  id="vector-is-a-point"
+  title="A vector is just a point"
+  probes={[
+    {
+      q: 'Is the arrow from (1, 1) to (4, 3) the same vector as the arrow from (0, 0) to (3, 2)?',
+      choices: ['No: they start in different places', 'Yes: both go 3 across and 2 up', 'No: they end in different places'],
+      answer: 1,
+      trap: 0,
+      why: 'A vector is the move, not where it is drawn. (4, 3) − (1, 1) = (3, 2), the same move as (3, 2) − (0, 0).',
+    },
+    {
+      q: 'What is the vector from P = (2, 5) to Q = (3, 1)?',
+      choices: ['(3, 1)', '(1, −4)', '(5, 6)'],
+      answer: 1,
+      trap: 0,
+      why: 'Subtract the start from the end: Q − P = (3 − 2, 1 − 5) = (1, −4). (3, 1) is where the arrow ends, not the move.',
+    },
+  ]}
+>
+
+A point says **where** something is. A vector says **which way and how far** to go. They are written the same way,
+which is why they get mixed up, and an arrow drawn from the origin does end on the point with the same numbers. But
+move the arrow and its numbers don't change, because the move doesn't. To get the vector between two points, subtract:
+end minus start.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: add two moves">
+
+Adding two vectors means making one move and then the other. Predict each answer before you take the next step.
+
+<PredictChallenge slug="vectors" settings={{ preset: 'add' }} goal={3} />
+
+To add, put the tail of $v$ on the tip of $u$ (**tip to tail**) and see where you end. In numbers, add the matching
+parts:
+
+$$
+\begin{aligned}
+u + v &= (3, 1) + (1, 2) \\
+&= (3 + 1,\ 1 + 2) = (4, 3)
+\end{aligned}
+$$
+
+Either order lands in the same place, $u + v = v + u$: the two routes go round opposite halves of a parallelogram and
+meet at the same corner. Subtracting works part by part too: $u - v = (2, -1)$, the arrow from $v$'s tip to $u$'s tip.
+
+</Section>
+
+<Section step="do" title="Scale, measure, and treat data as vectors">
+
+**Scaling.** Multiplying a vector by a scalar $k$ multiplies every part by $k$, written $kv$. $2v$ is the same move made
+twice over: the same direction, twice as long. $0.5v$ is half as long, and a negative $k$ also flips the arrow round.
+
+<Explore slug="vectors" settings={{ preset: 'scale' }} input caption="v = (2, 1). Then 2v, then −v, then −1.5v = (−3, −1.5): every multiple of v lies on one line through the origin." />
+
+**Measuring.** The length of $v = (3, 4)$ is the long side of a right-angled triangle whose short sides are 3 across
+and 4 up, so by Pythagoras:
+
+$$
+|v| = \sqrt{3^2 + 4^2} = \sqrt{25} = 5
+$$
+
+<Explore slug="vectors" settings={{ preset: 'length' }} input caption="|v| = 5. Doubling v doubles its length; −v is just as long; and v divided by 5 is (0.6, 0.8), a vector of length 1." />
+
+For any $v = (x, y)$ the length is $\sqrt{x^2 + y^2}$. The squares hide any minus signs, so a length is never negative:
+$|-v| = |v|$. Dividing $v$ by its own length, which means multiplying it by $\frac{1}{5}$ (divide each part by 5),
+gives a **unit vector** of length 1 that keeps only the direction: $(3, 4) / 5 = (0.6, 0.8)$. It lands on the unit
+circle from the sine and cosine lesson.
+
+<Misconception
+  id="lengths-add"
+  title="The length of u + v is the length of u plus the length of v"
+  probes={[
+    {
+      q: 'u = (3, 0) and v = (0, 4). How long is u + v?',
+      choices: ['7', '5', '12'],
+      answer: 1,
+      trap: 0,
+      why: 'u + v = (3, 4), whose length is √(9 + 16) = 5. Going 3 right and then 4 up is 7 steps of walking, but it ends only 5 from the start.',
+    },
+    {
+      q: 'u = (2, 0) and v = (−2, 0). How long is u + v?',
+      choices: ['4', '0', '2'],
+      answer: 1,
+      trap: 0,
+      why: 'v undoes u: u + v = (0, 0), the zero vector, of length 0.',
+    },
+  ]}
+>
+
+Lengths only add up when the two arrows point the same way. Otherwise the second move partly cancels the first, or
+goes off at an angle, and the sum is shorter. With $u = (3, 1)$ and $v = (1, 2)$, the lengths are $\sqrt{10} \approx 3.162$
+and $\sqrt{5} \approx 2.236$, so $|u| + |v| = 3.162 + 2.236 = 5.398$, but $u + v = (4, 3)$ has length 5. Add the vectors
+part by part first, then measure.
+
+</Misconception>
+
+**Data as vectors.** A dataset is a pile of vectors. Here three students each have a maths score and an art score, so
+each student is a vector. The difference $b - a$ says how two students differ, score by score, and its length says how
+different they are overall. The average student is the sum of all the vectors, scaled by $\frac{1}{3}$:
+
+<Explore slug="vectors" settings={{ preset: 'data' }} input caption="The three students add, tip to tail, to (9, 9); a third of that is the mean, (3, 3). Drag a student and the mean follows." />
+
+That is the mean from the Σ lesson, $\bar{x} = \frac{1}{n}(x_1 + x_2 + \dots + x_n)$, where each $x_i$ is now a whole
+vector instead of a single number. Adding and scaling are all it takes.
+
+Now write the three operations yourself, and use them to follow a robot around.
+
+<CodeExercise exercise="vector-walk" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is (2, −1) + (3, 4)?',
+      choices: ['(5, 3)', '(6, −4)', '(5, 5)', '(−1, −5)'],
+      answer: 0,
+      why: 'Add the matching parts: (2 + 3, −1 + 4) = (5, 3).',
+    },
+    {
+      q: 'What is the vector from P = (1, 2) to Q = (4, 6)?',
+      choices: ['(4, 6)', '(3, 4)', '(5, 8)', '(−3, −4)'],
+      answer: 1,
+      why: 'End minus start: Q − P = (4 − 1, 6 − 2) = (3, 4). (4, 6) is the point Q itself.',
+      traps: { 0: 'vector-is-a-point' },
+    },
+    {
+      q: 'What is −2 × (1, −3)?',
+      choices: ['(−2, 6)', '(−2, −6)', '(−1, −5)', '(2, −6)'],
+      answer: 0,
+      why: 'Multiply every part by −2: (−2 × 1, −2 × −3) = (−2, 6). The arrow flips round and doubles in length.',
+    },
+    {
+      q: 'How long is (6, 8)?',
+      choices: ['10', '14', '100', '48'],
+      answer: 0,
+      why: 'Pythagoras: √(6² + 8²) = √100 = 10.',
+    },
+    {
+      q: 'u = (5, 0) and v = (0, 12). How long is u + v?',
+      choices: ['17', '13', '169', '60'],
+      answer: 1,
+      why: 'u + v = (5, 12), of length √(25 + 144) = √169 = 13. Lengths add only when the arrows point the same way.',
+      traps: { 0: 'lengths-add' },
+    },
+    {
+      q: 'Which of these is a unit vector (length 1)?',
+      choices: ['(0, −1)', '(1, 1)', '(0.5, 0.5)', '(2, 0)'],
+      answer: 0,
+      why: '√(0² + (−1)²) = 1. (1, 1) has length √2 ≈ 1.414, (0.5, 0.5) about 0.707 and (2, 0) is 2.',
+    },
+    {
+      q: 'Four points add up, part by part, to (8, 12). What is their mean?',
+      choices: ['(2, 3)', '(8, 12)', '(4, 6)', '(32, 48)'],
+      answer: 0,
+      why: 'The mean is the sum scaled by 1/n: (8, 12) / 4 = (2, 3).',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="what-is-a-vector"
+  prompt="What is a vector, and how do you add two vectors and find a vector’s length?"
+  rubric={[
+    'A vector is a move or a list of numbers with a length and a direction, not a fixed place.',
+    'The same arrow drawn anywhere is the same vector; the vector from P to Q is Q − P.',
+    'Add two vectors part by part, which is the same as putting them tip to tail.',
+    'The length is √(x² + y²) by Pythagoras, and it is never negative.',
+  ]}
+  example="A vector is a move written as numbers, like (3, 2): 3 across and 2 up. It has a length and a direction but no fixed position, so the same arrow drawn anywhere is the same vector, and the arrow from P to Q is Q − P. To add two vectors you add the matching parts, which is the same as making one move and then the other, tip to tail. The length comes from Pythagoras, √(x² + y²), so it is never negative."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A vector is a move, a list of numbers with a length and a direction. The vector from $P$ to $Q$ is $Q - P$.
+- Add part by part (tip to tail): $u + v = v + u$. Subtract part by part too.
+- $kv$ multiplies every part by $k$: it stretches, shrinks or (for negative $k$) flips the arrow, along one line.
+- $|v| = \sqrt{x^2 + y^2}$, never negative. $|u + v|$ is never more than $|u| + |v|$, and equal only when the two point
+  the same way. $v / |v|$ has length 1.
+- Data points are vectors, so their mean is “add them all, then scale by $\frac{1}{n}$”.
+
+</Section>

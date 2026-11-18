@@ -29,6 +29,9 @@ const perLanguage = z.partialRecord(language, z.string());
 const json: z.ZodType<Json> = z.lazy(() => z.union([z.null(), z.boolean(), z.number(), z.string(), z.array(json), z.record(z.string(), json)]));
 
 const slug = z.string().regex(/^[a-z0-9][a-z0-9-]{1,79}$/);
+const SLOT_NAME = /^[a-z][a-z0-9_]*$/;
+/** A slot in an output task's snippet: «name». */
+const SLOT = /«([a-z][a-z0-9_]*)»/g;
 
 /** One run of a program: its stdin (a seed and clock make random and time repeatable). */
 export const ProgramCaseSchema = z.object({
@@ -71,7 +74,21 @@ const code = { starter: perLanguage, solution: perLanguage, check: CheckSchema }
 export const TaskSchema = z
   .discriminatedUnion('kind', [
     z.object({ ...base, kind: z.literal('choice'), choices: z.array(z.string()).min(2).max(6), answer: z.number().int().min(0), why: z.string().min(10) }),
-    z.object({ ...base, kind: z.literal('output'), code: perLanguage, stdin: z.string().default('') }),
+    z.object({
+      ...base,
+      kind: z.literal('output'),
+      /** The snippet; «name» slots take their literals from `vary`. */
+      code: perLanguage,
+      stdin: z.string().default(''),
+      /**
+       * Literals for the snippet's «name» slots, one list per slot, all the same
+       * length: variant k takes the k-th of each. Variant 0 is the one the topic
+       * and the task page show; a review card asks the others in turn, so the
+       * learner predicts a fresh output rather than one remembered. Each
+       * variant's output is in expected.json, and must differ from the others.
+       */
+      vary: z.record(z.string().regex(SLOT_NAME), z.array(z.string()).min(2).max(6)).default({}),
+    }),
     z.object({ ...base, kind: z.literal('program'), ...code }),
     z.object({ ...base, kind: z.literal('function'), ...code }),
     z.object({ ...base, kind: z.literal('tests'), ...code }),
@@ -105,6 +122,14 @@ export const TaskSchema = z
       for (const l of offered) if (per && per[l] === undefined) ctx.addIssue({ code: 'custom', message: `The check has nothing for ${l}` });
     }
     if ('starter' in t) for (const l of offered) if (t.starter[l] === undefined) ctx.addIssue({ code: 'custom', message: `No ${l} starter` });
+    if (t.kind === 'output') {
+      if (new Set(Object.values(t.vary).map((v) => v.length)).size > 1) ctx.addIssue({ code: 'custom', message: 'Every slot needs the same number of literals' });
+      for (const l of offered) {
+        const names = new Set([...t.code[l]!.matchAll(SLOT)].map((m) => m[1]));
+        for (const n of names) if (!t.vary[n]) ctx.addIssue({ code: 'custom', message: `The ${l} snippet's slot «${n}» has no literals in vary` });
+        for (const n of Object.keys(t.vary)) if (!names.has(n)) ctx.addIssue({ code: 'custom', message: `vary names «${n}», which the ${l} snippet doesn't use` });
+      }
+    }
   });
 
 export type Task = z.output<typeof TaskSchema>;
@@ -117,6 +142,13 @@ export function taskLanguages(t: Task): TaskLanguage[] {
   if (t.kind === 'choice') return [...TASK_LANGUAGES];
   const per = t.kind === 'output' ? t.code : t.solution;
   return TASK_LANGUAGES.filter((l) => per[l] !== undefined);
+}
+
+/** An output task's snippets, one per variant (just the one when it has no slots); variant 0 is the one shown. */
+export function outputVariants(t: Extract<Task, { kind: 'output' }>, language: TaskLanguage): string[] {
+  const code = t.code[language]!;
+  const count = Object.values(t.vary)[0]?.length ?? 1;
+  return Array.from({ length: count }, (_, k) => code.replace(SLOT, (_m, name: string) => t.vary[name][k]));
 }
 
 /** Kinds whose answer is code the learner writes in the editor. */
@@ -137,8 +169,10 @@ export const KIND_LABEL: Record<TaskKind, string> = {
 /**
  * The reference's results that cases are checked against, per task and
  * language (src/content/tasks/expected.json): for a program, each case's
- * stdout, prompts and exit code; for a function, each call's return.
+ * stdout, prompts and exit code; for a function, each call's return; for an
+ * output task, what each variant of its snippet prints (review cards check
+ * against these, so they work offline without loading a runtime).
  */
 export type ExpectedRun = { stdout: string; prompts: [number, number][]; exitCode: number | null };
-export type TaskExpected = { cases?: ExpectedRun[]; returns?: Json[] };
+export type TaskExpected = { cases?: ExpectedRun[]; returns?: Json[]; outputs?: string[] };
 export type ExpectedFile = Record<string, Partial<Record<TaskLanguage, TaskExpected>>>;

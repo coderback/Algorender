@@ -552,9 +552,33 @@ const mathEntries = [
     category: 'Math Toolkit'
   },
   {
+    name: 'Vectors',
+    description: 'An arrow is a move, not a place: add moves tip to tail, stretch and flip them, measure them by Pythagoras, and treat a data point as one.',
+    slug: 'vectors',
+    category: 'Linear Algebra'
+  },
+  {
+    name: 'The Dot Product',
+    description: 'Multiply matching parts and add them up: watch the sign flip as the angle passes 90°, cast one vector’s shadow on another, and rank words by cosine similarity.',
+    slug: 'dot-product',
+    category: 'Linear Algebra'
+  },
+  {
+    name: 'Lengths and Distances',
+    description: 'Measure a gap three ways (straight line, city blocks, a chess king’s moves), see their unit balls, and watch the nearest point change with the ruler.',
+    slug: 'norms',
+    category: 'Linear Algebra'
+  },
+  {
     name: 'Linear Transformations',
     description: 'See a 2×2 matrix move the whole plane: its columns are where î and ĵ land, and its determinant scales area.',
     slug: 'linear-transformations',
+    category: 'Linear Algebra'
+  },
+  {
+    name: 'Matrix Multiplication',
+    description: 'Fill C = AB cell by cell, each a row of A dotted with a column of B, count the multiplications, and see why doing B then A isn’t doing A then B.',
+    slug: 'matrix-multiplication',
     category: 'Linear Algebra'
   },
   {

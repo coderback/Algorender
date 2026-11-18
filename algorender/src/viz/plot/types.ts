@@ -148,6 +148,8 @@ export type ImagePart = {
   values?: readonly string[];
   /** On-screen width in px (default 240); a 3×3 kernel wants less. */
   size?: number;
+  /** A matrix of numbers rather than a picture: the stage caption names it by rows × columns. */
+  matrix?: boolean;
 };
 
 export type ImageBox = Paint & { id: string; x: number; y: number; w: number; h: number };

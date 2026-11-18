@@ -3,6 +3,8 @@
 // already knows, and schedules the rest. Concept ids are checked against
 // src/content/concepts.yaml by content.test.ts.
 
+import { trackTopics } from './units';
+
 export type Goal = {
   id: string;
   title: string;
@@ -88,6 +90,14 @@ export const goals: readonly Goal[] = [
       'preference-tuning',
       'message-passing-gnns',
     ],
+  },
+  {
+    // The Python track, every topic in the order of its units. Plans leave
+    // planned topics out, so the goal grows as each batch of topics lands.
+    id: 'python-from-zero',
+    title: 'Python from zero',
+    summary: 'Programming from the very first line: values and names, decisions and loops, functions, lists and dictionaries, each run line by line so you can watch what it does.',
+    concepts: trackTopics('python'),
   },
 ];
 

@@ -1,0 +1,158 @@
+<Section step="hook" title="Programs that talk">
+
+Most programs show people text: a greeting, a total, a warning. To build that text you need to join pieces together,
+put numbers inside sentences, and pick out single letters. In Python, text is called a **string**, and a handful of
+tools does nearly all of it.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="string">Text in quotes: `"Ada"` or `'Ada'`. Either kind of quote works, as long as both ends match.</Term>
+  <Term name="f-string">A string with an `f` before the quote. Anything in curly brackets inside it (a name, a sum, `len(word)`) is worked out, and its value put in its place.</Term>
+  <Term name="index">A character's position, counting from 0. `word[0]` is the first character, and `word[-1]` the last.</Term>
+</Terms>
+
+```python
+name = "Ada"
+print("Hi " + name)     # Hi Ada: + joins strings, adding nothing between them
+print("ha" * 3)         # hahaha: * repeats a string
+print(len(name))        # 3: how many characters
+print(name[0])          # A
+print(f"{name} has {len(name)} letters") # Ada has 3 letters
+```
+
+`+` joins exactly what it is given: `"ice" + "cream"` is `"icecream"`, with no space. And it won't join text to a
+number: `"Age: " + 30` stops with a `TypeError`, because Python won't guess whether you meant text or arithmetic.
+Turn the number into text with `str(30)`, or put it in an f-string, which does that for you.
+
+Indexes run from 0 to one less than the length, so the last character of a 3-letter word is `word[2]`, or simply
+`word[-1]`. Asking for `word[3]` stops with an `IndexError`.
+
+</Section>
+
+<Section step="see" title="Watch it run">
+
+<TraceCode snippet="py-strings" />
+
+`first + " " + last` needs that `" "` in the middle: without it you get `AdaLovelace`. The f-string on the last but
+one line does the joining for you, numbers and all.
+
+<KeyIdea>
+
+**`+` joins strings exactly as they are, and only strings.** Use an f-string to put numbers and names inside text,
+`len` to count characters, and an index from 0 to pick one out.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-join-and-count" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="plus-adds-space"
+  title="+ puts a space between the strings it joins"
+  probes={[
+    {
+      q: 'What does print("ice" + "cream") show?',
+      choices: ['icecream', 'ice cream', 'ice+cream'],
+      answer: 0,
+      trap: 1,
+      why: '+ joins the two strings exactly as they are. Neither has a space, so neither does the result.',
+    },
+    {
+      q: 'a = "Hi" and b = "there". What does print(a + b) show?',
+      choices: ['Hi there', 'Hithere', 'Hi + there'],
+      answer: 1,
+      trap: 0,
+      why: 'Nothing is added between joined strings. For a space, join one in: a + " " + b.',
+    },
+  ]}
+>
+
+`+` joins strings exactly as they are: `"ice" + "cream"` is `"icecream"`. Commas in `print` add spaces, but `+`
+never does. If you want a space, join one in: `first + " " + last`.
+
+</Misconception>
+
+<Misconception
+  id="number-plus-text"
+  title="+ turns a number into text when it meets a string"
+  probes={[
+    {
+      q: 'What happens when Python runs print("Age: " + 30)?',
+      choices: ['It stops with a TypeError', 'It prints Age: 30', 'It prints Age:30'],
+      answer: 0,
+      trap: 1,
+      why: '+ won’t mix a string and a number. Write "Age: " + str(30), or f"Age: {30}".',
+    },
+    {
+      q: 'Which line prints Score: 7?',
+      choices: ['print("Score: " + 7)', 'print("Score: " + str(7))', 'print("Score: " - 7)'],
+      answer: 1,
+      trap: 0,
+      why: 'str(7) turns the number into the text "7", which + can join. The first line is a TypeError.',
+    },
+  ]}
+>
+
+`"Age: " + 30` stops with `TypeError: can only concatenate str (not "int") to str`. Python never guesses that you
+meant the number as text. Convert it yourself with `str(30)`, or use an f-string: `f"Age: {age}"`.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'What does print("ab" + "cd") show?',
+      choices: ['abcd', 'ab cd', 'ab+cd'],
+      answer: 0,
+      why: '+ joins the strings as they are, with nothing in between.',
+      traps: { 1: 'plus-adds-space' },
+    },
+    {
+      q: 'What happens when Python runs print("Total: " + 5)?',
+      choices: ['It stops with a TypeError', 'It prints Total: 5', 'It prints Total:5'],
+      answer: 0,
+      why: '+ can’t join a string and a number. str(5) or an f-string fixes it.',
+      traps: { 1: 'number-plus-text' },
+    },
+    {
+      q: 'word = "python". What does print(word[1]) show?',
+      choices: ['y', 'p', 't'],
+      answer: 0,
+      why: 'Indexes start at 0: word[0] is p, so word[1] is y.',
+    },
+    {
+      q: 'What does print(len("hi there")) show?',
+      choices: ['8', '7', '2'],
+      answer: 0,
+      why: 'len counts every character, and the space is a character: h, i, space, t, h, e, r, e.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-strings-intro" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A string is text in matching quotes.
+- `+` joins strings exactly as they are, and only strings; `*` repeats one.
+- An f-string, `f"…{name}…"`, puts values inside text, numbers included.
+- `len(s)` counts characters; `s[0]` is the first and `s[-1]` the last.
+
+</Section>

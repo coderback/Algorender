@@ -12,6 +12,10 @@
 //   `misconception:<lesson>:<id>`, which asks that mistake's probe questions.
 //   It starts as a lapse (Again), so it comes back the next day, and picking
 //   the mistake again later sends it back to tomorrow.
+// - Checking a language task that asks what a snippet prints (an output
+//   task, src/tasks/) makes `task:<slug>`: its first check is its first
+//   review, Good if right, Again if wrong. The review shows another variant
+//   of the snippet, so the learner predicts it afresh.
 // - A mock interview that falls below the bar, or needed a level-2 hint or
 //   more, makes `problem:<slug>` due the next day: Again, as a new card or a
 //   lapse of the one solving it made.
@@ -27,7 +31,7 @@ import { misconceptionCard } from './misconceptions';
 
 export const scheduler = fsrs({ enable_fuzz: false, enable_short_term: false });
 
-export type CardKind = 'problem' | 'quiz' | 'misconception';
+export type CardKind = 'problem' | 'quiz' | 'misconception' | 'task';
 
 export type ReviewCard = {
   id: string;
@@ -41,10 +45,14 @@ export type ReviewCard = {
 
 export const problemCard = (slug: string) => `problem:${slug}`;
 export const quizCard = (lesson: string, quiz: string, question: number) => `quiz:${lesson}:${quiz}:${question}`;
+export const taskCard = (slug: string) => `task:${slug}`;
 
 export { misconceptionCard };
 
-const kindOf = (id: string): CardKind => (id.startsWith('problem:') ? 'problem' : id.startsWith('misconception:') ? 'misconception' : 'quiz');
+const kindOf = (id: string): CardKind => {
+  const kind = id.slice(0, id.indexOf(':'));
+  return kind === 'problem' || kind === 'misconception' || kind === 'task' ? kind : 'quiz';
+};
 
 /** Every card the events have made, with its current schedule. Events must be in time order. */
 export function reviewCards(events: readonly ProgressEvent[]): Map<string, ReviewCard> {
@@ -63,6 +71,10 @@ export function reviewCards(events: readonly ProgressEvent[]): Map<string, Revie
     } else if (e.kind === 'quiz.answered') {
       const id = quizCard(e.data.lesson, e.data.quiz, e.data.question);
       if (!cards.has(id)) make(id, e.at, e.data.correct ? Rating.Good : Rating.Again);
+    } else if (e.kind === 'task.checked') {
+      if (e.data.kind !== 'output') continue;
+      const id = taskCard(e.data.task);
+      if (!cards.has(id)) make(id, e.at, e.data.passed ? Rating.Good : Rating.Again);
     } else if (e.kind === 'misconception.picked') {
       const id = misconceptionCard(e.data.lesson, e.data.misconception);
       const c = cards.get(id);

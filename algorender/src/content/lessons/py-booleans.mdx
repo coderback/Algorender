@@ -1,0 +1,180 @@
+<Section step="hook" title="Yes or no">
+
+Is the password long enough? Is the player out of lives? Is it the weekend? Programs ask questions like these all the
+time, and every answer is one of two values: `True` or `False`. Next topic, `if` will use them to decide what to do;
+this one is about asking the questions.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="bool">The type of `True` and `False`, the two truth values. They are written with capitals and no quotes.</Term>
+  <Term name="comparison">A question that gives a bool: `==` equal, `!=` not equal, and `<`, `>`, `<=`, `>=`.</Term>
+  <Term name="and, or, not">Combine bools. `and` needs both sides true, `or` needs at least one, `not` flips one.</Term>
+</Terms>
+
+```python
+age = 15
+print(age >= 13)                 # True
+print(age == 15)                 # True: == compares
+print(age >= 13 and age <= 19)   # True: both hold
+print(age < 5 or age > 65)       # False: neither holds
+print(not age > 18)              # True
+```
+
+Watch the difference between `=` and `==`. One `=` points a name at a value; two compare. A single `=` where a
+question belongs, as in `print(5 = 5)`, stops the program with a `SyntaxError`.
+
+`not age > 18` means `not (age > 18)`: the comparison is worked out first, then `not` flips its answer.
+
+Values of other types count as true or false too. `0`, `0.0` and the empty string `""` count as false; every other
+number and every non-empty string counts as true, even `"False"` and `"0"`. And `False` itself, of course, counts as false.
+
+One trap: `or` joins two whole conditions. `day == "Sat" or "Sun"` doesn't ask whether the day is either one. It is
+`(day == "Sat") or "Sun"`, and when the first half is false, `or` simply gives back `"Sun"`. Write each comparison in
+full: `day == "Sat" or day == "Sun"`.
+
+</Section>
+
+<Section step="see" title="Watch it run">
+
+<TraceCode snippet="py-booleans" />
+
+The last line compares the number `3` with the string `"3"`. A number never equals a string, even one that looks like it: `False`.
+
+<KeyIdea>
+
+**A comparison gives `True` or `False`; `and`, `or` and `not` combine those answers.** `=` stores a value, `==`
+compares two.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-compare-and-combine" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="equals-compares"
+  title="= checks whether two things are equal"
+  probes={[
+    {
+      q: 'Which line asks whether score is 10?',
+      choices: ['score == 10', 'score = 10', 'score => 10'],
+      answer: 0,
+      trap: 1,
+      why: 'score = 10 points score at 10. Comparing takes two equals signs.',
+    },
+    {
+      q: 'What does print(5 = 5) do?',
+      choices: ['Stops with a SyntaxError', 'Prints True', 'Prints 5'],
+      answer: 0,
+      trap: 1,
+      why: 'A single = stores a value in a name, and 5 isn’t a name. print(5 == 5) prints True.',
+    },
+  ]}
+>
+
+One `=` is assignment: it points a name at a value and gives no answer. Two, `==`, compare and give `True` or
+`False`. Reach for `==` whenever you are asking a question.
+
+</Misconception>
+
+<Misconception
+  id="or-shortcut"
+  title="x == 1 or 2 asks whether x is 1 or 2"
+  probes={[
+    {
+      q: 'x is 5. What does print(x == 1 or 2) show?',
+      choices: ['False', '2', 'True'],
+      answer: 1,
+      trap: 0,
+      why: 'It means (x == 1) or 2. x == 1 is False, so or gives back its right side, 2.',
+    },
+    {
+      q: 'Which checks whether day is "Sat" or "Sun"?',
+      choices: ['day == "Sat" or day == "Sun"', 'day == "Sat" or "Sun"', 'day == ("Sat" or "Sun")'],
+      answer: 0,
+      trap: 1,
+      why: 'Each side of or must be a whole comparison. The other two compare day with "Sat" only.',
+    },
+  ]}
+>
+
+`or` doesn't share the `x ==` between its sides. `x == 1 or 2` is `(x == 1) or 2`, and the lone `2` counts as true,
+so the whole thing is never false. Repeat the comparison: `x == 1 or x == 2`.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'Which line prints True when n is 4?',
+      choices: ['print(n == 4)', 'print(n = 4)', 'print(n => 4)'],
+      answer: 0,
+      why: '== compares. A single = isn’t a comparison, so print(n = 4) doesn’t ask anything: Python stops with an error instead.',
+      traps: { 1: 'equals-compares' },
+    },
+    {
+      q: 'colour is "red". What does print(colour == "blue" or "green") show?',
+      choices: ['green', 'False', 'True'],
+      answer: 0,
+      why: 'colour == "blue" is False, so or gives back its right side, the string "green".',
+      traps: { 1: 'or-shortcut' },
+    },
+    {
+      q: 'What does print(not 3 > 2) show?',
+      choices: ['False', 'True', 'An error'],
+      answer: 0,
+      why: '3 > 2 is True, and not flips it to False.',
+    },
+    {
+      q: 'Which of these values counts as false?',
+      choices: ['0', '-1', '"0"'],
+      answer: 0,
+      why: 'The number 0 counts as false. Every other number does not, and "0" is a non-empty string, which counts as true.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-booleans" />
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="truth-values"
+  prompt="Explain what a comparison like age >= 18 gives back, and how and, or and not combine those answers. Mention the difference between = and ==."
+  rubric={[
+    'A comparison gives back True or False',
+    '== compares two values, while = points a name at a value',
+    'and is True only when both sides are True',
+    'or is True when at least one side is True',
+    'not turns True into False and False into True',
+  ]}
+  example="A comparison such as age >= 18 asks a yes-or-no question and gives back a bool, True or False. Two equals signs, ==, compare two values; a single = is different: it points a name at a value and answers nothing. To ask several questions at once, and gives True only when both of its sides are True, or gives True when at least one side is, and not flips a single answer, so not True is False."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A comparison gives `True` or `False`: `==`, `!=`, `<`, `>`, `<=`, `>=`.
+- `and` needs both, `or` needs either, `not` flips.
+- `=` stores, `==` compares.
+- Each side of `or` is a whole condition: `x == 1 or x == 2`.
+- `0` and `""` count as false; other numbers and non-empty strings count as true.
+
+</Section>

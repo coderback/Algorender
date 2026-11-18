@@ -83,9 +83,26 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'b1-lesson-sums', path: '/learn/sums-notation' },
   { name: 'b1-lesson-trig', path: '/learn/trigonometry' },
   { name: 'b1-exercise', path: '/code/variance' },
+  // Math and ML B2: vectors to matrix multiplication, a few steps in, its lessons and the matrix exercise.
+  { name: 'b2-vectors', path: '/visualisers/vectors?preset=add&step=2' },
+  { name: 'b2-dot-angle', path: '/visualisers/dot-product?preset=angle&step=4' },
+  { name: 'b2-dot-similar', path: '/visualisers/dot-product?preset=similar&step=2' },
+  { name: 'b2-norms', path: '/visualisers/norms?preset=distance&step=4' },
+  { name: 'b2-matmul', path: '/visualisers/matrix-multiplication?preset=cells&step=3' },
+  { name: 'b2-compose', path: '/visualisers/matrix-multiplication?preset=compose&step=5' },
+  { name: 'b2-lesson-vectors', path: '/learn/vectors' },
+  { name: 'b2-lesson-dot', path: '/learn/dot-product' },
+  { name: 'b2-lesson-norms', path: '/learn/norms-distances' },
+  { name: 'b2-lesson-matmul', path: '/learn/matrix-multiplication' },
+  { name: 'b2-exercise', path: '/code/matrix-multiply' },
   // Language tracks L1: a sample task of each kind shipped (e2e/tasks.spec.ts shoots them after a failed check).
   { name: 'task-program', path: '/learn/tasks/py-greet-by-name' },
   { name: 'task-output', path: '/learn/tasks/py-two-names-one-value' },
+  // Language tracks L2 batch 1: a Python topic (theory, a prediction, the task strip), Learn filtered to languages, a fill task.
+  { name: 'l2-topic', path: '/learn/py-variables' },
+  { name: 'l2-topic-loops', path: '/learn/py-nested-loops' },
+  { name: 'l2-learn-languages', path: '/learn?area=languages' },
+  { name: 'l2-task-fill', path: '/learn/tasks/py-is-even' },
 ];
 
 const VIEWPORTS = [

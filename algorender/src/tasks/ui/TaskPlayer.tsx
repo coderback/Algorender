@@ -24,7 +24,7 @@ import { loadCode, saveCode } from '@/workspace/storage';
 import { useRuntime } from '@/workspace/useRuntime';
 import { withoutPrompts } from '../checkers';
 import { checkChoice, checkCode, checkPrediction, errorLine, type CaseVerdict, type TaskVerdict } from '../check';
-import { KIND_LABEL, taskLanguages, WRITTEN, type Task, type TaskExpected, type TaskLanguage } from '../schema';
+import { KIND_LABEL, outputVariants, taskLanguages, WRITTEN, type Task, type TaskExpected, type TaskLanguage } from '../schema';
 import { OutputDiff } from './OutputDiff';
 
 const noSubscribe = () => () => {};
@@ -38,13 +38,14 @@ const noSubscribe = () => () => {};
  * test's outcome. Every check is a task.checked event. Code drafts are kept
  * on the device, so it mounts after hydration.
  */
-export function TaskPlayer({ task, expected }: { task: Task; expected: Partial<Record<TaskLanguage, TaskExpected>> }) {
+export function TaskPlayer({ task, expected, inline = false }: { task: Task; expected: Partial<Record<TaskLanguage, TaskExpected>>; inline?: boolean }) {
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const languages = taskLanguages(task);
   const [language, setLanguage] = useState<TaskLanguage>(languages[0]);
   return (
-    <div className="grid grid-cols-1 items-start gap-4 px-3 pt-4 pb-10 sm:px-4 lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.4fr)]">
-      <Brief task={task} language={language} expected={expected[language]} />
+    // Inline (inside a topic): one column, the brief above the answer.
+    <div className={cx('grid grid-cols-1 items-start gap-4', !inline && 'px-3 pt-4 pb-10 sm:px-4 lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.4fr)]')}>
+      <Brief task={task} language={language} expected={expected[language]} inline={inline} />
       <section aria-label="Your answer" className="flex min-w-0 flex-col gap-4">
         {task.kind !== 'choice' && languages.length > 1 && (
           <SelectField label="Language" value={language} onChange={(e) => setLanguage(e.target.value as TaskLanguage)} className="max-w-56">
@@ -66,13 +67,14 @@ export function TaskPlayer({ task, expected }: { task: Task; expected: Partial<R
 }
 
 /** The task's card: its kind, what to do, the first example, and hints to open one at a time. */
-function Brief({ task, language, expected }: { task: Task; language: TaskLanguage; expected?: TaskExpected }) {
+function Brief({ task, language, expected, inline }: { task: Task; language: TaskLanguage; expected?: TaskExpected; inline: boolean }) {
   const example = task.kind !== 'choice' && 'check' in task && task.check.kind === 'program' ? task.check.cases[0] : null;
   const run = example ? expected?.cases?.[0] : undefined;
   return (
-    <article aria-label="The task" className="flex flex-col gap-4 rounded-card bg-surface p-5 sm:p-6">
+    <article aria-label={inline ? task.title : 'The task'} className="flex flex-col gap-4 rounded-card bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-2">
         <Chip tone="accent">{KIND_LABEL[task.kind]}</Chip>
+        {inline && <span className="text-sm font-semibold text-ink">{task.title}</span>}
         {task.kind !== 'choice' && <Chip>{LANGUAGES[language].label}</Chip>}
       </div>
       <Markdown text={task.prompt} />
@@ -200,7 +202,7 @@ function Answer({ task, language, expected }: { task: Task; language: TaskLangua
         )}
         {task.kind === 'output' && (
           <>
-            <CodeBlock lines={task.code[language]!.replace(/\n$/, '').split('\n')} label={`The ${label} program`} />
+            <CodeBlock lines={outputVariants(task, language)[0].replace(/\n$/, '').split('\n')} label={`The ${label} program`} />
             <TextAreaField label="What does it print?" mono rows={4} value={typed} onChange={(e) => setTyped(e.target.value)} spellCheck={false} autoCapitalize="off" autoComplete="off" />
           </>
         )}

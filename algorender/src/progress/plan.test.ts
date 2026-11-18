@@ -67,6 +67,17 @@ describe('scheduling', () => {
     for (const id of toolkit.slice(1)) expect(order.indexOf(id), id).toBeGreaterThan(order.indexOf('functions-graphs'));
   });
 
+  it('reaches B2’s vectors, dot product, norms and matrix multiplication from the zero-to-hero goal, each after what it builds on', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    const chain = ['trigonometry', 'vectors', 'dot-product', 'norms-distances'];
+    for (const id of [...chain, 'vectors-matrices', 'matrix-multiplication']) expect(order, id).toContain(id);
+    for (let i = 1; i < chain.length; i++) expect(order.indexOf(chain[i]), chain[i]).toBeGreaterThan(order.indexOf(chain[i - 1]));
+    expect(order.indexOf('vectors-matrices')).toBeGreaterThan(order.indexOf('dot-product'));
+    expect(order.indexOf('matrix-multiplication')).toBeGreaterThan(order.indexOf('vectors-matrices'));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {
@@ -216,8 +227,8 @@ describe('the real goals', () => {
     for (const g of goals) for (const c of g.concepts) expect(ids.has(c), `${g.id}: ${c}`).toBe(true);
   });
 
-  it('only aim at planned concepts in the zero-to-hero goal, which grows as they go live', () => {
-    for (const g of goals.filter((x) => x.id !== 'ml-zero-to-hero')) for (const c of g.concepts) expect(ids.get(c)?.planned, `${g.id}: ${c}`).toBe(false);
+  it('only aim at planned concepts in the goals that grow as batches land', () => {
+    for (const g of goals.filter((x) => x.id !== 'ml-zero-to-hero' && x.id !== 'python-from-zero')) for (const c of g.concepts) expect(ids.get(c)?.planned, `${g.id}: ${c}`).toBe(false);
     const z = goals.find((x) => x.id === 'ml-zero-to-hero')!;
     expect(z.concepts).toContain('preference-tuning');
     expect(z.concepts).not.toContain('retrieval-rag');
@@ -228,6 +239,16 @@ describe('the real goals', () => {
     const reached = new Set(z.concepts.flatMap((t) => [t, ...(ancestors.get(t) ?? [])]));
     const mathMl = graph.concepts.filter((c) => areaOf(c.track) === 'math' || areaOf(c.track) === 'ml').map((c) => c.id);
     expect(mathMl.filter((id) => !reached.has(id)).sort()).toEqual(['reinforcement-learning', 'retrieval-rag']);
+  });
+
+  it('aims "Python from zero" at every Python topic, unit by unit, starting with the written ones', () => {
+    const p = goals.find((x) => x.id === 'python-from-zero')!;
+    const python = graph.concepts.filter((c) => c.track === 'python').map((c) => c.id);
+    expect([...p.concepts].sort()).toEqual([...python].sort());
+    expect(p.concepts.slice(0, 2)).toEqual(['py-first-program', 'py-variables']);
+    const order = prerequisiteOrder(goalConcepts(p, graph), graph, p.concepts);
+    expect(order[0]).toBe('py-first-program');
+    expect(order.every((id) => id.startsWith('py-')), 'a Python plan stays on the Python track').toBe(true);
   });
 
   it('give every concept an estimate and somewhere to learn it', () => {

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { collectErrors } from './errors';
+import { PYTHON_TOPICS } from '../src/content/lessons/python';
 
 /** The same axe rules as a11y.spec.ts, on whatever the page shows now. */
 async function expectAccessible(page: Page) {
@@ -48,6 +49,10 @@ const lessonPaths = [
   'exponents-logs',
   'sums-notation',
   'trigonometry',
+  'vectors',
+  'dot-product',
+  'norms-distances',
+  'matrix-multiplication',
   'derivatives-gradients',
   'optimizers',
   'rate-limiting',
@@ -117,6 +122,20 @@ test('answering a lesson question puts its concept in progress on the map', asyn
   await expect(page.getByRole('heading', { name: 'Binary search', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Resume lesson' })).toHaveAttribute('href', '/learn/binary-search');
 });
+
+// The Python topics have no visualisers: their stages, a traced program and the strip of tasks.
+for (const slug of PYTHON_TOPICS.map((t) => t.slug)) {
+  test(`${slug} topic renders every stage and its tasks with no console errors`, async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto(`/learn/${slug}`);
+    for (const stage of ['Why it matters', 'Key parts', 'See it work', 'Predict', 'Check yourself', 'Try it', 'Recap']) {
+      await expect(page.getByText(stage, { exact: true }).first()).toBeVisible();
+    }
+    await expect(page.getByRole('region', { name: 'This topic’s tasks' }).getByRole('link').first()).toBeVisible();
+    await expect(page.getByLabel('What does it print?')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}
 
 for (const slug of lessonPaths) {
   test(`${slug} lesson renders every stage with no console errors`, async ({ page }) => {

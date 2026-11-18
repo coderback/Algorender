@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_ID } from '@/progress/events';
 import { misconceptionCard } from '@/progress/misconceptions';
+import { endsUnit, unitOf } from '@/content/units';
 import { lessonMisconceptions, lessonPrompts, misconceptionsIn, promptsIn, tagsIn } from './assessment';
 import { lessons } from './index';
 import { lessonQuizzes } from './quizzes';
@@ -93,6 +94,11 @@ describe('explain-it-back prompts', () => {
   it('asks every lesson to be explained back, with a rubric and an example answer', () => {
     for (const l of lessons) {
       const mine = lessonPrompts().filter((p) => p.lesson === l.slug);
+      // A language topic is five minutes of reading: only a unit's last topic asks (src/content/units.ts).
+      if (unitOf(l.concept) && !endsUnit(l.concept)) {
+        expect(mine.length, `${l.slug} is a topic inside its unit: only the unit's last topic asks for an explanation`).toBe(0);
+        continue;
+      }
       expect(mine.length, `${l.slug} has no <ExplainBack>`).toBeGreaterThanOrEqual(1);
       expect(new Set(mine.map((p) => p.id)).size, l.slug).toBe(mine.length);
       for (const p of mine) {

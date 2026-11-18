@@ -77,9 +77,9 @@ describe('concept graph', () => {
   it('gives every track an area, and the math and ML tracks the zero-to-hero concepts', () => {
     expect(tracks.map((t) => t.area)).not.toContain(undefined);
     const mathMl = concepts.filter((c) => tracks.find((t) => t.id === c.track)?.area === 'math' || tracks.find((t) => t.id === c.track)?.area === 'ml');
-    // 21 that were there before the zero-to-hero path, and its 77 new ones, planned until their batch: B1 wrote 4.
+    // 21 that were there before the zero-to-hero path, and its 77 new ones, planned until their batch: B1 wrote 4 and B2 4 more.
     expect(mathMl.length).toBe(98);
-    expect(mathMl.filter((c) => c.planned).length).toBe(73);
+    expect(mathMl.filter((c) => c.planned).length).toBe(69);
     // A planned track has nothing available yet.
     for (const t of tracks.filter((x) => x.planned)) expect(concepts.filter((c) => c.track === t.id && !c.planned).map((c) => c.id), t.id).toEqual([]);
   });
@@ -109,6 +109,23 @@ describe('lessons', () => {
     for (const { slug } of lessons) {
       const body = readFileSync(fileURLToPath(new URL(`./lessons/${slug}.mdx`, import.meta.url)), 'utf8');
       for (const [, used] of body.matchAll(/snippet="([a-z0-9-]+)"/g)) expect(getSnippet(used), `${slug} traces snippet ${used}`).toBeDefined();
+    }
+  });
+
+  it('works only tasks that exist, and ends every language topic in the strip of its own tasks', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { getTask } = await import('./tasks');
+    const { unitOf } = await import('./units');
+    for (const { slug, concept } of lessons) {
+      const body = readFileSync(fileURLToPath(new URL(`./lessons/${slug}.mdx`, import.meta.url)), 'utf8');
+      const worked = [...body.matchAll(/<TopicTask task="([a-z0-9-]+)"/g)].map((m) => m[1]);
+      const strips = [...body.matchAll(/<TaskStrip concept="([a-z0-9-]+)"/g)].map((m) => m[1]);
+      for (const t of worked) expect(getTask(t)?.concept, `${slug} works task ${t}`).toBe(concept);
+      for (const c of strips) expect(c, `${slug}'s strip`).toBe(concept);
+      if (!unitOf(concept)) continue;
+      // A topic: a prediction worked in the page, then its tasks.
+      expect(strips, `${slug} ends in its strip of tasks`).toHaveLength(1);
+      expect(worked.map((t) => getTask(t)?.kind), `${slug} asks for a prediction`).toContain('output');
     }
   });
 

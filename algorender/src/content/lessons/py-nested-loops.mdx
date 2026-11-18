@@ -1,0 +1,168 @@
+<Section step="hook" title="A loop for every turn">
+
+A times table is rows of columns. A seating plan is rows of seats. To print every pair of players, you pick a first
+player and then, for each one, every second player. Each of these is a loop inside a loop, and once you see how the
+two take turns, you can build any grid.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="outer loop">The loop on the outside. Each of its turns runs the whole inner loop.</Term>
+  <Term name="inner loop">The loop indented inside the outer one. It starts again from the beginning on every outer turn.</Term>
+</Terms>
+
+```python
+for row in range(1, 4):
+    for col in range(1, 5):
+        print("*", end="")
+    print()           # ends the row: inside the outer loop, after the inner one
+```
+
+This prints 3 rows of 4 stars. For `row` 1, the inner loop runs `col` through 1, 2, 3, 4; then `print()` ends the line.
+Then `row` becomes 2 and the inner loop starts again from 1. The innermost line runs 3 × 4 = 12 times in all: outer
+turns times inner turns. That is why loops inside loops get slow quickly: two loops of 1,000 turns each make a million.
+
+Where a line sits matters. Indented under the inner loop, it runs once per star. Under the outer loop only, once per
+row. At the left edge, once in all.
+
+`break` inside the inner loop leaves the **inner** loop only. The outer loop carries on with its next turn.
+
+</Section>
+
+<Section step="see" title="Watch the loops take turns">
+
+Step through and watch `row` and `col`. `col` runs 1, 2, 3 for every value of `row`, and `line` starts empty again at
+each new row.
+
+<TraceCode snippet="py-nested-loops" />
+
+<KeyIdea>
+
+**The inner loop runs all the way through for every turn of the outer loop**, so its body runs outer × inner times.
+`break` leaves only the loop it is in.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-stars-triangle" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="inner-once"
+  title="The inner loop runs once, alongside the outer one"
+  probes={[
+    {
+      q: 'for i in range(3), and inside it for j in range(4): print("x"). How many x’s?',
+      choices: ['12', '7', '4'],
+      answer: 0,
+      trap: 1,
+      why: 'The inner loop runs its 4 turns for each of the 3 outer turns: 3 × 4 = 12.',
+    },
+    {
+      q: 'Two loops print a grid of 3 rows with 6 stars in each. How many times does the line that prints one star run?',
+      choices: ['18', '9', '6'],
+      answer: 0,
+      trap: 1,
+      why: 'The star loop runs all 6 of its turns in each of the 3 rows: 3 × 6 = 18.',
+    },
+  ]}
+>
+
+The inner loop doesn't run alongside the outer one, sharing its turns. It runs completely, from its first turn to its
+last, inside **each** turn of the outer loop. So the work multiplies: 3 outer turns of 4 inner turns is 12, not 7.
+
+</Misconception>
+
+<Misconception
+  id="break-leaves-all"
+  title="break leaves every loop it is inside"
+  probes={[
+    {
+      q: 'for i in range(2), inside it for j in range(3): if j == 1, break; otherwise print(i, j). What prints?',
+      choices: ['0 0, then 1 0', '0 0 only', '0 0, 0 1, 0 2'],
+      answer: 0,
+      trap: 1,
+      why: 'break leaves the inner loop only, so the outer loop goes on to i = 1, and the inner loop starts again.',
+    },
+    {
+      q: 'An inner loop finds what it is looking for and breaks. What happens next?',
+      choices: ['The outer loop carries on with its next turn', 'Both loops stop', 'The whole program ends'],
+      answer: 0,
+      trap: 1,
+      why: 'break leaves only the loop it is in. The outer loop goes on, and starts the inner loop again on its next turn.',
+    },
+  ]}
+>
+
+`break` leaves the innermost loop it is in, nothing more. The outer loop carries on with its next turn, and starts the
+inner loop again. To stop everything, the outer loop needs its own `break`, for example after checking a flag the
+inner loop set.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'for i in range(2), and inside it for j in range(5): print(i, j). How many lines does it print?',
+      choices: ['10', '7', '5'],
+      answer: 0,
+      why: 'Each of the 2 outer turns runs all 5 inner turns: 2 × 5 = 10.',
+      traps: { 1: 'inner-once' },
+    },
+    {
+      q: 'for i in range(3): an inner loop that breaks straight away, then print(i). What prints?',
+      choices: ['0, 1, 2', 'Nothing', '0 only'],
+      answer: 0,
+      why: 'break leaves only the inner loop, so the print after it runs on every outer turn.',
+      traps: { 1: 'break-leaves-all' },
+    },
+    {
+      q: 'In a grid program, what does a bare print() after the inner loop do?',
+      choices: ['Ends the row, so the next row starts on a new line', 'Prints the word print', 'Stops the outer loop'],
+      answer: 0,
+      why: 'print() with nothing to print just ends the line. Placed after the inner loop, it runs once per row.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-nested-loops" />
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="loops-in-loops"
+  prompt="Explain how a loop inside another loop runs: when does the inner loop start and finish, how many times does its body run in all, and what does a break inside it leave?"
+  rubric={[
+    'The inner loop runs all the way through for each turn of the outer loop',
+    'The inner loop starts again from its beginning on every outer turn',
+    'The inner body runs the outer turns times the inner turns',
+    'A break inside the inner loop leaves only the inner loop',
+  ]}
+  example="For every turn of the outer loop, the inner loop runs completely, from its first turn to its last, and then the outer loop moves on to its next turn, which starts the inner loop again from the beginning. So with 3 outer turns and 4 inner turns, the inner body runs 3 times 4, which is 12 times. A break in the inner loop leaves just that loop; the outer loop carries on."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The inner loop runs completely, from the start, on every turn of the outer loop.
+- The innermost body runs outer × inner times, so nested loops grow quickly.
+- Indentation decides whether a line runs per item, per row, or once.
+- `break` leaves only the innermost loop.
+
+</Section>

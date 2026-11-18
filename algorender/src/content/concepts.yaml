@@ -91,7 +91,6 @@ tracks:
     title: Python
     area: languages
     summary: Programming from zero in Python, watching every name, list and call in memory as it runs.
-    planned: true
 
 concepts:
   # ── Foundations ──────────────────────────────────────────────
@@ -420,32 +419,36 @@ concepts:
     track: linear-algebra
     summary: Arrows with a length and a direction, added tip to tail, and a data point as a vector.
     prereqs: [functions-graphs, trigonometry]
-    planned: true
+    visualisers: [vectors]
+    lesson: vectors
   - id: dot-product
     title: The dot product and similarity
     track: linear-algebra
     summary: Multiply matching parts and add them up, to measure how much two vectors point the same way.
     prereqs: [vectors, sums-notation]
-    planned: true
+    visualisers: [dot-product]
+    lesson: dot-product
   - id: norms-distances
     title: Lengths and distances
     track: linear-algebra
     summary: L1, L2 and L∞, three ways to measure how far apart two points are.
     prereqs: [dot-product]
-    planned: true
+    visualisers: [norms]
+    lesson: norms-distances
   - id: vectors-matrices
-    title: Vectors and matrices
+    title: Matrices as transformations
     track: linear-algebra
     summary: Matrices as transformations that warp space.
+    prereqs: [dot-product]
     visualisers: [linear-transformations]
     lesson: linear-transformations
-    later: [dot-product] # B2, retitled "Matrices as transformations"
   - id: matrix-multiplication
     title: Matrix multiplication
     track: linear-algebra
     summary: Each cell is a row times a column, composing two transformations, and why AB isn’t BA.
     prereqs: [vectors-matrices, big-o]
-    planned: true
+    visualisers: [matrix-multiplication]
+    lesson: matrix-multiplication
   - id: determinants-inverses
     title: Determinants, inverses and solving Ax = b
     track: linear-algebra
@@ -480,10 +483,9 @@ concepts:
     title: Eigenvectors
     track: linear-algebra
     summary: The directions a transformation only stretches.
-    prereqs: [vectors-matrices]
+    prereqs: [vectors-matrices, matrix-multiplication]
     visualisers: [eigenvectors]
     lesson: eigenvectors
-    later: [matrix-multiplication] # B2
   - id: symmetric-matrices-spectral
     title: Symmetric matrices and quadratic forms
     track: linear-algebra
@@ -756,10 +758,9 @@ concepts:
     title: Clustering with k-means
     track: ml
     summary: Find groups in unlabelled data by alternating between assigning points and moving centres.
-    prereqs: [vectors-matrices]
+    prereqs: [vectors-matrices, norms-distances]
     visualisers: [k-means]
     lesson: k-means
-    later: [norms-distances] # B2
   - id: pca
     title: Principal component analysis
     track: ml
@@ -1103,77 +1104,78 @@ concepts:
     visualisers: [raft]
     lesson: consensus
 
-  # ── Python (the language tracks: topics arrive from L2) ──────
-  # The units of the language tracks' proposal (§1a), planned until each
-  # topic is written. DS&A concepts don't depend on them: a learner coming
-  # from another language mustn't be sent through Python first.
+  # ── Python (the language tracks) ─────────────────────────────
+  # The units of the language tracks' proposal (§1a, src/content/units.ts),
+  # planned until each topic is written (L2's batch 1 wrote units 1 and 2).
+  # DS&A concepts don't depend on them: a learner coming from another
+  # language mustn't be sent through Python first.
   # Basics
   - id: py-first-program
     title: Your first program
     track: python
     summary: print, comments, and how Python runs a program from top to bottom.
-    planned: true
+    lesson: py-first-program
   - id: py-variables
     title: Variables
     track: python
     summary: Names that point at values, and what = really does.
     prereqs: [py-first-program]
-    planned: true
+    lesson: py-variables
   - id: py-numbers
     title: Numbers
     track: python
     summary: Whole numbers and floats, //, % and **, and why 0.1 + 0.2 is not quite 0.3.
     prereqs: [py-variables]
-    planned: true
+    lesson: py-numbers
   - id: py-strings-intro
     title: Strings
     track: python
     summary: Text in quotes, joining it, f-strings, len and indexing.
     prereqs: [py-variables]
-    planned: true
+    lesson: py-strings-intro
   - id: py-input
     title: Reading input
     track: python
     summary: input() and turning the text it gives into numbers, and what happens when that fails.
     prereqs: [py-strings-intro, py-numbers]
-    planned: true
+    lesson: py-input
   - id: py-booleans
     title: True and False
     track: python
     summary: Comparisons, and, or, not, and which values count as true.
     prereqs: [py-numbers]
-    planned: true
+    lesson: py-booleans
   # Control flow
   - id: py-if
     title: if, elif and else
     track: python
     summary: Running code only when a condition holds.
     prereqs: [py-booleans]
-    planned: true
+    lesson: py-if
   - id: py-while
     title: while loops
     track: python
     summary: Repeating while a condition holds, and making sure it stops.
     prereqs: [py-if]
-    planned: true
+    lesson: py-while
   - id: py-for-range
     title: for loops and range
     track: python
     summary: Counting with range and walking through a sequence.
     prereqs: [py-while]
-    planned: true
+    lesson: py-for-range
   - id: py-break-continue
     title: break and continue
     track: python
     summary: Leaving a loop early, skipping a turn, and the loop else.
     prereqs: [py-for-range]
-    planned: true
+    lesson: py-break-continue
   - id: py-nested-loops
     title: Loops inside loops
     track: python
     summary: A loop for every turn of another, and how the work multiplies.
     prereqs: [py-for-range]
-    planned: true
+    lesson: py-nested-loops
   # Functions
   - id: py-functions
     title: Functions

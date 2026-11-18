@@ -6,8 +6,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { Rating } from 'ts-fsrs';
 import { parseEvent, type EventData, type EventKind, type ProgressEvent } from './events';
-import { exerciseProgress, inOrder, lessonProgress, problemProgress } from './projections';
-import { dueToday, intervals, nextDue, problemCard, quizCard, reviewCards } from './review';
+import { exerciseProgress, inOrder, lessonProgress, problemProgress, taskProgress } from './projections';
+import { dueToday, intervals, nextDue, problemCard, quizCard, reviewCards, taskCard } from './review';
 
 let clock = Date.parse('2026-10-16T09:00:00Z');
 function ev<K extends EventKind>(kind: K, data: EventData<K>, at?: string): ProgressEvent {
@@ -117,6 +117,24 @@ describe('review cards', () => {
     expect(next[Rating.Good]).toBeLessThan(next[Rating.Easy]);
   });
 
+  it('an output task makes a "what does this print?" card on its first check; other task kinds make none', () => {
+    const checked = (task: string, kind: EventData<'task.checked'>['kind'], passed: boolean, at: string) =>
+      ev('task.checked', { task, kind, language: 'python', passed, tests: 1, failed: passed ? 0 : 1 }, at);
+    const cards = reviewCards([
+      checked('py-print-order', 'output', false, day(0)),
+      checked('py-print-order', 'output', true, day(0, 10)), // only the first check counts
+      checked('py-doubling', 'output', true, day(0)),
+      checked('py-hello-world', 'program', true, day(0)),
+    ]);
+    expect([...cards.keys()].sort()).toEqual([taskCard('py-doubling'), taskCard('py-print-order')]);
+    expect(cards.get(taskCard('py-print-order'))!.kind).toBe('task');
+    // Wrong at first: back tomorrow. Right: a few days.
+    expect(cards.get(taskCard('py-print-order'))!.card.due.toISOString()).toBe(day(1));
+    expect(cards.get(taskCard('py-doubling'))!.card.due.toISOString()).toBe(day(3));
+    const reviewed = reviewCards([checked('py-doubling', 'output', true, day(0)), ev('review.rated', { card: taskCard('py-doubling'), rating: Rating.Good }, day(3))]);
+    expect(reviewed.get(taskCard('py-doubling'))!.reviews).toBe(1);
+  });
+
   it('is the same schedule however the events arrive, once in order', () => {
     const events = [
       ev('problem.submitted', { problem: 'two-sum', language: 'python', passed: true, tests: 5, failed: 0 }, day(0)),
@@ -126,6 +144,19 @@ describe('review cards', () => {
     const a = reviewCards(inOrder(events)).get('problem:two-sum')!;
     const b = reviewCards(inOrder([...events].reverse())).get('problem:two-sum')!;
     expect(b.card).toEqual(a.card);
+  });
+});
+
+describe('task progress', () => {
+  it('records when each task first passed, and the failed checks before', () => {
+    const p = taskProgress([
+      ev('task.checked', { task: 'a', kind: 'program', language: 'python', passed: false, tests: 3, failed: 2 }, day(0)),
+      ev('task.checked', { task: 'a', kind: 'program', language: 'python', passed: true, tests: 3, failed: 0 }, day(1)),
+      ev('task.checked', { task: 'a', kind: 'program', language: 'python', passed: false, tests: 3, failed: 1 }, day(2)),
+      ev('task.checked', { task: 'b', kind: 'choice', passed: false, tests: 1, failed: 1 }, day(0)),
+    ]);
+    expect(p.a).toEqual({ passed: day(1), checks: 3, failedFirst: 1 });
+    expect(p.b).toEqual({ checks: 1, failedFirst: 1 });
   });
 });
 
