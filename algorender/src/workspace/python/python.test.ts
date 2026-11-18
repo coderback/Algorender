@@ -3,7 +3,7 @@
 
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { CONTRACT, drawnSteps, entryFor, expectedSteps, fileStem, filesFor, stepProblems } from '../contract';
+import { CONTRACT, drawnSteps, entryFor, expectedSteps, expectedTests, fileStem, filesFor, stepProblems, testsFor } from '../contract';
 import {
   type Arg,
   DEFAULT_LIMITS,
@@ -30,7 +30,7 @@ let runRequest: (json: string) => string;
 
 beforeAll(async () => {
   // Loaded once for the whole file: Pyodide takes a few seconds and a few hundred MB.
-  pyodide = await loadPyodide();
+  pyodide = await loadPyodide({ env: { PYTHONHASHSEED: '0' } }); // as public/workers/python.js
   pyodide.runPython(HARNESS);
   runRequest = pyodide.globals.get('run_request');
 }, 120_000);
@@ -42,7 +42,7 @@ function run(
   limits: Partial<Limits> = {},
   mode?: RunMode,
   calls?: MethodCall[],
-  program: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed'> = {},
+  program: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed' | 'tests' | 'clock'> = {},
 ): RunResult {
   const request = { language: 'python' as const, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls, ...program };
   return JSON.parse(runRequest(JSON.stringify(request)));
@@ -56,7 +56,7 @@ const only = <K extends RunEvent['kind']>(r: RunResult, kind: K) =>
 describe('contract', () => {
   for (const c of CONTRACT.filter((c) => c.code.python)) {
     it(c.name, () => {
-      const r = run(c.code.python!, entryFor(c, 'python'), c.args, c.limits, c.mode, c.calls, { stdin: c.stdin, moreInput: c.moreInput, files: filesFor(c, 'python') });
+      const r = run(c.code.python!, entryFor(c, 'python'), c.args, c.limits, c.mode, c.calls, { stdin: c.stdin, moreInput: c.moreInput, files: filesFor(c, 'python'), tests: testsFor(c, 'python'), seed: c.seed, clock: c.clock });
       const want = c.expect;
       if (want.events) expect(r.events).toEqual(want.events);
       else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
@@ -71,10 +71,11 @@ describe('contract', () => {
       if (want.grids) expect(r.grids).toEqual(want.grids);
       if ('returned' in want) expect(r.returned).toEqual(want.returned);
       if (want.args) expect(r.args).toEqual(want.args);
-      for (const key of ['stdout', 'stderr', 'exitCode', 'reads', 'waiting'] as const) {
+      for (const key of ['stdout', 'stderr', 'exitCode', 'reads', 'prompts', 'waiting'] as const) {
         if (key in want) expect(r[key]).toEqual(want[key]);
       }
-      if (c.stdin === undefined) expect(r).not.toHaveProperty('stdout');
+      if (c.stdin === undefined && c.mode !== 'program') expect(r).not.toHaveProperty('stdout');
+        if (want.tests) expect(r.tests).toEqual(expectedTests(c, 'python'));
       if (want.error) {
         expect(r.error?.kind).toBe(want.error.kind);
         if (want.error.file) expect(fileStem(r.error?.file)).toBe(want.error.file);
@@ -835,5 +836,54 @@ describe('programs', () => {
   it('names a file in a folder by its path, on an error inside it', () => {
     const r = program(`from geo.shapes import area\narea()\n`, { files: { 'geo/shapes.py': 'def area():\n    return 1 / 0\n' } });
     expect(r.error).toMatchObject({ kind: 'runtime', line: 2, file: 'geo/shapes.py', message: 'ZeroDivisionError: division by zero' });
+  });
+});
+
+describe("'program' mode", () => {
+  const program = (code: string, extra: Pick<RunRequest, 'stdin' | 'files' | 'seed' | 'tests' | 'clock'> = {}, limits: Partial<Limits> = {}) =>
+    run(code, '', [], limits, 'program', undefined, extra);
+
+  it('moves the clock only when the program sleeps, and puts time back afterwards', () => {
+    const r = program(`import time\na = time.time()\ntime.sleep(2.5)\nprint(time.time() - a, time.monotonic())\n`, { clock: 1_000_000 });
+    expect(r.stdout).toBe('2.5 2.5\n');
+    expect(pyodide.runPython('import time\ntime.time() > 1e9')).toBe(true);
+  });
+
+  it('shows datetimes as the real class does, and gives datetime back afterwards', () => {
+    const r = program(`from datetime import datetime, date\nprint(repr(datetime(2020, 1, 2)), repr(date.today()))\n`, { clock: Date.UTC(2024, 4, 6) });
+    expect(r.stdout).toBe('datetime.datetime(2020, 1, 2, 0, 0) datetime.date(2024, 5, 6)\n');
+    expect(pyodide.runPython('import datetime\ndatetime.datetime.__module__ + type(datetime.datetime.now()).__name__')).toBe('datetimedatetime');
+  });
+
+  it('runs with a fixed string hash seed, so a set keeps its order across workers', () => {
+    expect(pyodide.runPython('import sys\nsys.flags.hash_randomization')).toBe(0);
+  });
+
+  it("names a learner's own function test_x only when the tests define it", () => {
+    const r = program(`def test_mine():\n    raise ValueError()\n`, { tests: `def test_theirs():\n    assert 1 + 1 == 2\n` });
+    expect(r.tests).toEqual([{ name: 'test_theirs', passed: true }]);
+  });
+
+  it('says what each side of a failed comparison was, and what a failed truth test was', () => {
+    const r = program(`nums = [1, 2]\n`, { tests: `def test_in():\n    assert 3 in nums\n\n\ndef test_true():\n    assert len(nums) > 5\n\n\ndef test_plain():\n    assert nums == []\n\n\ndef test_bool():\n    assert not nums\n` });
+    expect(r.tests?.map((t) => t.message)).toEqual([
+      'Expected 3 in nums, but nums is [1, 2]',
+      'Expected len(nums) > 5, but len(nums) is 2',
+      'Expected nums == [], but nums is [1, 2]',
+      'Expected not nums to be true, but it is False',
+    ]);
+  });
+
+  it('fails raises() when nothing is raised, and lets another error fail the test with its own message', () => {
+    const r = program(`def f(x):\n    return int(x)\n`, { tests: `def test_none():\n    with raises(ValueError):\n        f('1')\n\n\ndef test_other():\n    with raises(KeyError):\n        f('x')\n` });
+    expect(r.tests).toEqual([
+      { name: 'test_none', passed: false, message: 'Expected ValueError to be raised, but nothing was', line: null },
+      { name: 'test_other', passed: false, message: "ValueError: invalid literal for int() with base 10: 'x'", line: 2 },
+    ]);
+  });
+
+  it('writes what the tests print to stdout', () => {
+    const r = program(`def hi():\n    print("hi")\n`, { tests: `def test_hi():\n    hi()\n` });
+    expect(r.stdout).toBe('hi\n');
   });
 });

@@ -9,7 +9,7 @@ import { z } from 'zod';
 const id = z.string().regex(/^[a-z0-9-]+$/, 'ids are lowercase-kebab-case');
 
 /** The broad areas of the map (src/progress/mastery.ts's AREAS): each track belongs to one. */
-export const AREA_IDS = ['dsa', 'math', 'ml', 'systems'] as const;
+export const AREA_IDS = ['dsa', 'math', 'ml', 'systems', 'languages'] as const;
 
 const TrackSchema = z.object({
   id,

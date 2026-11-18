@@ -1,0 +1,38 @@
+{
+  "py-greet-by-name": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "What's your name? Hello, Ada!\n",
+          "prompts": [
+            [
+              0,
+              18
+            ]
+          ],
+          "exitCode": 0
+        },
+        {
+          "stdout": "What's your name? Hello, Grace Hopper!\n",
+          "prompts": [
+            [
+              0,
+              18
+            ]
+          ],
+          "exitCode": 0
+        },
+        {
+          "stdout": "What's your name? Hello, Linus!\n",
+          "prompts": [
+            [
+              0,
+              18
+            ]
+          ],
+          "exitCode": 0
+        }
+      ]
+    }
+  }
+}

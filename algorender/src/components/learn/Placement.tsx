@@ -21,6 +21,7 @@ const AREA_HINT: Record<AreaId, string> = {
   math: 'Vectors, gradients, probability',
   ml: 'Regression to transformers',
   systems: 'Scheduling, storage, consensus',
+  languages: 'Python from zero',
 };
 
 const STEPS = ['Areas', 'Questions', 'Where to start'] as const;
@@ -81,6 +82,8 @@ export function Placement({
   const seed = useRef(0);
   const available = useMemo(() => new Set(Object.keys(questions)), [questions]);
   const titleOf = useMemo(() => new Map(graph.concepts.map((c) => [c.id, c.title])), [graph]);
+  // Only areas with something to ask about: the language tracks have no questions until their topics arrive.
+  const offered = useMemo(() => AREAS.filter((a) => graph.concepts.some((c) => available.has(c.id) && areaOf(c.track) === a.id)), [graph, available]);
 
   const ask = (given: PlacementAnswer[]) => {
     const concept = nextConcept(graph, available, given, areas);
@@ -118,7 +121,7 @@ export function Placement({
         <fieldset className="flex flex-col gap-4">
           <legend className="mb-4 font-display text-title-section">First: what do you want to learn?</legend>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {AREAS.map((a) => {
+            {offered.map((a) => {
               const on = areas.includes(a.id);
               return (
                 <label

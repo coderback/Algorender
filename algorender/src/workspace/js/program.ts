@@ -18,7 +18,7 @@
 // instrumented. Each carries a sourceURL, so an error's stack names its file.
 
 import { EOF_MESSAGE, FILE_PATH, MAX_FILE_CHARS, MAX_FILES, MAX_OUTPUT, OUTPUT_CUT, type RunError, type RunRequest } from '../protocol';
-import { LearnerSyntaxError, prepare, type SourceLanguage } from './instrument';
+import { instrument, LearnerSyntaxError, prepare, type SourceLanguage } from './instrument';
 import { ProgramSignal } from './signals';
 
 /** One output stream, kept to MAX_OUTPUT characters. */
@@ -59,14 +59,14 @@ class Interface {
     return this.on(event, once);
   }
   question(query: unknown, callback: Listener) {
-    this.program.write('stdout', String(query));
+    this.program.prompt(String(query));
     this.questions.push(callback);
   }
   setPrompt(text: unknown) {
     this.promptText = String(text);
   }
   prompt() {
-    this.program.write('stdout', this.promptText);
+    this.program.prompt(this.promptText);
   }
   close() {
     if (this.closed) return;
@@ -105,8 +105,18 @@ export class Program {
     this.more = request.moreInput === true;
   }
 
+  /** Where each prompt sits in stdout, [start, end) in UTF-16 units. */
+  readonly prompts: [number, number][] = [];
+
   write(stream: 'stdout' | 'stderr', text: string) {
     if (!this.exited) this[stream].write(text);
+  }
+
+  /** Writes a prompt (input's, or readline's), remembering where it is. */
+  prompt(text: string) {
+    const start = this.stdout.text.length;
+    this.write('stdout', text);
+    if (this.stdout.text.length > start) this.prompts.push([start, this.stdout.text.length]);
   }
 
   /** The next line, newline and all, or null at the end of input; with moreInput the end stops the run. */
@@ -123,7 +133,7 @@ export class Program {
   }
 
   readonly input = (prompt?: unknown): string => {
-    if (prompt !== undefined) this.write('stdout', String(prompt));
+    if (prompt !== undefined) this.prompt(String(prompt));
     const line = this.line();
     if (line === null) {
       const error = new Error(EOF_MESSAGE.replace(/^EOFError: /, ''));
@@ -192,6 +202,7 @@ export class Program {
       stderr: this.stderr.text,
       exitCode,
       reads: this.reads,
+      prompts: this.prompts,
       waiting,
     };
   }
@@ -255,6 +266,12 @@ export class Modules {
     private readonly files: Record<string, string>,
     private readonly globals: ModuleGlobals,
     private readonly builtins: Record<string, unknown>,
+    /**
+     * Each file's `__viz`, when its lines are counted: the file is then
+     * instrumented (only its step counting is used; runtime.ts's ModuleViz)
+     * rather than run as written ('judge' mode, for speed).
+     */
+    private readonly viz?: (path: string) => unknown,
   ) {}
 
   /** The global names a module's code sees, in order. */
@@ -306,13 +323,14 @@ export class Modules {
     const language: SourceLanguage = path.endsWith('.ts') ? 'typescript' : 'javascript';
     let code: string;
     try {
-      code = prepare(text, language, { modules: true });
+      code = this.viz ? instrument(text, language, { modules: true }).code : prepare(text, language, { modules: true });
     } catch (e) {
       if (e instanceof LearnerSyntaxError) throw new FileSyntaxError(e.message, path, e.line);
       throw e;
     }
-    const fn = new Function(...MODULE_PARAMS, ...this.names, `${code}\n//# sourceURL=${path}`) as (...args: unknown[]) => void;
-    fn(module.exports, this.requireFrom(path), module, `/${path}`, `/${folderOf(path)}`, ...Object.values(this.globals));
+    const viz = this.viz ? [this.viz(path)] : [];
+    const fn = new Function(...MODULE_PARAMS, ...(this.viz ? ['__viz'] : []), ...this.names, `${code}\n//# sourceURL=${path}`) as (...args: unknown[]) => void;
+    fn(module.exports, this.requireFrom(path), module, `/${path}`, `/${folderOf(path)}`, ...viz, ...Object.values(this.globals));
   }
 }
 
@@ -393,4 +411,26 @@ export function seededMath(seed: number): Math {
     },
   });
   return math;
+}
+
+/**
+ * A request's clock (protocol.ts): Date and performance for the run, reading
+ * a time that stands still (JS has no sleep to move it), so a replay or a
+ * check sees the same time every run.
+ */
+export function clocked(clock: number): { Date: DateConstructor; performance: { now(): number } } {
+  const Real = Date;
+  class ClockDate extends Real {
+    constructor(...args: unknown[]) {
+      if (args.length === 0) super(clock);
+      else super(...(args as [number]));
+    }
+    static now() {
+      return clock;
+    }
+  }
+  Object.defineProperty(ClockDate, 'name', { value: 'Date' });
+  // Date() without new is today's date as text.
+  const date = new Proxy(ClockDate, { apply: () => new Real(clock).toString() }) as unknown as DateConstructor;
+  return { Date: date, performance: { now: () => 0 } };
 }

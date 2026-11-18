@@ -25,9 +25,15 @@
 // Arguments are plain values, printing is capped, an error's line comes from
 // the stack trace, and the result carries every argument's final value.
 //
-// A program (a request with stdin, files or a seed; program.ts) gets more
-// globals after the helpers: require, module, exports, input, process and a
-// seeded Math. Without them the factory is exactly as it always was.
+// A program (a request with stdin, files, a seed or a clock; program.ts) gets
+// more globals after the helpers: require, module, exports, input, process, a
+// seeded Math, and Date and performance (clocked when asked). Without them the
+// factory is exactly as it always was. Other files are instrumented too, but
+// their __viz (moduleViz) only counts their lines toward the step limit.
+//
+// 'program' mode is 'judge' mode instrumented: plain arguments and helpers,
+// lines counted, no events at all, and, with tests, runTests: the test file
+// sees the top level's names (topLevelNames) and a small expect (expect.ts).
 
 import type { VarValue } from '@/engine/types';
 import {
@@ -38,6 +44,7 @@ import {
   MAX_OBJECTS,
   MAX_PRINT_CHARS,
   MAX_PRINTS,
+  MAX_TESTS,
   type Arg,
   type CompareOp,
   type GridCell,
@@ -53,9 +60,11 @@ import {
   type RunRequest,
   type RunResult,
   type StackFrame,
+  type TestResult,
 } from '../protocol';
-import { instrument, LearnerSyntaxError, prepare } from './instrument';
-import { FileSyntaxError, filesProblem, fsFor, moduleFrame, Modules, Program, seededMath } from './program';
+import { Expectation, makeExpect } from './expect';
+import { instrument, LearnerSyntaxError, prepare, topLevelNames } from './instrument';
+import { clocked, FileSyntaxError, filesProblem, fsFor, moduleFrame, Modules, Program, seededMath } from './program';
 import { ProgramSignal, STOP, StopSignal } from './signals';
 
 /** Lists longer than this show their first items, then the length (as the Python runtime does). */
@@ -270,8 +279,10 @@ class Run {
   private readonly limits: Limits;
   /** 'lines' mode: memory at every step. */
   private readonly lines: boolean;
-  /** 'judge' mode: plain arguments and helpers, capped printing, no events but prints. */
+  /** 'judge' and 'program' modes: plain arguments and helpers; 'judge' keeps capped prints and no other events. */
   readonly judging: boolean;
+  /** 'program' mode: lines are counted and nothing is recorded, not even prints (the streams have them). */
+  readonly counting: boolean;
   /** 'judge' mode: lines printed so far. */
   private printed = 0;
   /** 'lines' mode: the Global frame, then the calls in progress. */
@@ -285,7 +296,46 @@ class Run {
   constructor(limits: Limits, mode: RunMode = 'visual') {
     this.limits = limits;
     this.lines = mode === 'lines';
-    this.judging = mode === 'judge';
+    this.judging = mode === 'judge' || mode === 'program';
+    this.counting = mode === 'program';
+  }
+
+  /** Each of the learner's other files' latest line, by path, for an error raised there (moduleViz). */
+  readonly moduleLines = new Map<string, number>();
+
+  /**
+   * The `__viz` of one of the learner's other files: instrumented like the
+   * main file, but only its lines are used, to count steps toward the same
+   * limit; nothing in it is recorded or drawn. Its line is kept per file and
+   * restored when a call returns, as the main file's is, so an error raised
+   * there says where.
+   */
+  moduleViz(file: string) {
+    const saved: number[] = [];
+    const at = (n: number) => this.moduleLines.set(file, n);
+    return {
+      line: (n: number) => {
+        if (this.stopped || this.done) throw STOP;
+        at(n);
+        if (++this.steps > this.limits.maxSteps) {
+          this.stopped = { kind: 'limit', message: `Stopped after ${withCommas(this.limits.maxSteps)} steps: is there a loop that never ends?`, line: n, file };
+          throw STOP;
+        }
+      },
+      cell: (obj: unknown, key: unknown) => (obj as Record<PropertyKey, unknown>)[key as PropertyKey],
+      cmp: (op: string, a: unknown, b: unknown) => evaluate(op, a, b),
+      named: (_name: string, fn: unknown) => fn,
+      enter: () => saved.push(this.moduleLines.get(file) ?? 0),
+      leave: (depth: number, value?: unknown) => {
+        if (depth >= 1 && depth <= saved.length) {
+          at(saved[depth - 1]);
+          saved.length = depth - 1;
+        }
+        return value;
+      },
+      rethrow: this.viz.rethrow,
+      iter: (_n: number, iterable: unknown) => iterable,
+    };
   }
 
   /** The `__viz` object the instrumented code calls. */
@@ -607,7 +657,9 @@ class Run {
 
   private printTo(stream: 'stdout' | 'stderr', args: unknown[]) {
     const text = args.map((a) => this.show(a)).join(' ');
-    if (!this.judging) {
+    if (this.counting) {
+      // Nothing to record: the streams have it all.
+    } else if (!this.judging) {
       this.emit({ kind: 'print', text, ...this.at() });
     } else if (this.printed <= MAX_PRINTS) {
       // A judged run can print a lot (a loop over a big test): keep the start.
@@ -1276,17 +1328,22 @@ function execute(request: RunRequest): RunResult {
     return failed('internal', `The JavaScript runner can't run ${language}.`);
   }
   const mode = request.mode ?? 'visual';
-  // A program reads stdin and writes raw streams; other files and a seed need the same extra globals.
-  const io = request.stdin !== undefined ? new Program(request) : null;
+  const counting = mode === 'program';
+  // A program reads stdin and writes raw streams ('program' mode always does);
+  // other files, a seed and a clock need the same extra globals.
+  const io = request.stdin !== undefined || counting ? new Program(request) : null;
   const files = request.files && Object.keys(request.files).length > 0 ? request.files : null;
-  const extras = io !== null || files !== null || request.seed !== undefined;
+  const extras = io !== null || files !== null || request.seed !== undefined || request.clock !== undefined;
+  const tests = counting && request.tests !== undefined ? request.tests : null;
   const ended = (result: RunResult): RunResult => (io ? withProgram(result, io) : result);
   const problem = filesProblem(request.files);
   if (problem) return ended(failed(problem.kind, problem.message, problem.line));
   let code: string;
+  let names: string[] = [];
   try {
     const modules = files !== null;
     code = mode === 'judge' ? prepare(request.code, language, { modules }) : instrument(request.code, language, { lines: mode === 'lines', modules }).code;
+    if (tests !== null) names = topLevelNames(request.code, language, { modules });
   } catch (e) {
     if (e instanceof LearnerSyntaxError) return ended(failed('syntax', e.message, e.line));
     throw e;
@@ -1294,7 +1351,9 @@ function execute(request: RunRequest): RunResult {
   // The entry name is pasted into the code below, so it must be a plain name;
   // none at all runs only the top level.
   if (entry !== '' && !IDENTIFIER.test(entry)) return failed('internal', `“${entry}” isn't a valid function name.`);
-  const lookup = entry === '' ? 'return undefined;' : `return typeof ${entry} === "function" ? ${entry} : undefined;`;
+  let lookup = entry === '' ? 'return undefined;' : `return typeof ${entry} === "function" ? ${entry} : undefined;`;
+  // Unit tests see the top level's names, read once it has finished.
+  if (tests !== null) lookup = `return { entry: ${entry === '' ? 'undefined' : `typeof ${entry} === "function" ? ${entry} : undefined`}, scope: { ${names.join(', ')} } };`;
 
   const run = new Run(request.limits, mode);
   run.program = io;
@@ -1304,26 +1363,43 @@ function execute(request: RunRequest): RunResult {
   const { table, array, TreeNode, ListNode } = run.helpers;
   const helpers = [run.viz, run.console, table, array, TreeNode, ListNode];
   let program: () => unknown;
+  let globals: Record<string, unknown> = {};
   if (!extras) {
     program = new Function(...FACTORY_PARAMS, wrap(code, lookup))(...helpers) as () => unknown;
   } else {
-    const globals = { console: run.console, input: io ? io.input : noInput, process: io?.process, Math: request.seed === undefined ? Math : seededMath(request.seed), TreeNode, ListNode };
+    const time = request.clock === undefined ? { Date, performance } : clocked(request.clock);
+    globals = {
+      console: run.console,
+      input: io ? io.input : noInput,
+      process: io?.process,
+      Math: request.seed === undefined ? Math : seededMath(request.seed),
+      Date: time.Date,
+      performance: time.performance,
+      TreeNode,
+      ListNode,
+    };
     const builtins: Record<string, unknown> = {};
-    const modules = new Modules(files ?? {}, globals, builtins);
+    // Other files count their lines, except in 'judge' mode, which runs everything as written.
+    const modules = new Modules(files ?? {}, globals, builtins, mode === 'judge' ? undefined : (path) => run.moduleViz(path));
     builtins.fs = fsFor(io, modules);
     if (io) builtins.readline = io.readline;
     const main = { exports: {} };
-    const extra = [modules.requireFrom(''), main, main.exports, globals.input, globals.process, globals.Math];
+    const require = modules.requireFrom('');
+    const extra = [require, main, main.exports, globals.input, globals.process, globals.Math, globals.Date, globals.performance];
     program = new Function(...FACTORY_PARAMS, ...PROGRAM_PARAMS, wrap(code, lookup))(...helpers, ...extra) as () => unknown;
+    // The tests get require too (modules have their own).
+    globals = { ...globals, require };
   }
 
   let returned: unknown = undefined;
   let args: unknown[] = [];
   let calls: Json[] | null = null;
   let error: RunError | null = null;
+  const outcomes: TestResult[] = [];
   const started = performance.now();
   try {
-    const fn = run.topLevel(program);
+    const top = run.topLevel(program);
+    const fn = tests !== null ? (top as { entry: unknown }).entry : top;
     // readline's events, once the top level is done, as Node's event loop would.
     io?.drain();
     if (entry === '') {
@@ -1337,6 +1413,9 @@ function execute(request: RunRequest): RunResult {
       args = request.args.map((a) => run.arg(a));
       returned = (fn as (...args: unknown[]) => unknown)(...args);
     }
+    if (tests !== null && error === null) {
+      runTests(run, tests, language, (top as { scope: Record<string, unknown> }).scope, globals, outcomes);
+    }
   } catch (e) {
     if (e instanceof ProgramSignal) {
       // process.exit or waiting for input: the program's fields say which.
@@ -1347,8 +1426,9 @@ function execute(request: RunRequest): RunResult {
     } else {
       const inFile = files ? moduleFrame(e, files) : null;
       error = inFile
-        ? { kind: 'runtime', message: errorMessage(e, run), ...inFile }
-        : { kind: 'runtime', message: errorMessage(e, run), line: run.judging ? stackLine(e) : run.errorLine };
+        ? // An instrumented file's lines are its markers' (the stack's are the rewritten code's).
+          { kind: 'runtime', message: errorMessage(e, run), file: inFile.file, line: run.moduleLines.get(inFile.file) ?? inFile.line }
+        : { kind: 'runtime', message: errorMessage(e, run), line: run.judging && !run.counting ? stackLine(e) : run.errorLine };
     }
   }
   const ms = performance.now() - started;
@@ -1376,7 +1456,69 @@ function execute(request: RunRequest): RunResult {
   for (const [id, data] of run.arrays) arrays[id] = [...data];
   const grids: Record<string, (number | null)[][]> = {};
   for (const [id, data] of run.grids) grids[id] = data.map((row) => [...row]);
-  return ended({ events: run.events, arrays, grids, returned: json, error, ms, ...(run.judging && { args: error ? [] : args.map(toJson) }) });
+  return ended({
+    events: run.events,
+    arrays,
+    grids,
+    returned: json,
+    error,
+    ms,
+    ...(run.judging && { args: error ? [] : args.map(toJson) }),
+    ...(tests !== null && { tests: outcomes }),
+  });
+}
+
+/** The tests' file name in stack traces, so an error raised in the tests themselves has no learner line. */
+const TESTS_FILE = '__tests__.js';
+
+/** The names the tests get besides the learner's, which win over a learner name of their own. */
+const TEST_NAMES = ['test', 'it', 'describe', 'expect'];
+
+/**
+ * 'program' mode's unit tests: runs the test file (test(name, fn) registers a
+ * test; describe just runs its body), then every test in order, each with
+ * its outcome. A limit or an exit ends the run there.
+ */
+function runTests(run: Run, source: string, language: 'javascript' | 'typescript', scope: Record<string, unknown>, globals: Record<string, unknown>, out: TestResult[]) {
+  let code: string;
+  try {
+    code = prepare(source, language);
+  } catch (e) {
+    throw new Error(`The tests themselves don’t parse: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const registered: { name: string; fn: unknown }[] = [];
+  const test = (name: unknown, fn: unknown) => void registered.push({ name: String(name), fn });
+  const describe = (_name: unknown, fn: unknown) => void (typeof fn === 'function' && fn());
+  // The learner's names win over the globals they shadow, as in their own code.
+  const given = { ...globals, ...Object.fromEntries(Object.entries(scope).filter(([name]) => !TEST_NAMES.includes(name))) };
+  const names = [...TEST_NAMES, ...Object.keys(given)];
+  const file = new Function(...names, `${code}\n//# sourceURL=${TESTS_FILE}`) as (...args: unknown[]) => void;
+  file(test, test, describe, makeExpect((v) => run.show(v, true)), ...Object.values(given));
+  for (const { name, fn } of registered.slice(0, MAX_TESTS)) {
+    try {
+      if (typeof fn !== 'function') throw new TypeError(`test "${name}" has no function to run`);
+      const value: unknown = fn();
+      if (value instanceof Promise) {
+        value.catch(() => {});
+        throw new Error('Async tests aren’t supported here: write the test without async.');
+      }
+      out.push({ name, passed: true });
+    } catch (e) {
+      if (e instanceof StopSignal) throw e; // a limit, or the program exiting
+      if (e instanceof Expectation) out.push({ name, passed: false, message: e.message, line: null });
+      else out.push({ name, passed: false, message: errorMessage(e, run), line: fromTests(e) ? null : run.errorLine });
+    }
+  }
+}
+
+/** Whether an error was raised in the tests' own code rather than the learner's. */
+function fromTests(e: unknown): boolean {
+  const stack = typeof e === 'object' && e !== null && 'stack' in e ? String(e.stack) : '';
+  for (const frame of stack.split('\n').slice(1)) {
+    if (frame.includes(TESTS_FILE)) return true;
+    if (/(?:<anonymous>|> Function):\d+/.test(frame)) return false;
+  }
+  return false;
 }
 
 /** A result with a program's output; a waiting program ended at its read, not in error. */
@@ -1391,7 +1533,7 @@ function noInput(): never {
 }
 
 /** A program's extra globals, after the helpers. Modules get the same ones (program.ts). */
-const PROGRAM_PARAMS = ['require', 'module', 'exports', 'input', 'process', 'Math'];
+const PROGRAM_PARAMS = ['require', 'module', 'exports', 'input', 'process', 'Math', 'Date', 'performance'];
 
 /**
  * A design problem: constructs the class with the first call's arguments, then

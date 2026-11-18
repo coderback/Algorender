@@ -36,9 +36,14 @@
 //   line, print() writes the raw stream too, and SystemExit sets the exit
 //   code. Its other files are written to a fresh folder in Pyodide's file
 //   system (_Files), imported from there as ordinary modules (so they run
-//   as written, untraced), and removed with their modules when it ends.
+//   as written; the tracer only counts their lines), and removed with their
+//   modules when it ends. A clock (_Clock) stands in for time and datetime.
+// - 'program' mode is _judge's run with a light tracer (_Counter) that counts
+//   the lines of the learner's files, no print events, and, with tests,
+//   _run_tests: every test_* function, its asserts rewritten (_Asserts) so a
+//   failure says what each side was.
 
-import { FILE_PATH, MAX_FILE_CHARS, MAX_FILES, MAX_OUTPUT, OUTPUT_CUT } from '../protocol';
+import { FILE_PATH, MAX_FILE_CHARS, MAX_FILES, MAX_OUTPUT, MAX_TESTS, OUTPUT_CUT } from '../protocol';
 
 export const HARNESS = String.raw`
 import ast
@@ -82,6 +87,7 @@ MAX_OUTPUT = ${MAX_OUTPUT}
 OUTPUT_CUT = ${JSON.stringify(OUTPUT_CUT)}
 MAX_FILES = ${MAX_FILES}
 MAX_FILE_CHARS = ${MAX_FILE_CHARS}
+MAX_TESTS = ${MAX_TESTS}
 FILE_PATH = r'${FILE_PATH.source}'
 # The longest linked list returned as JSON.
 MAX_LIST = 1000000
@@ -105,9 +111,15 @@ _SKIP = object()
 
 class _Stop(BaseException):
     """Ends a run at a limit. A BaseException, so 'except Exception:' in the
-    learner's code can't swallow it. Its line, when set, is where to report it."""
+    learner's code can't swallow it. Its line, when set, is where to report
+    it, in its file when that is one of the learner's other files."""
 
     line = None
+    file = None
+
+
+# The harness's own timer: a program's clock (_Clock) replaces time's.
+_perf_counter = time.perf_counter
 
 
 # The run in progress; the instrumented code and VisualList report to it.
@@ -1359,10 +1371,11 @@ class _Run:
                 caller[key] = None
         self._bind_reads(caller)
 
-    def stop(self, message, line=None):
+    def stop(self, message, line=None, file=None):
         self.stopped = message
         stop = _Stop(message)
         stop.line = line
+        stop.file = file
         raise stop
 
     def limit_message(self):
@@ -1388,14 +1401,29 @@ class _Run:
 
     # sys.settrace: only the learner's frames get a line tracer. Their call and
     # return events (a generator's every resume and yield, and a return by
-    # exception too) keep the read logs in step with the frames.
+    # exception too) keep the read logs in step with the frames. Frames of the
+    # learner's other files only count their lines.
     def trace_calls(self, frame, event, arg):
-        if frame.f_code.co_filename == LEARNER:
+        name = frame.f_code.co_filename
+        if name == LEARNER:
             self.enter()
             if self.drawn(frame.f_code):
                 self.called(frame)
             return self.trace_lines
+        if self.files is not None and self.files.relative(name) is not None:
+            return self.count_lines
         return None
+
+    def count_lines(self, frame, event, arg):
+        if event == 'line':
+            self.steps += 1
+            if self.steps > self.max_steps:
+                self.stop(f'Stopped after {self.max_steps:,} steps: is there a loop that never ends?',
+                          frame.f_lineno, self.files.relative(frame.f_code.co_filename))
+        return self.count_lines
+
+    # Set by _run when the run has other files (_Files).
+    files = None
 
     def trace_lines(self, frame, event, arg):
         if event == 'line':
@@ -1442,12 +1470,17 @@ class _Run:
             if self.stopped is None:
                 if frame.f_code.co_code[frame.f_lasti] in _RETURNS:
                     self.step('return', frame, _SKIP if module else value)
-                elif error is not None and not isinstance(error, _Stop):
+                elif error is not None and not isinstance(error, _Stop) and not self.exiting(error):
                     self.step('exception', frame, message=_message(error))
         finally:
             if not module:
                 self.depth -= 1
                 self.order.pop(self.frame_ids.pop(key, None), None)
+
+    def exiting(self, error):
+        """A program's sys.exit: it ends the run, as process.exit does in
+        JS, rather than unwinding frame by frame as an error does."""
+        return isinstance(error, SystemExit) and self.program is not None
 
     def object_id(self, x):
         key = id(x)
@@ -1569,6 +1602,13 @@ def _error(kind, message, line, file=None):
     return error
 
 
+def _limit(e):
+    """The error a limit (_Stop) ended a run with: where it says, else the learner's innermost line."""
+    if e.line is not None:
+        return _error('limit', str(e), e.line, e.file)
+    return _error('limit', str(e), _error_line(e))
+
+
 def _failed(e, files):
     """The error that ended a run: a runtime error, or a syntax error in another file."""
     line, file = _where(e, files)
@@ -1606,7 +1646,9 @@ def _run(request):
     real_print = builtins.print
     real_input = builtins.input
     files = _Files(request['files']) if request.get('files') else None
+    run.files = files
     seeded = _Seeded(request.get('seed'))
+    clock = _Clock(request.get('clock'))
     _current = run
     builtins.print = run.print
     builtins.input = program.input if program else _no_input
@@ -1614,7 +1656,8 @@ def _run(request):
         program.install()
     if files:
         files.install()
-    started = time.perf_counter()
+    clock.install()
+    started = _perf_counter()
     try:
         sys.settrace(run.trace_calls)
         try:
@@ -1635,7 +1678,7 @@ def _run(request):
     except _Waiting:
         pass  # the program's fields say so
     except _Stop as e:
-        error = _error('limit', str(e), e.line if e.line is not None else _error_line(e))
+        error = _limit(e)
     except SystemExit as e:
         if program is None:
             error = _failed(e, files)
@@ -1651,8 +1694,9 @@ def _run(request):
         if files:
             files.restore()
         seeded.restore()
+        clock.restore()
         _current = None
-    ms = (time.perf_counter() - started) * 1000
+    ms = (_perf_counter() - started) * 1000
 
     if run.stopped is not None and (error is None or error['kind'] != 'limit'):
         # The learner's code caught the stop (a bare except); it still stopped.
@@ -1805,10 +1849,15 @@ class _Program:
         self.stdin = _In(request.get('stdin') or '', bool(request.get('moreInput')), self.stdout)
         self.exit_code = 0
         self.saved = None
+        # Where each prompt sits in stdout, [start, end) in UTF-16 units.
+        self.prompts = []
 
     def input(self, prompt=''):
         if prompt != '':
+            start = self.stdout.units
             sys.stdout.write(str(prompt))
+            if self.stdout.units > start:
+                self.prompts.append([start, self.stdout.units])
         line = self.stdin.line()
         if not line:
             raise EOFError('EOF when reading a line')
@@ -1859,6 +1908,7 @@ class _Program:
             'stderr': self.stderr.text(),
             'exitCode': exit_code,
             'reads': self.stdin.reads,
+            'prompts': self.prompts,
             'waiting': waiting,
         }
 
@@ -1950,16 +2000,103 @@ class _Seeded:
             self.state = None
 
 
+# time's functions a program's clock replaces while it runs.
+_TIME_NAMES = ('time', 'time_ns', 'sleep', 'monotonic', 'monotonic_ns', 'perf_counter',
+               'perf_counter_ns', 'localtime', 'gmtime', 'ctime', 'asctime', 'strftime')
+
+
+class _Clock:
+    """A request's clock (ms since 1970): time and datetime read it, and it
+    moves only when the program sleeps, so a replay sees the same time and a
+    sleep costs nothing. monotonic() and perf_counter() count from 0."""
+
+    def __init__(self, clock):
+        self.start = None if clock is None else clock / 1000
+        self.now = self.start
+        self.saved = None
+
+    def sleep(self, seconds):
+        if not isinstance(seconds, (int, float)) or isinstance(seconds, bool):
+            raise TypeError(f"'{type(seconds).__name__}' object cannot be interpreted as an integer")
+        if seconds < 0:
+            raise ValueError('sleep length must be non-negative')
+        self.now += seconds
+
+    def install(self):
+        if self.start is None:
+            return
+        import datetime as dt
+        real = {name: getattr(time, name) for name in _TIME_NAMES}
+        self.saved = (real, dt.datetime, dt.date)
+        clock = self
+        base_dt, base_date = dt.datetime, dt.date
+
+        def at(secs, convert):
+            return convert(clock.now if secs is None else secs)
+
+        time.time = lambda: clock.now
+        time.time_ns = lambda: int(round(clock.now * 1e9))
+        time.sleep = clock.sleep
+        time.monotonic = time.perf_counter = lambda: clock.now - clock.start
+        time.monotonic_ns = time.perf_counter_ns = lambda: int(round((clock.now - clock.start) * 1e9))
+        time.localtime = lambda secs=None: at(secs, real['localtime'])
+        time.gmtime = lambda secs=None: at(secs, real['gmtime'])
+        time.ctime = lambda secs=None: at(secs, real['ctime'])
+        time.asctime = lambda t=None: real['asctime'](real['localtime'](clock.now) if t is None else t)
+        time.strftime = lambda fmt, t=None: real['strftime'](fmt, real['localtime'](clock.now) if t is None else t)
+
+        # Subclasses whose now() and today() read the clock, named and shown as the real ones.
+        class datetime(base_dt):
+            @classmethod
+            def now(cls, tz=None):
+                return cls.fromtimestamp(clock.now, tz)
+
+            @classmethod
+            def today(cls):
+                return cls.fromtimestamp(clock.now)
+
+            @classmethod
+            def utcnow(cls):
+                return cls.fromtimestamp(clock.now, dt.timezone.utc).replace(tzinfo=None)
+
+            def __repr__(self):
+                text = base_dt.__repr__(self)
+                return text if text.startswith('datetime.') else 'datetime.' + text
+
+        class date(base_date):
+            @classmethod
+            def today(cls):
+                return cls.fromtimestamp(clock.now)
+
+            def __repr__(self):
+                text = base_date.__repr__(self)
+                return text if text.startswith('datetime.') else 'datetime.' + text
+
+        for cls in (datetime, date):
+            cls.__module__ = 'datetime'
+        dt.datetime, dt.date = datetime, date
+
+    def restore(self):
+        if self.saved is None:
+            return
+        import datetime as dt
+        real, dt.datetime, dt.date = self.saved
+        for name, fn in real.items():
+            setattr(time, name, fn)
+        self.saved = None
+
+
 # ---------------------------------------------------------------------------
 # 'judge' mode
 # ---------------------------------------------------------------------------
 
 class _Prints:
-    """What a judged run printed: the first MAX_PRINTS lines, then a note."""
+    """What a judged run printed: the first MAX_PRINTS lines, then a note.
+    A 'program' run keeps no events: its streams are the whole output."""
 
-    def __init__(self, program=None):
+    def __init__(self, program=None, events=True):
         self.events = []
-        self.count = 0
+        self.count = 0 if events else MAX_PRINTS + 1
         self.program = program
 
     def print(self, *args, sep=' ', end='\n', file=None, flush=False):
@@ -2024,14 +2161,23 @@ def _judge_arg(spec):
 
 
 def _judge(request):
+    """'judge' mode, and 'program' mode: the same run, but a program counts
+    the lines of the learner's files, keeps no print events, is always a
+    program, and may end with unit tests."""
     entry = request['entry']
     calls = request.get('calls')
-    program = _Program(request) if request.get('stdin') is not None else None
-    prints = _Prints(program)
+    counting = request.get('mode') == 'program'
+    program = _Program(request) if counting or request.get('stdin') is not None else None
+    prints = _Prints(program, events=not counting)
+    tests = request.get('tests') if counting else None
+    outcomes = []
 
     def result(returned, error, ms, args=()):
-        return _ended({'events': prints.events, 'arrays': {}, 'grids': {}, 'returned': returned,
-                       'error': error, 'ms': ms, 'args': [] if error else [_json(a) for a in args]}, program)
+        out = {'events': prints.events, 'arrays': {}, 'grids': {}, 'returned': returned,
+               'error': error, 'ms': ms, 'args': [] if error else [_json(a) for a in args]}
+        if tests is not None:
+            out['tests'] = outcomes
+        return _ended(out, program)
 
     problem = _files_problem(request.get('files'))
     if problem is not None:
@@ -2052,29 +2198,42 @@ def _judge(request):
     real_input = builtins.input
     files = _Files(request['files']) if request.get('files') else None
     seeded = _Seeded(request.get('seed'))
+    clock = _Clock(request.get('clock'))
+    counter = _Counter(request, files) if counting else None
     builtins.print = prints.print
     builtins.input = program.input if program else _no_input
     if program:
         program.install()
     if files:
         files.install()
-    started = time.perf_counter()
+    clock.install()
+    started = _perf_counter()
     try:
-        exec(code, namespace)
-        # A program (stdin, no entry) is its top level; a function is called.
-        fn = namespace.get(entry) if entry or program is None else None
-        if (entry or program is None) and not callable(fn):
-            error = _error('runtime', f"Define {'a class' if calls else 'a function'} called {entry}.", None)
-        elif fn is None:
-            pass
-        elif calls:
-            returned = []
-            _call_methods(fn, entry, calls, returned)
-        else:
-            args = [_judge_arg(spec) for spec in request.get('args') or []]
-            returned = _json(fn(*args))
+        if counter:
+            sys.settrace(counter.trace_calls)
+        try:
+            exec(code, namespace)
+            # A program (stdin, no entry) is its top level; a function is called.
+            fn = namespace.get(entry) if entry or program is None else None
+            if (entry or program is None) and not callable(fn):
+                error = _error('runtime', f"Define {'a class' if calls else 'a function'} called {entry}.", None)
+            elif fn is None:
+                pass
+            elif calls:
+                returned = []
+                _call_methods(fn, entry, calls, returned)
+            else:
+                args = [_judge_arg(spec) for spec in request.get('args') or []]
+                returned = _json(fn(*args))
+            if tests is not None and error is None:
+                _run_tests(tests, namespace, files, outcomes)
+        finally:
+            sys.settrace(None)
     except _Waiting:
         pass  # the program's fields say so
+    except _Stop as e:
+        error = _limit(e)
+        returned = None
     except SystemExit as e:
         if program is None:
             error = _failed(e, files)
@@ -2092,8 +2251,157 @@ def _judge(request):
         if files:
             files.restore()
         seeded.restore()
-    ms = (time.perf_counter() - started) * 1000
+        clock.restore()
+    ms = (_perf_counter() - started) * 1000
+    if counter is not None and counter.stopped is not None and (error is None or error['kind'] != 'limit'):
+        # The learner's code caught the stop (a bare except); it still stopped.
+        error = _error('limit', counter.stopped, None)
+        returned = None
     return result(returned, error, ms, args)
+
+
+class _Counter:
+    """'program' mode's tracer: counts the lines run in the learner's files
+    (the main one, the others, and the tests that call them), so an endless
+    loop stops with a message rather than a timeout. Nothing else is traced."""
+
+    def __init__(self, request, files):
+        limits = request.get('limits') or {}
+        self.max_steps = int(limits.get('maxSteps', 200000))
+        self.files = files
+        self.steps = 0
+        self.stopped = None
+
+    def trace_calls(self, frame, event, arg):
+        name = frame.f_code.co_filename
+        if name == LEARNER or name == TESTS or (self.files is not None and self.files.relative(name) is not None):
+            return self.trace_lines
+        return None
+
+    def trace_lines(self, frame, event, arg):
+        if event == 'line':
+            self.steps += 1
+            if self.steps > self.max_steps:
+                self.stopped = f'Stopped after {self.max_steps:,} steps: is there a loop that never ends?'
+                stop = _Stop(self.stopped)
+                name = frame.f_code.co_filename
+                if name == LEARNER:
+                    stop.line = frame.f_lineno
+                elif name != TESTS:
+                    stop.line = frame.f_lineno
+                    stop.file = self.files.relative(name)
+                raise stop
+        return self.trace_lines
+
+
+# ---------------------------------------------------------------------------
+# Unit tests ('program' mode with tests)
+# ---------------------------------------------------------------------------
+
+TESTS = '<tests>'
+
+_CMP_TEXT = {
+    ast.Eq: '==', ast.NotEq: '!=', ast.Lt: '<', ast.LtE: '<=', ast.Gt: '>', ast.GtE: '>=',
+    ast.In: 'in', ast.NotIn: 'not in', ast.Is: 'is', ast.IsNot: 'is not',
+}
+_CMP = {
+    '==': operator.eq, '!=': operator.ne, '<': operator.lt, '<=': operator.le, '>': operator.gt,
+    '>=': operator.ge, 'in': lambda a, b: a in b, 'not in': lambda a, b: a not in b,
+    'is': operator.is_, 'is not': operator.is_not,
+}
+
+
+class _Asserts(ast.NodeTransformer):
+    """assert a == b  becomes  _test_cmp('==', a, b, 'a == b', 'a', 'b', msg), and any
+    other assert x  becomes  _test_true(x, 'x', msg), so a failure says what each side was."""
+
+    def __init__(self, source):
+        self.source = source
+
+    def text(self, node):
+        return ast.get_source_segment(self.source, node) or ''
+
+    def visit_Assert(self, node):
+        test = node.test
+        msg = node.msg if node.msg is not None else ast.Constant(None)
+        if isinstance(test, ast.Compare) and len(test.ops) == 1 and type(test.ops[0]) in _CMP_TEXT:
+            left, right = test.left, test.comparators[0]
+            call = ast.Call(ast.Name('_test_cmp', ast.Load()), [
+                ast.Constant(_CMP_TEXT[type(test.ops[0])]), left, right, ast.Constant(self.text(test)),
+                ast.Constant(None if _literal(left) else self.text(left)),
+                ast.Constant(None if _literal(right) else self.text(right)), msg], [])
+        else:
+            call = ast.Call(ast.Name('_test_true', ast.Load()), [test, ast.Constant(self.text(test)), msg], [])
+        return ast.copy_location(ast.Expr(call), node)
+
+
+def _literal(node):
+    """Whether a side of an assert is written as its own value (5, 'x', [], (1, 2)), so saying what it is adds nothing."""
+    try:
+        ast.literal_eval(node)
+        return True
+    except Exception:
+        return False
+
+
+def _test_cmp(op, a, b, text, left, right, msg):
+    if _CMP[op](a, b):
+        return
+    if msg is not None:
+        raise AssertionError(msg)
+    seen = [f'{side} is {_short(repr(value))}' for side, value in ((left, a), (right, b)) if side]
+    raise AssertionError(f'Expected {text}, but ' + ' and '.join(seen) if seen else f'Expected {text}')
+
+
+def _test_true(value, text, msg):
+    if value:
+        return
+    raise AssertionError(msg if msg is not None else f'Expected {text} to be true, but it is {_short(repr(value))}')
+
+
+class raises:
+    """with raises(ValueError): … passes only if the block raises that error (or a subclass)."""
+
+    def __init__(self, expected):
+        self.expected = expected
+        self.value = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, kind, value, tb):
+        if kind is None:
+            raise AssertionError(f'Expected {self.expected.__name__} to be raised, but nothing was')
+        if issubclass(kind, self.expected) and not issubclass(kind, _Stop):
+            self.value = value
+            return True
+        return False
+
+
+def _run_tests(source, namespace, files, outcomes):
+    """Runs every test_* function the tests define, in order, against the
+    learner's top-level names, appending each one's outcome. A limit or an
+    exit ends the run there."""
+    try:
+        tree = _Asserts(source).visit(ast.parse(source, TESTS, 'exec'))
+        code = compile(ast.fix_missing_locations(tree), TESTS, 'exec')
+    except SyntaxError as e:
+        raise RuntimeError(f'The tests themselves don’t parse: {e.msg} (line {e.lineno})')
+    scope = dict(namespace)
+    scope.update({'__name__': 'tests', 'raises': raises, '_test_cmp': _test_cmp, '_test_true': _test_true})
+    exec(code, scope)
+    names = [name for name, fn in scope.items()
+             if name.startswith('test_') and isinstance(fn, types.FunctionType) and fn.__code__.co_filename == TESTS]
+    for name in names[:MAX_TESTS]:
+        try:
+            scope[name]()
+            outcomes.append({'name': name, 'passed': True})
+        except (_Stop, SystemExit):
+            raise
+        except BaseException as e:
+            line, file = _where(e, files)
+            message = (str(e) or 'AssertionError') if isinstance(e, AssertionError) and line is None else _message(e)
+            outcomes.append({'name': name, 'passed': False, 'message': message, 'line': line if file is None else None})
 
 
 def _no_input(prompt=''):
@@ -2105,7 +2413,7 @@ def run_request(request_json):
     """Runs one RunRequest (JSON) and returns its RunResult (JSON)."""
     try:
         request = json.loads(request_json)
-        return json.dumps(_judge(request) if request.get('mode') == 'judge' else _run(request), allow_nan=False)
+        return json.dumps(_judge(request) if request.get('mode') in ('judge', 'program') else _run(request), allow_nan=False)
     except BaseException as e:  # a bug here, not in the learner's code
         sys.settrace(None)
         return json.dumps({

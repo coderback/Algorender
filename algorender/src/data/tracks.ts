@@ -27,12 +27,14 @@ export const TRACK_COLOURS = {
   llms: 'lime',
   interpretability: 'lime',
   systems: 'teal',
+  // TODO(redesign): the language tracks borrow sky until the design gives them a pastel of their own.
+  python: 'sky',
 } as const satisfies Record<string, TrackColour>;
 
 export type TrackId = keyof typeof TRACK_COLOURS;
 
 /** The broad areas of the map (src/progress/mastery.ts's AREAS). */
-export type AreaId = 'dsa' | 'math' | 'ml' | 'systems';
+export type AreaId = 'dsa' | 'math' | 'ml' | 'systems' | 'languages';
 
 /**
  * Each track's area, as concepts.yaml gives it (content.test.ts checks they
@@ -57,6 +59,7 @@ export const TRACK_AREA: Record<TrackId, AreaId> = {
   llms: 'ml',
   interpretability: 'ml',
   systems: 'systems',
+  python: 'languages',
 };
 
 /** The area a track belongs to; unknown tracks count as DS&A. */
@@ -82,6 +85,7 @@ export const TRACK_LABEL: Record<TrackId, string> = {
   llms: 'Language models',
   interpretability: 'Interpretability',
   systems: 'Systems',
+  python: 'Python',
 };
 
 export const trackLabel = (track: string): string => (TRACK_LABEL as Record<string, string>)[track] ?? track;

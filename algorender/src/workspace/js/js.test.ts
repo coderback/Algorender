@@ -2,7 +2,7 @@
 
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { CONTRACT, drawnSteps, entryFor, expectedSteps, fileStem, filesFor, stepProblems } from '../contract';
+import { CONTRACT, drawnSteps, entryFor, expectedSteps, expectedTests, fileStem, filesFor, stepProblems, testsFor } from '../contract';
 import {
   type Arg,
   DEFAULT_LIMITS,
@@ -32,7 +32,7 @@ function run(
   language: Language = 'javascript',
   mode?: RunMode,
   calls?: MethodCall[],
-  program: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed'> = {},
+  program: Pick<RunRequest, 'stdin' | 'moreInput' | 'files' | 'seed' | 'tests' | 'clock'> = {},
 ): RunResult {
   return runJs({ language, code, entry, args, limits: { ...DEFAULT_LIMITS, ...limits }, mode, calls, ...program });
 }
@@ -49,7 +49,7 @@ for (const language of ['javascript', 'typescript'] as const) {
     for (const c of CONTRACT.filter((c) => c.code[language] ?? c.code.javascript)) {
       it(c.name, () => {
         const code = c.code[language] ?? c.code.javascript!;
-        const r = run(code, entryFor(c, language), c.args, c.limits, language, c.mode, c.calls, { stdin: c.stdin, moreInput: c.moreInput, files: filesFor(c, language) });
+        const r = run(code, entryFor(c, language), c.args, c.limits, language, c.mode, c.calls, { stdin: c.stdin, moreInput: c.moreInput, files: filesFor(c, language), tests: testsFor(c, language), seed: c.seed, clock: c.clock });
         const want = c.expect;
         if (want.events) expect(r.events).toEqual(want.events);
         else if (want.kinds) expect(kinds(r)).toEqual(want.kinds);
@@ -64,10 +64,11 @@ for (const language of ['javascript', 'typescript'] as const) {
         if (want.grids) expect(r.grids).toEqual(want.grids);
         if ('returned' in want) expect(r.returned).toEqual(want.returned);
         if (want.args) expect(r.args).toEqual(want.args);
-        for (const key of ['stdout', 'stderr', 'exitCode', 'reads', 'waiting'] as const) {
+        for (const key of ['stdout', 'stderr', 'exitCode', 'reads', 'prompts', 'waiting'] as const) {
           if (key in want) expect(r[key]).toEqual(want[key]);
         }
-        if (c.stdin === undefined) expect(r).not.toHaveProperty('stdout');
+        if (c.stdin === undefined && c.mode !== 'program') expect(r).not.toHaveProperty('stdout');
+        if (want.tests) expect(r.tests).toEqual(expectedTests(c, language));
         if (want.error) {
           expect(r.error?.kind).toBe(want.error.kind);
           if (want.error.file) expect(fileStem(r.error?.file)).toBe(want.error.file);
@@ -1172,5 +1173,60 @@ rl.question("Name? ", (name) => {
       const r = program('const { area } = require("./geo/shapes");\narea();\n', { files }, mode);
       expect(r.error, mode).toMatchObject({ kind: 'runtime', line: 2, file: 'geo/shapes.js' });
     }
+  });
+});
+
+describe("'program' mode", () => {
+  const program = (code: string, extra: Pick<RunRequest, 'stdin' | 'files' | 'seed' | 'tests' | 'clock'> = {}, language: Language = 'javascript') =>
+    run(code, '', [], {}, language, 'program', undefined, extra);
+
+  it('records readline questions as prompts', () => {
+    const r = program(`const rl = require("readline").createInterface({});\nrl.question("Name? ", (n) => console.log("hi " + n));\n`, { stdin: 'Bo\n' });
+    expect(r).toMatchObject({ stdout: 'Name? hi Bo\n', prompts: [[0, 6]] });
+  });
+
+  it('gives Date() without new as text, and Date.UTC as usual', () => {
+    const r = program(`console.log(typeof Date(), Date.UTC(2000, 0, 1), new Date(5).getTime(), new Date() instanceof Date);\n`, { clock: 42 });
+    expect(r.stdout).toBe('string 946684800000 5 true\n');
+  });
+
+  it('gives TypeScript tests the learner’s typed names', () => {
+    const r = program(`const greet = (name: string): string => "hi " + name;\nclass Box<T> {\n  constructor(public value: T) {}\n}\n`, { tests: `test("t", () => {\n  const b: Box<number> = new Box(3);\n  expect(greet("x")).toBe("hi x");\n  expect(b.value).toBe(3);\n});\n` }, 'typescript');
+    expect(r.tests).toEqual([{ name: 't', passed: true }]);
+  });
+
+  it('lets the expect matchers pass and fail with their messages', () => {
+    const tests = [
+      'expect([1, [2]]).toEqual([1, [2]])',
+      'expect({ a: 1 }).toEqual({ a: 2 })',
+      'expect(0.1 + 0.2).toBeCloseTo(0.3)',
+      'expect("abc").toContain("d")',
+      'expect([1, 2]).toHaveLength(3)',
+      'expect(() => { throw new RangeError("no") }).toThrow(RangeError)',
+      'expect(() => 1).toThrow()',
+      'expect(3).toBeGreaterThan(5)',
+      'expect(null).toBeNull()',
+      'expect(1).not.toBe(1)',
+    ]
+      .map((body, k) => `test("t${k}", () => {\n  ${body};\n});\n`)
+      .join('');
+    const r = program(`const x = 1;\n`, { tests });
+    expect(r.tests?.map((t) => (t.passed ? 'ok' : t.message))).toEqual([
+      'ok',
+      'Expected {"a":2}, but got {"a":1}',
+      'ok',
+      'Expected "abc" to contain "d"',
+      'Expected length 3, but got 2',
+      'ok',
+      "Expected it to throw an error, but it didn't",
+      'Expected 3 to be greater than 5',
+      'ok',
+      'Expected anything but 1',
+    ]);
+  });
+
+  it('gives an error raised in the tests themselves no learner line', () => {
+    const r = program(`function f() {\n  return 1;\n}\n`, { tests: `test("t", () => {\n  f();\n  nope();\n});\n` });
+    expect(r.tests).toEqual([{ name: 't', passed: false, message: 'ReferenceError: nope is not defined', line: null }]);
   });
 });

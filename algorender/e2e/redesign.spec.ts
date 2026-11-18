@@ -83,6 +83,9 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'b1-lesson-sums', path: '/learn/sums-notation' },
   { name: 'b1-lesson-trig', path: '/learn/trigonometry' },
   { name: 'b1-exercise', path: '/code/variance' },
+  // Language tracks L1: a sample task of each kind shipped (e2e/tasks.spec.ts shoots them after a failed check).
+  { name: 'task-program', path: '/learn/tasks/py-greet-by-name' },
+  { name: 'task-output', path: '/learn/tasks/py-two-names-one-value' },
 ];
 
 const VIEWPORTS = [

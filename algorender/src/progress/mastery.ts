@@ -43,9 +43,11 @@ export type MasteryGraph = {
   problems: Record<string, string[]>;
   /** System-design case study slug → its concept. */
   designs?: Record<string, string>;
+  /** Language task slug → its concept (src/content/tasks). */
+  tasks?: Record<string, string>;
 };
 
-export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review' | 'explanation' | 'design' | 'interview';
+export type Source = 'quiz' | 'prediction' | 'exercise' | 'problem' | 'review' | 'explanation' | 'design' | 'interview' | 'task';
 
 /** One piece of evidence: an item (a question, an exercise, a problem) answered right or wrong. */
 export type Observation = { concept: string; item: string; correct: boolean; at: string; source: Source };
@@ -134,6 +136,14 @@ export function observations(events: readonly ProgressEvent[], graph: MasteryGra
         if (seenSubmissions.has(key)) break;
         seenSubmissions.add(key);
         push(graph.problems[e.data.problem], { item: `problem:${e.data.problem}`, correct: e.data.passed, at: e.at, source: 'problem' });
+        break;
+      }
+      case 'task.checked': {
+        // As a problem's submissions: one observation each way per task and day, so retrying until it passes isn't ten pieces of evidence.
+        const key = `task:${e.data.task}:${e.at.slice(0, 10)}:${e.data.passed}`;
+        if (seenSubmissions.has(key)) break;
+        seenSubmissions.add(key);
+        push(graph.tasks?.[e.data.task], { item: `task:${e.data.task}`, correct: e.data.passed, at: e.at, source: 'task' });
         break;
       }
       case 'design.checked': {
@@ -262,6 +272,7 @@ export const AREAS = [
   { id: 'math', label: 'Math for CS and ML' },
   { id: 'ml', label: 'Machine learning' },
   { id: 'systems', label: 'Systems' },
+  { id: 'languages', label: 'Programming languages' },
 ] as const;
 export type AreaId = (typeof AREAS)[number]['id'];
 

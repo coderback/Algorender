@@ -14,6 +14,7 @@
     "e2e": "playwright test",
     "workers": "node scripts/build-workers.mjs",
     "models": "node scripts/train-models.mjs",
+    "tasks:expected": "node scripts/task-expected.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
     "judge:image": "docker build -t algorender-judge judge"

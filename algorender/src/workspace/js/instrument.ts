@@ -112,6 +112,38 @@ export function prepare(code: string, language: SourceLanguage, { modules = fals
   return source;
 }
 
+/**
+ * The names the learner's top level declares (functions, classes and
+ * variables, destructured ones too), in order: what unit tests may use
+ * ('program' mode). Throws LearnerSyntaxError.
+ */
+export function topLevelNames(code: string, language: SourceLanguage, { modules = false }: { modules?: boolean } = {}): string[] {
+  const source = STRICT + (language === 'typescript' || modules ? stripTypes(code, language, modules) : code);
+  let program: ES.Program;
+  try {
+    program = parse(source, { ecmaVersion: 'latest', sourceType: 'script' }) as unknown as ES.Program;
+  } catch (e) {
+    throw syntaxError(e);
+  }
+  const names: string[] = [];
+  const add = (name: string) => {
+    if (!name.startsWith(RESERVED_PREFIX) && !names.includes(name)) names.push(name);
+  };
+  const bind = (p: ES.Pattern | null): void => {
+    if (!p) return;
+    if (p.type === 'Identifier') add(p.name);
+    else if (p.type === 'ObjectPattern') p.properties.forEach((q) => bind(q.type === 'RestElement' ? q.argument : q.value));
+    else if (p.type === 'ArrayPattern') p.elements.forEach(bind);
+    else if (p.type === 'RestElement') bind(p.argument);
+    else if (p.type === 'AssignmentPattern') bind(p.left);
+  };
+  for (const s of program.body) {
+    if ((s.type === 'FunctionDeclaration' || s.type === 'ClassDeclaration') && s.id) add(s.id.name);
+    else if (s.type === 'VariableDeclaration') s.declarations.forEach((d) => bind(d.id));
+  }
+  return names;
+}
+
 function stripTypes(code: string, language: SourceLanguage, modules = false): string {
   const transforms: ('typescript' | 'imports')[] = language === 'typescript' ? ['typescript'] : [];
   if (modules) transforms.push('imports');

@@ -8,7 +8,7 @@
 // spelled per language when compared, plus the few names only one language
 // has (JS block scope ends where Python's function scope goes on).
 
-import { MAX_PRINTS, type Arg, type HeapObject, type Json, type Language, type Limits, type MemValue, type MethodCall, type RunError, type RunEvent, type RunMode } from './protocol';
+import { MAX_PRINTS, type Arg, type HeapObject, type Json, type Language, type Limits, type MemValue, type MethodCall, type RunError, type RunEvent, type RunMode, type TestResult } from './protocol';
 
 export type ContractCase = {
   name: string;
@@ -26,7 +26,15 @@ export type ContractCase = {
   moreInput?: boolean;
   /** The other files, per language (TypeScript takes JavaScript's unless it has its own). */
   files?: Partial<Record<Language, Record<string, string>>>;
+  /** 'program' mode's unit tests, per language (TypeScript takes JavaScript's). */
+  tests?: Partial<Record<Language, string>>;
+  seed?: number;
+  clock?: number;
   expect: {
+    /** A program's prompts in stdout, [start, end). */
+    prompts?: [number, number][];
+    /** Each unit test's outcome; a message per side, since the languages word failures their own way. */
+    tests?: { name: string; passed: boolean; message?: Record<Side, string>; line?: number | null }[];
     /** A program's streams, exactly; both languages must write the same. */
     stdout?: string;
     stderr?: string;
@@ -65,6 +73,22 @@ export function filesFor(c: ContractCase, language: Language): Record<string, st
 
 /** A file named without its extension, so 'helpers.py' and 'helpers.js' compare alike. */
 export const fileStem = (file: string | undefined) => file?.replace(/\.\w+$/, '');
+
+/** The case's unit tests for a language. */
+export function testsFor(c: ContractCase, language: Language): string | undefined {
+  return c.tests?.[language] ?? (language === 'typescript' ? c.tests?.javascript : undefined);
+}
+
+/** A case's unit-test outcomes as a language must report them. */
+export function expectedTests(c: ContractCase, language: Language): TestResult[] | undefined {
+  const side: Side = language === 'python' ? 'python' : 'js';
+  return c.expect.tests?.map((t) => ({
+    name: t.name,
+    passed: t.passed,
+    ...(t.message && { message: t.message[side] }),
+    ...(t.line !== undefined && { line: t.line }),
+  }));
+}
 
 const at = (line: number | null, vars: Record<string, number | string | boolean | null> = {}) => ({ line, vars });
 const cell = (index: number, value: number) => ({ array: 'arr', index, value });
@@ -2058,6 +2082,316 @@ require("./nowhere");
     args: [],
     stdin: '',
     expect: { stdout: '', exitCode: 1, error: { kind: 'runtime', line: null, message: 'isn’t a file name' } },
+  },
+  {
+    name: 'files: an endless loop in another file stops at the step limit there, in visual mode too',
+    code: {
+      python: `from spin import forever
+forever()
+`,
+      javascript: `const { forever } = require("./spin");
+forever();
+`,
+    },
+    files: {
+      python: { 'spin.py': 'def forever():\n    n = 0\n    while True:\n        n += 1\n' },
+      javascript: { 'spin.js': 'exports.forever = () => {\n  let n = 0;\n  while (true) {\n    n += 1;\n  }\n};\n' },
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    limits: { maxSteps: 1000 },
+    expect: { error: { kind: 'limit', file: 'spin', hasLine: true, message: 'Stopped after 1,000 steps' } },
+  },
+  {
+    name: 'program: sys.exit / process.exit in line-by-line mode ends the steps there, with no unwinding',
+    code: {
+      python: `def stop(code):
+    print("bye")
+    raise SystemExit(code)
+
+
+stop(2)
+print("never")
+`,
+      javascript: `function stop(code) {
+  console.log("bye");
+  process.exit(code);
+}
+
+stop(2);
+console.log("never");
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    stdin: '',
+    expect: {
+      stdout: 'bye\n',
+      exitCode: 2,
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 6, stack: [[G, { stop: fn('stop') }]] },
+        { line: 2, stack: [[G, { stop: fn('stop') }], ['stop', { code: 2 }]] },
+        { line: 3, stack: [[G, { stop: fn('stop') }], ['stop', { code: 2 }]] },
+      ],
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // 'program' mode: checking programs (the language tracks' tasks)
+  // -------------------------------------------------------------------------
+
+  {
+    name: 'program mode: streams only, no events, and where each prompt sits',
+    code: {
+      python: `name = input("Name? ")
+print("Hi", name, end="!\\n")
+n = int(input("Age? "))
+print(n + 1)
+`,
+      javascript: `const name = input("Name? ");
+process.stdout.write("Hi " + name + "!\\n");
+const n = Number(input("Age? "));
+console.log(n + 1);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    stdin: 'Ada\n36\n',
+    expect: { events: [], stdout: 'Name? Hi Ada!\nAge? 37\n', stderr: '', exitCode: 0, reads: [6, 19], prompts: [[0, 6], [14, 19]], waiting: false },
+  },
+  {
+    name: 'program mode: no stdin is empty input, so a read is EOFError',
+    code: {
+      python: `print("ready")
+x = input()
+`,
+      javascript: `console.log("ready");
+const x = input();
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    expect: { events: [], stdout: 'ready\n', exitCode: 1, error: { kind: 'runtime', line: 2, message: 'EOFError' } },
+  },
+  {
+    name: 'program mode: an endless loop stops at the step limit, on its line, with no exit code',
+    code: {
+      python: `n = 0
+while n >= 0:
+    n += 1
+`,
+      javascript: `let n = 0;
+while (n >= 0) {
+  n += 1;
+}
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    limits: { maxSteps: 1000 },
+    expect: { events: [], stdout: '', exitCode: null, error: { kind: 'limit', hasLine: true, message: 'Stopped after 1,000 steps' } },
+  },
+  {
+    name: 'program mode: an endless loop in another file stops at the limit, naming the file',
+    code: {
+      python: `from spin import forever
+print("start")
+forever()
+`,
+      javascript: `const { forever } = require("./spin");
+console.log("start");
+forever();
+`,
+    },
+    files: {
+      python: { 'spin.py': 'def forever():\n    n = 0\n    while True:\n        n += 1\n' },
+      javascript: { 'spin.js': 'exports.forever = () => {\n  let n = 0;\n  while (true) {\n    n += 1;\n  }\n};\n' },
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    limits: { maxSteps: 1000 },
+    expect: { stdout: 'start\n', exitCode: null, error: { kind: 'limit', file: 'spin', hasLine: true } },
+  },
+  {
+    name: 'program mode: an entry function gets plain arguments after the top level',
+    code: {
+      python: `def double_all(xs):
+    print("doubling", len(xs))
+    return [2 * x for x in xs]
+`,
+      javascript: `function doubleAll(xs) {
+  console.log("doubling", xs.length);
+  return xs.map((x) => 2 * x);
+}
+`,
+    },
+    entry: { python: 'double_all', js: 'doubleAll' },
+    args: [{ kind: 'value', name: 'xs', value: [1, 2, 3] }],
+    mode: 'program',
+    expect: { events: [], stdout: 'doubling 3\n', exitCode: 0, returned: [2, 4, 6] },
+  },
+  {
+    name: 'program mode: the clock stands where the request puts it',
+    code: {
+      python: `import time
+from datetime import datetime, timezone
+print(int(time.time()))
+print(datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"))
+`,
+      javascript: `console.log(Math.floor(Date.now() / 1000));
+console.log(new Date().toISOString().slice(0, 16).replace("T", " "));
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    clock: 1_700_000_000_000,
+    expect: { stdout: '1700000000\n2023-11-14 22:13\n', exitCode: 0 },
+  },
+  {
+    name: 'program mode: unit tests run after the top level, each with its outcome',
+    code: {
+      python: `def add(a, b):
+    if a > 5:
+        return a + b + 1
+    return a + b
+
+
+# the first item's name
+def first(items):
+    return items[0]['name']
+`,
+      javascript: `function add(a, b) {
+  if (a > 5) {
+    return a + b + 1;
+  }
+  return a + b;
+}
+
+function first(items) {
+  return items[0].name;
+}
+`,
+    },
+    tests: {
+      python: `def test_small():
+    assert add(2, 3) == 5
+
+
+def test_big():
+    assert add(10, 1) == 11
+
+
+def test_first():
+    assert first([]) == 'x'
+
+
+def test_raises():
+    with raises(IndexError):
+        first([])
+
+
+def test_message():
+    assert add(1, 1) != 2, 'one and one'
+`,
+      javascript: `test("test_small", () => {
+  expect(add(2, 3)).toBe(5);
+});
+test("test_big", () => {
+  expect(add(10, 1)).toBe(11);
+});
+test("test_first", () => {
+  expect(first([])).toBe("x");
+});
+test("test_raises", () => {
+  expect(() => first([])).toThrow(TypeError);
+});
+test("test_message", () => {
+  expect(add(1, 1)).not.toBe(2);
+});
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    expect: {
+      stdout: '',
+      exitCode: 0,
+      tests: [
+        { name: 'test_small', passed: true },
+        { name: 'test_big', passed: false, message: { python: 'Expected add(10, 1) == 11, but add(10, 1) is 12', js: 'Expected 11, but got 12' }, line: null },
+        {
+          name: 'test_first',
+          passed: false,
+          message: { python: 'IndexError: list index out of range', js: "TypeError: Cannot read properties of undefined (reading 'name')" },
+          line: 9,
+        },
+        { name: 'test_raises', passed: true },
+        { name: 'test_message', passed: false, message: { python: 'one and one', js: 'Expected anything but 2' }, line: null },
+      ],
+    },
+  },
+  {
+    name: 'program mode: a top level that fails runs no tests',
+    code: {
+      python: `x = 1 / 0
+`,
+      javascript: `const x = null.y;
+`,
+    },
+    tests: {
+      python: `def test_x():
+    assert x == 1
+`,
+      javascript: `test("test_x", () => {
+  expect(x).toBe(1);
+});
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    expect: { exitCode: 1, tests: [], error: { kind: 'runtime', line: 1 } },
+  },
+  {
+    name: 'program mode: an endless loop inside a test stops the run there',
+    code: {
+      python: `def spin():
+    while True:
+        pass
+`,
+      javascript: `function spin() {
+  while (true) {}
+}
+`,
+    },
+    tests: {
+      python: `def test_one():
+    assert True
+
+
+def test_spin():
+    spin()
+`,
+      javascript: `test("test_one", () => {
+  expect(true).toBe(true);
+});
+test("test_spin", () => {
+  spin();
+});
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'program',
+    limits: { maxSteps: 1000 },
+    expect: { exitCode: null, tests: [{ name: 'test_one', passed: true }], error: { kind: 'limit', hasLine: true } },
   },
 ];
 
