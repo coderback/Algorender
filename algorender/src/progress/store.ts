@@ -16,6 +16,12 @@
 // in `meta` under `unread:<owner>:<id>`, and read again on every visit, so
 // the version that knows it picks it up even though the cursor has moved past.
 //
+// The other way round, a server older than the app (a deployment rolled back)
+// refuses the events of a kind it doesn't know yet. An event the server
+// refuses but this app can read is held rather than deleted, and offered again
+// an hour later (`HOLD_RETRY_MS`), so it reaches the server once the newer
+// deployment is back. Only an event this app can't read either is dropped.
+//
 // Without IndexedDB (some private windows), events and the sync bookkeeping
 // live in memory for the visit. Other tabs hear about changes over a
 // BroadcastChannel.
@@ -37,8 +43,17 @@ const OWNER_KEY = 'algorender:owner';
 const cursorKey = (owner: string) => `pull:${owner}`;
 const oldCursorKey = (owner: string) => `cursor:${owner}`;
 const unreadPrefix = (owner: string) => `unread:${owner}:`;
+const heldKey = (owner: string) => `held-at:${owner}`;
 
-type Stored = ProgressEvent & { owner: string; synced: 0 | 1 };
+/** How long an event the server refused (but this app reads) waits before it is offered again. */
+export const HOLD_RETRY_MS = 60 * 60 * 1000;
+
+/**
+ * `synced`: 0 not sent yet, 1 on the server, 2 held (refused by the server
+ * though this app reads it; see the top of the file). Older apps neither push
+ * nor count held events, and read them like any other.
+ */
+type Stored = ProgressEvent & { owner: string; synced: 0 | 1 | 2 };
 
 class ProgressDatabase extends Dexie {
   events!: Table<Stored, string>;
@@ -54,7 +69,7 @@ export type SyncState = 'local' | 'idle' | 'syncing' | 'offline' | 'error';
 export type SyncStatus = {
   /** local: not signed in, so nothing syncs. */
   state: SyncState;
-  /** Events not yet on the server. */
+  /** Events not yet on the server (held ones included). */
   pending: number;
   lastSynced: string | null;
   message?: string;
@@ -246,6 +261,7 @@ export class ProgressStore {
     }
     this.setStatus({ state: 'syncing' });
     try {
+      await this.release(owner);
       for (let round = 0; round < 50; round++) {
         if (this.snapshot.owner !== owner) return;
         const outgoing = (await this.unsynced(owner)).slice(0, 500);
@@ -337,19 +353,57 @@ export class ProgressStore {
     return true;
   }
 
+  /** Offers held events again once `HOLD_RETRY_MS` has passed since the server last refused them; drops any this app can no longer read. */
+  private async release(owner: string) {
+    const held = this.memory ? this.memory.filter((e) => e.owner === owner && e.synced === 2) : await this.db!.events.where('[owner+synced]').equals([owner, 2]).toArray();
+    if (held.length === 0) return;
+    const at = (await this.getMeta(heldKey(owner))) as string | null;
+    if (at && this.env.now().getTime() - new Date(at).getTime() < HOLD_RETRY_MS) return;
+    const readable = held.filter((e) => this.env.parse(strip(e))).map((e) => e.id);
+    const unreadable = held.filter((e) => !readable.includes(e.id)).map((e) => e.id);
+    if (this.memory) {
+      for (const e of this.memory) if (e.owner === owner && readable.includes(e.id)) e.synced = 0;
+      this.memory = this.memory.filter((e) => !(e.owner === owner && unreadable.includes(e.id)));
+    } else {
+      await this.db!.events.where('id').anyOf(readable).modify({ synced: 0 });
+      if (unreadable.length > 0) await this.db!.events.bulkDelete(unreadable);
+    }
+  }
+
+  /** How many of the owner's events aren't on the server: unsent and held. */
+  private async waiting(owner: string): Promise<number> {
+    if (this.memory) return this.memory.filter((e) => e.owner === owner && e.synced !== 1).length;
+    return this.db!.events.where('[owner+synced]').anyOf([[owner, 0], [owner, 2]]).count();
+  }
+
   private async unsynced(owner: string): Promise<Stored[]> {
     const rows = this.memory ? this.memory.filter((e) => e.owner === owner && e.synced === 0) : await this.db!.events.where('[owner+synced]').equals([owner, 0]).toArray();
     return rows.sort(byTime);
   }
 
+  /**
+   * Accepted events are on the server. A refused one this app reads is held
+   * (the server is probably older than the app); one it can't read is dropped.
+   */
   private async markSynced(owner: string, accepted: string[], rejected: string[]) {
+    const refused = this.memory
+      ? this.memory.filter((e) => e.owner === owner && rejected.includes(e.id))
+      : (await this.db!.events.bulkGet(rejected)).filter((e): e is Stored => !!e && e.owner === owner);
+    const hold = refused.filter((e) => this.env.parse(strip(e))).map((e) => e.id);
+    const drop = refused.filter((e) => !hold.includes(e.id)).map((e) => e.id);
     if (this.memory) {
-      for (const e of this.memory) if (e.owner === owner && accepted.includes(e.id)) e.synced = 1;
-      this.memory = this.memory.filter((e) => !(e.owner === owner && rejected.includes(e.id)));
-      return;
+      for (const e of this.memory) {
+        if (e.owner !== owner) continue;
+        if (accepted.includes(e.id)) e.synced = 1;
+        else if (hold.includes(e.id)) e.synced = 2;
+      }
+      this.memory = this.memory.filter((e) => !(e.owner === owner && drop.includes(e.id)));
+    } else {
+      await this.db!.events.where('id').anyOf(accepted).modify({ synced: 1 });
+      if (hold.length > 0) await this.db!.events.where('id').anyOf(hold).modify({ synced: 2 });
+      if (drop.length > 0) await this.db!.events.bulkDelete(drop);
     }
-    await this.db!.events.where('id').anyOf(accepted).modify({ synced: 1 });
-    if (rejected.length > 0) await this.db!.events.bulkDelete(rejected);
+    if (hold.length > 0) await this.setMeta(heldKey(owner), this.env.now().toISOString());
   }
 
   private async claim(userId: string) {
@@ -372,6 +426,7 @@ export class ProgressStore {
     // An older app opened later starts from 0 too.
     await this.setMeta(oldCursorKey(owner), 0);
     await this.setMeta(`synced-at:${owner}`, null);
+    await this.setMeta(heldKey(owner), null);
   }
 
   /** Reads the owner's events (and sync status) from storage into the snapshot. */
@@ -379,7 +434,7 @@ export class ProgressStore {
     const key = owner ?? ANON;
     const rows = this.memory ? this.memory.filter((e) => e.owner === key) : await this.db!.events.where('owner').equals(key).toArray();
     const events = rows.map(strip).sort(byTime);
-    const pending = owner ? rows.filter((e) => e.synced === 0).length : 0;
+    const pending = owner ? rows.filter((e) => e.synced !== 1).length : 0;
     const lastSynced = owner ? ((await this.getMeta(`synced-at:${owner}`)) as string | null) : null;
     const state: SyncState = !owner ? 'local' : this.snapshot.sync.state === 'local' ? 'idle' : this.snapshot.sync.state;
     this.set({ ready: true, owner, events, sync: { ...this.snapshot.sync, state, pending, lastSynced: lastSynced ?? null } });
@@ -434,7 +489,7 @@ export class ProgressStore {
   private async refreshPending() {
     const owner = this.snapshot.owner;
     if (!owner) return;
-    const pending = (await this.unsynced(owner)).length;
+    const pending = await this.waiting(owner);
     if (pending !== this.snapshot.sync.pending) this.set({ sync: { ...this.snapshot.sync, pending } });
   }
 

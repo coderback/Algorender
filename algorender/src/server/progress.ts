@@ -21,7 +21,11 @@ export type StoredEvent = { id: string; kind: string; at: string; data: unknown 
 export type SyncResponse = {
   /** Ids now stored (or stored already): the device can mark them sent. */
   accepted: string[];
-  /** Ids of pushed events refused as malformed (from an app version that wrote them wrong); the device drops them. */
+  /**
+   * Ids of pushed events refused as malformed: from an app version that wrote
+   * them wrong, or of a kind this server doesn't know (a newer app, after a
+   * rollback). The device holds the ones it can read and offers them again later, and drops the rest.
+   */
   rejected: string[];
   /** Events after the cursor, in server order, including ones just pushed, as stored (the device parses them). */
   events: StoredEvent[];
