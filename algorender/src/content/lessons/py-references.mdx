@@ -1,0 +1,216 @@
+<Section step="hook" title="Two names, one list">
+
+You make a list of guests, then write `backup = guests` to keep the original safe, and append a late arrival to
+`guests`. The backup has the late arrival too. Nothing went wrong with Python: `=` never copies a list. It gives the
+same list a second name. Once you see names as arrows to objects, this stops being a surprise, and becomes something
+you can use.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="reference">What a name holds: an arrow to an object. For a list it matters, because the object can change.</Term>
+  <Term name="alias">A second name for the same object. A change made through one name shows through every other.</Term>
+  <Term name="is">`a is b` asks whether two names point at the very same object.</Term>
+  <Term name="==">`a == b` asks whether two values are equal: for lists, the same items in the same order.</Term>
+  <Term name="copy">A new list with the same items: `a.copy()`, `a[:]` or `list(a)`.</Term>
+</Terms>
+
+`b = a` points `b` at the object `a` points at. For a list, which can change, that matters: `b.append(3)` changes
+the one list, and `a` sees it too. To get a separate list, copy it:
+
+```python
+a = [1, 2]
+b = a            # one list, two names: a is b
+c = a.copy()     # a second list with the same items: a == c, but not a is c
+b.append(3)      # a and b are [1, 2, 3]; c is still [1, 2]
+```
+
+For numbers and strings, aliasing never shows, because they can't be changed in place: `x += 1` makes a new number
+and points `x` at it, leaving any other name where it was.
+
+A copy made this way is **shallow**: a new outer list, holding the same items. If the items are lists themselves,
+the copy and the original share them. `copy.deepcopy(a)` (after `import copy`) copies all the way down.
+
+Passing a list to a function passes the object, not a copy. The parameter is one more name for the caller's list, so
+a function can change it. Pointing the parameter at a new list, though, only moves the function's own name:
+
+```python
+def add_bonus(scores):
+    scores.append(10)    # changes the caller's list
+    scores = [0]         # just points the local name somewhere else
+```
+
+One more consequence: a **default value** is made once, when `def` runs, and kept with the function. A default list
+is therefore one list, shared by every call that leaves the argument out. Use `None` as the default and make the list
+inside: `if items is None: items = []`.
+
+</Section>
+
+<Section step="see" title="Watch the arrows">
+
+Step through the first program. When two names point at one list, the memory view draws two arrows to one box and
+badges it as shared. The copy is a box of its own.
+
+<TraceCode snippet="py-references" />
+
+Now a list passed to a function, and a default list. Watch `scores` and `mine` share a box, then `scores` move away.
+Then watch `add`'s box in the memory view: its default `box` list is kept there, between calls, and both calls fill
+the same list.
+
+<TraceCode snippet="py-references-calls" />
+
+<KeyIdea>
+
+**A name is an arrow to an object. `=` and passing an argument add arrows; they never copy.** Changes to a list show
+through every name for it. `is` asks "the same object?", `==` asks "equal values?".
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-alias-or-copy" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="assign-copies"
+  title="b = a makes a copy of the list"
+  probes={[
+    {
+      q: 'a = [1, 2], b = a, then b.append(3). What does print(a) show?',
+      choices: ['[1, 2, 3]', '[1, 2]', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'b = a makes b a second name for the same list, so appending through b changes the list a names.',
+    },
+    {
+      q: 'def drop_last(items): items.pop(). nums = [4, 5], then drop_last(nums). What is nums now?',
+      choices: ['[4]', '[4, 5]', 'None'],
+      answer: 0,
+      trap: 1,
+      why: 'items is another name for nums’s list, so pop changes the caller’s list.',
+    },
+  ]}
+>
+
+`=` and passing an argument never copy a list: they give the same list one more name. Every name sees every change.
+When you need a separate list, ask for one with `a.copy()`, `a[:]` or `list(a)`.
+
+</Misconception>
+
+<Misconception
+  id="is-means-equal"
+  title="is and == ask the same question"
+  probes={[
+    {
+      q: 'a = [1, 2] and b = [1, 2], made separately. What do a == b and a is b give?',
+      choices: ['True and False', 'True and True', 'False and False'],
+      answer: 0,
+      trap: 1,
+      why: 'They hold equal items, so == is True, but they are two lists, so is is False.',
+    },
+    {
+      q: 'c = a.copy(). What does c is a give?',
+      choices: ['False', 'True'],
+      answer: 0,
+      trap: 1,
+      why: 'copy makes a new list. It is equal to a, but it is not a.',
+    },
+  ]}
+>
+
+`==` compares values: two separate lists with the same items are equal. `is` compares identity: it is `True` only
+for two arrows to one box. Use `==` to compare contents, and `is` to ask whether a change through one name would show
+through the other (and for `x is None`).
+
+</Misconception>
+
+<Misconception
+  id="default-made-each-call"
+  title="A default list is made fresh on every call"
+  probes={[
+    {
+      q: 'def add(x, items=[]): items.append(x), then return items. After add(1), what does add(2) return?',
+      choices: ['[1, 2]', '[2]', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'The default list was made once, when def ran. Both calls append to that one list.',
+    },
+    {
+      q: 'def log(msg, seen=[]): seen.append(msg), then return len(seen). After log("a") and log("b"), what does log("c") return?',
+      choices: ['3', '1', '0'],
+      answer: 0,
+      trap: 1,
+      why: 'All three calls share the one default list, which now holds three messages.',
+    },
+  ]}
+>
+
+Python works out a default value once, when the `def` line runs, and keeps it with the function. For a number or a
+string that's harmless. For a list, every call that leaves the argument out shares one list, which keeps whatever the
+last call put in it. Make the default `None`, and a new list inside the function.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'x = [0], y = x, then y[0] = 9. What does print(x) show?',
+      choices: ['[9]', '[0]', 'An error'],
+      answer: 0,
+      why: 'x and y name one list, so the change made through y shows through x.',
+      traps: { 1: 'assign-copies' },
+    },
+    {
+      q: 'p = [1] and q = [1], made separately. What does print(p is q) show?',
+      choices: ['False', 'True'],
+      answer: 0,
+      why: 'They are equal (p == q is True), but they are two different lists.',
+      traps: { 1: 'is-means-equal' },
+    },
+    {
+      q: 'def grow(n, acc=[]): acc.append(n), then return acc. After grow(1) and grow(2), what does grow(3) return?',
+      choices: ['[1, 2, 3]', '[3]', '[1]'],
+      answer: 0,
+      why: 'Every call shares the one default list made when def ran.',
+      traps: { 1: 'default-made-each-call' },
+    },
+    {
+      q: 'grid = [[1], [2]], g2 = grid.copy(), then g2[0].append(5). What is grid[0]?',
+      choices: ['[1, 5]', '[1]', 'An error'],
+      answer: 0,
+      why: 'copy is shallow: g2 is a new outer list, but its rows are the same lists as grid’s.',
+    },
+    {
+      q: 'def reset(items): items = []. nums = [1, 2], then reset(nums). What is nums?',
+      choices: ['[1, 2]', '[]', 'None'],
+      answer: 0,
+      why: 'items = [] points the function’s own name at a new list; nums still points at the old one, unchanged.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-references" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A name is an arrow to an object; `=` and passing arguments add arrows and never copy.
+- A list changed through one name is changed for every name.
+- `==` compares values; `is` asks whether it is the same object.
+- `a.copy()`, `a[:]` and `list(a)` make shallow copies; `copy.deepcopy` copies all the way down.
+- A default list is made once and shared by every call: use `None` and make the list inside.
+
+</Section>

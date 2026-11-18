@@ -1,0 +1,180 @@
+<Section step="hook" title="Values that belong together">
+
+A point on a map is an x and a y. A date is a day, a month and a year. These groups have a fixed size and a fixed
+meaning for each place, and they shouldn't grow or have an item swapped out by accident. Python's **tuple** is made
+for them, and it brings a handy trick along: unpacking a group into names in one line.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="tuple">An ordered group of values that can't change: `(3, 4)`. It is the commas that make it; the brackets just group them (the empty tuple, `()`, is the one exception).</Term>
+  <Term name="immutable">Can't be changed once made. Tuples, numbers and strings are immutable; lists are not.</Term>
+  <Term name="unpacking">Pointing several names at a group's items in one go: `x, y = point`.</Term>
+</Terms>
+
+Reading a tuple works as it does for a list: `point[0]`, `len(point)`, `for v in point:`, `3 in point`. Changing one
+doesn't: `point[0] = 5` is a `TypeError`, and there is no `append`. To "change" a tuple, make a new one and point the
+name at it.
+
+```python
+point = (3, 4)
+x, y = point            # unpacking: x is 3, y is 4
+x, y = y, x             # swap: x is 4, y is 3
+one = (5,)              # a tuple of one item needs the comma: (5) is just 5
+```
+
+`x, y = y, x` works because Python builds the whole right side first, a tuple of the **old** values, and only then
+unpacks it into the names. The number of names must match: unpacking three values into two names is a `ValueError`.
+
+A function can give back several values at once by returning a tuple, and the caller unpacks it:
+
+```python
+def min_max(a, b, c):
+    return min(a, b, c), max(a, b, c)
+
+lo, hi = min_max(5, 2, 9)   # lo is 2, hi is 9
+```
+
+When to use which? A list is for a collection that grows and shrinks, usually of the same kind of thing: scores,
+names. A tuple is for a fixed group where each place means something: a point, a date, a pair a function returns.
+
+One catch: a tuple can't change, but a list **inside** it still can. `(1, [2])` can't swap out its list, but the
+list itself can still be appended to.
+
+</Section>
+
+<Section step="see" title="Watch the unpacking">
+
+Step through it. `point` is a tuple box in the memory view, and unpacking points `x` and `y` at its items. The swap
+changes only the names; the tuple stays as it was. Then `min_max` returns a tuple, which is unpacked into `lo` and `hi`,
+or kept whole as `pair`.
+
+<TraceCode snippet="py-tuples" />
+
+<KeyIdea>
+
+**A tuple is a fixed group of values; unpacking points one name at each item.** In `a, b = b, a`, the right side is
+worked out in full, with the old values, before any name moves.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-swap-unpack" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="swap-one-at-a-time"
+  title="a, b = b, a sets a first, then b from the new a"
+  probes={[
+    {
+      q: 'a = 1 and b = 2, then a, b = b, a. What are a and b now?',
+      choices: ['2 and 1', '2 and 2', '1 and 1'],
+      answer: 0,
+      trap: 1,
+      why: 'The right side, (2, 1), is made from the old values before either name moves.',
+    },
+    {
+      q: 'x = 5 and y = 3, then x, y = y, x + y. What are x and y now?',
+      choices: ['3 and 8', '3 and 6', '8 and 3'],
+      answer: 0,
+      trap: 1,
+      why: 'x + y is worked out with the old x, 5, so y becomes 8, at the same moment x becomes 3.',
+    },
+  ]}
+>
+
+Python works out the whole right-hand side first, making a tuple of values from the names as they are **before** the
+line. Only then does it unpack that tuple into the names on the left. So no name on the right ever sees a value set
+earlier on the same line, and a swap needs no spare variable.
+
+</Misconception>
+
+<Misconception
+  id="tuples-change"
+  title="A tuple's items can be changed, like a list's"
+  probes={[
+    {
+      q: 't = (1, 2, 3), then t[0] = 9. What happens?',
+      choices: ['A TypeError: a tuple can’t be changed', 't becomes (9, 2, 3)', 't becomes [9, 2, 3]'],
+      answer: 0,
+      trap: 1,
+      why: 'Tuples are immutable: no item can be replaced, added or removed.',
+    },
+    {
+      q: 'Which of these works on t = (4, 5)?',
+      choices: ['t[0], which gives 4', 't.append(6)', 'Both'],
+      answer: 0,
+      trap: 2,
+      why: 'Reading works as for a list, but a tuple has no append: it can’t grow.',
+    },
+  ]}
+>
+
+A tuple can't be changed after it's made: assigning to an item is a `TypeError`, and there's no `append`, `insert` or
+`remove`. To get a different tuple, build a new one, `point = (point[0] + 1, point[1])`, and point the name at it.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'p = 4 and q = 7, then p, q = q, p. What does print(p, q) show?',
+      choices: ['7 4', '7 7', '4 7'],
+      answer: 0,
+      why: 'The right side is the pair (7, 4), made before either name changes.',
+      traps: { 1: 'swap-one-at-a-time' },
+    },
+    {
+      q: 'colors = ("red", "green"). What does colors[1] = "blue" do?',
+      choices: ['Raises a TypeError', 'Changes green to blue', 'Adds blue at the end'],
+      answer: 0,
+      why: 'A tuple can’t be changed. Make a new one instead.',
+      traps: { 1: 'tuples-change' },
+    },
+    {
+      q: 'x = 5, (a 5 and then a comma). What is x?',
+      choices: ['The tuple (5,)', 'The number 5', 'A SyntaxError'],
+      answer: 0,
+      why: 'The comma makes a tuple, here of one item.',
+    },
+    {
+      q: 'def f(): return 1, 2. What does r = f() point r at?',
+      choices: ['The tuple (1, 2)', 'Just 1', 'An error: a function returns one value'],
+      answer: 0,
+      why: 'return 1, 2 returns one value: a tuple holding both numbers.',
+    },
+    {
+      q: 'name, age = ("Ada", 36, "London"). What happens?',
+      choices: ['A ValueError: too many values to unpack', 'name is Ada and age is 36', 'age is (36, "London")'],
+      answer: 0,
+      why: 'Unpacking needs one name per item: three items won’t go into two names.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-tuples" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A tuple is a fixed group of values: commas make it, and `(5,)` is a tuple of one.
+- Tuples can be read like lists but never changed; build a new one instead.
+- Unpacking points one name at each item, and the counts must match.
+- In `a, b = b, a`, the right side is made from the old values first, so swaps just work.
+- Use a list for a collection that changes, and a tuple for a fixed group.
+
+</Section>

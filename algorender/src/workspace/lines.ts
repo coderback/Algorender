@@ -182,9 +182,13 @@ function narrate(
     return `The ${errorName(prev.message)} isn't caught in ${prev.stack.at(-1)!.fn}, so it passes up to line ${e.line} in ${where}.`;
   }
   if (e.event === 'return' && top.returning) {
-    const returns = `${top.fn} returns ${memText(top.returning, heap, e.stack.at(-2))}`;
+    let returns = `${top.fn} returns ${memText(top.returning, heap, e.stack.at(-2))}`;
+    // A closure leaving the frame that made it: what it captured lives on with it.
+    const made = 'ref' in top.returning ? heap.get(top.returning.ref) : undefined;
+    const kept = made?.kind === 'function' ? (made.captured ?? []).filter(([name]) => top.locals.some(([n]) => n === name)) : [];
+    if (kept.length > 0) returns += `, which keeps ${listWords(kept.map(([name]) => name))} alive after this call ends`;
     // A function that falls off its end after changing something: say both.
-    const did = [...extra, ...(was && prev.event === 'line' ? changes(prev, e, was, top, heap, seen) : [])];
+    const did = [...extra, ...(was && prev.event === 'line' ? changes(prev, e, was, top, heap, seen, source[was.line - 1]) : [])];
     return did.length === 0 ? `${returns}.` : `Line ${was?.line ?? e.line} ${listWords(did.slice(0, NAMED_CHANGES - 1))}, and ${returns}.`;
   }
   if (!was) {
@@ -198,7 +202,7 @@ function narrate(
 
   // The line that ran is the one this frame was on at the step before.
   const ran = was.line;
-  const clauses = [...extra, ...changes(prev, e, was, top, heap, seen), ...prints.map((text) => `prints “${text}”`)];
+  const clauses = [...extra, ...changes(prev, e, was, top, heap, seen, source[ran - 1]), ...prints.map((text) => `prints “${text}”`)];
   if (clauses.length === 0) {
     if (e.event === 'return') return `Line ${ran} runs.`;
     const tested = e.line !== ran ? testedCondition(source[ran - 1]) : null;
@@ -246,33 +250,93 @@ function changes(
   now: StackFrame,
   heap: ReadonlyMap<string, HeapObject>,
   seen: ReadonlyMap<string, number>,
+  /** The line that ran, so a change is told through the name it used (`b.append(3)` changes b, not a). */
+  line = '',
 ): string[] {
   const out: string[] = [];
   const before = new Map(prev.heap.map((o) => [o.id, o]));
   // Objects a name's clause already describes, so their contents aren't described again.
   const covered = new Set<string>();
-  for (const [name, value] of now.locals) {
-    const old = was.locals.find(([n]) => n === name)?.[1];
-    if (old && sameValue(old, value)) continue;
-    if ('prim' in value) {
-      out.push(`sets ${name} to ${value.prim}`);
-      continue;
+  // Names set this step, in any frame: a closure's captured copy of one isn't described again.
+  const named = new Set<string>();
+  const global = e.stack[0];
+  const set = (frame: StackFrame, old: StackFrame | undefined, label: (name: string) => string) => {
+    for (const [name, value] of frame.locals) {
+      const previous = old?.locals.find(([n]) => n === name)?.[1];
+      if (previous && sameValue(previous, value)) continue;
+      named.add(name);
+      // A new local with a global's name: a name of its own, which leaves the global alone.
+      const shadows = frame === now && frame !== global && !previous && global.locals.some(([n]) => n === name);
+      const who = shadows ? `a local ${name}` : label(name);
+      const after = shadows ? ` (not the global ${name})` : '';
+      if ('prim' in value) {
+        out.push(`sets ${who} to ${value.prim}${after}`);
+        continue;
+      }
+      covered.add(value.ref);
+      const obj = heap.get(value.ref);
+      if (!obj) out.push(`sets ${who}${after}`);
+      else if (!seen.has(value.ref)) {
+        if (obj.kind === 'function' && obj.name === name) {
+          const captured = obj.captured?.map(([n]) => n) ?? [];
+          out.push(captured.length > 0 ? `defines ${name}, which captures ${listWords(captured)}` : `defines ${name}`);
+        } else out.push(`sets ${who} to a new ${objectText(obj, heap)}${after}`);
+      } else {
+        const other = frame === now ? otherName(e, now, name, value.ref) : null;
+        out.push(other ? `makes ${other} and ${name} name the same ${kindWord(obj)}` : `sets ${who} to the ${objectText(obj, heap)}${after}`);
+      }
     }
-    covered.add(value.ref);
-    const obj = heap.get(value.ref);
-    if (!obj) out.push(`sets ${name}`);
-    else if (!seen.has(value.ref)) out.push(obj.kind === 'function' && obj.name === name ? `defines ${name}` : `sets ${name} to a new ${objectText(obj, heap)}`);
-    else {
-      const other = otherName(e, now, name, value.ref);
-      out.push(other ? `makes ${other} and ${name} name the same ${kindWord(obj)}` : `sets ${name} to the ${objectText(obj, heap)}`);
-    }
+  };
+  set(now, was, (name) => name);
+  // Names in other frames: set through `global` or `nonlocal` in Python, or from an inner function in JS.
+  for (const frame of e.stack) {
+    const old = frame === now ? undefined : prev.stack.find((f) => f.id === frame.id);
+    if (old) set(frame, old, (name) => (frame === global ? `the global ${name}` : `${name} in ${frame.fn}'s frame`));
   }
   for (const obj of e.heap) {
     const old = before.get(obj.id);
     if (!old || covered.has(obj.id) || JSON.stringify(old) === JSON.stringify(obj)) continue;
-    out.push(mutation(old, obj, nameOf(obj.id, e, now, heap), heap));
+    if (obj.kind === 'function' && old.kind === 'function' && changedCaptures(old, obj).every(([name]) => named.has(name))) continue;
+    const name = nameOf(obj.id, e, now, heap, line);
+    out.push(mutation(old, obj, name, heap) + sharedWith(obj, name, e, now, heap));
   }
   return out;
+}
+
+/** Whether a line of code uses a name (as a whole word, not inside a longer one). */
+function mentions(line: string, name: string): boolean {
+  const word = /[\w$]/;
+  for (let at = line.indexOf(name); at >= 0; at = line.indexOf(name, at + 1)) {
+    if (!word.test(line[at - 1] ?? '') && !word.test(line[at + name.length] ?? '')) return true;
+  }
+  return false;
+}
+
+/** A closure's captured names whose values differ from before. */
+function changedCaptures(old: Extract<HeapObject, { kind: 'function' }>, now: Extract<HeapObject, { kind: 'function' }>): [string, MemValue][] {
+  return (now.captured ?? []).filter(([name, v]) => !(old.captured ?? []).some(([n, w]) => n === name && sameValue(v, w)));
+}
+
+/**
+ * When an object changed through one name has another (two names for one
+ * list, or a list passed in as an argument): " (the same list as nums)", so
+ * the change is seen to reach every name for it. One name in several frames
+ * (recursion passing a list down) says nothing: the view badges it. A list
+ * only a function's default holds says so: " (the default list kept on add)".
+ */
+function sharedWith(obj: HeapObject, used: string, e: Step, now: StackFrame, heap: ReadonlyMap<string, HeapObject>): string {
+  if (obj.kind === 'function') return '';
+  const holds = ([, v]: [string, MemValue]) => 'ref' in v && v.ref === obj.id;
+  const frames = [now, ...e.stack.toReversed()];
+  if (!frames.some((f) => f.locals.some(([n, v]) => n === used && holds([n, v])))) return '';
+  for (const f of frames) {
+    const other = f.locals.find((l) => l[0] !== used && holds(l))?.[0];
+    if (other) return ` (the same ${kindWord(obj)} as ${other})`;
+  }
+  for (const o of heap.values()) {
+    if (o.kind === 'function' && o.defaults?.some(holds)) return ` (the default ${kindWord(obj)} kept on ${o.name})`;
+  }
+  return '';
 }
 
 /** Another name for the object, in this frame first, then in the frames below it. */
@@ -284,9 +348,12 @@ function otherName(e: Step, now: StackFrame, name: string, ref: string): string 
 }
 
 /** How to refer to an object: a name for it, a name's item or field ("grid[0]", "p.next"), or its kind. */
-function nameOf(id: string, e: Step, now: StackFrame, heap: ReadonlyMap<string, HeapObject>): string {
+function nameOf(id: string, e: Step, now: StackFrame, heap: ReadonlyMap<string, HeapObject>, line = ''): string {
   const frames = [now, ...e.stack.toReversed()];
-  for (const f of frames) for (const [n, v] of f.locals) if ('ref' in v && v.ref === id) return n;
+  const names = frames.flatMap((f) => f.locals.flatMap(([n, v]) => ('ref' in v && v.ref === id ? [n] : [])));
+  // Of several names for it, the one the line used.
+  const used = names.find((n) => mentions(line, n)) ?? names[0];
+  if (used) return used;
   for (const f of frames) {
     for (const [n, v] of f.locals) {
       const o = 'ref' in v ? heap.get(v.ref) : undefined;
@@ -301,6 +368,11 @@ function nameOf(id: string, e: Step, now: StackFrame, heap: ReadonlyMap<string, 
       } else if (o.kind === 'object') {
         const field = o.fields.find(([, x]) => isIt(x));
         if (field) return fieldAccess(n, field[0]);
+      } else if (o.kind === 'function') {
+        const captured = o.captured?.find(([, x]) => isIt(x));
+        if (captured) return captured[0];
+        const given = o.defaults?.find(([, x]) => isIt(x));
+        if (given) return `${o.name}'s default ${given[0]}`;
       }
     }
   }
@@ -319,6 +391,19 @@ function mutation(old: HeapObject, now: HeapObject, name: string, heap: Readonly
     if (b.length === a.length - 1 && b.every((x, i) => sameValue(x, a[i]))) return `removes ${text(a.at(-1)!)} from the end of ${name}`;
     if (b.length === a.length - 1 && b.every((x, i) => sameValue(x, a[i + 1]))) return `removes ${text(a[0])} from the front of ${name}`;
     if (b.length === a.length + 1 && a.every((x, i) => sameValue(x, b[i + 1]))) return `puts ${text(b[0])} at the front of ${name}`;
+    // One item put in, or taken out, in the middle (insert, remove, pop(i)).
+    const firstDiff = (x: MemValue[], y: MemValue[]) => {
+      const k = x.findIndex((v, i) => !sameValue(v, y[i]));
+      return k < 0 ? x.length : k;
+    };
+    if (b.length === a.length + 1) {
+      const at = firstDiff(a, b);
+      if (a.slice(at).every((x, i) => sameValue(x, b[at + i + 1]))) return `inserts ${text(b[at])} into ${name} at index ${at}`;
+    }
+    if (b.length === a.length - 1) {
+      const at = firstDiff(b, a);
+      if (b.slice(at).every((x, i) => sameValue(x, a[at + i + 1]))) return `removes ${text(a[at])} from ${name} at index ${at}`;
+    }
     if (a.length === b.length) {
       const diff = a.flatMap((x, i) => (sameValue(x, b[i]) ? [] : [i]));
       if (diff.length === 1) return `sets ${name}[${diff[0]}] to ${text(b[diff[0]])}`;
@@ -340,6 +425,9 @@ function mutation(old: HeapObject, now: HeapObject, name: string, heap: Readonly
     const removed = old.fields.filter(([k]) => !now.fields.some(([k2]) => k === k2));
     if (set.length === 1 && removed.length === 0) return `sets ${fieldAccess(name, set[0][0])} to ${text(set[0][1])}`;
     if (removed.length === 1 && set.length === 0) return `deletes ${fieldAccess(name, removed[0][0])}`;
+  } else if (now.kind === 'function' && old.kind === 'function') {
+    const set = changedCaptures(old, now);
+    if (set.length === 1) return `sets the ${set[0][0]} that ${now.name} captured to ${text(set[0][1])}`;
   }
   return `changes ${name}`;
 }

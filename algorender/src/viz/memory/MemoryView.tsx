@@ -4,7 +4,7 @@ import { LayoutGroup, motion } from 'motion/react';
 import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { MARKS } from '@/viz/marks';
 import type { HeapObject, MemValue } from '@/workspace/protocol';
-import { describeFrames, describeObjects, objectNames } from './describe';
+import { describeFrames, describeObjects, objectNames, sharedNames } from './describe';
 import { arrowPath, clampInto, framePath, lanePath, targetPoint, targetPointRight, type Box } from './geometry';
 import { extendOrder, NO_ORDER, orderHeap, type SeenOrder } from './order';
 import type { MemoryState } from './types';
@@ -27,6 +27,8 @@ const KEY = {
   dictKey: (obj: string, entry: string) => `o:${obj}{${entry}}k`,
   dictValue: (obj: string, entry: string) => `o:${obj}{${entry}}v`,
   field: (obj: string, name: string) => `o:${obj}.${name}`,
+  captured: (obj: string, name: string) => `o:${obj}^${name}`,
+  defaults: (obj: string, name: string) => `o:${obj}=${name}`,
 };
 
 // A plain `kind === 'list' || …` can't narrow the union: the three kinds share one member.
@@ -52,6 +54,7 @@ export function MemoryView({ state }: { state: MemoryState }) {
   const names = objectNames(state.heap, seen);
   const present = new Set(state.heap.map((h) => h.object.id));
   const refs = collectRefs(state).filter((r) => present.has(r.to));
+  const shared = sharedNames(state);
   const rootRef = useRef<HTMLDivElement>(null);
   useArrows(rootRef, state);
 
@@ -81,7 +84,7 @@ export function MemoryView({ state }: { state: MemoryState }) {
             )}
             <div className="flex flex-col items-start gap-4">
               {heap.map((entry) => (
-                <ObjectBox key={entry.object.id} entry={entry} name={names.get(entry.object.id)!} present={present} />
+                <ObjectBox key={entry.object.id} entry={entry} name={names.get(entry.object.id)!} present={present} shared={shared.get(entry.object.id)} />
               ))}
             </div>
           </div>
@@ -222,16 +225,17 @@ function Wash({ rounded }: { rounded: string }) {
  * says "new"; one whose contents changed this step says "changed". Both flash
  * in the write colour.
  */
-function ObjectBox({ entry, name, present }: { entry: HeapEntry; name: string; present: Set<string> }) {
+function ObjectBox({ entry, name, present, shared }: { entry: HeapEntry; name: string; present: Set<string>; shared?: string }) {
   const { object: o, fresh, changed } = entry;
   // Keyed by the contents, so the flash replays on every change, not only the first.
   const flash = fresh || changed ? JSON.stringify(o) : '';
   return (
     <motion.div layout="position" initial={fresh ? { opacity: 0 } : false} animate={{ opacity: 1 }} className="max-w-full min-w-0">
-      {(o.kind !== 'function' || flash) && (
-        <div aria-hidden className="mb-0.5 flex items-center gap-1.5 text-[11px] font-semibold">
+      {(o.kind !== 'function' || flash || shared) && (
+        <div aria-hidden className="mb-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
           {o.kind !== 'function' && <span className="font-mono text-ink-muted">{o.type}</span>}
           {fresh ? <Badge>new</Badge> : changed && <Badge>{WRITE.glyph} changed</Badge>}
+          {shared && <SharedBadge names={shared} />}
         </div>
       )}
       {isSequence(o) ? (
@@ -239,9 +243,13 @@ function ObjectBox({ entry, name, present }: { entry: HeapEntry; name: string; p
       ) : (
         <ObjectFrame id={o.id} flash={flash}>
           {o.kind === 'function' ? (
-            <div className="relative px-2 py-1 font-mono text-sm wrap-anywhere" aria-hidden>
-              <span className="text-ink-soft">{o.type}</span> <span className="font-semibold text-ink">{o.name}</span>
-            </div>
+            <>
+              <div className="relative px-2 py-1 font-mono text-sm wrap-anywhere" aria-hidden>
+                <span className="text-ink-soft">{o.type}</span> <span className="font-semibold text-ink">{o.name}</span>
+              </div>
+              {o.captured && <Kept title="captured" rows={o.captured} src={(n) => KEY.captured(o.id, n)} present={present} />}
+              {o.defaults && <Kept title="defaults" rows={o.defaults} src={(n) => KEY.defaults(o.id, n)} present={present} />}
+            </>
           ) : o.kind === 'dict' ? (
             <Rows
               rows={o.entries.map(([k, v]) => {
@@ -264,6 +272,25 @@ function ObjectBox({ entry, name, present }: { entry: HeapEntry; name: string; p
       )}
     </motion.div>
   );
+}
+
+/**
+ * The names a function keeps with it: what a closure captured from the
+ * function that made it (alive after that call ends), or its default values
+ * (made once, by def).
+ */
+function Kept({ title, rows, src, present }: { title: string; rows: [string, MemValue][]; src: (name: string) => string; present: Set<string> }) {
+  return (
+    <div className="relative border-t border-dashed border-line-strong" aria-hidden>
+      <div className="px-2 pt-1 text-[10px] font-semibold tracking-wide text-ink-soft uppercase">{title}</div>
+      <Rows rows={rows.map(([n, v]) => ({ key: n, left: n, src: src(n), value: v }))} more={0} empty="" present={present} />
+    </div>
+  );
+}
+
+/** Two or more names for one object: aliasing, plain to see. */
+function SharedBadge({ names }: { names: string }) {
+  return <span className="rounded bg-accent-soft px-1 text-[10px] leading-4 font-bold text-accent-ink">shared · {names}</span>;
 }
 
 function Badge({ children }: { children: ReactNode }) {
@@ -403,6 +430,9 @@ function collectRefs(state: MemoryState): Ref[] {
       for (const [f, v] of o.fields) add(KEY.field(o.id, f), v);
     } else if (isSequence(o)) {
       o.items.forEach((v, i) => add(KEY.item(o.id, i), v));
+    } else if (o.kind === 'function') {
+      for (const [n, v] of o.captured ?? []) add(KEY.captured(o.id, n), v);
+      for (const [n, v] of o.defaults ?? []) add(KEY.defaults(o.id, n), v);
     }
   }
   return refs;

@@ -942,5 +942,547 @@
         }
       ]
     }
+  },
+  "py-call-order": {
+    "python": {
+      "outputs": [
+        "doubling 3\ngot 6\ndoubling 6\n13\n",
+        "doubling 5\ngot 10\ndoubling 10\n21\n",
+        "doubling 10\ngot 20\ndoubling 20\n41\n"
+      ]
+    }
+  },
+  "py-to-fahrenheit": {
+    "python": {
+      "returns": [
+        212,
+        32,
+        -40,
+        98.6
+      ]
+    }
+  },
+  "py-sum-to": {
+    "python": {
+      "returns": [
+        10,
+        1,
+        0,
+        5050
+      ]
+    }
+  },
+  "py-delivery-none": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "You pay 13\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "You pay 3\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "You pay 28\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-average-function": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "2.0\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "4.333333333333333\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "3.0\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-power-defaults": {
+    "python": {
+      "outputs": [
+        "9\n27\n3\n",
+        "4\n8\n2\n",
+        "25\n125\n5\n"
+      ]
+    }
+  },
+  "py-greet-default": {
+    "python": {
+      "returns": [
+        "Hello, Ada!",
+        "Hi, Bo!",
+        "Welcome, Cy!"
+      ]
+    }
+  },
+  "py-total-args": {
+    "python": {
+      "returns": [
+        6,
+        0,
+        5,
+        10
+      ]
+    }
+  },
+  "py-swapped-arguments": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "180\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "25\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "99\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-label-keywords": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "cat...\ncat---\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "hello...\nhello---\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "ab\nab\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-scope-shadow": {
+    "python": {
+      "outputs": [
+        "99\n5\n6\n",
+        "99\n1\n2\n",
+        "99\n40\n41\n"
+      ]
+    }
+  },
+  "py-click-counter": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "3\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "0\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "7\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-down-and-up": {
+    "python": {
+      "outputs": [
+        "down 2\ndown 1\nup 1\nup 2\n",
+        "down 3\ndown 2\ndown 1\nup 1\nup 2\nup 3\n",
+        "down 1\nup 1\n"
+      ]
+    }
+  },
+  "py-digit-sum": {
+    "python": {
+      "returns": [
+        6,
+        0,
+        7,
+        18,
+        45
+      ]
+    }
+  },
+  "py-power-recursive": {
+    "python": {
+      "returns": [
+        1024,
+        27,
+        5,
+        1
+      ]
+    }
+  },
+  "py-stars-forever": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "***\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "*\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-fill-fib": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "13\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "0\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "1\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "144\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-lambda-calls": {
+    "python": {
+      "outputs": [
+        "9\n81\nfig\n",
+        "4\n16\nfig\n",
+        "25\n625\nfig\n"
+      ]
+    }
+  },
+  "py-longest-word": {
+    "python": {
+      "returns": [
+        "banana",
+        "cat",
+        "bb",
+        "plum"
+      ]
+    }
+  },
+  "py-key-lambdas": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "fig\npear\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "b\ncc\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "ox\nox\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-make-adder": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "6\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "15\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "0\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-list-ops": {
+    "python": {
+      "outputs": [
+        "[0, 7, 3]\n3 3\n",
+        "[0, 7, 10]\n3 10\n",
+        "[0, 7, 6]\n3 6\n"
+      ]
+    }
+  },
+  "py-list-average": {
+    "python": {
+      "returns": [
+        2,
+        10,
+        2.5,
+        3
+      ]
+    }
+  },
+  "py-evens-only": {
+    "python": {
+      "returns": [
+        [
+          2,
+          4
+        ],
+        [],
+        [],
+        [
+          0,
+          -2,
+          8
+        ]
+      ]
+    }
+  },
+  "py-words-backwards": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "blue\ngreen\nred\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "hello\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "e\nd\nc\nb\na\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-append-none": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "[0, 1, 4]\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "[0]\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "[]\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "[0, 1, 4, 9, 16, 25]\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-first-last-rest": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "5\n7\n[6, 7]\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "9\n9\n[]\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "1\n4\n[2, 3, 4]\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-alias-or-copy": {
+    "python": {
+      "outputs": [
+        "[1, 2, 3]\n[0, 2]\nTrue False\n",
+        "[5, 2, 3]\n[0, 2]\nTrue False\n",
+        "[9, 2, 3]\n[0, 2]\nTrue False\n"
+      ]
+    }
+  },
+  "py-shared-default": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "['pen']\n['cup']\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "['same']\n['same']\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "['a']\n['b']\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-swap-unpack": {
+    "python": {
+      "outputs": [
+        "(2, 3)\n4 3\n",
+        "(3, 5)\n6 5\n",
+        "(0, 5)\n0 5\n"
+      ]
+    }
+  },
+  "py-min-max-pair": {
+    "python": {
+      "returns": [
+        [
+          1,
+          3
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          -5,
+          4
+        ],
+        [
+          2,
+          2
+        ]
+      ]
+    }
+  },
+  "py-fib-swap": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "0\n1\n1\n2\n3\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "0\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "0\n1\n1\n2\n3\n5\n8\n13\n21\n34\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-move-point": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "(4, 4)\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "(1, 0)\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "(-1, 5)\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
+  },
+  "py-split-minutes": {
+    "python": {
+      "cases": [
+        {
+          "stdout": "2 h 15 min\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "1 h 0 min\n",
+          "prompts": [],
+          "exitCode": 0
+        },
+        {
+          "stdout": "0 h 5 min\n",
+          "prompts": [],
+          "exitCode": 0
+        }
+      ]
+    }
   }
 }

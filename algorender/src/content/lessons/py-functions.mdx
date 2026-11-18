@@ -1,0 +1,174 @@
+<Section step="hook" title="Naming a piece of work">
+
+Say a program works out the area of three rooms. You could write `width * height` three times, but if the rule ever
+changes (add the doorway, round up), you'd have to fix it in three places. A **function** gives a piece of work a
+name. You write it once, then use it by name as often as you like, each time with different values.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="def">The line that makes a function: `def area(width, height):`, then its body, indented under it.</Term>
+  <Term name="parameter">A name in the `def` line's brackets, like `width`. It stands for whatever value the call passes in.</Term>
+  <Term name="call">Using the function: `area(3, 4)`. Its body runs, with `width` pointing at 3 and `height` at 4.</Term>
+  <Term name="argument">A value a call passes in, like the `3` and the `4` in `area(3, 4)`.</Term>
+  <Term name="return">Ends the call and hands a value back to the line that made it.</Term>
+  <Term name="None">The value a call gives back when the function ends without a `return` value.</Term>
+</Terms>
+
+```python
+def area(width, height):
+    return width * height
+
+print(area(3, 4))      # 12
+big = area(10, 20)     # big points at 200
+```
+
+The `def` line runs when Python reaches it (here, once), and all it does is make the function and point the name
+`area` at it. Nothing in the body runs yet. The body runs each time something **calls** `area`, and each call gets
+its own `width` and `height`.
+
+`return` does two things at once: it hands a value back to the line that called, and it ends the call. A line after
+a `return` in the same block never runs. A function that reaches the end of its body without a `return` value gives
+back `None`, Python's value for "nothing", and so does `return` on its own, with no value after it: it just ends the
+call.
+
+You'll also meet `pass`, a line that does nothing at all. A body can't be empty, so task starters use `pass` to hold
+the place where your code goes: replace it.
+
+`print` and `return` are easy to mix up. `print` shows a value on the screen; the program can't do anything more
+with it. `return` gives the value back to the program, so a line like `big = area(10, 20)` can keep it, add to it, or
+pass it on.
+
+</Section>
+
+<Section step="see" title="Watch a call come and go">
+
+Step through it. Each call adds a frame under the Global frame with the call's own names, and the frame goes away
+when the call returns. Watch what `a` and `b` end up pointing at: `square` returns its answer, but `greet` only
+prints.
+
+<TraceCode snippet="py-functions" />
+
+<KeyIdea>
+
+**A call runs the function's body with its own names, then hands back what `return` gives**, or `None` when there's
+no `return` value. Printing a value inside a function is not the same as returning it.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-call-order" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="print-is-return"
+  title="A function that prints its answer gives it back"
+  probes={[
+    {
+      q: 'def f(x): print(x * 2), with no return. Then y = f(5). What does y point at?',
+      choices: ['None', '10', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'f prints 10 on the screen, but it has no return, so the call gives back None, and y points at None.',
+    },
+    {
+      q: 'def add(a, b) prints a + b and has no return. What does print(add(1, 2)) show?',
+      choices: ['3, then None on the next line', '3', '3, then 3 again'],
+      answer: 0,
+      trap: 1,
+      why: 'The call prints 3 itself, then gives back None, which the outer print shows.',
+    },
+  ]}
+>
+
+`print` shows a value on the screen, and that's all: the line that called the function gets nothing back but
+`None`. To hand a value back so the program can keep it and use it, the function has to `return` it. If you see
+`None` where you expected a number, look for a `print` that should have been a `return`.
+
+</Misconception>
+
+<Misconception
+  id="code-after-return"
+  title="The lines after a return still run"
+  probes={[
+    {
+      q: 'Inside f, the first line is return 1 and the second is print("hi"). What does calling f() print?',
+      choices: ['Nothing', 'hi', '1, then hi'],
+      answer: 0,
+      trap: 1,
+      why: 'return ends the call on the spot, so the print below it never runs.',
+    },
+    {
+      q: 'def first_multiple(n): a loop for i in range(1, 10) that returns i as soon as i % n == 0. What does first_multiple(3) return?',
+      choices: ['3', '9', '6'],
+      answer: 0,
+      trap: 1,
+      why: 'The first i that fits is 3, and return ends the function there: the loop never gets to 6 or 9.',
+    },
+  ]}
+>
+
+`return` ends the call at once, even in the middle of a loop. Nothing after it in the function runs on that call.
+That is often exactly what you want: a function that searches can `return` the moment it finds the answer.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'def f(x): return x + 1. What does print(f(f(1))) show?',
+      choices: ['3', '2', 'f(2)'],
+      answer: 0,
+      why: 'The inner call runs first and gives back 2; the outer call adds one more and gives back 3.',
+    },
+    {
+      q: 'def show(n): print(n), with no return. What does r point at after r = show(4)?',
+      choices: ['None', '4', 'The function show'],
+      answer: 0,
+      why: 'show prints 4, but without a return the call gives back None.',
+      traps: { 1: 'print-is-return' },
+    },
+    {
+      q: 'Inside f, the first line is return "a" and the second is return "b". What does f() give back?',
+      choices: ['"a"', '"b"', 'Both, one after the other'],
+      answer: 0,
+      why: 'The first return ends the call, so the second line never runs.',
+      traps: { 1: 'code-after-return', 2: 'code-after-return' },
+    },
+    {
+      q: 'Python reaches a def line. What happens?',
+      choices: ['It makes the function and names it; the body runs only when it is called', 'It runs the body once straight away', 'Nothing, until the program ends'],
+      answer: 0,
+      why: 'def makes the function. Its body runs on each call, and not before.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+Some of these tasks ask you to write a function. The check calls it with arguments of its own and compares what each
+call **returns**, so a function that prints its answer instead won't pass.
+
+<TaskStrip concept="py-functions" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `def` makes a function; its body runs each time it is called, with the call's own names.
+- Arguments fill the parameters; `return` hands a value back and ends the call.
+- A function without a `return` value gives back `None`.
+- `print` shows a value; only `return` gives it back to the program.
+
+</Section>

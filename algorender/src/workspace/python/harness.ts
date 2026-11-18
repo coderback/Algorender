@@ -1222,6 +1222,34 @@ def _shown(name, value):
 _FUNCTIONS = (types.FunctionType, types.BuiltinFunctionType, types.MethodType)
 
 
+def _captured(fn):
+    """What a closure captured: the names it uses from the functions around
+    it, with their values now, in name order (as JS lists them); a name not
+    yet given a value is left out."""
+    out = []
+    for name, cell in zip(fn.__code__.co_freevars, fn.__closure__ or ()):
+        try:
+            value = cell.cell_contents
+        except ValueError:
+            continue
+        if _shown(name, value):
+            out.append((name, value))
+    return sorted(out, key=lambda pair: pair[0])
+
+
+def _defaults(fn):
+    """A function's default values by parameter, in parameter order: made
+    once, when def ran, and kept on the function."""
+    code = fn.__code__
+    positional = code.co_varnames[:code.co_argcount]
+    values = fn.__defaults__ or ()
+    out = list(zip(positional[len(positional) - len(values):], values))
+    keyword = code.co_varnames[code.co_argcount:code.co_argcount + code.co_kwonlyargcount]
+    given = fn.__kwdefaults__ or {}
+    out += [(name, given[name]) for name in keyword if name in given]
+    return out
+
+
 class _Heap:
     """The objects one step reaches from its frames, breadth first, each listed
     once under its id for the run. Past MAX_OBJECTS a reference shows as …."""
@@ -1286,7 +1314,15 @@ class _Heap:
         if isinstance(x, type):
             return {'id': oid, 'kind': 'function', 'type': 'class', 'name': x.__name__}
         if isinstance(x, _FUNCTIONS):
-            return {'id': oid, 'kind': 'function', 'type': 'function', 'name': getattr(x, '__name__', 'function')}
+            fn = {'id': oid, 'kind': 'function', 'type': 'function', 'name': getattr(x, '__name__', 'function')}
+            if isinstance(x, types.FunctionType) and x.__code__.co_filename == LEARNER:
+                captured = [[k, self.value(v)] for k, v in _captured(x)]
+                if captured:
+                    fn['captured'] = captured
+                defaults = [[k, self.value(v)] for k, v in _defaults(x)]
+                if defaults:
+                    fn['defaults'] = defaults
+            return fn
         # Anything else is drawn by its attributes, read without running the
         # learner's __getattr__ or properties.
         try:

@@ -290,6 +290,8 @@ class Run {
   private calls = 0;
   private readonly objectIds = new WeakMap<object, string>();
   private objectCount = 0;
+  /** 'lines' mode: what each closure captured, read on demand (instrument.ts). */
+  private readonly closures = new WeakMap<object, NonNullable<Capture>>();
   /** Set while memory is read, so a getter or Proxy trap of the learner's records no steps of its own. */
   private reading = false;
 
@@ -381,6 +383,17 @@ class Run {
     named: (name: string, fn: unknown): unknown => {
       if (fn === this.helpers.table) return (rows: unknown, cols: unknown, fill: unknown = 0) => this.makeTable(name, rows, cols, fill);
       if (fn === this.helpers.array) return (values: unknown, fill: unknown = 0) => this.makeArray(name, values, fill);
+      return fn;
+    },
+    /**
+     * 'lines' mode: a function made inside another that uses its names. Its
+     * object shows them (`captured`), read through `reader`, for as long as
+     * it lives. `name` is the one the engine would have inferred unwrapped.
+     */
+    closure: (fn: unknown, reader: Capture, name: string | null): unknown => {
+      if (typeof fn !== 'function') return fn;
+      if (reader) this.closures.set(fn, reader);
+      if (name && !fn.name) Object.defineProperty(fn, 'name', { value: name, configurable: true });
       return fn;
     },
     enter: (name?: string): number => {
@@ -630,7 +643,20 @@ class Run {
     }
     if (typeof x === 'function') {
       const isClass = /^class\b/.test(Function.prototype.toString.call(x));
-      return { id, kind: 'function', type: isClass ? 'class' : 'function', name: x.name || '(anonymous)' };
+      const fn: Extract<HeapObject, { kind: 'function' }> = { id, kind: 'function', type: isClass ? 'class' : 'function', name: x.name || '(anonymous)' };
+      const reader = this.closures.get(x);
+      if (reader) {
+        let raw: Record<string, unknown> = {};
+        try {
+          raw = reader();
+        } catch {
+          // A name still in its temporal dead zone is skipped by the reader itself.
+        }
+        // In name order (the reader's), as Python lists a closure's cells; a name not yet set is left out.
+        const captured = Object.keys(raw).map((name): [string, MemValue] => [name, value(raw[name])]);
+        if (captured.length > 0) fn.captured = captured;
+      }
+      return fn;
     }
     const fields: [string, MemValue][] = [];
     const keys = Object.keys(x);

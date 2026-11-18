@@ -1,0 +1,191 @@
+<Section step="hook" title="Functions are values too">
+
+`max("zoo", "apple", "kiwi")` gives `zoo`, the one that comes last in the alphabet. What if you want the longest word
+instead? You don't need a new `max`. You hand it a function that says what to compare by: `max("zoo", "apple",
+"kiwi", key=len)` gives `apple`. A function can be passed around like any other value, and a **lambda** lets you
+write a small one right where you need it.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="function object">What `def` makes: a value like a number or a string, which a name points at. In the memory view it has a box of its own.</Term>
+  <Term name="lambda">An expression that makes a small function without a name: `lambda x: x * 2`.</Term>
+  <Term name="key=">An argument that `max`, `min` (and `sorted`, later) take: a function they call on each item, comparing what it gives back.</Term>
+</Terms>
+
+A function's name, without brackets, is the function itself; with brackets, it's a call. `print(len)` shows something
+like `<built-in function len>`, while `print(len("hi"))` shows `2`. So you can pass a function to another function,
+which calls it when it chooses:
+
+```python
+def apply_twice(f, x):
+    return f(f(x))
+
+def double(n):
+    return n * 2
+
+apply_twice(double, 5)   # double(double(5)), which is 20
+```
+
+Pass `double`, not `double()`: the brackets would call it on the spot, with no argument.
+
+A `lambda` writes the same kind of small function in one expression:
+
+```python
+double = lambda n: n * 2          # the same as the def above
+apply_twice(lambda n: n + 3, 1)   # 7, with no name needed
+```
+
+After `lambda` come the parameters, then a colon, then **one expression**, which the function gives back when it is
+called. There is no `return` in a lambda (writing one is a `SyntaxError`), and no room for loops or other statements:
+anything longer deserves a `def` and a name.
+
+A function made inside another keeps the names it uses from there, as you saw with closures, and lambdas are no
+different: `make_adder(3)` below returns a lambda that remembers `n` is 3.
+
+</Section>
+
+<Section step="see" title="Watch functions being passed around">
+
+Step through it. `double` and `add3` point at function objects, lambdas named `<lambda>`. The one `make_adder` made
+keeps `n` in its box. Watch `apply_twice` call whichever function it was given.
+
+<TraceCode snippet="py-lambdas" />
+
+<KeyIdea>
+
+**A function is a value: a name without brackets passes it, with brackets calls it.** A lambda makes a small
+function from one expression, which it gives back when called.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-lambda-calls" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="passing-calls"
+  title="Passing f() is the same as passing f"
+  probes={[
+    {
+      q: 'def hello(): return "hi". What does print(hello) show, with no brackets after hello?',
+      choices: ['Something like <function hello at 0x…>', 'hi', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'Without brackets, hello is the function itself, so print shows the function, not its result.',
+    },
+    {
+      q: 'def run(f): return f(). Which call hands the function shout itself to run?',
+      choices: ['run(shout)', 'run(shout())', 'Both'],
+      answer: 0,
+      trap: 2,
+      why: 'run(shout()) calls shout first and hands run what shout gave back, not the function.',
+    },
+  ]}
+>
+
+Brackets call a function. `use(half)` hands `use` the function, to call when it chooses. `use(half())` calls `half`
+straight away, with no arguments. If `half` needs an argument, that's a `TypeError` on the spot, and `use` never runs;
+if not, `use` gets whatever `half` gave back (often `None`), not the function. When you pass a function, leave the
+brackets off.
+
+</Misconception>
+
+<Misconception
+  id="lambda-return"
+  title="A lambda needs the word return"
+  probes={[
+    {
+      q: 'Which line makes a function that adds 1 to its argument?',
+      choices: ['f = lambda x: x + 1', 'f = lambda x: return x + 1', 'Both'],
+      answer: 0,
+      trap: 1,
+      why: 'A lambda’s body is one expression, given back on its own. return is a statement, so it is a SyntaxError there.',
+    },
+    {
+      q: 'What does (lambda a, b: a * b)(3, 4) give?',
+      choices: ['12', 'None, because there is no return', 'The lambda itself'],
+      answer: 0,
+      trap: 1,
+      why: 'The lambda is called with 3 and 4, and gives back its expression, 3 * 4.',
+    },
+  ]}
+>
+
+A lambda's body is a single expression, and calling the lambda gives back that expression's value. You never write
+`return` in one; Python won't accept it. If the function needs more than one expression, write it with `def`.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'f = lambda x: x - 1. What does f(f(5)) return?',
+      choices: ['3', '4', 'A lambda'],
+      answer: 0,
+      why: 'f(5) is 4, and f(4) is 3.',
+    },
+    {
+      q: 'def use(f): return f(10), and def half(n): return n // 2. Which call gives 5?',
+      choices: ['use(half)', 'use(half())', 'use(half(10))'],
+      answer: 0,
+      why: 'use needs the function itself. half() fails for want of an argument, and half(10) hands use the number 5, which can’t be called.',
+      traps: { 1: 'passing-calls' },
+    },
+    {
+      q: 'What does print((lambda: 7)()) show?',
+      choices: ['7', 'None', 'An error'],
+      answer: 0,
+      why: 'The lambda takes no parameters and gives back 7 when called.',
+      traps: { 1: 'lambda-return' },
+    },
+    {
+      q: 'What does max("zoo", "apple", "kiwi", key=len) return?',
+      choices: ['apple', 'zoo', 'kiwi'],
+      answer: 0,
+      why: 'key=len compares the lengths, 3, 5 and 4. Without it, max would compare the alphabet and give zoo.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-lambdas" />
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="functions-as-values"
+  prompt="Explain what a function is to Python, from def to lambda: what does a def (or a lambda) make, what happens when it is called, and what does it mean to pass a function to another function?"
+  rubric={[
+    'A def or a lambda makes a function object, a value a name can point at (a lambda needs no name)',
+    'A call runs the body in a new frame with its own local names, and return (or a lambda’s expression) hands a value back',
+    'A name without brackets is the function itself, so it can be passed to another function and called there',
+    'A function made inside another keeps the names it uses from there, even after that call ends',
+  ]}
+  example="A def makes a function object and points its name at it, like any other value; a lambda makes one from a single expression, without needing a name. Calling it runs the body in a new frame, with its own local names for that call, and hands back what return gives, or the lambda's expression. Because the function is a value, I can pass it without brackets to another function, like key=len for max, and that function calls it when it needs to. If the function was made inside another, it keeps the outer names it uses, so make_adder(3) gives a function that still knows n is 3."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A function is a value: its name without brackets is the function, with brackets it's a call.
+- Functions can be passed to other functions, and returned from them.
+- `lambda params: expression` makes a small function that gives back its expression; no `return`.
+- `max`, `min` and later `sorted` take `key=`, a function to compare by.
+
+</Section>

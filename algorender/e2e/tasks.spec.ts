@@ -188,6 +188,41 @@ test('the "Python from zero" plan starts at the first program', async ({ page })
   await expect(upNext.getByRole('heading', { level: 3 })).toHaveText('Your first program');
 });
 
+// L2 batch 2: function tasks compare what a call returns, so printing the answer instead fails;
+// tests tasks run hidden unit tests against the learner's functions.
+/** Opens a task with a draft already typed. */
+async function openTask(page: Page, slug: string, code: string) {
+  await page.addInitScript(
+    ([s, c]) => {
+      if (window === window.top) localStorage.setItem(`algorender:code:task:${s}:python`, c);
+    },
+    [slug, code],
+  );
+  await page.goto(`/learn/tasks/${slug}`);
+  await expect(page.locator('.cm-editor')).toBeVisible();
+}
+
+test('a function task: printing the answer instead of returning it fails each call with what came back', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openTask(page, 'py-sum-to', 'def sum_to(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    print(total)\n');
+  await check(page).click();
+  await expect(results(page)).toHaveAttribute('data-verdict', 'failed', { timeout: 60_000 });
+  await expect(results(page)).toContainText('4 of 4 calls fail');
+  await expect(results(page)).toContainText('sum_to(4)');
+  await expect(results(page)).toContainText('Returned None, not 10.');
+  expect(errors).toEqual([]);
+});
+
+test('a tests task: a closure that keeps its own n passes every hidden test', async ({ page }) => {
+  await openTask(page, 'py-make-multiplier', 'def make_multiplier(n):\n    def multiply(x):\n        return x * n\n    return multiply\n');
+  await check(page).click();
+  await expect(results(page)).toHaveAttribute('data-verdict', 'passed', { timeout: 60_000 });
+  await expect(results(page)).toContainText('All 4 tests pass');
+  // The strip of the topic's tasks: py-scope has five.
+  await page.goto('/learn/py-scope');
+  await expect(page.getByRole('region', { name: 'This topic’s tasks' }).getByRole('link')).toHaveCount(5);
+});
+
 const VIEWPORTS = [
   { name: '1440', width: 1440, height: 900 },
   { name: '390', width: 390, height: 844 },

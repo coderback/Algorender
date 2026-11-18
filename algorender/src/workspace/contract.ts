@@ -138,7 +138,9 @@ export const NOTHING = { nothing: true } as const;
  * is None/null. An object is a reference with its contents: `ref` labels it,
  * and names with one label must share one object (different labels, different
  * objects) for the whole run. `list` is a Python list / JS Array; `map` a
- * Python dict with string keys / a plain JS object; `fn` a function by name.
+ * Python dict with string keys / a plain JS object; `fn` a function by name,
+ * with what it captured (both languages) and its default values (Python only:
+ * JS works a default out on every call).
  */
 export type Shape =
   | number
@@ -149,7 +151,7 @@ export type Shape =
   | { ref: string; list: Shape[] }
   | { ref: string; map: [string, Shape][] }
   | { ref: string; obj: string; fields: [string, Shape][] }
-  | { ref: string; fn: string };
+  | { ref: string; fn: string; captured?: [string, Shape][]; defaults?: [string, Shape][] };
 
 type Side = 'python' | 'js';
 
@@ -174,7 +176,7 @@ export type Drawn =
   | { ref: string; type: string; items: Drawn[] }
   | { ref: string; type: string; entries: [Drawn, Drawn][] }
   | { ref: string; type: string; fields: [string, Drawn][] }
-  | { ref: string; type: string; name: string }
+  | { ref: string; type: string; name: string; captured?: [string, Drawn][]; defaults?: [string, Drawn][] }
   | { ref: string; type: string };
 
 export type DrawnStep = {
@@ -191,6 +193,10 @@ const map = (ref: string, ...entries: [string, Shape][]): Shape => ({ ref, map: 
 /** An instance of a class both languages name alike (TreeNode), with its fields in order. */
 const obj = (ref: string, type: string, ...fields: [string, Shape][]): Shape => ({ ref, obj: type, fields });
 const fn = (name: string): Shape => ({ ref: name, fn: name });
+/** A function that captured names from the function that made it; `ref` tells two made by one def apart. */
+const closure = (ref: string, name: string, ...captured: [string, Shape][]): Shape => ({ ref, fn: name, captured });
+/** A function with default values: Python keeps them on the function, JS shows none. */
+const withDefaults = (name: string, ...defaults: [string, Shape][]): Shape => ({ ref: name, fn: name, defaults });
 const G = 'Global frame';
 
 const UNIQUE_PATHS_PY = `def unique_paths(rows, cols):
@@ -1253,6 +1259,161 @@ console.log(nums);
         { event: 'return', line: 6, stack: [[G, { grow: fn('grow'), nums: list('L', 1, 2, 3, 4) }]] },
       ],
       prints: ['[1, 2, 3, 4]'],
+    },
+  },
+  {
+    name: 'lines: a closure shows what it captured, which outlives the frame that made it',
+    code: {
+      python: `def counter():
+    count = 0
+    def tick():
+        nonlocal count
+        count += 1
+        return count
+    # (line 7: the JS closes tick here)
+    return tick
+# (line 9: the JS closes counter here)
+c = counter()
+c()
+`,
+      javascript: `function counter() {
+  let count = 0;
+  function tick() {
+    count; // Python's nonlocal count is a step too
+    count += 1;
+    return count;
+  }
+  return tick;
+}
+const c = counter();
+c();
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 10, stack: [[G, { counter: fn('counter') }]] },
+        { line: 2, stack: [[G, { counter: fn('counter') }], ['counter', {}]] },
+        { line: 3, stack: [[G, { counter: fn('counter') }], ['counter', { count: 0 }]] },
+        { line: 8, stack: [[G, { counter: fn('counter') }], ['counter', { count: 0, tick: closure('T', 'tick', ['count', 0]) }]] },
+        {
+          event: 'return',
+          line: 8,
+          stack: [[G, { counter: fn('counter') }], ['counter', { count: 0, tick: closure('T', 'tick', ['count', 0]) }]],
+          returning: closure('T', 'tick', ['count', 0]),
+        },
+        // counter's frame is gone, but tick still holds count.
+        { line: 11, stack: [[G, { counter: fn('counter'), c: closure('T', 'tick', ['count', 0]) }]] },
+        { line: 4, stack: [[G, { counter: fn('counter'), c: closure('T', 'tick', ['count', 0]) }], ['tick', {}]] },
+        { line: 5, stack: [[G, { counter: fn('counter'), c: closure('T', 'tick', ['count', 0]) }], ['tick', {}]] },
+        { line: 6, stack: [[G, { counter: fn('counter'), c: closure('T', 'tick', ['count', 1]) }], ['tick', {}]] },
+        { event: 'return', line: 6, stack: [[G, { counter: fn('counter'), c: closure('T', 'tick', ['count', 1]) }], ['tick', {}]], returning: 1 },
+        { event: 'return', line: 11, stack: [[G, { counter: fn('counter'), c: closure('T', 'tick', ['count', 1]) }]] },
+      ],
+    },
+  },
+  {
+    name: 'lines: closures capture from every function around them, a captured list by reference, and nothing from the top level',
+    code: {
+      python: `rate = 2
+def outer(items):
+    total = 0
+    def middle():
+        def inner(x):
+            items.append(x * rate + total)
+            return items
+        # (line 8: the JS closes inner here)
+        return inner
+    # (line 10: the JS closes middle here)
+    return middle()
+# (line 12: the JS closes outer here)
+f = outer([])
+f(5)
+`,
+      javascript: `let rate = 2;
+function outer(items) {
+  let total = 0;
+  function middle() {
+    function inner(x) {
+      items.push(x * rate + total);
+      return items;
+    }
+    return inner;
+  }
+  return middle();
+}
+const f = outer([]);
+f(5);
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      firstSteps: true,
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 2, stack: [[G, { rate: 2 }]] },
+        { line: 13, stack: [[G, { rate: 2, outer: fn('outer') }]] },
+        { line: 3, stack: [[G, { rate: 2, outer: fn('outer') }], ['outer', { items: list('L') }]] },
+        { line: 4, stack: [[G, { rate: 2, outer: fn('outer') }], ['outer', { items: list('L'), total: 0 }]] },
+        {
+          line: 11,
+          // middle uses items and total only through inner, which it makes: it captures them too.
+          stack: [[G, { rate: 2, outer: fn('outer') }], ['outer', { items: list('L'), total: 0, middle: closure('M', 'middle', ['items', list('L')], ['total', 0]) }]],
+        },
+        {
+          line: 5,
+          stack: [
+            [G, { rate: 2, outer: fn('outer') }],
+            ['outer', { items: list('L'), total: 0, middle: closure('M', 'middle', ['items', list('L')], ['total', 0]) }],
+            ['middle', {}],
+          ],
+        },
+        {
+          line: 9,
+          stack: [
+            [G, { rate: 2, outer: fn('outer') }],
+            ['outer', { items: list('L'), total: 0, middle: closure('M', 'middle', ['items', list('L')], ['total', 0]) }],
+            ['middle', { inner: closure('I', 'inner', ['items', list('L')], ['total', 0]) }],
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: 'lines: a default value is kept on the function in Python; JS works one out on every call',
+    code: {
+      python: `def greet(name, greeting="Hi"):
+    return greeting + " " + name
+# (line 3: the JS closes greet here)
+s = greet("Ada")
+`,
+      javascript: `function greet(name, greeting = "Hi") {
+  return greeting + " " + name;
+}
+const s = greet("Ada");
+`,
+    },
+    entry: { python: '', js: '' },
+    args: [],
+    mode: 'lines',
+    expect: {
+      steps: [
+        { line: 1, stack: [[G, {}]] },
+        { line: 4, stack: [[G, { greet: withDefaults('greet', ['greeting', 'Hi']) }]] },
+        { line: 2, stack: [[G, { greet: withDefaults('greet', ['greeting', 'Hi']) }], ['greet', { name: 'Ada', greeting: 'Hi' }]] },
+        {
+          event: 'return',
+          line: 2,
+          stack: [[G, { greet: withDefaults('greet', ['greeting', 'Hi']) }], ['greet', { name: 'Ada', greeting: 'Hi' }]],
+          returning: 'Hi Ada',
+        },
+        { event: 'return', line: 4, stack: [[G, { greet: withDefaults('greet', ['greeting', 'Hi']), s: 'Hi Ada' }]] },
+      ],
     },
   },
   {
@@ -2431,7 +2592,10 @@ export function expectedSteps(steps: readonly StepShape[], language: Language): 
         : { ref, type: 'Object', fields: s.map.map(([k, v]): [string, Drawn] => [k, draw(v)]) };
     }
     if ('obj' in s) return { ref, type: s.obj, fields: s.fields.map(([k, v]): [string, Drawn] => [k, draw(v)]) };
-    return { ref, type: 'function', name: s.fn };
+    const f: Drawn = { ref, type: 'function', name: s.fn };
+    if (s.captured?.length) f.captured = s.captured.map(([k, v]): [string, Drawn] => [k, draw(v)]);
+    if (py && s.defaults?.length) f.defaults = s.defaults.map(([k, v]): [string, Drawn] => [k, draw(v)]);
+    return f;
   };
   return steps.map((step) => {
     const stack = step.stack.map(([name, locals]): [string, [string, Drawn][]] => [
@@ -2469,8 +2633,12 @@ export function drawnSteps(events: readonly RunEvent[]): DrawnStep[] {
           return { ref, type: o.type, entries: o.entries.map(([k, x]): [Drawn, Drawn] => [draw(k, inner), draw(x, inner)]) };
         case 'object':
           return { ref, type: o.type, fields: o.fields.map(([k, x]): [string, Drawn] => [k, draw(x, inner)]) };
-        case 'function':
-          return { ref, type: o.type, name: o.name };
+        case 'function': {
+          const f: Drawn = { ref, type: o.type, name: o.name };
+          if (o.captured) f.captured = o.captured.map(([k, x]): [string, Drawn] => [k, draw(x, inner)]);
+          if (o.defaults) f.defaults = o.defaults.map(([k, x]): [string, Drawn] => [k, draw(x, inner)]);
+          return f;
+        }
       }
     };
     const stack = e.stack.map((f): [string, [string, Drawn][]] => [f.fn, f.locals.map(([name, v]): [string, Drawn] => [name, draw(v)])]);
@@ -2534,7 +2702,8 @@ export function stepProblems(events: readonly RunEvent[]): string[] {
       if (!o) return void problems.push(`${at}: ${v.ref} isn't in the heap`);
       if (o.kind === 'dict') o.entries.forEach(([a, b]) => (reach(a), reach(b)));
       else if (o.kind === 'object') o.fields.forEach(([, b]) => reach(b));
-      else if (o.kind !== 'function') o.items.forEach(reach);
+      else if (o.kind === 'function') [...(o.captured ?? []), ...(o.defaults ?? [])].forEach(([, b]) => reach(b));
+      else o.items.forEach(reach);
     };
     for (const f of e.stack) {
       f.locals.forEach(([, v]) => reach(v));

@@ -1,0 +1,193 @@
+<Section step="hook" title="Whose name is it?">
+
+A program of any size reuses names: `total`, `count`, `i`. If a function's `total` could quietly overwrite the
+program's `total`, every function would be a risk to every other. Python keeps them apart: a name set inside a
+function belongs to that call. Knowing which name a line means, and how to reach past that rule when you need to, is
+what **scope** is about.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="local name">A name a function sets, its parameters included. It belongs to one call: made fresh when the call starts, gone when it ends.</Term>
+  <Term name="global name">A name set at the top level of the program, outside every function.</Term>
+  <Term name="enclosing name">A name set in an outer function, as a function defined inside it sees it.</Term>
+  <Term name="global">`global count` inside a function says that `count` there means the global name.</Term>
+  <Term name="nonlocal">`nonlocal count` inside an inner function says that `count` means the enclosing function's name.</Term>
+  <Term name="closure">A function that keeps the enclosing names it uses, even after the enclosing call has ended.</Term>
+</Terms>
+
+When a line uses a name, Python looks for it in four places, in this order, and takes the first it finds: the
+**L**ocal names of the call, then the names of any **E**nclosing function, then the **G**lobal names, and last the
+**B**uilt-in ones like `print` and `len` (LEGB). So a function can read a global without doing anything special.
+
+**Assigning** is different. Setting a name anywhere in a function makes it local to that function, for the whole of
+its body:
+
+```python
+total = 100
+
+def spend(amount):
+    total = amount * 2    # a new local total; the global one stays 100
+    return total
+```
+
+That's also why this fails: `x = x + 1` inside a function makes `x` local, so reading it on the right is reading a
+local that has no value yet. Python stops with an `UnboundLocalError`. To change the global instead, say so first
+with `global x`. Use it sparingly: functions that change globals are hard to follow, and returning a value is usually
+clearer.
+
+A function defined inside another can read the outer function's names, and with `nonlocal` it can change them. If the
+outer function returns the inner one, the inner function keeps those names alive: it is a **closure**.
+
+```python
+def make_counter():
+    n = 0
+    def tick():
+        nonlocal n
+        n += 1
+        return n
+    return tick
+
+c = make_counter()   # make_counter has ended, but tick keeps its n
+c()                  # 1
+c()                  # 2
+```
+
+</Section>
+
+<Section step="see" title="Watch the names live and die">
+
+Step through it. `spend` gets a `total` of its own while the global one stays at 100. Then watch `make_counter`'s
+frame end: the function `tick` keeps `n` in its box in the memory view (under "captured"), and each call to `c`
+changes that `n`.
+
+<TraceCode snippet="py-scope" />
+
+<KeyIdea>
+
+**Assigning a name inside a function makes it local to the call; reading one looks it up in LEGB order.** `global`
+and `nonlocal` let a function change a name outside it, and an inner function keeps the enclosing names it uses alive
+after the outer call ends.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-scope-shadow" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="assign-changes-global"
+  title="Assigning to a name in a function changes the global with that name"
+  probes={[
+    {
+      q: 'score = 1 at the top level. def reset(): score = 0. After calling reset(), what does print(score) show?',
+      choices: ['1', '0', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'score = 0 inside reset makes a local score, which is gone once the call ends. The global score stays 1.',
+    },
+    {
+      q: 'name = "Ada" at the top level. def rename(): name = "Bo", then print(name), both inside it. What do rename() and then a print(name) at the top level show?',
+      choices: ['Bo, then Ada', 'Bo, then Bo', 'Ada, then Ada'],
+      answer: 0,
+      trap: 1,
+      why: 'Inside, name is rename’s local, "Bo". At the top level, name is still the global "Ada".',
+    },
+  ]}
+>
+
+A function that sets a name gets a local name of its own, even when a global has the same name. The global is
+untouched, and the local disappears when the call ends. To change the global, the function has to say
+`global name` first, or, usually better, `return` the new value and let the caller store it.
+
+</Misconception>
+
+<Misconception
+  id="locals-survive"
+  title="A function's local names are still there after it returns"
+  probes={[
+    {
+      q: 'def f(): secret = 42. After calling f(), the top level runs print(secret). What happens?',
+      choices: ['NameError: name \'secret\' is not defined', 'It prints 42', 'It prints None'],
+      answer: 0,
+      trap: 1,
+      why: 'secret was local to the call, and went away when it ended. The top level never had a secret.',
+    },
+    {
+      q: 'def f(n): if n > 0, saved = n; then return saved. f(5) returns 5. What does f(0) do next?',
+      choices: ['Stops with UnboundLocalError: this call never set saved', 'Returns 5, the saved from the call before', 'Returns 0'],
+      answer: 0,
+      trap: 1,
+      why: 'Each call starts with no local names at all. f(0) skips the line that sets saved, so it has no saved to return.',
+    },
+  ]}
+>
+
+Each call gets fresh local names and loses them when it ends. Nothing carries over from one call to the next, and
+the code outside can't see them. The exception is a closure: an inner function the outer one gives back keeps the
+outer names that it uses, which is how `make_counter`'s `n` survives.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'level = 1 at the top level. def up(): level = 2. After up(), what does print(level) show?',
+      choices: ['1', '2', 'An error'],
+      answer: 0,
+      why: 'up made a local level of its own. The global level is still 1.',
+      traps: { 1: 'assign-changes-global' },
+    },
+    {
+      q: 'count = 0 at the top level. def bump(): global count, then count += 1. After two calls of bump(), what does print(count) show?',
+      choices: ['2', '0', 'An error'],
+      answer: 0,
+      why: 'global count makes count in bump the global one, so each call adds 1 to it.',
+    },
+    {
+      q: 'def remember(x): if x != 0, last = x; then return last. After remember(7), what does remember(0) do?',
+      choices: ['Stops with UnboundLocalError', 'Returns 7', 'Returns 0'],
+      answer: 0,
+      why: 'last was local to the first call and went away with it. The second call never sets last, so returning it fails.',
+      traps: { 1: 'locals-survive' },
+    },
+    {
+      q: 'x = 5 at the top level. def f(): print(x), then x = 1 on the next line. What happens when f() runs?',
+      choices: ['UnboundLocalError: x is local in f, and is read before it is set', 'It prints 5', 'It prints 1'],
+      answer: 0,
+      why: 'The assignment makes x local to the whole of f, so the print reads the local x, which has no value yet.',
+    },
+    {
+      q: 'make() sets n = 0 and defines step(), which says nonlocal n, adds 1 to n and returns it; make returns step. After s = make() and one s(), what does a second s() return?',
+      choices: ['2', '1', 'An error, because make has returned'],
+      answer: 0,
+      why: 'step keeps make’s n alive after make returns, so the second call adds 1 to the 1 left by the first.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-scope" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Names set in a function, parameters too, are local to the call: fresh each call, gone when it ends.
+- Reading a name looks in Local, Enclosing, Global, then Built-in names (LEGB).
+- Assigning anywhere in a function makes the name local there; `global` and `nonlocal` say otherwise.
+- An inner function returned from an outer one keeps the outer names it uses: a closure.
+
+</Section>

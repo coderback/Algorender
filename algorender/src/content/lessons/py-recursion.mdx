@@ -1,0 +1,168 @@
+<Section step="hook" title="A function that calls itself">
+
+How many digits are in 9045? One for the 5, plus however many are in 904. And 904 is one digit plus the digits of
+90, and so on, until a single digit is left. Some problems are made of a smaller copy of themselves. A function can
+solve them by calling **itself** on the smaller copy, until the copy is so small that the answer is obvious.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="recursive function">A function that calls itself, on a smaller version of its problem.</Term>
+  <Term name="base case">The case small enough to answer without another call. Every recursive function needs one, and every call must get closer to it.</Term>
+  <Term name="recursive case">The case that calls the function again, on a smaller problem, and uses its answer.</Term>
+  <Term name="call stack">The frames of the calls still running, newest on top. Each call waits there until the call it made returns.</Term>
+</Terms>
+
+```python
+def factorial(n):
+    if n <= 1:                       # base case
+        return 1
+    return n * factorial(n - 1)      # recursive case
+
+factorial(3)   # 3 * factorial(2) = 3 * (2 * factorial(1)) = 3 * 2 * 1 = 6
+```
+
+Nothing special happens when a function calls itself: it's a call like any other. Python makes a new frame with its
+own `n`, and the calling frame **waits**, its own `n` unchanged, until the new call returns. `factorial(3)` waits for
+`factorial(2)`, which waits for `factorial(1)`. That one hits the base case and returns 1, and then the waiting calls
+finish one by one, newest first, each using the answer it was given.
+
+Without a base case, or with a call that doesn't get closer to it, the calls never stop. Python allows about a
+thousand calls waiting at once, then stops the program with `RecursionError: maximum recursion depth exceeded`.
+
+A function can do work both before and after its call to itself. Work before the call happens on the way down, in the
+order the calls are made. Work after it happens on the way back up, in the reverse order.
+
+</Section>
+
+<Section step="see" title="Watch the frames stack up">
+
+Step through it. Each call to `countdown` puts a new frame on the stack, with its own `n`. Then watch `factorial`:
+three frames stack up, the first two waiting on the one above, and the answers come back down the stack, `1`, then
+`2`, then `6`.
+
+<TraceCode snippet="py-recursion" />
+
+<KeyIdea>
+
+**Each call gets its own frame and its own names, and waits for the call it made.** A base case stops the calls;
+then they return one by one, newest first.
+
+</KeyIdea>
+
+To see the calls of a recursion that branches, like Fibonacci's two calls, drawn as a tree, try the
+[recursion lesson](/learn/recursion).
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-down-and-up" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="shared-n"
+  title="All the calls share one n"
+  probes={[
+    {
+      q: 'def f(n): if n == 0, return; otherwise call f(n - 1), then print(n). What does f(2) print?',
+      choices: ['1, then 2', 'Nothing', '0, then 0'],
+      answer: 0,
+      trap: 2,
+      why: 'Each call keeps its own n while it waits: f(1) prints 1 when f(0) returns, then f(2) prints 2.',
+    },
+    {
+      q: 'Calls f(3), f(2) and f(1) are all on the stack. How many separate n names are there in memory?',
+      choices: ['3, one in each frame', '1, shared by every call', 'None, until they return'],
+      answer: 0,
+      trap: 1,
+      why: 'Every call has its own frame with its own n: 3, 2 and 1.',
+    },
+  ]}
+>
+
+A call to itself is still a new call, with a new frame and fresh names. The calling frame keeps its own `n` while it
+waits. When the inner call returns, the caller carries on with its own `n`, exactly as it was. In the memory view,
+that's a stack of frames, each with an `n` of its own.
+
+</Misconception>
+
+<Misconception
+  id="stops-by-itself"
+  title="Recursion stops by itself when the numbers get small"
+  probes={[
+    {
+      q: 'def down(n): print(n), then down(n - 1), with no if. What happens when down(3) runs?',
+      choices: ['It prints 3, 2, 1, 0, -1 and on, until a RecursionError', 'It prints 3, 2, 1 and stops', 'It prints 3 and stops'],
+      answer: 0,
+      trap: 1,
+      why: 'Nothing tells it to stop at 1, so it keeps calling with smaller and smaller numbers until Python stops it.',
+    },
+    {
+      q: 'def f(n): return n * f(n - 1), with no base case. What does f(3) do?',
+      choices: ['Calls itself until a RecursionError', 'Returns 6', 'Returns 0'],
+      answer: 0,
+      trap: 1,
+      why: 'Without an if that returns without calling, every call makes another one.',
+    },
+  ]}
+>
+
+A recursive function stops only where you tell it to: a base case that returns without calling again. Nothing about
+small numbers is special to Python. Check two things: there is a base case, and every call moves closer to it.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'def f(n): if n <= 1, return 1; otherwise return n * f(n - 1). What does f(4) return?',
+      choices: ['24', '10', '4'],
+      answer: 0,
+      why: '4 * 3 * 2 * 1 is 24.',
+    },
+    {
+      q: 'def g(n): return g(n - 1) + 1, with no base case. What does g(2) give?',
+      choices: ['A RecursionError', '2', '1'],
+      answer: 0,
+      why: 'g never stops calling itself, so Python stops the program.',
+      traps: { 1: 'stops-by-itself' },
+    },
+    {
+      q: 'def h(n): if n > 0, call h(n - 1); then print(n). What does h(2) print?',
+      choices: ['0, 1, 2', '0, 0, 0', '2, 1, 0'],
+      answer: 0,
+      why: 'The print comes after the call, so it happens on the way back up: h(0) prints first, then h(1), then h(2), each its own n.',
+      traps: { 1: 'shared-n' },
+    },
+    {
+      q: 'When f(3) calls f(2), what happens to f(3)’s frame?',
+      choices: ['It waits on the stack until f(2) returns', 'It is thrown away', 'f(2) replaces it'],
+      answer: 0,
+      why: 'f(3) still has work to do with the answer, so it waits, with its own names, until f(2) returns.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-recursion" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A recursive function calls itself on a smaller problem.
+- Each call has its own frame and names, and waits for the call it made.
+- A base case answers without calling; every call must get closer to it, or Python stops with a `RecursionError`.
+- Work before the call happens on the way down; work after it, on the way back up.
+
+</Section>
