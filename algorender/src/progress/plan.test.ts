@@ -5,10 +5,10 @@ import { goals, type Goal } from '@/content/goals';
 import { masteryGraph, planCatalog } from '@/content/mastery';
 import type { EventData, EventKind, ProgressEvent } from './events';
 import { areaOf, mastery, relatives, type MasteryGraph } from './mastery';
-import { currentPlan, goalConcepts, isConcept, MILESTONE_FILL, milestoneDone, pack, planView, prerequisiteOrder, REVIEW_SHARE, WEEK_MS, withMilestones, type PlanItem, type PlanMilestone } from './plan';
+import { currentPlan, goalConcepts, isConcept, isMilestone, MILESTONE_FILL, milestoneDone, pack, planView, prerequisiteOrder, REVIEW_SHARE, WEEK_MS, withMilestones, type PlanItem, type PlanMilestone } from './plan';
 
 /** A plan item as a short id: the concept, or m<stage> for a milestone. */
-const itemId = (i: PlanItem) => (isConcept(i) ? i.concept : `m${i.milestone}`);
+const itemId = (i: PlanItem) => (isConcept(i) ? i.concept : isMilestone(i) ? `m${i.milestone}` : 'round');
 
 let n = 0;
 const DAY = 86_400_000;

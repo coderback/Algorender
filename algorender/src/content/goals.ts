@@ -11,6 +11,8 @@ export type Goal = {
   summary: string;
   /** The concepts the goal is reached at, in the order to learn them; their prerequisites come along, each just before it is needed. */
   concepts: readonly string[];
+  /** The goal aims at interviews: its plan keeps time each week for a mock interview (src/progress/plan.ts). */
+  interviews?: boolean;
 };
 
 export const goals: readonly Goal[] = [
@@ -18,6 +20,7 @@ export const goals: readonly Goal[] = [
     id: 'interviews',
     title: 'Coding interviews',
     summary: 'The patterns behind most interview problems, each with practice problems judged in your language.',
+    interviews: true,
     concepts: [
       'hash-tables',
       'two-pointers',
