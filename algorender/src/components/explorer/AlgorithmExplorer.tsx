@@ -10,7 +10,7 @@ import type { ViewEdit } from '@/viz/edit';
 import { Experiments } from './Experiments';
 import { InputPanel } from './InputPanel';
 import type { ExplorerOptions } from './options';
-import { inputFor, sourceFromParams, sourceToParams, type InputSource } from './source';
+import { canDrawNewValues, inputFor, sourceFromParams, sourceToParams, type InputSource } from './source';
 import { useStartMode } from './startMode';
 import { TraceStage, type Density, type Mode } from './TraceStage';
 import { stepFromParams, writeUrl } from './url';
@@ -63,7 +63,9 @@ export function AlgorithmExplorer({
       size: source.kind === 'example' ? source.size : (algo.input.size?.default ?? 0),
       seed: randomSeed(),
     });
-  const toolbar = options.showInput ? (
+  // Fixed examples ignore the seed, so the button would do nothing there.
+  const reseeds = canDrawNewValues(source, algo.input);
+  const toolbar = options.showInput && (custom || reseeds) ? (
     <>
       {custom && (
         <>
@@ -84,9 +86,11 @@ export function AlgorithmExplorer({
           </Button>
         </>
       )}
-      <IconButton label="New random input" kind="secondary" size="s" onClick={newValues}>
-        <FiShuffle aria-hidden />
-      </IconButton>
+      {reseeds && (
+        <IconButton label="New random input" kind="secondary" size="s" onClick={newValues}>
+          <FiShuffle aria-hidden />
+        </IconButton>
+      )}
     </>
   ) : undefined;
   const edit: ViewEdit | undefined =
