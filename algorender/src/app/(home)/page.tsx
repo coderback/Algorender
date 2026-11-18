@@ -14,6 +14,7 @@ import { masteryGraph, planCatalog } from '@/content/mastery';
 import { loadProblems } from '@/problems/load';
 import { PATTERNS } from '@/problems/patterns';
 import { misconceptionCard } from '@/progress/misconceptions';
+import { interviewConfig } from '@/server/interview/config';
 
 // The landing page is what a crawler sees, so it sets the title; returning learners get Today at the same URL.
 export const metadata: Metadata = {
@@ -26,7 +27,8 @@ export const metadata: Metadata = {
 function todayData(): TodayData {
   const { tracks, concepts } = loadConcepts();
   const catalog = planCatalog();
-  const pattern = new Map(loadProblems().map((p) => [p.slug, PATTERNS[p.patterns[0]].title]));
+  const problems = loadProblems();
+  const pattern = new Map(problems.map((p) => [p.slug, PATTERNS[p.patterns[0]].title]));
   return {
     graph: masteryGraph(),
     goals,
@@ -54,6 +56,15 @@ function todayData(): TodayData {
       lessonMisconceptions().map((m) => [misconceptionCard(m.lesson, m.id), { title: m.title, lesson: m.lesson, lessonTitle: getLesson(m.lesson)?.title ?? m.lesson }]),
     ),
     milestones: planMilestones(),
+    // Pages read the switch at build time, like the interview hub's.
+    interviews:
+      interviewConfig() === null
+        ? null
+        : {
+            patterns: Object.fromEntries(problems.map((p) => [p.slug, p.patterns])),
+            titles: Object.fromEntries(problems.map((p) => [p.slug, p.title])),
+            patternTitles: Object.fromEntries(Object.values(PATTERNS).map((p) => [p.id, p.title])),
+          },
   };
 }
 

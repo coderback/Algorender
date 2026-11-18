@@ -12,7 +12,22 @@ import type { Goal } from '@/content/goals';
 import { TRACK_CLASSES, trackColour } from '@/data/tracks';
 import { record, useMastery, useProblemProgress, useProgressSnapshot, useReviewCards } from '@/progress/hooks';
 import { KNOWN, isReady, type MasteryGraph } from '@/progress/mastery';
-import { goalConcepts, HOUR_CHOICES, isConcept, isMilestone, planView, REVIEW_SHARE, type PlanMilestone, type PlanSettings, type PlanView, type PlanWeek } from '@/progress/plan';
+import {
+  goalConcepts,
+  HOUR_CHOICES,
+  isConcept,
+  isInterview,
+  isMilestone,
+  leftIn,
+  planView,
+  REVIEW_SHARE,
+  ROUND_MINUTES,
+  type InterviewItem,
+  type PlanMilestone,
+  type PlanSettings,
+  type PlanView,
+  type PlanWeek,
+} from '@/progress/plan';
 import { dueToday } from '@/progress/review';
 
 type Props = {
@@ -21,6 +36,8 @@ type Props = {
   catalog: Record<string, ConceptCatalogEntry>;
   /** The math and ML stages' milestones (src/content/checkpoints.ts), scheduled after their stage's concepts. */
   milestones?: readonly PlanMilestone[];
+  /** Mock interviews are on (read at build time): a goal that aims at interviews keeps a weekly round. */
+  interviews?: boolean;
 };
 
 const NO_MILESTONES: readonly PlanMilestone[] = [];
@@ -33,13 +50,13 @@ const hoursOf = (minutes: number) => (minutes < 60 ? `${minutes} min` : `${Math.
  * and what's left this week. Everything is computed from the learner's events
  * (src/progress/plan.ts), so it re-plans itself as concepts become known.
  */
-export function StudyPlan({ graph, goals, catalog, milestones = NO_MILESTONES }: Props) {
+export function StudyPlan({ graph, goals, catalog, milestones = NO_MILESTONES, interviews = false }: Props) {
   const { ready, events } = useProgressSnapshot();
   const [editing, setEditing] = useState(false);
   // The plan is computed for the moment the page opened; it changes with the events, not the clock.
   const [now] = useState(() => new Date());
   const minutes = useMemo(() => Object.fromEntries(Object.entries(catalog).map(([id, c]) => [id, c.minutes])), [catalog]);
-  const view = useMemo(() => planView(events, graph, goals, minutes, now, milestones), [events, graph, goals, minutes, now, milestones]);
+  const view = useMemo(() => planView(events, graph, goals, minutes, now, milestones, { interviews }), [events, graph, goals, minutes, now, milestones, interviews]);
   if (!ready) return <p className="text-sm text-ink-muted">Loading your progress…</p>;
   if (!view || editing) {
     return <PlanSetup graph={graph} goals={goals} minutes={minutes} current={view?.settings ?? null} onDone={() => setEditing(false)} placed={events.some((e) => e.kind === 'placement.answered')} />;
@@ -206,7 +223,7 @@ function PlanBoard({ view, graph, catalog, now, onEdit }: { view: PlanView; grap
               {view.goal.title}
             </h2>
             <p className="max-w-xl text-[15px] leading-relaxed text-feature-muted">
-              {view.goal.summary} {view.settings.hours} hours a week, about {reviewHours} of them for review.
+              {view.goal.summary} {view.settings.hours} hours a week, about {reviewHours} of them for review{view.rounds && ` and ${hoursOf(ROUND_MINUTES)} for a mock interview`}.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -329,7 +346,7 @@ function Week({ week, now, byId, view }: { week: PlanWeek; now: boolean; byId: M
         </h3>
         {now && (
           <Chip tone="warn">
-            {week.items.length} left
+            {leftIn(week)} left
           </Chip>
         )}
       </div>
@@ -338,6 +355,23 @@ function Week({ week, now, byId, view }: { week: PlanWeek; now: boolean; byId: M
       </p>
       <ul className="flex flex-col gap-2">
         {week.items.map((item) => {
+          if (isInterview(item)) {
+            return (
+              <li key="interview">
+                <Link
+                  href="/practice/interview"
+                  className={cx('flex items-center justify-between gap-2 rounded-[14px] bg-track-sky px-3 py-2 text-[13px] font-semibold text-track-sky-ink hover:underline', item.done && 'line-through')}
+                >
+                  Mock interview
+                  {item.done && (
+                    <span role="img" aria-label="done" className="flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent no-underline">
+                      <FiCheck aria-hidden className="size-3" strokeWidth={3} />
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          }
           if (isMilestone(item)) {
             const ms = view.milestones.get(item.milestone);
             return (
@@ -385,6 +419,7 @@ function ThisWeek({
   const concepts = week.items.filter(isConcept);
   const [first, second] = concepts;
   const milestone = week.items.find(isMilestone);
+  const round = week.items.find(isInterview);
   const practice = concepts
     .flatMap((i) => catalog[i.concept]?.problems ?? [])
     .filter((p) => !solved[p.slug]?.solved)
@@ -420,6 +455,8 @@ function ThisWeek({
         )}
         {milestone ? (
           <MilestoneCard stage={milestone.milestone} milestone={view.milestones.get(milestone.milestone)} minutes={milestone.minutes} />
+        ) : round ? (
+          <RoundCard round={round} />
         ) : (
           second && <ConceptCard id={second.concept} entry={catalog[second.concept]} view={view} graph={graph} byId={byId} />
         )}
@@ -441,6 +478,35 @@ function MilestoneCard({ stage, milestone, minutes }: { stage: number; milestone
         Take the checkpoint
       </ButtonLink>
     </FeatureCard>
+  );
+}
+
+/**
+ * The week's mock interview, kept in the hours of a goal that aims at
+ * interviews, done once a round finishes this week. TODO(redesign): no board
+ * for this card; it follows the interview hub's coding-round card (sky).
+ */
+function RoundCard({ round }: { round: InterviewItem }) {
+  return (
+    <TrackCard track="sky" as="article" aria-labelledby="week-round" dense className="gap-3 rounded-tile">
+      <div className="flex items-center justify-between gap-2 text-[13px] font-semibold">
+        <span>Mock interview</span>
+        <span>{hoursOf(round.minutes)}</span>
+      </div>
+      <h3 id="week-round" className={cx('font-display text-[22px] leading-tight font-bold', trackTitle('sky'))}>
+        This week’s round
+      </h3>
+      {round.done ? (
+        <Chip tone="good" icon={<FiCheck aria-hidden />} className="self-start">
+          Done this week
+        </Chip>
+      ) : (
+        <p className="text-sm">A timed coding round with an AI interviewer, then a debrief that scores each part. Your plan keeps the time for it.</p>
+      )}
+      <ButtonLink href="/practice/interview" kind={round.done ? 'onTrack' : 'primary'} block className="mt-auto">
+        {round.done ? 'See your rounds' : 'Take a mock interview'}
+      </ButtonLink>
+    </TrackCard>
   );
 }
 

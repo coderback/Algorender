@@ -32,7 +32,14 @@ const GOAL_LOOK: Record<string, { mark: string; colour: TrackColour }> = {
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
 
-type Props = { goals: readonly Goal[]; graph: MasteryGraph; minutes: Record<string, number>; questions: Record<string, PlacementQuestion[]> };
+type Props = {
+  goals: readonly Goal[];
+  graph: MasteryGraph;
+  minutes: Record<string, number>;
+  questions: Record<string, PlacementQuestion[]>;
+  /** Mock interviews are on: a goal that aims at interviews keeps a weekly round, as on /plan. */
+  interviews?: boolean;
+};
 
 /**
  * The onboarding (/start): a goal, the hours a week, the placement check, and
@@ -40,7 +47,7 @@ type Props = { goals: readonly Goal[]; graph: MasteryGraph; minutes: Record<stri
  * `plan.set`), except the placement answers, which count as they are given.
  * "Skip for now" goes to Today with nothing set.
  */
-export function Onboarding({ goals, graph, minutes, questions }: Props) {
+export function Onboarding({ goals, graph, minutes, questions, interviews = false }: Props) {
   const router = useRouter();
   const { events } = useProgressSnapshot();
   const [step, setStep] = useState(0);
@@ -68,8 +75,10 @@ export function Onboarding({ goals, graph, minutes, questions }: Props) {
         goals,
         minutes,
         now,
+        undefined,
+        { interviews },
       );
-  }, [events, goalId, target, graph, goals, minutes, now]);
+  }, [events, goalId, target, graph, goals, minutes, now, interviews]);
 
   const areas = useMemo(() => [...new Set(goal.concepts.map((id) => areaOf(graph.concepts.find((c) => c.id === id)?.track ?? '')))] as AreaId[], [goal, graph]);
 
@@ -260,6 +269,7 @@ function PlanPreview({ view, graph, hours }: { view: ReturnType<typeof planView>
         </p>
         <p className="text-[15px] text-feature-muted">
           {left} {left === 1 ? 'concept' : 'concepts'} to go at {hours} h a week
+          {view.rounds && ', with a mock interview each week'}
           {view.finish && `, done around ${day(view.finish)}`}.{view.done.length > 0 && ` ${view.done.length} you already know drop out.`}
         </p>
         {view.targetOutOfReach ? (

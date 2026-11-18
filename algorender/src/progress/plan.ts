@@ -17,10 +17,21 @@
 // checkpoint and (once written) its project, right after the last of the
 // stage's concepts in the plan. The window holding a milestone is filled to
 // MILESTONE_FILL of its hours, so there is room to catch up before moving on.
+//
+// Mock interviews: a goal that aims at interviews (`interviews` on the goal),
+// with interviews switched on, keeps ROUND_MINUTES of every window for one
+// mock interview, counted in the hours like the review share and listed last
+// in the window. It is done once a round finishes inside the window
+// (`interview.finished`, src/progress/interviews.ts). Rounds aren't counted as
+// behind: a missed week's round doesn't carry over. TODO(redesign): the board
+// has no rule for which weeks hold a round; every week does (the design
+// proposal suggested only the final weeks).
 
 import type { Goal } from '@/content/goals';
+import { DEFAULT_LENGTH } from '@/interview/rules';
 import { latestRounds } from './checkpoint';
 import type { ProgressEvent } from './events';
+import { roundsBetween } from './interviews';
 import { KNOWN, mastery, relatives, type ConceptMastery, type MasteryGraph } from './mastery';
 import { builtExercises } from './projects';
 
@@ -31,6 +42,8 @@ export const WEEK_MS = 7 * 86_400_000;
 export const HOUR_CHOICES = [2, 3, 5, 8, 10, 15] as const;
 /** The most hours a week a plan takes (the `plan.set` event's limit). */
 export const MAX_HOURS = 40;
+/** The time a plan keeps each week for a mock interview: a round of the default length, and reading its debrief. */
+export const ROUND_MINUTES = DEFAULT_LENGTH + 15;
 
 export type PlanSettings = { goal: string; hours: number; target?: string; since: string };
 
@@ -83,11 +96,16 @@ export function prerequisiteOrder(ids: ReadonlySet<string>, graph: MasteryGraph,
 export type ConceptItem = { concept: string; minutes: number };
 /** A stage's milestone: its checkpoint, and its project once there is one. */
 export type MilestoneItem = { milestone: number; minutes: number };
-export type PlanItem = ConceptItem | MilestoneItem;
+/** A week's mock interview: `done` once a round finished inside the window. */
+export type InterviewItem = { interview: true; minutes: number; done: boolean };
+export type PlanItem = ConceptItem | MilestoneItem | InterviewItem;
 export type PlanWeek = { index: number; start: string; end: string; minutes: number; items: PlanItem[] };
 
 export const isMilestone = (item: PlanItem): item is MilestoneItem => 'milestone' in item;
 export const isConcept = (item: PlanItem): item is ConceptItem => 'concept' in item;
+export const isInterview = (item: PlanItem): item is InterviewItem => 'interview' in item;
+/** How much is still to do in a week: its concepts and milestones (known ones have already dropped out), and its round unless done. */
+export const leftIn = (week: PlanWeek) => week.items.filter((i) => !isInterview(i) || !i.done).length;
 
 /** A stage's milestone as the server describes it (src/content/checkpoints.ts): what it covers and roughly how long it takes. */
 export type PlanMilestone = {
@@ -114,10 +132,11 @@ export function milestoneDone(m: PlanMilestone, events: readonly ProgressEvent[]
  * Packs items, in order, into windows of `hours` a week (less the review
  * share), starting at window `first` of a plan set at `since`. An item never
  * splits: one too big for an empty window takes the window alone. A window
- * holding a milestone is filled only to MILESTONE_FILL.
+ * holding a milestone is filled only to MILESTONE_FILL. `reserve` minutes of
+ * every window are kept for something else (the weekly mock interview).
  */
-export function pack(items: readonly PlanItem[], hours: number, since: Date, first: number): PlanWeek[] {
-  const capacity = hours * 60 * (1 - REVIEW_SHARE);
+export function pack(items: readonly PlanItem[], hours: number, since: Date, first: number, reserve = 0): PlanWeek[] {
+  const capacity = Math.max(0, hours * 60 * (1 - REVIEW_SHARE) - reserve);
   const weeks: PlanWeek[] = [];
   let week: PlanWeek | null = null;
   let cap = capacity;
@@ -175,6 +194,13 @@ export type PlanView = {
   mastery: Map<string, ConceptMastery>;
   /** The milestones that are in this plan, by stage. */
   milestones: Map<number, PlanMilestone>;
+  /** Every window keeps ROUND_MINUTES for a mock interview. */
+  rounds: boolean;
+};
+
+export type PlanOptions = {
+  /** Mock interviews are switched on here, so a goal that aims at interviews keeps a weekly round. */
+  interviews?: boolean;
 };
 
 /** The plan as it stands at `now`, or null without one (or with an unknown goal). Events must be in time order. */
@@ -185,11 +211,23 @@ export function planView(
   minutes: Readonly<Record<string, number>>,
   now: Date,
   milestones: readonly PlanMilestone[] = [],
+  options: PlanOptions = {},
 ): PlanView | null {
   const settings = currentPlan(events);
   const goal = settings && goals.find((g) => g.id === settings.goal);
   if (!settings || !goal) return null;
   const since = new Date(settings.since);
+  const rounds = !!options.interviews && !!goal.interviews;
+  const reserve = rounds ? ROUND_MINUTES : 0;
+  // Each window's round goes last in it, done once a round finished inside the window.
+  const withRounds = (packed: PlanWeek[]): PlanWeek[] =>
+    rounds
+      ? packed.map((w) => ({
+          ...w,
+          minutes: w.minutes + ROUND_MINUTES,
+          items: [...w.items, { interview: true, minutes: ROUND_MINUTES, done: roundsBetween(events, w.start, w.end) > 0 }],
+        }))
+      : packed;
   const order = prerequisiteOrder(goalConcepts(goal, graph), graph, goal.concepts);
   const planned = new Set(order);
   const itemsLeft = (m: Map<string, ConceptMastery>, upTo: readonly ProgressEvent[]) =>
@@ -203,14 +241,15 @@ export function planView(
   const m = mastery(events, graph);
   const known = (id: string) => KNOWN.has(m.get(id)?.status ?? 'new');
   const week = Math.max(0, Math.floor((now.getTime() - since.getTime()) / WEEK_MS));
-  const weeks = pack(itemsLeft(m, events), settings.hours, since, week);
+  const left = itemsLeft(m, events);
+  const weeks = withRounds(pack(left, settings.hours, since, week, reserve));
 
   // The schedule as set: everything known at the moment the plan was made drops out, the rest from window 0.
   const before = events.filter((e) => e.at <= settings.since);
-  const original = pack(itemsLeft(mastery(before, graph), before), settings.hours, since, 0);
+  const original = pack(itemsLeft(mastery(before, graph), before), settings.hours, since, 0, reserve);
   const dueItems = original.filter((w) => w.index < week).flatMap((w) => w.items);
   const byStage = new Map(milestones.map((ms) => [ms.stage, ms]));
-  const itemDone = (i: PlanItem) => (isConcept(i) ? known(i.concept) : milestoneDone(byStage.get(i.milestone)!, events));
+  const itemDone = (i: PlanItem) => (isConcept(i) ? known(i.concept) : isInterview(i) ? i.done : milestoneDone(byStage.get(i.milestone)!, events));
 
   let hoursNeeded: number | null = null;
   let targetOutOfReach = false;
@@ -219,9 +258,8 @@ export function planView(
     const deadline = new Date(`${settings.target}T23:59:59`).getTime();
     if (new Date(finish).getTime() > deadline) {
       // The fewest whole hours whose schedule (items never split) ends by the target; null when even the most can't.
-      const items = weeks.flatMap((w) => w.items);
       for (let h = settings.hours + 1; h <= MAX_HOURS && hoursNeeded === null; h++) {
-        const end = pack(items, h, since, week).at(-1)!.end;
+        const end = pack(left, h, since, week, reserve).at(-1)!.end;
         if (new Date(end).getTime() <= deadline) hoursNeeded = h;
       }
       targetOutOfReach = hoursNeeded === null;
@@ -242,6 +280,7 @@ export function planView(
     targetOutOfReach,
     mastery: m,
     milestones: new Map(milestones.filter((ms) => ms.concepts.some((c) => planned.has(c))).map((ms) => [ms.stage, ms])),
+    rounds,
   };
 }
 

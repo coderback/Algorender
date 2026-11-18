@@ -20,9 +20,10 @@ import { useLessonProgress, useMastery, useMistakes, useProblemProgress, useProg
 import { isReady, nextSteps, type ConceptMastery, type MasteryConcept, type MasteryGraph } from '@/progress/mastery';
 import { CLEAR_AFTER } from '@/progress/misconceptions';
 import { BADGES, badges } from '@/progress/play';
-import { isConcept, planView, WEEK_MS, type PlanMilestone, type PlanView } from '@/progress/plan';
+import { isConcept, isInterview, planView, WEEK_MS, type PlanMilestone, type PlanView } from '@/progress/plan';
 import { minutesLeft, readingByLesson, type Reading } from '@/progress/reading';
 import { dueToday, nextDue, type ReviewCard } from '@/progress/review';
+import { InterviewCard, type TodayInterviews } from './InterviewCard';
 import { firstUnsolved, greeting, lessonInProgress, trackMastery, weekActivity, type WeekDay } from './select';
 
 // Today (/): the learner's home. Everything comes from their own events and
@@ -53,6 +54,8 @@ export type TodayData = {
   mistakes: Record<string, { title: string; lesson: string; lessonTitle: string }>;
   /** The math and ML stages' milestones, so this week's plan matches /plan. */
   milestones?: readonly PlanMilestone[];
+  /** Mock interviews, when they are on: the card, and the plan's weekly round. */
+  interviews?: TodayInterviews;
 };
 
 /** A rough guide for "about N minutes" of review. */
@@ -80,7 +83,11 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
   const problems = useProblemProgress();
   const xp = useXp();
   const minutes = useMemo(() => Object.fromEntries(Object.entries(concepts).map(([id, c]) => [id, c.minutes])), [concepts]);
-  const plan = useMemo(() => planView(events, graph, goals, minutes, now, data.milestones), [events, graph, goals, minutes, now, data.milestones]);
+  const interviewsOn = data.interviews != null;
+  const plan = useMemo(
+    () => planView(events, graph, goals, minutes, now, data.milestones, { interviews: interviewsOn }),
+    [events, graph, goals, minutes, now, data.milestones, interviewsOn],
+  );
   const byId = useMemo(() => new Map(graph.concepts.map((c) => [c.id, c])), [graph]);
   const week = weekActivity(events, now);
   const due = dueToday(cards, now);
@@ -97,6 +104,7 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
   // This week's plan: what is left in the current window.
   const thisWeek = plan?.weeks.find((w) => w.index === plan.week) ?? null;
   const weekConcepts = thisWeek?.items.filter(isConcept) ?? [];
+  const planRound = thisWeek?.items.find(isInterview) ?? null;
   const left = weekConcepts.length;
 
   const first = learner?.name?.trim().split(/\s+/)[0];
@@ -158,6 +166,7 @@ function TodayFor({ data, now }: { data: TodayData; now: Date }) {
           <ReviewDue due={due} cards={cards} now={now} />
           <MasteryByTrack graph={graph} m={m} tracks={data.tracks} />
           {problem && <ProblemForToday {...problem} title={byId.get(problem.concept)?.title ?? ''} />}
+          <InterviewCard data={data.interviews ?? null} planRound={planRound} />
           <Challenge graph={graph} m={m} cards={cards} now={now} xp={xp} />
         </div>
       </div>
