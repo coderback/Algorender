@@ -172,6 +172,14 @@ describe('the real checkpoints', () => {
     for (const q of p.probes) for (const t of Object.values(q.traps ?? {})) expect(mistakes.has(`${q.lesson}:${t.id}`)).toBe(true);
   });
 
+  it('asks stage 1 about the math toolkit B1 wrote, with its mistakes and its quizzes', () => {
+    const p = checkpointPools(1);
+    for (const id of ['functions-graphs', 'exponents-logs', 'sums-notation', 'trigonometry']) {
+      expect(p.probes.some((q) => q.concept === id), id).toBe(true);
+      expect(p.quiz.some((q) => q.concept === id), id).toBe(true);
+    }
+  });
+
   it('opens the first two stages today, from the lessons already written', () => {
     const open = openCheckpoints().map((c) => c.stage);
     expect(open).toContain(1);

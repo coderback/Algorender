@@ -528,6 +528,30 @@ const algorithmEntries = [
 // the module's teaching content instead.
 const mathEntries = [
   {
+    name: 'Functions and Graphs',
+    description: 'Fill a table of values, join the dots into a graph, then stretch, flip and shift it with the three knobs of a·f(x − h) + k.',
+    slug: 'functions',
+    category: 'Math Toolkit'
+  },
+  {
+    name: 'Exponents and Logarithms',
+    description: 'Count the doublings from 1 to N, see logs turn products into sums, find e in compound interest, and mirror eˣ into ln x.',
+    slug: 'logarithms',
+    category: 'Math Toolkit'
+  },
+  {
+    name: 'Sigma Notation',
+    description: 'Read Σ and Π as the loops they are: terms as bars, a running total, the mean as a balance point, and a double sum filling a table.',
+    slug: 'sigma-notation',
+    category: 'Math Toolkit'
+  },
+  {
+    name: 'The Unit Circle',
+    description: 'Turn a point round a circle of radius 1: the arc is the angle in radians, its shadows are cos and sin, and going round traces the sine wave.',
+    slug: 'unit-circle',
+    category: 'Math Toolkit'
+  },
+  {
     name: 'Linear Transformations',
     description: 'See a 2×2 matrix move the whole plane: its columns are where î and ĵ land, and its determinant scales area.',
     slug: 'linear-transformations',

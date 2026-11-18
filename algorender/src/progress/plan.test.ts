@@ -58,6 +58,15 @@ describe('scheduling', () => {
     }
   });
 
+  it('reaches the math toolkit from the zero-to-hero goal, functions first, now that B1 has written it', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    const toolkit = ['functions-graphs', 'exponents-logs', 'sums-notation', 'trigonometry', 'floating-point'];
+    for (const id of toolkit) expect(order, id).toContain(id);
+    for (const id of toolkit.slice(1)) expect(order.indexOf(id), id).toBeGreaterThan(order.indexOf('functions-graphs'));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {

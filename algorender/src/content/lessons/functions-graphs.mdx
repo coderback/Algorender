@@ -1,0 +1,241 @@
+<Section step="hook" title="Every model is a function with knobs">
+
+An estate agent guesses a flat's price from its size: about £3,000 a square metre, plus £20,000 on top. That guess is
+a rule. Put a size in, get one price out:
+
+$$
+\text{price} = 3000 \times \text{size} + 20000
+$$
+
+A 50 square metre flat: $3000 \times 50 + 20000 = 170000$, so about £170,000.
+
+The two numbers, 3000 and 20000, are knobs. Turn them and the rule gives different prices. Machine learning, at its
+heart, is choosing the knobs from data: look at lots of real sales, then pick the numbers that make the rule's guesses
+closest to the real prices. Before any of that, you need to be at ease with two things. One is rules like this, called
+**functions**. The other is their pictures, called **graphs**, which show you what turning a knob does.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="function">A rule that turns each input into exactly one output. We often call it $f$ and write the output for input $x$ as $f(x)$, read "f of x".</Term>
+  <Term name="table of values">A few inputs written next to their outputs: $x = 2$ gives $f(2) = 4$ for $f(x) = x^2$.</Term>
+  <Term name="graph">Every point $(x, f(x))$ drawn on a grid: $x$ is how far along, $f(x)$ is how high. It is the whole table at once.</Term>
+  <Term name="knob (parameter)">A number in the rule that you choose rather than put in, like the 3000 above. Changing it changes the whole graph.</Term>
+  <Term name="slope">How much the output rises for each step of 1 to the right. For a straight line it is the same everywhere.</Term>
+</Terms>
+
+In this lesson every graph starts from a plain rule $f$, such as $x^2$ or $|x|$. (The bars mean the size of $x$,
+ignoring its sign: $|-3| = 3$.) Three knobs, $a$, $h$ and $k$, then move it:
+
+$$
+y = a \cdot f(x - h) + k
+$$
+
+Here $y$ is the output, the height of each point, and the dot means "times". Read the rule from the inside out: take
+$x$, subtract $h$, apply the plain rule $f$, multiply by $a$, then add $k$. With $f(x) = x^2$, $a = 1$, $h = 2$ and
+$k = -1$ it is $y = (x - 2)^2 - 1$, the first example below. Don't worry if the formula looks dense: the visualiser
+builds it one knob at a time.
+
+</Section>
+
+<Section step="see" title="From a rule to a picture, then three knobs">
+
+<Explore slug="functions" settings={{ preset: 'parabola' }} caption="Fill the table, join the dots, then watch a, h and k move the graph. Each dot glides to its new place, so you can follow it." />
+
+Step through it one frame at a time. The first frames are just arithmetic: put $x = -2$ into $x^2$ and you get $4$,
+which becomes the point $(-2, 4)$. Five rows of the table give five dots. But every input in between has an output
+too, so the dots join into one unbroken curve. That curve is the graph. It holds every row of the table at once,
+infinitely many of them.
+
+A function gives **one** output per input, so a vertical line can never meet its graph twice. A circle is not the graph
+of a function: above most $x$ it has a point at the top and another at the bottom.
+
+Then come the knobs, one at a time:
+
+- **$a$ multiplies every output.** Heights double when $a = 2$ and halve when $a = 0.5$. A negative $a$ flips the
+  graph upside down.
+- **$h$ moves the graph sideways.** $f(x - 2)$ sits 2 to the **right** of $f(x)$, which surprises almost everyone.
+- **$k$ is added to every output**, so the whole graph moves up by $k$.
+
+<KeyIdea>
+
+**Every point $(x, f(x))$ on the plain graph lands at $(x + h,\ a \cdot f(x) + k)$.** Outputs are stretched by $a$ and
+lifted by $k$; inputs are moved by $h$. In particular the point $(0, f(0))$, which is $(0, 0)$ for all the rules here,
+lands on the anchor $(h, k)$, so you can read $h$ and $k$ straight off the picture.
+
+</KeyIdea>
+
+Try it on the example, $y = (x - 2)^2 - 1$. The plain parabola's lowest point $(0, 0)$ lands at $(2, -1)$, and its
+point $(1, 1)$ lands at $(3, 0)$. Check: $(3 - 2)^2 - 1 = 0$.
+
+Why does $x - h$ move the graph to the right? Because the graph needs a bigger $x$ to produce the same output. With
+$y = (x - 2)^2$, the output $0$, which $x^2$ gave at $x = 0$, now needs $x - 2 = 0$, that is $x = 2$. Reading from
+left to right, every output arrives 2 later, so the whole curve sits 2 further right.
+
+</Section>
+
+<Section step="predict" title="Your turn: flip it and move it">
+
+This one starts from $|x|$, the V shape, and builds $y = -|x + 1| + 3$. Predict each value of the table, then which
+way each knob moves the graph, before the next step shows you. One thing to watch for: here $h = -1$, and
+$x - (-1)$ is the same as $x + 1$. Wrong guesses are fine. The surprises are what stick.
+
+<PredictChallenge slug="functions" settings={{ preset: 'flip' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Match the curve">
+
+Now drive the knobs yourself. This graph opens finished, with two handles on it:
+
+- The **anchor** is where $f$'s point $(0, 0)$ landed: $(h, k)$. Moving it changes $h$ and $k$.
+- The **unit point** is where $f$'s point $(1, 1)$ landed: $(h + 1, k + a)$. It stays one step right of the anchor
+  and only moves up and down. Its height above the anchor is $a$.
+
+Drag them, or focus one and use the arrow keys. The Knobs panel and the formula in the narration change as you go.
+
+<Explore slug="functions" settings={{ preset: 'parabola', step: '9' }} input caption="Try to make y = −(x − 1)² + 4: the anchor goes to (1, 4), and the unit point one step right and one step down from it." />
+
+Some targets to match:
+
+- $y = -(x - 1)^2 + 4$: an upside-down parabola, its peak at $(1, 4)$. Unit point: $(2, 3)$.
+- $y = 2x + 1$: dragging can't turn a parabola into a line, so change the rule itself. Type `line a=2 h=0 k=1` into
+  the input box below the graph, press Run, then step to the end. Every step right climbs 2: the slope is $a$.
+- $y = 0.5|x + 3|$: a wide V with its corner at $(-3, 0)$. Type `abs`, press Run and step to the end. Then place the
+  anchor, and ask how far above it the unit point should sit.
+
+Typing a new rule starts the visualiser again from the first frame. The handles appear on the last two frames.
+
+For a straight line, $a$ is the slope: the rise for each step of 1 to the right, the same everywhere. That is exactly
+the "3000 per square metre" knob of the price rule. For a curve such as $x^2$, the rise for one step depends on where
+you start. Measuring how steep a curve is at each single point is what [derivatives](/learn/derivatives-gradients) do.
+You will meet them later on the path.
+
+<Misconception
+  id="shift-direction"
+  title="f(x − 2) moves the graph left, because of the minus sign"
+  probes={[
+    {
+      q: 'Compared with the graph of y = |x|, the graph of y = |x + 3| is moved…',
+      choices: ['3 to the right', '3 to the left', '3 up'],
+      answer: 1,
+      trap: 0,
+      why: 'The corner of |x| is where the inside is 0. For |x + 3| that needs x = −3, so the corner, and the whole graph, moves 3 to the left.',
+    },
+    {
+      q: 'Which formula moves the graph of y = x² 4 units to the right?',
+      choices: ['y = (x + 4)²', 'y = (x − 4)²', 'y = x² − 4'],
+      answer: 1,
+      trap: 0,
+      why: 'Moving right by 4 means each output arrives 4 later: the lowest point, where the inside is 0, must be at x = 4, so the inside is x − 4.',
+    },
+  ]}
+>
+
+A change **inside** the brackets moves the graph the opposite way to its sign: $f(x - 2)$ is 2 to the right and
+$f(x + 2)$ is 2 to the left. Find where the inside is 0. That is where the plain graph's $x = 0$ point has gone.
+
+</Misconception>
+
+<Misconception
+  id="inside-outside"
+  title="Adding a number inside the brackets and outside are the same move"
+  probes={[
+    {
+      q: 'Where is the lowest point of y = x² + 3?',
+      choices: ['(0, 3)', '(−3, 0)', '(3, 0)'],
+      answer: 0,
+      trap: 1,
+      why: 'The + 3 is outside: it is added to every output, so the parabola moves up 3 and its lowest point goes from (0, 0) to (0, 3).',
+    },
+    {
+      q: 'How do the graphs of y = √x + 2 and y = √(x + 2) differ from y = √x?',
+      choices: ['They are the same graph', 'The first is moved up 2, the second left 2', 'The first is moved left 2, the second up 2'],
+      answer: 1,
+      trap: 0,
+      why: 'Outside the root, + 2 is added to the output (up 2). Inside, + 2 changes the input, which moves the graph sideways, to the left.',
+    },
+  ]}
+>
+
+Outside, a number changes the **outputs**: $f(x) + 3$ is the whole graph moved up 3. Inside, it changes the **inputs**:
+$f(x + 3)$ is the graph moved sideways, 3 to the left. Outside moves go the way the sign says; inside moves go the
+opposite way.
+
+</Misconception>
+
+Now write it in code. Your function fills in the table of values for a moved parabola, $y = a(x - h)^2 + k$, one $x$
+at a time, as the visualiser did:
+
+<CodeExercise exercise="graph-values" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'f(x) = x². What is f(−3)?',
+      choices: ['−9', '9', '−6', '6'],
+      answer: 1,
+      why: '(−3) × (−3) = 9: squaring a negative number gives a positive one.',
+    },
+    {
+      q: 'Which of these is not the graph of a function?',
+      choices: ['A parabola', 'A circle', 'A sloping straight line', 'The V shape of |x|'],
+      answer: 1,
+      why: 'A vertical line through a circle meets it twice, so one input would have two outputs. A function gives exactly one.',
+    },
+    {
+      q: 'Where is the lowest point of y = (x − 5)²?',
+      choices: ['(5, 0)', '(−5, 0)', '(0, −5)', '(0, 5)'],
+      answer: 0,
+      why: 'The inside is 0 at x = 5, so the lowest point of x² moves from (0, 0) to (5, 0): 5 to the right.',
+      traps: { 1: 'shift-direction', 2: 'inside-outside' },
+    },
+    {
+      q: 'On the line y = 2x + 1, how much does y rise for each step of 1 to the right?',
+      choices: ['1', '2', '3', '0.5'],
+      answer: 1,
+      why: 'The knob multiplying x is the slope: each step right adds 2 to the output. The + 1 only lifts the line.',
+    },
+    {
+      q: 'Compared with y = |x|, the graph of y = −|x| + 3 is…',
+      choices: ['flipped upside down, then moved up 3', 'moved 3 to the left', 'flipped, then moved 3 to the right', 'steeper, and moved up 3'],
+      answer: 0,
+      why: 'a = −1 flips every output, and the + 3 outside the bars adds 3 to every output: the V turns upside down with its peak at (0, 3).',
+      traps: { 1: 'inside-outside', 2: 'inside-outside' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="knobs-move-graphs"
+  prompt="What does each knob in y = a·f(x − h) + k do to the graph of f, and why does x − h move it right rather than left?"
+  rubric={[
+    'A function gives exactly one output for each input, and its graph is every point (x, f(x)).',
+    'a multiplies every output: it stretches the graph up and down, and a negative a flips it over.',
+    'k is added to every output, so the whole graph moves up by k, or down if k is negative.',
+    'x − h moves the graph right by h, because the output f gave at 0 now needs x = h.',
+  ]}
+  example="A function turns each input x into one output f(x), and its graph is all the points (x, f(x)). In a·f(x − h) + k, a multiplies every output, so it stretches the graph vertically and flips it when a is negative. Adding k to every output moves the graph up by k. The h is inside the brackets, so it changes the inputs: to get the output f used to give at 0 you now need x − h = 0, that is x = h, so everything arrives h later and the graph moves right by h."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A function is a rule with one output per input; its graph is every point $(x, f(x))$, the whole table at once.
+- $a \cdot f(x - h) + k$: $a$ stretches (and flips when negative), $h$ moves right, $k$ moves up.
+- Inside the brackets moves go the opposite way to the sign; outside moves go the way it says.
+- For a straight line, $a$ is the slope, like the 3000 in the price rule.
+- Choosing the knobs so a graph fits real data is what machine learning does.
+
+</Section>
