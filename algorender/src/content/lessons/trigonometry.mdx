@@ -1,0 +1,271 @@
+<Section step="hook" title="Why a language model needs sine waves">
+
+A transformer, the kind of model behind modern chatbots, looks at all the words of a sentence at once. Its core
+step, called attention, has no built-in sense of word order: to it, "dog bites man" and "man bites dog" hold the same
+words. So the model is told each word's position.
+
+The original transformer (Vaswani and colleagues, 2017) did that by adding a pattern of **sine and cosine waves** to
+each word's numbers, a different pattern for each position. Many newer models instead **turn** pairs of a word's
+numbers by an angle that grows with its position (rotary embeddings, Su and colleagues, 2021). Games turn sprites with
+the same two functions, and robots turn their arms.
+
+Sine and cosine come from one simple picture: a point going round a circle. This lesson builds that picture, uses it
+to turn arrows, and shows a mistake that catches many people the first time they use `Math.sin`.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="unit circle">A circle of radius 1 with its centre at $(0, 0)$. Angles start from the point $(1, 0)$ on its right and turn anticlockwise.</Term>
+  <Term name="angle θ">How far round a point has turned. θ is the Greek letter theta.</Term>
+  <Term name="radian">An angle measured by the distance travelled round the unit circle. A full turn is the whole circumference, $2\pi \approx 6.28$ radians, the same as 360°.</Term>
+  <Term name="cos θ and sin θ">The coordinates of the turned point: $\cos\theta$ across, $\sin\theta$ up.</Term>
+  <Term name="period">How far along a repeating pattern goes before it starts again. For sine and cosine, $2\pi$: one full turn.</Term>
+</Terms>
+
+You may remember that a circle's circumference is $2\pi r$. With radius 1 that is $2\pi$, so a full turn of 360° is
+$2\pi$ radians. Divide both by 360 and 1° is $\frac{\pi}{180}$ radians. So to turn degrees into radians, multiply by
+$\frac{\pi}{180}$: 180° is $\pi$ radians, 90° is $\frac{\pi}{2} \approx 1.57$, and one radian is about 57.3°.
+
+Why a new unit? Radians tie the angle to a distance, which keeps the maths of sine and cosine simple (the calculus
+lessons show why). That is why code uses them.
+
+</Section>
+
+<Section step="see" title="Shadows of a turning point">
+
+<Explore slug="unit-circle" settings={{ preset: 'angle' }} caption="Turn P by 60°. The arc it travels is the angle in radians; its shadows on the axes are cos θ and sin θ." />
+
+Turning 60° sends $P$ along an arc of length $1.047$: that is 60° in radians, $60 \times \frac{\pi}{180}$. Where it
+stops, $P$ sits at $(0.5, 0.866)$. Those two coordinates are, by definition, the cosine and sine of 60°:
+
+$$
+\cos 60^\circ = 0.5
+$$
+
+$$
+\sin 60^\circ \approx 0.866
+$$
+
+The picture draws $\cos\theta$ and $\sin\theta$ as two lines. $\cos\theta$ runs along the x-axis from the centre to just below $P$: the
+shadow $P$ would cast with a light straight overhead. $\sin\theta$ runs from there straight up to $P$: its height,
+the shadow it would cast on the y-axis.
+
+If you remember SOH CAH TOA, this is the same idea. The across distance, the up distance and the radius make a
+right-angled triangle, and its hypotenuse is the radius, 1. So $\sin\theta = \frac{\text{opposite}}{1}$ is the
+height, and $\cos\theta = \frac{\text{adjacent}}{1}$ is the across distance. The circle only adds one thing: it
+keeps going past 90°, where a triangle can't.
+
+The same triangle gives a rule that holds at every angle. By Pythagoras (and writing $\cos^2\theta$ for
+$(\cos\theta)^2$):
+
+$$
+\cos^2\theta + \sin^2\theta = 1
+$$
+
+Squares are never negative, so two squares that add up to 1 are each at most 1. That is why sine and cosine can
+never be bigger than 1 or smaller than $-1$.
+
+<KeyIdea>
+
+**Turn a point θ round the unit circle from $(1, 0)$: it lands at $(\cos\theta, \sin\theta)$.** The angle in radians
+is the distance it travelled. Left of the centre, cos is negative; below it, sin is negative.
+
+</KeyIdea>
+
+Here is $P$ at 150°. Step forward, then drag $P$ into each quarter of the circle. Between 90° and 270° it is left of the
+centre, so $\cos\theta$ is negative. Between 180° and 360° it is below the centre, so $\sin\theta$ is negative.
+
+<Explore slug="unit-circle" settings={{ preset: 'obtuse' }} input caption="At 150°, P is at (−0.866, 0.5): cos is negative, sin positive. Type circle and an angle to try others." />
+
+</Section>
+
+<Section step="predict" title="Your turn: trace the sine wave">
+
+Turn $P$ round in 30° steps and plot its height against the angle. Before each step, predict whether $\sin\theta$ will
+be positive, negative or zero. The graph's angle axis is in radians: $\frac{\pi}{2}$ is 90°, $\pi$ is 180° and $2\pi$
+is a full turn.
+
+<PredictChallenge slug="unit-circle" settings={{ preset: 'wave' }} goal={6} />
+
+One full turn draws one full wave, and turning further repeats it. Plotting the across distance, $\cos\theta$,
+instead gives the cosine wave. It is the same shape, shifted: cosine reaches each peak a quarter turn before sine
+does.
+
+</Section>
+
+<Section step="do" title="Turn an arrow">
+
+Now use the circle to turn an arrow $v = (x, y)$, drawn from the centre $(0, 0)$ to the point $(x, y)$, by an angle θ.
+We'll build the rule in three small steps.
+
+**A quarter turn first.** On squared paper, the arrow $(2, 1)$ goes 2 right and 1 up. Turn the page a quarter turn
+anticlockwise: "right" becomes "up" and "up" becomes "left". So it now goes 2 up and 1 left, to $(-1, 2)$. In
+general a quarter turn sends $(x, y)$ to $(-y, x)$.
+
+**Then the two unit steps.** Every arrow is made of two kinds of step: $x$ steps of $(1, 0)$ and $y$ steps of
+$(0, 1)$. Turned by θ, the step $(1, 0)$ lands at $(\cos\theta, \sin\theta)$: that is the unit circle again. The step
+$(0, 1)$ is $(1, 0)$ turned a quarter turn, so it stays a quarter turn ahead. Apply the quarter-turn rule to
+$(\cos\theta, \sin\theta)$ and it lands at $(-\sin\theta, \cos\theta)$.
+
+**Then add them up.** Turning the whole arrow turns each step but keeps the counts $x$ and $y$. So the turned arrow
+$v' = (x', y')$ (said "v prime") is $x$ of the first plus $y$ of the second. Add the across parts, then the up parts:
+
+$$
+x' = x\cos\theta - y\sin\theta
+$$
+
+$$
+y' = x\sin\theta + y\cos\theta
+$$
+
+Check it with $(2, 1)$ and 90°, where $\cos 90^\circ = 0$ and $\sin 90^\circ = 1$: $x' = 2 \times 0 - 1 \times 1 = -1$
+and $y' = 2 \times 1 + 1 \times 0 = 2$. That is the $(-1, 2)$ from the squared paper.
+
+<Explore slug="unit-circle" settings={{ preset: 'rotate' }} input caption="(2, 1) turned 90° lands at (−1, 2), and its length is still 2.236. Drag v, or type rotate, an angle and a vector." />
+
+An arrow's length is its distance from the centre, $\sqrt{x^2 + y^2}$ by Pythagoras, so $(2, 1)$ has length
+$\sqrt{5} \approx 2.236$. Turning never changes it. Rotary embeddings rely on this: the angle a word's numbers are
+turned by carries its position, and their size stays the same.
+
+<Misconception
+  id="degrees-in-code"
+  title="Math.sin takes the angle in degrees"
+  probes={[
+    {
+      q: 'In Python, math.cos(180) returns about…',
+      choices: ['−1', '−0.598', '0'],
+      answer: 1,
+      trap: 0,
+      why: 'math.cos reads 180 as 180 radians, more than 28 full turns, and cos 180 radians is about −0.598. cos 180° = −1 needs math.cos(math.pi).',
+    },
+    {
+      q: 'Which call gives sin 30° = 0.5?',
+      choices: ['Math.sin(30)', 'Math.sin(30 * Math.PI / 180)', 'Math.sin(30 / 360)'],
+      answer: 1,
+      trap: 0,
+      why: 'Convert degrees to radians first: multiply by π/180. Math.sin(30) treats 30 as radians and returns about −0.988.',
+    },
+  ]}
+>
+
+The `sin` and `cos` in Python, JavaScript and almost every other language expect **radians**. `Math.sin(90)`
+doesn't fail. It turns 90 radians, about 14.3 full turns, and returns $0.894$: a wrong number, with no warning. The
+fix is to convert first: multiply degrees by $\frac{\pi}{180}$ (Python also has `math.radians`).
+
+</Misconception>
+
+<Explore slug="unit-circle" settings={{ preset: 'degrees' }} caption="Math.sin(90) lands 116.6° round, after 14 full turns. Converted first, 90° is π/2 and the sine is 1." />
+
+<Misconception
+  id="cos-positive"
+  title="sin θ and cos θ are lengths, so they are never negative"
+  probes={[
+    {
+      q: 'P is turned 150° round the unit circle. What is the sign of cos 150°?',
+      choices: ['Positive: cos is a length', 'Negative: P is left of the centre', 'Zero'],
+      answer: 1,
+      trap: 0,
+      why: 'cos θ is P’s x-coordinate, and at 150° P is left of the centre, so cos 150° ≈ −0.866.',
+    },
+    {
+      q: 'What is sin 270°?',
+      choices: ['1', '−1', '0'],
+      answer: 1,
+      trap: 0,
+      why: 'Three quarters of a turn puts P at the bottom of the circle, (0, −1), so sin 270° = −1.',
+    },
+  ]}
+>
+
+In a SOH CAH TOA triangle the sides are lengths, so they are never negative. On the circle, $\cos\theta$ and
+$\sin\theta$ are the **coordinates** of the turned point, which can be. Left of the centre $\cos\theta$ is negative,
+and below it $\sin\theta$ is negative: $\cos 180^\circ = -1$ and $\sin 270^\circ = -1$.
+
+</Misconception>
+
+Now write it yourself: turn a point in code, converting the angle to radians first.
+
+<CodeExercise exercise="rotate-point" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'How many radians is a full turn?',
+      choices: ['2π ≈ 6.28', '360', 'π ≈ 3.14', '1'],
+      answer: 0,
+      why: 'A full turn travels the whole circumference of the unit circle, 2π × 1.',
+    },
+    {
+      q: 'What is 90° in radians?',
+      choices: ['π/2 ≈ 1.57', '90', 'π', 'π/4'],
+      answer: 0,
+      why: 'A quarter of 2π: 90 × π/180 = π/2.',
+    },
+    {
+      q: 'A point on the unit circle is at (0.5, 0.866). What is cos θ?',
+      choices: ['0.5', '0.866', '1.366', '60'],
+      answer: 0,
+      why: 'cos θ is the x-coordinate. (This is θ = 60°.)',
+    },
+    {
+      q: 'What does Math.sin(90) return in JavaScript?',
+      choices: ['1', 'About 0.894', '0', 'An error'],
+      answer: 1,
+      why: 'Math.sin reads 90 as 90 radians, not degrees. Math.sin(Math.PI / 2) is 1.',
+      traps: { 0: 'degrees-in-code' },
+    },
+    {
+      q: 'What is cos 180°?',
+      choices: ['−1', '1', '0', '180'],
+      answer: 0,
+      why: 'Half a turn puts P at (−1, 0), left of the centre, so its x-coordinate is −1.',
+      traps: { 1: 'cos-positive' },
+    },
+    {
+      q: 'For any angle θ, cos²θ + sin²θ is…',
+      choices: ['1', '0', 'It depends on θ', '2'],
+      answer: 0,
+      why: 'Pythagoras on the unit circle: the two shadows and the radius 1 form a right-angled triangle.',
+    },
+    {
+      q: 'Turning the arrow (2, 1) by 90° anticlockwise gives…',
+      choices: ['(−1, 2)', '(1, −2)', '(2, 1)', '(1, 2)'],
+      answer: 0,
+      why: 'A quarter turn sends (x, y) to (−y, x): x′ = 2 cos 90° − 1 sin 90° = −1 and y′ = 2 sin 90° + 1 cos 90° = 2.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="sine-cosine"
+  prompt="What are sin θ and cos θ, and why do they always stay between −1 and 1?"
+  rubric={[
+    'Turn a point anticlockwise by θ from (1, 0), round a circle of radius 1 centred at (0, 0).',
+    'cos θ is the turned point’s x-coordinate and sin θ its y-coordinate, so either can be negative.',
+    'The angle in radians is the distance travelled round the circle; a full turn is 2π.',
+    'By Pythagoras cos²θ + sin²θ = 1, so neither can be above 1 or below −1.',
+  ]}
+  example="Start a point at (1, 0) on a circle of radius 1 and turn it anticlockwise by θ. Where it lands is (cos θ, sin θ): cos is its x-coordinate and sin its y-coordinate, so they go negative on the left and bottom of the circle. The angle in radians is the distance the point travelled, 2π for a full turn. The coordinates and the radius make a right-angled triangle with long side 1, so cos²θ + sin²θ = 1 and neither can be bigger than 1."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Turn a point θ round the unit circle from $(1, 0)$: it lands at $(\cos\theta, \sin\theta)$.
+- Radians measure the distance travelled: $360^\circ = 2\pi$. Code's `sin` and `cos` want radians, so multiply degrees
+  by $\frac{\pi}{180}$.
+- $\cos^2\theta + \sin^2\theta = 1$; both repeat every $2\pi$, tracing the sine and cosine waves.
+- Turning $(x, y)$ by θ gives $(x\cos\theta - y\sin\theta,\ x\sin\theta + y\cos\theta)$ and keeps its length.
+
+</Section>

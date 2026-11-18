@@ -953,6 +953,16 @@ Every phase ships something usable; nothing waits for the whole revamp. Old page
     - **Checkpoints:** the `checkpoint.answered` event, the round builder and `/learn/checkpoint/[stage]`. Stages 1 and 2 already open, from the lessons that exist.
     - **The plan:** milestone items after each stage's concepts, in windows filled to 70%, and the `ml-zero-to-hero` goal with every target, which grows as concepts go live.
     - **Checks:** content tests (areas, planned counts, `later`, cycles with every batch in place, stages, goal reach), unit and property tests (loader, judge mode, projects, checkpoint rounds, milestones), e2e for the checkpoint, the map's new tracks, the plan's milestone and lazy weights, with axe in both themes and screenshots at 1440 and 390.
+  - **Status (2026-11-17): B1 (the math toolkit) is built** (`claude/math-ml-b1-103294`).
+    - **Concepts live:** functions and their graphs, exponents and logarithms, sums and notation, and angles, sine and cosine. Floating point now builds on logarithms, derivatives on functions, and entropy on logarithms (their B1 `later` prerequisites moved in). The `ml-zero-to-hero` plan now starts with the toolkit, and the stage-1 checkpoint asks about it.
+    - **Visualisers (4, `src/algorithms/toolkit/`, each telling short stories picked by preset):**
+      - **Functions:** a rule, a table of values, the dots joined, then a·f(x − h) + k one knob at a time; drag the anchor (h, k) and the unit point (h + 1, k + a).
+      - **Logarithms:** doubling to N and halving back (binary search's log₂ n), a log scale as a straight staircase, log(a·b) as stacked bars beside log(a + b), compound interest levelling off at e, and ln mirroring eˣ (draggable).
+      - **Sigma notation:** Σ and Π as loops with a running total, the mean as a balance point (drag the bars), Σxᵢ² as the diagonal of the table whose whole is (Σxᵢ)², and a double sum filling a table row by row.
+      - **The unit circle:** radians as arc length, cos and sin as shadows (drag P), the sine wave traced, a vector turned, and what Math.sin(90) does.
+    - **Exercises (4, Python/JS/TS):** a moved parabola's values, a bug hunt where a sentence's probability underflows (fixed by adding log₂s), the variance as two loops (with order-the-lines and fill-the-gaps stages), and turning a point with the angle converted to radians.
+    - **Lessons (4):** each a draft and a cold review as a school-maths learner (the reviewers also caught narration and message bugs in the modules, since fixed). Every number a lesson quotes is measured from the code in `src/content/lessons/toolkit-numbers.test.ts`, which also checks each embed's preset, step and question count.
+    - **Checks:** property tests (each table point lands at (x + h, a·f(x) + k) on the drawn curve, ⌈log₂ N⌉ doublings and halvings, stacked logs equal log(a·b), compound totals rise towards e, every Σ against its closed form, deviations summing to 0, the table's diagonal and whole, P at (cos θ, sin θ) with the arc as long as θ, turning keeps length); e2e for the handles, the map and a bug hunt, the lessons on `learn.spec`, axe on every new page in both themes, and screenshots at 1440 and 390.
 
 ### Phase 5 — Personalization and tutor
 

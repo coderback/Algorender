@@ -1,0 +1,255 @@
+<Section step="hook" title="A number too small for a computer">
+
+Suppose a language model, the kind of program that writes text one word at a time, reads a 120-word sentence. Say it
+gives each word a chance of about one in a thousand. The chance of the whole sentence is all 120 of those chances
+multiplied together: about $2^{-1200}$. Written as a decimal, that is a point followed by roughly 360 zeros before the
+first digit.
+
+Ask Python or JavaScript to multiply those 120 numbers and the answer is exactly 0. Both store decimals as 64-bit
+floats, and the smallest positive number a float can hold is about $2^{-1074}$. The product sank below it, so it was
+rounded to 0. That is why programs that work with probabilities do something else: they take **logarithms**, which
+turn the product into a sum. Here the sum is $-1200$, an everyday number. By the end of this lesson you will know why
+that works, and you will have fixed code that gets it wrong.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="exponent (power)">How many copies of a number to multiply together: $2^{10} = 2 \times 2 \times \cdots \times 2 = 1024$, ten 2s.</Term>
+  <Term name="logarithm">The exponent, worked out backwards: $\log_2 1024 = 10$, because ten doublings take 1 to 1024. Read it as "log base 2 of 1024 is 10".</Term>
+  <Term name="base">The number being multiplied: 2 for $\log_2$, 10 for $\log_{10}$, and $e$ for $\ln$.</Term>
+  <Term name="e">A number, about 2.718, that compound interest levels off at (you will see how below). Logs to base $e$ are called natural logs and written $\ln$.</Term>
+  <Term name="log scale">An axis where each step up multiplies by the same amount (1, 2, 4, 8, …) instead of adding.</Term>
+</Terms>
+
+Three facts about powers explain every rule in this lesson:
+
+- Multiplying adds the exponents: $2^3 \times 2^2 = 2^5$ (three doublings, then two more).
+- Anything to the power 0 is 1: no doublings at all.
+- A negative power divides: $2^{-3} = \frac{1}{8}$, three halvings.
+
+</Section>
+
+<Section step="see" title="Counting doublings">
+
+<Explore slug="logarithms" settings={{ preset: 'doubling' }} caption="Double from 1 until you reach 1000, halve 1000 back down, then see the same bars on a log scale." />
+
+Starting from 1, ten doublings pass 1000: $2^9 = 512$ falls short and $2^{10} = 1024$ gets there. So $\log_2 1000$ is a
+little under 10. More precisely, it is $9.97$, because $2^{9.97}$ is about 1000.
+
+Logarithms don't have to be whole numbers. A fraction of a doubling makes sense: $2^{0.5}$ is about 1.414, and
+multiplying by 1.414 twice is one doubling ($0.5 + 0.5 = 1$). So 1000, which sits between $2^9$ and $2^{10}$ and much
+nearer the top, has a log between 9 and 10, much nearer 10.
+
+Halving runs the same steps backwards: halve 1000 ten times and you are below 1. That is why
+[binary search](/learn/binary-search) needs at most 10 looks to find an item among 1000 sorted ones. It checks the
+middle item and throws away the half the item can't be in. Each look halves what is left, so the number of looks grows
+like $\log_2 n$: for a million items, only 20.
+
+On a log scale the bars that shot up become a straight staircase, one equal step per doubling. That is why charts of
+things that keep multiplying, like savings or the cases in an epidemic, are often drawn on a log scale: steady growth
+becomes a straight line.
+
+<KeyIdea>
+
+**A logarithm is an exponent.** $\log_2 N$ is the power you raise 2 to in order to get $N$: the number of doublings from
+1 to $N$. It grows very slowly. Doubling $N$ adds just 1 to it.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: how many doublings to 100 000?">
+
+Same idea, bigger number. Answer each question before you step on. A handy fact: $2^{10} = 1024$, which is about a
+thousand.
+
+<PredictChallenge slug="logarithms" settings={{ preset: 'big' }} goal={6} />
+
+</Section>
+
+<Section step="do" title="Products become sums">
+
+Multiply $8 \times 4$. In doublings, 8 is three doublings and 4 is two. So $8 \times 4$ is three doublings followed by
+two more, five in all, and $2^5 = 32$. That is the rule logarithms are loved for:
+
+$$
+\log(a \times b) = \log a + \log b
+$$
+
+It works in every base, and for numbers that aren't whole powers of 2:
+
+<Explore slug="logarithms" settings={{ preset: 'product-uneven' }} input caption="log₂ 10 = 3.32 and log₂ 100 = 6.64 stack up to log₂ 1000 = 9.97. Type product a b to try your own." />
+
+If you add the rounded 3.32 and 6.64 you get 9.96, not 9.97. That gap is only rounding: the logs really are 3.3219…
+and 6.6438…, which add to 9.9657….
+
+This is what saves the 120-word sentence. Its probability is a product of 120 small numbers, so its log is a sum of 120
+logs. In the exercise below, the words' chances are $2^{-9}$, $2^{-10}$ and $2^{-11}$ in turn (1 in 512, 1 in 1024 and
+1 in 2048, all near one in a thousand). Their logs are $-9$, $-10$ and $-11$, and 120 of them add up to a comfortable
+$-1200$.
+
+Notice the minus signs. A number below 1 is reached by halving 1, so its log is negative. Every probability is at most
+1, so every log-probability is negative, or 0 for a sure thing.
+
+<Misconception
+  id="log-of-sum"
+  title="log(a + b) = log a + log b"
+  probes={[
+    {
+      q: 'log₂ 8 = 3. What is log₂(8 + 8)?',
+      choices: ['6', '4', '9'],
+      answer: 1,
+      trap: 0,
+      why: '8 + 8 = 16 = 2⁴, so log₂ 16 = 4. Adding the logs, 3 + 3 = 6, gives the log of 8 × 8 = 64 instead.',
+    },
+    {
+      q: 'Which of these is true for all positive a and b?',
+      choices: ['log(a + b) = log a + log b', 'log(a × b) = log a + log b', 'log(a × b) = log a × log b'],
+      answer: 1,
+      trap: 0,
+      why: 'Multiplying stacks doublings, so logs of a product add. Adding a and b has no such rule.',
+    },
+  ]}
+>
+
+Logs turn **multiplying** into adding, never adding into anything simpler. $\log_2(8 + 8) = \log_2 16 = 4$, but
+$\log_2 8 + \log_2 8 = 6$, which is $\log_2 64$. There is no rule for the log of a sum: work out the sum first.
+
+</Misconception>
+
+<Misconception
+  id="log-below-one"
+  title="Numbers below 1 have no logarithm, or a positive one"
+  probes={[
+    {
+      q: 'What is log₂(1/4)?',
+      choices: ['−2', '2', 'There is none: logs need numbers above 1', '0.25'],
+      answer: 0,
+      trap: 2,
+      why: '1/4 = 2⁻², two halvings of 1, so log₂(1/4) = −2. Every positive number has a log; those below 1 are negative.',
+    },
+    {
+      q: 'A model gives the right word a probability of 0.5. What is its log₂-probability?',
+      choices: ['1', '−1', '0.5', 'It has none'],
+      answer: 1,
+      trap: 0,
+      why: '0.5 = 2⁻¹, one halving, so log₂ 0.5 = −1. Probabilities are at most 1, so their logs are at most 0.',
+    },
+  ]}
+>
+
+A negative power is a halving: $2^{-1} = 0.5$ and $2^{-3} = 0.125$. So every positive number has a logarithm.
+$\log 1 = 0$, numbers above 1 have positive logs, and numbers between 0 and 1 have negative ones. Only 0 and negative
+numbers have no log, and 0 is exactly where the underflowing product ends up.
+
+</Misconception>
+
+Here is the calculation from the hook as code. It gives the right answer for four events. On the 120-word sentence it
+returns $-\infty$, minus infinity (Python stops with an error instead). Step through it, watch the running product sink
+to 0, then fix it:
+
+<CodeExercise exercise="log-probability" />
+
+</Section>
+
+<Section step="do" title="Where e comes from">
+
+The number $e$ turns up whenever growth compounds. A bank pays 100% interest once a year: £1 becomes £2. Now pay it as
+two halves of 50%. After six months you have £1.50, and the second payment earns interest on that, so you end with
+£2.25. Paid in $n$ equal parts, each payment multiplies the pot by $1 + \frac{1}{n}$, so £1 becomes
+$(1 + \frac{1}{n})^n$. Split it finer and finer:
+
+<Explore slug="logarithms" settings={{ preset: 'compound' }} caption="Paid yearly, half-yearly, quarterly, monthly, weekly, daily, hourly and every minute." />
+
+Monthly gives £2.613, daily £2.7146, every minute £2.71828, and it never gets past $e = 2.71828\ldots$. Each extra
+split adds less than the one before. (Every minute is really £2.718279, a whisker under $e = 2.718281\ldots$.)
+
+Money that grows all the time, at a rate in proportion to what is already there, follows $e^x$: at 100% a year, £1
+grows to $e^x$ pounds after $x$ years. The natural log runs that backwards: $\ln x$ is how many years it takes £1 to
+grow to $x$ pounds. Swapping inputs and outputs like this reflects a graph in the line $y = x$:
+
+<Explore slug="logarithms" settings={{ preset: 'mirror' }} input caption="Drag P along eˣ and watch Q trace ln x on the other side of the line y = x." />
+
+So $\ln$ undoes $e^x$: $\ln(e^x) = x$. Every base gives the same shape of log, just scaled. One doubling is about 0.693
+of a step in base $e$, because $e^{0.693}$ is about 2. So $\ln x = \log_2 x \times \ln 2$, and
+$\ln 1000 = 9.97 \times 0.693 = 6.91$.
+
+Machine learning papers usually write $\ln$ as plain $\log$. That is safe, because changing the base multiplies every
+log by the same number. It never changes which of two things has the bigger log.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: '2⁵ = 32. So log₂ 32 is…',
+      choices: ['5', '16', '32', '2.5'],
+      answer: 0,
+      why: 'A log is the exponent: five doublings take 1 to 32.',
+    },
+    {
+      q: 'Binary search halves the sorted items left with each look. About how many looks does it need at most for 1000 items?',
+      choices: ['10', '100', '500', '1000'],
+      answer: 0,
+      why: 'Ten halvings take 1000 below 1, since log₂ 1000 = 9.97.',
+    },
+    {
+      q: 'log₂ 4 = 2 and log₂ 16 = 4. Which number has a log₂ of 2 + 4 = 6?',
+      choices: ['4 × 16 = 64', '4 + 16 = 20', '2 × 4 = 8', '6'],
+      answer: 0,
+      why: 'Logs of a product add: log₂(4 × 16) = 2 + 4 = 6, and 2⁶ = 64. log₂ 20 is only about 4.32.',
+      traps: { 1: 'log-of-sum' },
+    },
+    {
+      q: 'What is log₂ 0.125?',
+      choices: ['−3', '3', '0.125', 'It does not exist'],
+      answer: 0,
+      why: '0.125 = 1/8 = 2⁻³: three halvings of 1.',
+      traps: { 1: 'log-below-one', 3: 'log-below-one' },
+    },
+    {
+      q: '£1 at 100% a year is paid in more and more, smaller instalments. What does the total approach?',
+      choices: ['£2', 'e ≈ £2.72', '£3', 'It grows without limit'],
+      answer: 1,
+      why: 'Paid in n parts, £1 becomes (1 + 1/n)ⁿ. That rises as n grows, but each split adds less, and it levels off at e = 2.718…',
+    },
+    {
+      q: 'Why do models add log-probabilities instead of multiplying probabilities?',
+      choices: ['A product of many small numbers underflows to 0; the sum of their logs stays an everyday size', 'Logs are faster to compute than multiplication', 'Adding gives a different, more accurate answer', 'Probabilities can be negative'],
+      answer: 0,
+      why: 'log(a × b) = log a + log b, so the sum carries exactly the same information without ever forming the tiny product.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="what-a-log-is"
+  prompt="What is a logarithm, and why does it turn multiplying into adding?"
+  rubric={[
+    'log₂ N is the power of 2 that gives N: how many doublings take 1 to N.',
+    'Multiplying stacks one number’s doublings on top of the other’s, so log(a × b) = log a + log b.',
+    'There is no such rule for log(a + b).',
+    'Numbers between 0 and 1 have negative logs, and log 1 = 0.',
+  ]}
+  example="A logarithm is an exponent run backwards: log₂ 1000 is the power you raise 2 to to get 1000, about 9.97, the number of doublings from 1. Multiplying a by b means doubling up to a and then doubling log b more times, so the doublings add: log(a × b) = log a + log b. That only works for products; log(a + b) has no rule. Numbers below 1 are halvings, so they have negative logs, which is why log-probabilities are negative."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- $\log_2 N$ is the number of doublings from 1 to $N$: an exponent, worked backwards. Halving $N$ down to 1 takes as many steps.
+- $\log(a \times b) = \log a + \log b$ in any base. There is no rule for $\log(a + b)$.
+- Numbers below 1 have negative logs. Models add log-probabilities, so a tiny product never has to be stored and never underflows to 0.
+- $e \approx 2.718$ is where compound growth levels off, and $\ln$ undoes $e^x$. Changing the base only scales a log.
+- A float has a smallest size because it stores a number with a power of 2; the [floating-point lesson](/learn/floating-point) shows how.
+
+</Section>

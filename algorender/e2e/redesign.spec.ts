@@ -72,6 +72,17 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'viz-diffusion', path: '/visualisers/diffusion?step=3' },
   // 6f: the mock interviews hub, signed out (e2e/interview.spec.ts shoots a round, its debrief and the hub signed in).
   { name: 'interviews', path: '/practice/interview' },
+  // Math and ML B1: the math toolkit's visualisers a few steps in, and its lessons.
+  { name: 'b1-functions', path: '/visualisers/functions?preset=parabola&step=10' },
+  { name: 'b1-logarithms', path: '/visualisers/logarithms?preset=product-uneven&step=3' },
+  { name: 'b1-sigma', path: '/visualisers/sigma-notation?preset=square&step=1' },
+  { name: 'b1-double-sum', path: '/visualisers/sigma-notation?preset=double&step=7' },
+  { name: 'b1-unit-circle', path: '/visualisers/unit-circle?preset=wave&step=5' },
+  { name: 'b1-lesson-functions', path: '/learn/functions-graphs' },
+  { name: 'b1-lesson-logs', path: '/learn/exponents-logs' },
+  { name: 'b1-lesson-sums', path: '/learn/sums-notation' },
+  { name: 'b1-lesson-trig', path: '/learn/trigonometry' },
+  { name: 'b1-exercise', path: '/code/variance' },
   // Language tracks L1: a sample task of each kind shipped (e2e/tasks.spec.ts shoots them after a failed check).
   { name: 'task-program', path: '/learn/tasks/py-greet-by-name' },
   { name: 'task-output', path: '/learn/tasks/py-two-names-one-value' },
