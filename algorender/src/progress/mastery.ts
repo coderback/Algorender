@@ -157,8 +157,11 @@ export function observations(events: readonly ProgressEvent[], graph: MasteryGra
       case 'interview.finished':
         // A mock interview is one observation for its problem's concepts, under the problem's own item (never a second distinct item):
         // right when it meets the bar. Only rounds the server wrote count.
+        // A design round counts for its case study's concept under the case's own item, `design:<case>`.
         if (e.data.verified && e.data.format === 'coding') {
           push(graph.problems[e.data.item], { item: `problem:${e.data.item}`, correct: meetsBar(e.data.scores, e.data.hints, e.data.passed), at: e.at, source: 'interview' });
+        } else if (e.data.verified && e.data.format === 'design') {
+          push(graph.designs?.[e.data.item], { item: `design:${e.data.item}`, correct: meetsBar(e.data.scores, e.data.hints, e.data.passed), at: e.at, source: 'interview' });
         }
         break;
       case 'explanation.scored':

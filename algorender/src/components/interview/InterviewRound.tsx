@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react
 import { FiClock } from 'react-icons/fi';
 import { Button } from '@/components/ui/Button';
 import { cx } from '@/components/ui/cx';
-import { ANNOUNCE_AT, edgeCaseList, nextPhase, PHASE_INFO, PHASES, type Phase, type WorkPhase } from '@/interview/rules';
+import { ANNOUNCE_AT, edgeCaseList, nextPhase, PHASE_INFO, phasesOf, type Format, type RoundPhase, type WorkPhase } from '@/interview/rules';
 import type { ProblemSpec } from '@/problems/judge';
 import { ProblemWorkspace, type ProblemHeading } from '@/problems/ui/ProblemWorkspace';
 import type { ServerAnswer } from '@/problems/ui/serverJudge';
@@ -39,8 +39,9 @@ export function InterviewRound({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cases, setCases] = useState(initial.edgeCases);
-  const [confirmEnd, setConfirmEnd] = useState(false);
   const slot = `interview:${round.id}`;
+  /** A coding round always has its language. */
+  const language = round.language ?? 'python';
 
   const accept = (r: RoundView) => {
     setSkew(Date.parse(r.now) - Date.now());
@@ -63,7 +64,7 @@ export function InterviewRound({
   };
 
   /** The code as it stands: the editor saves it on this device as it changes. */
-  const currentCode = () => loadCode(slot, round.language) ?? undefined;
+  const currentCode = () => loadCode(slot, language) ?? undefined;
 
   if (round.phase === 'debrief') {
     return <Debrief round={round} content={debrief} onChange={accept} />;
@@ -72,39 +73,7 @@ export function InterviewRound({
   const phase = round.phase as WorkPhase;
   const coding = phase === 'code' || phase === 'test';
   const listed = edgeCaseList(cases).length > 0;
-  const end = () => {
-    setConfirmEnd(false);
-    void act({ action: 'end', code: currentCode() });
-  };
-
-  const bar = (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-card bg-surface px-3 py-2.5">
-      <PhaseStrip current={round.phase} />
-      <Clock round={round} skew={skew} />
-      <span className="ml-auto flex items-center gap-2">
-        {confirmEnd ? (
-          <>
-            <span className="text-sm text-ink-soft">End the interview now?</span>
-            <Button kind="danger" size="s" onClick={end} disabled={busy}>
-              End it
-            </Button>
-            <Button kind="ghost" size="s" onClick={() => setConfirmEnd(false)}>
-              Keep going
-            </Button>
-          </>
-        ) : (
-          <Button kind="ghost" size="s" onClick={() => setConfirmEnd(true)} disabled={busy}>
-            End interview
-          </Button>
-        )}
-      </span>
-      {busy && round.phase === 'test' && (
-        <span role="status" className="sr-only">
-          Working…
-        </span>
-      )}
-    </div>
-  );
+  const bar = <RoundBar round={round} skew={skew} busy={busy} working={busy && round.phase === 'test'} onEnd={() => void act({ action: 'end', code: currentCode() })} />;
 
   const submitResults = async (code: string, tests: number, failed: number) => {
     await act({ action: 'submit', code, cases, results: { tests, failed } });
@@ -128,7 +97,7 @@ export function InterviewRound({
       statement={{ problem }}
       interview={{
         slot,
-        language: round.language,
+        language,
         back: { href: '/practice/interview', label: 'Back to mock interviews (the round keeps going)' },
         bar,
         canEdit: coding,
@@ -163,12 +132,54 @@ export function InterviewRound({
   );
 }
 
+/** The bar under a round's header: the phases, the clock, and End (with a confirm). */
+export function RoundBar({ round, skew, busy, working, onEnd }: { round: RoundView; skew: number; busy: boolean; working: boolean; onEnd: () => void }) {
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-card bg-surface px-3 py-2.5">
+      <PhaseStrip current={round.phase} format={round.format} />
+      <Clock round={round} skew={skew} />
+      <span className="ml-auto flex items-center gap-2">
+        {confirmEnd ? (
+          <>
+            <span className="text-sm text-ink-soft">End the interview now?</span>
+            <Button
+              kind="danger"
+              size="s"
+              onClick={() => {
+                setConfirmEnd(false);
+                onEnd();
+              }}
+              disabled={busy}
+            >
+              End it
+            </Button>
+            <Button kind="ghost" size="s" onClick={() => setConfirmEnd(false)}>
+              Keep going
+            </Button>
+          </>
+        ) : (
+          <Button kind="ghost" size="s" onClick={() => setConfirmEnd(true)} disabled={busy}>
+            End interview
+          </Button>
+        )}
+      </span>
+      {working && (
+        <span role="status" className="sr-only">
+          Working…
+        </span>
+      )}
+    </div>
+  );
+}
+
 /** The phases as a read-only strip: done, current (aria-current) and to come. */
-function PhaseStrip({ current }: { current: Phase }) {
-  const at = PHASES.indexOf(current);
+function PhaseStrip({ current, format }: { current: RoundPhase; format: Format }) {
+  const phases = phasesOf(format);
+  const at = phases.indexOf(current);
   return (
     <ol aria-label="Interview phases" className="flex min-w-0 gap-0.5 overflow-x-auto rounded-full bg-sunken p-[3px]">
-      {PHASES.map((p, i) => (
+      {phases.map((p, i) => (
         <li
           key={p}
           aria-current={p === current ? 'step' : undefined}
@@ -192,7 +203,7 @@ function PhaseStrip({ current }: { current: Phase }) {
  */
 const noSubscribe = () => () => {};
 
-function Clock({ round, skew }: { round: RoundView; skew: number }) {
+export function Clock({ round, skew }: { round: RoundView; skew: number }) {
   // The server renders no time: the page's own clock takes over once it runs.
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const [now, setNow] = useState(() => Date.now());

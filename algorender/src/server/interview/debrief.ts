@@ -5,13 +5,13 @@
 // it: exactly one score per dimension, evidence quotes that really are the
 // learner's words, and the hint cap applied afterwards, whatever the model said.
 
-import { DIMENSIONS, MODEL_DIMENSIONS, SCORE_LABELS, hintCap, type DimensionId, type Score } from '@/interview/rules';
+import { cappedDimension, DIMENSIONS, MODEL_DIMENSIONS, modelDimensionsOf, SCORE_LABELS, hintCap, type AnyDimensionId, type Format, type Score } from '@/interview/rules';
 import { ModelError } from '../tutor/model';
 import { defuse, numbered } from '../tutor/prompt';
 import type { InterviewGrounding, RoundState } from './prompt';
 
 /** One dimension's result as the debrief shows it. */
-export type DimensionResult = { dimension: DimensionId; score: Score; evidence: string[]; feedback: string };
+export type DimensionResult = { dimension: AnyDimensionId; score: Score; evidence: string[]; feedback: string };
 
 export type Debrief = {
   dimensions: DimensionResult[];
@@ -20,6 +20,16 @@ export type Debrief = {
   workOn: string[];
   /** The written feedback gave too much of the solution away, so only the scores are kept. */
   withheld?: boolean;
+  /** A design round's measured outcome: the final run's checks, each estimate's verdict, and the cost. */
+  design?: DesignOutcome;
+};
+
+export type DesignOutcome = {
+  checks: { id: string; label: string; ok: boolean; want: string; actual: string }[];
+  estimates: { id: string; verdict: 'spot-on' | 'close' | 'off'; factor: number; value: number | null }[];
+  cost: number;
+  referenceCost: number;
+  checksUsed: number;
 };
 
 export function debriefInstructions(item: InterviewGrounding, facts: { correctness: Score; tests: string; hints: number; stricter?: boolean }): string {
@@ -62,7 +72,11 @@ export function debriefMessage(item: InterviewGrounding, state: RoundState): str
   ].join('\n\n');
 }
 
-export const DEBRIEF_SCHEMA = {
+export const DEBRIEF_SCHEMA = debriefSchema(MODEL_DIMENSIONS);
+
+/** The debrief's JSON schema for the dimensions the model scores. */
+export function debriefSchema(ids: readonly string[]) {
+  return {
   name: 'interview_debrief',
   schema: {
     type: 'object',
@@ -72,7 +86,7 @@ export const DEBRIEF_SCHEMA = {
         items: {
           type: 'object',
           properties: {
-            dimension: { type: 'string', enum: [...MODEL_DIMENSIONS] },
+            dimension: { type: 'string', enum: [...ids] },
             score: { type: 'integer', enum: [1, 2, 3, 4] },
             evidence: { type: 'array', items: { type: 'string' } },
             feedback: { type: 'string' },
@@ -87,7 +101,8 @@ export const DEBRIEF_SCHEMA = {
     required: ['dimensions', 'summary', 'workOn'],
     additionalProperties: false,
   },
-};
+  };
+}
 
 const squash = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -107,7 +122,12 @@ export function learnerText(state: RoundState): string {
  * learner's own scores), evidence only where it is really the learner's
  * words, and approach capped by the hints used.
  */
-export function parseDebrief(text: string, state: RoundState, hints: number): Omit<Debrief, 'dimensions'> & { dimensions: DimensionResult[] } {
+export function parseDebrief(text: string, state: RoundState, hints: number): Debrief {
+  return parseScores(text, learnerText(state), 'coding', hints);
+}
+
+/** The model's scores for a round of either format, checked against everything the learner wrote (`said`). */
+export function parseScores(text: string, learner: string, format: Format, hints: number): Debrief {
   let raw: { dimensions?: unknown; summary?: unknown; workOn?: unknown };
   try {
     raw = JSON.parse(text);
@@ -115,8 +135,9 @@ export function parseDebrief(text: string, state: RoundState, hints: number): Om
     throw new ModelError('The debrief wasn’t JSON.');
   }
   const given = Array.isArray(raw.dimensions) ? (raw.dimensions as Record<string, unknown>[]) : [];
-  const said = squash(learnerText(state));
-  const dimensions = MODEL_DIMENSIONS.map((id): DimensionResult => {
+  const said = squash(learner);
+  const capped = cappedDimension(format);
+  const dimensions = modelDimensionsOf(format).map((id): DimensionResult => {
     const d = given.find((g) => g?.dimension === id);
     const score = d?.score;
     if (!d || typeof score !== 'number' || !Number.isInteger(score) || score < 1 || score > 4) throw new ModelError(`The debrief gave no usable score for ${id}.`);
@@ -124,8 +145,8 @@ export function parseDebrief(text: string, state: RoundState, hints: number): Om
       .filter((q): q is string => typeof q === 'string' && q.trim().length > 0 && said.includes(squash(q)))
       .slice(0, 2)
       .map((q) => q.trim());
-    const capped = id === 'approach' ? Math.min(score, hintCap(hints)) : score;
-    return { dimension: id, score: capped as Score, evidence, feedback: typeof d.feedback === 'string' ? d.feedback.trim() : '' };
+    const final = id === capped ? Math.min(score, hintCap(hints)) : score;
+    return { dimension: id, score: final as Score, evidence, feedback: typeof d.feedback === 'string' ? d.feedback.trim() : '' };
   });
   const workOn = (Array.isArray(raw.workOn) ? raw.workOn : []).filter((w): w is string => typeof w === 'string' && w.trim().length > 0).slice(0, 3).map((w) => w.trim());
   return { dimensions, summary: typeof raw.summary === 'string' ? raw.summary.trim() : '', workOn };
@@ -134,11 +155,12 @@ export function parseDebrief(text: string, state: RoundState, hints: number): Om
 /** The debrief's prose, for the leak check. */
 export const debriefProse = (d: Pick<Debrief, 'dimensions' | 'summary' | 'workOn'>) => [d.summary, ...d.dimensions.map((x) => x.feedback), ...d.workOn].join('\n');
 
-/** Scores the learner gave themself against the rubric, when the model couldn't score: approach still capped by hints. */
-export function selfScored(scores: Record<string, number>, hints: number): DimensionResult[] {
-  return MODEL_DIMENSIONS.map((id) => {
+/** Scores the learner gave themself against the rubric, when the model couldn't score: the approach (or trade-offs) still capped by hints. */
+export function selfScored(scores: Record<string, number>, hints: number, format: Format = 'coding'): DimensionResult[] {
+  const capped = cappedDimension(format);
+  return modelDimensionsOf(format).map((id) => {
     const n = scores[id];
     if (!Number.isInteger(n) || n < 1 || n > 4) throw new RangeError(`Score ${id} from 1 to 4.`);
-    return { dimension: id, score: (id === 'approach' ? Math.min(n, hintCap(hints)) : n) as Score, evidence: [], feedback: '' };
+    return { dimension: id, score: (id === capped ? Math.min(n, hintCap(hints)) : n) as Score, evidence: [], feedback: '' };
   });
 }

@@ -11,7 +11,7 @@ import { Chip } from '@/components/ui/Chip';
 import { SelectField } from '@/components/ui/Field';
 import { CountTile } from '@/components/ui/Numbers';
 import { Segmented } from '@/components/ui/Segmented';
-import { DEFAULT_LENGTH, LENGTHS, PHASE_INFO, PHASES, dimensionLabel, meetsBar, suggestedMinutes, type Phase, type RoundLength } from '@/interview/rules';
+import { DEFAULT_LENGTH, LENGTHS, PHASE_INFO, PHASES, dimensionLabel, meetsBar, suggestedMinutes, workPhasesOf, type RoundLength, type RoundPhase } from '@/interview/rules';
 import { authClient } from '@/lib/auth-client';
 import { PROBLEM_LANGUAGE_IDS, PROBLEM_LANGUAGES, type ProblemLanguage } from '@/problems/languages';
 import { loadProblemLanguage } from '@/workspace/storage';
@@ -19,13 +19,25 @@ import type { InterviewStatus } from '@/server/interview';
 import { minutesText, postInterview } from './api';
 
 // The mock interviews hub (/practice/interview): start a coding round (its
-// length, level, pattern and language, or "surprise me"), resume one in
-// progress, and reread past rounds' debriefs. Signed-in learners only.
+// length, level, pattern and language, or "surprise me") or a system-design
+// round (its length and case study), resume one in progress, and reread
+// past rounds' debriefs. Signed-in learners only.
 // TODO(billing): free to signed-in learners until billing exists.
 
 type Status = { enabled: boolean; signedIn?: boolean } & Partial<InterviewStatus>;
 
-export function InterviewHub({ enabled, patterns, problems }: { enabled: boolean; patterns: { id: string; title: string }[]; problems: number }) {
+export function InterviewHub({
+  enabled,
+  patterns,
+  problems,
+  cases,
+}: {
+  enabled: boolean;
+  patterns: { id: string; title: string }[];
+  problems: number;
+  /** The case studies a design round can be on, and how many interview briefs each has. */
+  cases: { slug: string; title: string; variants: number }[];
+}) {
   const session = authClient.useSession();
   const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
@@ -33,6 +45,8 @@ export function InterviewHub({ enabled, patterns, problems }: { enabled: boolean
   const [level, setLevel] = useState('');
   const [pattern, setPattern] = useState('');
   const [language, setLanguage] = useState<ProblemLanguage>(() => loadProblemLanguage() ?? 'python');
+  const [designLength, setDesignLength] = useState<RoundLength>(DEFAULT_LENGTH);
+  const [study, setStudy] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; round?: string } | null>(null);
   const signedIn = session.data != null;
@@ -65,11 +79,11 @@ export function InterviewHub({ enabled, patterns, problems }: { enabled: boolean
     );
   }
 
-  const start = async (surprise: boolean) => {
+  const begin = async (body: Record<string, unknown>) => {
     if (busy) return;
     setBusy(true);
     setError(null);
-    const res = await postInterview({ action: 'start', limit: length, language, ...(!surprise && level && { level }), ...(!surprise && pattern && { pattern }) });
+    const res = await postInterview({ action: 'start', ...body });
     if (!res.ok) {
       setBusy(false);
       setError({ message: res.message, round: res.round });
@@ -77,6 +91,10 @@ export function InterviewHub({ enabled, patterns, problems }: { enabled: boolean
     }
     router.push(`/practice/interview/${res.body.round.id}`);
   };
+  const start = (surprise: boolean) => begin({ limit: length, language, ...(!surprise && level && { level }), ...(!surprise && pattern && { pattern }) });
+  const startDesign = () => begin({ format: 'design', limit: designLength, ...(study && { study }) });
+  const designSuggested = suggestedMinutes(designLength, 'design');
+  const briefs = cases.reduce((n, c) => n + c.variants, 0);
 
   const left = status?.roundsLeft;
   const suggested = suggestedMinutes(length);
@@ -153,14 +171,43 @@ export function InterviewHub({ enabled, patterns, problems }: { enabled: boolean
             </Button>
           </div>
         </TrackCard>
-        <TrackCard track="peach" aria-labelledby="design-title">
-          <h2 id="design-title" className="text-title-card font-bold text-track-peach-title">
-            System-design round
-          </h2>
-          <p className="text-sm">Requirements, estimates, a design on the canvas and a deep dive into a failure, on the system-design case studies. Coming later.</p>
-          <Chip tone="onTrack" className="self-start">
-            Coming later
-          </Chip>
+        <TrackCard track="peach" aria-labelledby="design-title" className="gap-5">
+          <div className="flex flex-col gap-1">
+            <h2 id="design-title" className="text-title-card font-bold text-track-peach-title">
+              System-design round
+            </h2>
+            <p className="text-sm">
+              Requirements, estimates, a design on the canvas checked by the simulator, then a deep dive into a failure. One of {briefs} interview briefs, each a new story on a
+              case study, so a case you’ve passed doesn’t give the answer away.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-[13px] font-semibold">Length</span>
+            <Segmented
+              label="Design round length"
+              size="m"
+              value={String(designLength) as `${RoundLength}`}
+              onChange={(v) => setDesignLength(Number(v) as RoundLength)}
+              options={LENGTHS.map((n) => ({ value: String(n) as `${RoundLength}`, label: `${n} min` }))}
+            />
+            <p className="text-xs">
+              {workPhasesOf('design')
+                .map((p) => `${PHASE_INFO[p].label} ${designSuggested[p]}`)
+                .join(' · ')}{' '}
+              minutes, suggested.
+            </p>
+          </div>
+          <SelectField label="Case study" value={study} onChange={(e) => setStudy(e.target.value)}>
+            <option value="">Any</option>
+            {cases.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.title}
+              </option>
+            ))}
+          </SelectField>
+          <Button kind="onTrack" className="self-start" onClick={() => void startDesign()} disabled={busy || !status || out}>
+            Start design round
+          </Button>
         </TrackCard>
       </div>
 
@@ -173,7 +220,7 @@ export function InterviewHub({ enabled, patterns, problems }: { enabled: boolean
             {status.open.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-well bg-sunken px-4 py-3 text-sm">
                 <span>
-                  <span className="font-semibold text-ink">{r.title}</span> <span className="text-ink-soft">· {PHASE_INFO[r.phase as Phase].label} phase</span>
+                  <span className="font-semibold text-ink">{r.title}</span> <span className="text-ink-soft">· {PHASE_INFO[r.phase as RoundPhase].label} phase</span>
                 </span>
                 <ButtonLink href={`/practice/interview/${r.id}`} kind="secondary" size="s">
                   Resume
@@ -206,7 +253,8 @@ export function InterviewHub({ enabled, patterns, problems }: { enabled: boolean
                       <span className="font-semibold text-ink">{r.title}</span>
                       <Chip tone={r.scoredBy === 'pending' ? 'warn' : bar ? 'good' : 'neutral'}>{r.scoredBy === 'pending' ? 'To score' : bar ? 'Meets the bar' : 'Not yet'}</Chip>
                       <span className="text-ink-soft">
-                        {PROBLEM_LANGUAGES[r.language].label} · {minutesText(r.minutes)} of {r.limit} · {new Date(r.endedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                        {r.language ? PROBLEM_LANGUAGES[r.language].label : 'System design'} · {minutesText(r.minutes)} of {r.limit} ·{' '}
+                        {new Date(r.endedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                       </span>
                     </span>
                     <span className="flex flex-wrap gap-1.5">

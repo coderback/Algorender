@@ -104,6 +104,10 @@ export function fakeModel(): TutorModel {
           ? `(fake interviewer, hint level ${level}) What does each step of your idea need to remember from the steps before it?`
           : /^The learner has stated the approach/m.test(last)
             ? '(fake interviewer) Why that time complexity? And what does it do with an empty input?'
+            : /^The learner has explained their design/m.test(last)
+              ? '(fake interviewer) What does that choice cost you, and what happens when a machine fails?'
+              : /^The learner has given their estimates/m.test(last)
+                ? '(fake interviewer) How did you get to the first of those numbers?'
             : last.includes('NAME THE PATTERN')
               ? '(fake interviewer) Have you thought about a hash map?'
               : '(fake interviewer) Good question. Assume only what the constraints say, and tell me what you’d assume.';

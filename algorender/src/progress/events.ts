@@ -147,15 +147,19 @@ export const EVENT_DATA = {
   }),
   /**
    * A mock interview finished (src/interview/, src/server/interview/): a
-   * coding round on a practice problem (`item`), with a score per dimension
+   * coding round on a practice problem (`item`, with its `language`), or a
+   * design round on a case study (`item`) told as one of its interview
+   * `variant`s, with a score per dimension
    * (1 not yet, 2 partly, 3 meets the bar, 4 strong). `minutes` is the
    * round's length on the server's clock and `limit` the time it was set
    * for, so overtime shows. `hints` is the highest hint level used (0–3).
-   * `passed`: the last submission passed every test. `by` says who scored
+   * `passed`: the last submission passed every test (a design round: the
+   * server's run of the final design met every target, its deep dive
+   * included). `by` says who scored
    * the dimensions code can't measure: the model, or the learner against the
    * rubric when the model couldn't. Only the server writes it, with
    * `verified`; sync drops `verified` from events a device sends, and the
-   * projections ignore a round without it. Design rounds ('design') come later.
+   * projections ignore a round without it.
    */
   'interview.finished': z.object({
     format: z.enum(['coding', 'design']),

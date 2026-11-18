@@ -56,8 +56,10 @@ const DAY_MS = 86_400_000;
 /** Task kinds where the learner writes or fixes the program: passing one reaches a concept's implement level. */
 const IMPLEMENTS = new Set(['program', 'function', 'tests', 'bug']);
 
-/** A coding round the server wrote: a device can't claim one (sync drops `verified` from what it sends). */
-const verifiedRound = (e: Extract<ProgressEvent, { kind: 'interview.finished' }>) => e.data.verified === true && e.data.format === 'coding';
+/** A round (coding or design) the server wrote: a device can't claim one (sync drops `verified` from what it sends). */
+const verifiedRound = (e: Extract<ProgressEvent, { kind: 'interview.finished' }>) => e.data.verified === true;
+/** The item a round's XP is counted once for: its problem, or its case study. */
+const roundItem = (e: Extract<ProgressEvent, { kind: 'interview.finished' }>) => (e.data.format === 'design' ? `interview:design:${e.data.item}` : `interview:${e.data.item}`);
 const dayOf = (at: string) => at.slice(0, 10);
 const daysBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / DAY_MS;
 
@@ -115,7 +117,7 @@ export function xpLedger(events: readonly ProgressEvent[], projects: readonly Pr
         break;
       }
       case 'interview.finished':
-        if (verifiedRound(e) && meetsBar(e.data.scores, e.data.hints, e.data.passed) && e.data.hints <= 1 && once(`interview:${e.data.item}`)) {
+        if (verifiedRound(e) && meetsBar(e.data.scores, e.data.hints, e.data.passed) && e.data.hints <= 1 && once(roundItem(e))) {
           award(e.at, e.data.hints === 0 ? XP.interview.clean : XP.interview.oneHint, 'A mock interview that meets the bar');
         }
         break;
@@ -234,8 +236,11 @@ export function conceptLevels(
         if (e.data.total > 0 && (e.data.covered + e.data.partly / 2) / e.data.total >= EXPLAINED_AT) add(graph.lessons[e.data.lesson], 'analyze');
         break;
       case 'interview.finished':
-        // Implement comes from the submissions inside the round; a round adds analyse.
-        if (verifiedRound(e) && scoreOf(e.data.scores, 'approach') >= 3 && scoreOf(e.data.scores, 'analysis') >= 3) add(graph.problems[e.data.item], 'analyze');
+        // Implement comes from the submissions inside a coding round (and a design round's checks aren't a pass on the case page); a round adds analyse.
+        if (!verifiedRound(e)) break;
+        if (e.data.format === 'design') {
+          if (scoreOf(e.data.scores, 'tradeoffs') >= 3) add(graph.designs?.[e.data.item], 'analyze');
+        } else if (scoreOf(e.data.scores, 'approach') >= 3 && scoreOf(e.data.scores, 'analysis') >= 3) add(graph.problems[e.data.item], 'analyze');
         break;
     }
   }
