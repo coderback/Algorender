@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '@/engine/random';
+import { cpuTime } from '@/testing/timing';
 import { cacheRun, createCache } from '@/systems/cache';
 import { latencyQuantile, meanLatency } from '@/systems/queueing';
 import {
@@ -230,6 +231,7 @@ describe('runs', () => {
     expect(r2.findings[0]).toMatch(/“App servers” is the bottleneck/);
   });
 
+  // In CPU time (see cpuTime): under a busy suite the wall-clock passed 3.8 s.
   it('simulate 10,000 requests a second for 10 seconds in well under two seconds', () => {
     const d = design(
       clients({ rps: 10_000, readShare: 0.9, keys: 100_000, skew: 1 }, 'lb'),
@@ -239,9 +241,8 @@ describe('runs', () => {
       db({ shards: 2, replicas: 2 }),
     );
     simulate(d, { seconds: 1, seed: 1 });
-    const t = performance.now();
-    const r = simulate(d, { seconds: 10, seed: 1 });
-    expect(performance.now() - t).toBeLessThan(2000);
+    const { result: r, ms } = cpuTime(() => simulate(d, { seconds: 10, seed: 1 }));
+    expect(ms).toBeLessThan(2000);
     expect(r.offered).toBeGreaterThan(95_000);
   });
 

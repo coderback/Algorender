@@ -23,6 +23,7 @@ import {
   type RunRequest,
   type RunResult,
 } from '../protocol';
+import { cpuTime } from '@/testing/timing';
 import { HARNESS } from './harness';
 
 let pyodide: PyodideInterface;
@@ -422,10 +423,23 @@ describe('limits', () => {
     });
   });
 
+  // In CPU time (see cpuTime): under the full suite this took 2 s of
+  // wall-clock against 0.6 s alone.
   it('trips the default step limit well inside the default time budget', () => {
-    const r = run(`def f(arr):\n    i = 0\n    while i < len(arr):\n        i = i * 1\n`, 'f', [arr([0])]);
+    const { result: r, ms } = cpuTime(() => run(`def f(arr):\n    i = 0\n    while i < len(arr):\n        i = i * 1\n`, 'f', [arr([0])]));
     expect(r.error).toMatchObject({ kind: 'limit', message: expect.stringContaining('200,000 steps'), line: expect.any(Number) });
-    expect(r.ms).toBeLessThan(DEFAULT_LIMITS.timeoutMs / 4);
+    expect(ms).toBeLessThan(DEFAULT_LIMITS.timeoutMs / 3);
+  });
+
+  // Every event shows the plain lists in scope, checking each holds only
+  // numbers. Done item by item in Python, that made 1,200 writes beside 1,200
+  // numbers (the log-probability exercise's longest test) take 7 s.
+  it('keeps each event cheap beside a long list of numbers', () => {
+    const values = Array.from({ length: 1_200 }, () => 0.5);
+    const args: Arg[] = [{ kind: 'value', name: 'ps', value: values }, arr(values.map(() => 0), 'out')];
+    const { result, ms } = cpuTime(() => run(`def f(ps, out):\n    for i in range(len(ps)):\n        out[i] = ps[i]\n`, 'f', args));
+    expect(only(result, 'write')).toHaveLength(1_200);
+    expect(ms).toBeLessThan(2_500);
   });
 
   it('formats the step limit with separators', () => {

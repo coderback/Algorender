@@ -138,6 +138,16 @@ def _is_number(x):
     return isinstance(x, (int, float)) and not isinstance(x, bool)
 
 
+def _all_numbers(items):
+    """_is_number for every item. The usual case (only ints and floats) is one
+    C-level pass over the types: this runs on every event, for every list in
+    scope, and a Python-level check of a long list made runs quadratic."""
+    return set(map(type, items)) <= _PLAIN_NUMBERS or all(_is_number(x) for x in items)
+
+
+_PLAIN_NUMBERS = {int, float}
+
+
 def _number(x):
     """A number as JSON can carry it, or _SKIP."""
     if isinstance(x, float):
@@ -168,7 +178,7 @@ def _var(value):
         return _number(value)
     if isinstance(value, str):
         return _short(value)
-    if isinstance(value, (list, tuple)) and all(_is_number(x) for x in value):
+    if isinstance(value, (list, tuple)) and _all_numbers(value):
         return _list_text(value, isinstance(value, tuple))
     return _SKIP
 

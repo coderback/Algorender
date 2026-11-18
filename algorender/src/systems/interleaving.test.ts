@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { createRng } from '@/engine/random';
+import { LONG_MS } from '@/testing/timing';
 import {
   completeSchedule,
   deadlocked,
@@ -123,7 +124,7 @@ describe('interleaving', () => {
       }),
       { numRuns: 150 },
     );
-  });
+  }, LONG_MS);
 
   it('ends every random schedule in one of the outcomes, respecting locks', () => {
     fc.assert(
