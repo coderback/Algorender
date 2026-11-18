@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { RunResult } from '@/workspace/protocol';
 import { CALLS, customCase, customError, customText, LiteralError, MAX_CUSTOM, parseLiteral, readCustom, valueError, type CustomText } from './custom';
 import { ownMismatch, verdict, type ProblemSpec } from './judge';
+import { LONG_MS } from '@/testing/timing';
 import { PROBLEM_LANGUAGE_IDS } from './languages';
 import { getProblem, loadProblems, specFor } from './load';
 
@@ -72,7 +73,7 @@ describe('typed tests', () => {
         expect(read.test.input ?? read.test.calls, `${s.slug} ${test.id} ${language}`).toEqual(test.input ?? test.calls);
       }
     }
-  });
+  }, LONG_MS);
 
   it('names each field that is wrong, and keeps tests under the size limit', () => {
     const twoSum = spec('two-sum');

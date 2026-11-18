@@ -23,8 +23,12 @@ const LANGUAGE: Record<ProblemLanguage, Extension> = {
 function complete(marked: string, language: ProblemLanguage, explicit = false): CompletionResult | null {
   const pos = marked.indexOf('|');
   const doc = marked.slice(0, pos) + marked.slice(pos + 1);
-  const state = EditorState.create({ doc, extensions: LANGUAGE[language] });
-  ensureSyntaxTree(state, doc.length, 5000);
+  const created = EditorState.create({ doc, extensions: LANGUAGE[language] });
+  // A state keeps the tree it parsed when it was made, within a 20 ms budget
+  // a busy machine can run out of, and finishing the parse doesn't change it:
+  // the next state takes the whole tree, as an editor's next update would.
+  ensureSyntaxTree(created, doc.length, 5000);
+  const state = created.update({}).state;
   return completionSource(language)(new CompletionContext(state, pos, explicit)) as CompletionResult | null;
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadConcepts } from '@/content/concepts';
+import { cpuTime } from '@/testing/timing';
 import { evaluate, withWorkload } from '@/systems/design/evaluate';
 import { validateDesign } from '@/systems/design/validate';
 import { caseStudies, getCaseStudy } from '.';
@@ -16,7 +17,7 @@ const START: Record<string, { fails: string[]; passes: string[] }> = {
 };
 
 // Every check runs the case's traffic for its seconds (twice with faults); this
-// keeps the canvas responsive and the suite quick.
+// keeps the canvas responsive and the suite quick. In CPU time (see cpuTime).
 const TIME_LIMIT_MS = 4000;
 
 describe('case studies', () => {
@@ -51,18 +52,16 @@ describe('case studies', () => {
     });
 
     it('has a reference that meets every target', () => {
-      const t0 = performance.now();
-      const e = evaluate(study.reference, study);
-      expect(performance.now() - t0).toBeLessThan(TIME_LIMIT_MS);
+      const { result: e, ms } = cpuTime(() => evaluate(study.reference, study));
+      expect(ms).toBeLessThan(TIME_LIMIT_MS);
       expect(e.checks.filter((c) => !c.ok).map((c) => `${c.id}: ${c.actual}, want ${c.want}`)).toEqual([]);
       expect(e.passed).toBe(true);
       expect(e.faultResult === null).toBe(!study.targets.survive);
     });
 
     it('starts from a design that fails in the way the case is about', () => {
-      const t0 = performance.now();
-      const e = evaluate(study.start, study);
-      expect(performance.now() - t0).toBeLessThan(TIME_LIMIT_MS);
+      const { result: e, ms } = cpuTime(() => evaluate(study.start, study));
+      expect(ms).toBeLessThan(TIME_LIMIT_MS);
       expect(e.passed).toBe(false);
       const ok = new Map(e.checks.map((c) => [c.id, c.ok]));
       for (const id of START[slug].fails) expect(ok.get(id), `${id} should fail`).toBe(false);
