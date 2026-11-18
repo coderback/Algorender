@@ -11,7 +11,7 @@ import { user } from '@/server/db/schema';
 import { parseSyncRequest, sync } from '@/server/progress';
 import { parseEvent } from './events';
 import { problemProgress } from './projections';
-import { ProgressStore, type StoreEnvironment } from './store';
+import { HOLD_RETRY_MS, ProgressStore, type StoreEnvironment } from './store';
 
 let db: Database;
 let close: () => Promise<void>;
@@ -23,6 +23,8 @@ beforeAll(async () => {
     { id: 'u2', name: 'Grace', email: 'grace@example.com' },
     { id: 'u3', name: 'Edsger', email: 'edsger@example.com' },
     { id: 'u4', name: 'Barbara', email: 'barbara@example.com' },
+    { id: 'u5', name: 'Frances', email: 'frances@example.com' },
+    { id: 'u6', name: 'Kathleen', email: 'kathleen@example.com' },
   ]);
 }, 60_000);
 
@@ -257,6 +259,75 @@ describe('devices on different app versions', () => {
     expect(ids(upgraded)).toEqual([a.id, b.id].sort());
     expect(upgraded.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 0 });
     await upgraded.close();
+    await phone.close();
+  });
+
+  /** The server, rolled back (while `rolledBack.on`) to a version from before checkpoints: it refuses them as malformed. */
+  function olderServer(session: { user: string }, rolledBack: { on: boolean }): Pick<StoreEnvironment, 'fetch' | 'online'> {
+    return {
+      online: () => true,
+      fetch: (async (_url: string, init: RequestInit) => {
+        const request = parseSyncRequest(JSON.parse(String(init.body)));
+        const unknown = rolledBack.on ? request.events.filter((e) => (e as { kind: string }).kind === 'checkpoint.answered') : [];
+        const body = await sync(db, session.user, { ...request, events: request.events.filter((e) => !unknown.includes(e)) });
+        return Response.json({ ...body, rejected: [...body.rejected, ...unknown.map((e) => (e as { id: string }).id)] });
+      }) as typeof fetch,
+    };
+  }
+  const onServer = async (userId: string) => (await sync(db, userId, { events: [], cursor: 0 })).events.map((e) => e.id).sort();
+
+  it('holds events an older server refuses, and sends them once the newer one is back', async () => {
+    const session = { user: 'u5' };
+    const rolledBack = { on: true };
+    let now = new Date('2026-11-18T09:00:00.000Z');
+    const dbName = 'phone-during-rollback';
+    const storage = new MemoryStorage();
+    const env = { dbName, storage, syncDelay: 5, now: () => now, ...olderServer(session, rolledBack) };
+    const phone = new ProgressStore(env);
+    await phone.setOwner('u5');
+    const a = answer(phone, 0);
+    const b = solve(phone, 'two-sum');
+    await phone.syncNow();
+    // The old server took what it knows; the checkpoint stays on the device, waiting.
+    expect(await onServer('u5')).toEqual([b.id]);
+    expect(ids(phone)).toEqual([a.id, b.id].sort());
+    expect(phone.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 1 });
+    await phone.close();
+
+    // The newer deployment is back. Within the hour, a new visit doesn't offer the held event again yet.
+    rolledBack.on = false;
+    now = new Date(now.getTime() + HOLD_RETRY_MS / 2);
+    const later = new ProgressStore(env);
+    await later.start();
+    await later.syncNow();
+    expect(await onServer('u5')).toEqual([b.id]);
+    expect(later.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 1 });
+
+    // An hour after the refusal, it goes.
+    now = new Date(now.getTime() + HOLD_RETRY_MS / 2);
+    await later.syncNow();
+    expect(await onServer('u5')).toEqual([a.id, b.id].sort());
+    expect(later.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 0 });
+    expect(ids(later)).toEqual([a.id, b.id].sort());
+    await later.close();
+  });
+
+  it('still drops a refused event this app can’t read either', async () => {
+    const dbName = 'phone-malformed';
+    const malformed = { id: uuidv7(), kind: 'problem.submitted', at: '2026-11-18T09:00:00.000Z', data: { problem: 'two-sum' } };
+    const seeded = new Dexie(dbName);
+    seeded.version(1).stores({ events: 'id, owner, [owner+synced]', meta: 'key' });
+    await seeded.table('events').put({ ...malformed, owner: 'u6', synced: 0 });
+    seeded.close();
+
+    const storage = new MemoryStorage();
+    storage.setItem('algorender:owner', 'u6');
+    const phone = new ProgressStore({ dbName, storage, syncDelay: 5, ...server({ user: 'u6' }) });
+    await phone.start();
+    await phone.syncNow();
+    expect(phone.getSnapshot().events).toEqual([]);
+    expect(phone.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 0 });
+    expect(await onServer('u6')).toEqual([]);
     await phone.close();
   });
 });
