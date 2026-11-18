@@ -1,0 +1,136 @@
+<Section step="hook" title="Changing course mid-loop">
+
+Looking for the first number that fits a rule? Once you've found it, there's no point checking the rest. Reading
+words until someone types `stop`? You don't know how many there will be. Skipping the blank lines in some input? Two
+small words handle all of these: `break` and `continue`.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="break">Leaves the loop at once. Python carries on with the first line after the loop.</Term>
+  <Term name="continue">Skips the rest of this turn and goes straight on to the next one.</Term>
+  <Term name="loop else">An `else` lined up with the `for` or `while`. It runs once the loop has finished, but only if no `break` ended it.</Term>
+</Terms>
+
+`while True:` is a loop whose condition never fails, so the only way out is a `break`. It is the usual way to read
+input until some signal:
+
+```python
+while True:
+    word = input()
+    if word == "stop":
+        break           # leave the loop now
+    if word == "":
+        continue        # skip blank lines: back to the top for the next word
+    print("got", word)
+print("finished")
+```
+
+A loop's `else` answers the question "did the loop finish without a `break`?", which is just what a search needs:
+
+```python
+for d in range(2, n):
+    if n % d == 0:
+        print("found a divisor:", d)
+        break
+else:
+    print("no divisor: prime")   # only when no break happened
+```
+
+The `else` lines up with the `for`, not with the `if`. That one level of indentation decides whether it runs once
+after the loop or on every turn where the `if` is false.
+
+</Section>
+
+<Section step="see" title="Watch it skip and stop">
+
+Step through. Even numbers hit `continue`, so they're never printed. At 7, `break` ends the loop, so the `else` is
+skipped too.
+
+<TraceCode snippet="py-break-continue" />
+
+<KeyIdea>
+
+**`break` leaves the loop; `continue` skips to the next turn.** A loop's `else` runs only when the loop ran to the end
+without a `break`.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-skip-and-stop" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="loop-else-if"
+  title="A loop’s else runs only when the loop never ran"
+  probes={[
+    {
+      q: 'for i in range(3): print(i), then a loop else that prints "end". Does "end" print?',
+      choices: ['Yes, after 0, 1 and 2: no break stopped the loop', 'No: a loop’s else runs only when the loop never runs', 'Yes, before 0'],
+      answer: 0,
+      trap: 1,
+      why: 'A loop’s else runs whenever the loop finishes without a break, however many turns it had.',
+    },
+    {
+      q: 'for c in "ab": print(c), then a loop else that prints "no letters". What prints?',
+      choices: ['a, b, then no letters', 'a and b only: there were letters'],
+      answer: 0,
+      trap: 1,
+      why: 'Nothing broke out of the loop, so the else runs after it, whatever it says.',
+    },
+  ]}
+>
+
+A loop's `else` isn't about whether the loop ran. It runs once, after the loop, whenever the loop finished on its own,
+and is skipped only when a `break` ended the loop. Read it as "no break".
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'for i in range(2): print(i), then a loop else that prints "done". What prints?',
+      choices: ['0, 1, done', '0, 1'],
+      answer: 0,
+      why: 'The loop ends without a break, so its else runs.',
+      traps: { 1: 'loop-else-if' },
+    },
+    {
+      q: 'What does continue do?',
+      choices: ['Skips the rest of this turn and starts the next one', 'Leaves the loop', 'Starts the whole loop again from its first turn'],
+      answer: 0,
+      why: 'continue jumps back to the top for the next turn; break is the one that leaves.',
+    },
+    {
+      q: 'for i in range(10): if i == 3, break; otherwise print(i). What is printed last?',
+      choices: ['2', '3', '9'],
+      answer: 0,
+      why: 'When i is 3 the loop breaks before printing, so 0, 1 and 2 are printed.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-break-continue" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `break` leaves the loop at once; `continue` skips to the next turn.
+- `while True:` with a `break` reads until a signal.
+- A loop's `else` runs after the loop only if no `break` happened. Line it up with the `for` or `while`.
+
+</Section>

@@ -7,7 +7,9 @@ import { lessonQuizzes } from '@/content/lessons/quizzes';
 import { loadProblems } from '@/problems/load';
 import { PATTERNS } from '@/problems/patterns';
 import { Markdown } from '@/problems/ui/Markdown';
-import { misconceptionCard, problemCard, quizCard } from '@/progress/review';
+import { expected, tasks } from '@/content/tasks';
+import { misconceptionCard, problemCard, quizCard, taskCard } from '@/progress/review';
+import { outputVariants, taskLanguages } from '@/tasks/schema';
 
 export const metadata: Metadata = {
   title: 'Daily review | Algorender',
@@ -58,7 +60,30 @@ function faces(): CardFace[] {
       correction: <Markdown text={m.correction} className="text-sm" />,
       probes: m.probes.map(({ q, choices, answer, why }) => ({ q, choices, answer, why })),
     }));
-  return [...problems, ...quizzes, ...mistakes];
+  // "What does this print?" cards from output tasks: every variant with the output it was measured to print
+  // (expected.json), so checking works offline, without loading Python.
+  const predictions: CardFace[] = tasks.flatMap((t) => {
+    if (t.kind !== 'output') return [];
+    const language = taskLanguages(t)[0];
+    const outputs = expected[t.slug]?.[language]?.outputs;
+    if (!outputs) return [];
+    const topic = concept.get(t.concept);
+    return [
+      {
+        id: taskCard(t.slug),
+        kind: 'output' as const,
+        slug: t.slug,
+        title: t.title,
+        language,
+        stdin: t.stdin,
+        variants: outputVariants(t, language).map((code, k) => ({ code, output: outputs[k] })),
+        ...(topic?.lesson && { lesson: topic.lesson }),
+        topic: topic?.title ?? t.concept,
+        track: topic?.track ?? 'python',
+      },
+    ];
+  });
+  return [...problems, ...quizzes, ...mistakes, ...predictions];
 }
 
 export default function ReviewPage() {

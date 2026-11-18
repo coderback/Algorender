@@ -17,8 +17,8 @@ beforeAll(async () => {
   runPython = py.globals.get('run_request');
 }, 120_000);
 
-function run(language: Language, code: string): RunResult {
-  const request: RunRequest = { language, code, entry: '', args: [], limits: LINE_LIMITS, mode: 'lines' };
+function run(language: Language, code: string, stdin?: string): RunResult {
+  const request: RunRequest = { language, code, entry: '', args: [], limits: LINE_LIMITS, mode: 'lines', ...(stdin !== undefined && { stdin }) };
   return language === 'python' ? JSON.parse(runPython(JSON.stringify(request))) : runJs(request);
 }
 
@@ -29,7 +29,7 @@ describe.each(snippets.map((s) => [s.id, s] as const))('%s', (_id, snippet) => {
 
   for (const language of (Object.keys(LANGUAGES) as Language[]).filter((l) => snippet.code[l] != null)) {
     it(`${language}: runs cleanly and plays on the memory view`, () => {
-      const result = run(language, snippet.code[language]!);
+      const result = run(language, snippet.code[language]!, snippet.stdin);
       expect(result.error).toBeNull();
       const traced = traceFor(result, { code: snippet.code[language] });
       expect(traced?.view).toBe('memory');

@@ -112,6 +112,23 @@ describe('lessons', () => {
     }
   });
 
+  it('works only tasks that exist, and ends every language topic in the strip of its own tasks', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { getTask } = await import('./tasks');
+    const { unitOf } = await import('./units');
+    for (const { slug, concept } of lessons) {
+      const body = readFileSync(fileURLToPath(new URL(`./lessons/${slug}.mdx`, import.meta.url)), 'utf8');
+      const worked = [...body.matchAll(/<TopicTask task="([a-z0-9-]+)"/g)].map((m) => m[1]);
+      const strips = [...body.matchAll(/<TaskStrip concept="([a-z0-9-]+)"/g)].map((m) => m[1]);
+      for (const t of worked) expect(getTask(t)?.concept, `${slug} works task ${t}`).toBe(concept);
+      for (const c of strips) expect(c, `${slug}'s strip`).toBe(concept);
+      if (!unitOf(concept)) continue;
+      // A topic: a prediction worked in the page, then its tasks.
+      expect(strips, `${slug} ends in its strip of tasks`).toHaveLength(1);
+      expect(worked.map((t) => getTask(t)?.kind), `${slug} asks for a prediction`).toContain('output');
+    }
+  });
+
   it('only embeds visualisers that are registered', async () => {
     const { readFileSync } = await import('node:fs');
     for (const { slug } of lessons) {

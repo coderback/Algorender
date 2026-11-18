@@ -10,7 +10,7 @@ import type { EventData, EventKind, ProgressEvent } from './events';
 import { mastery, type MasteryGraph } from './mastery';
 import { mistakes } from './misconceptions';
 import { badges, conceptLevels, xpLedger } from './play';
-import { exerciseProgress, lessonProgress, problemProgress } from './projections';
+import { exerciseProgress, lessonProgress, problemProgress, taskProgress } from './projections';
 import { reviewCards } from './review';
 import { progressStore, type Snapshot } from './store';
 
@@ -41,6 +41,12 @@ export function useExerciseProgress(exercise: string) {
 export function useProblemProgress() {
   const events = useEvents();
   return useMemo(() => problemProgress(events), [events]);
+}
+
+/** Every language task checked at least once, by slug (src/progress/projections.ts). */
+export function useTaskProgress() {
+  const events = useEvents();
+  return useMemo(() => taskProgress(events), [events]);
 }
 
 export function useReviewCards() {

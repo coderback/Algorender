@@ -8,7 +8,7 @@
 import { formatValue, same } from '@/problems/judge';
 import { DEFAULT_LIMITS, type Json, type Limits, type RunError, type RunRequest, type RunResult, type TestResult } from '@/workspace/protocol';
 import { checkOutput, DEFAULT_CHECKER, withoutPrompts, type NamedCheck } from './checkers';
-import type { ExpectedRun, ProgramCase, Task, TaskCheck, TaskExpected, TaskLanguage } from './schema';
+import { outputVariants, type ExpectedRun, type ProgramCase, type Task, type TaskCheck, type TaskExpected, type TaskLanguage } from './schema';
 
 export type Runner = (request: RunRequest) => Promise<RunResult>;
 
@@ -150,16 +150,20 @@ export function errorLine(e: RunError): string {
 }
 
 /**
- * An output task: runs the snippet (as the learner sees it) and compares what
- * they typed with what it printed, line by line, prompts and all.
+ * An output task: runs the snippet as the learner sees it (variant 0, or
+ * another variant) and compares what they typed with what it printed.
  */
-export async function checkPrediction(task: Extract<Task, { kind: 'output' }>, language: TaskLanguage, typed: string, run: Runner): Promise<TaskVerdict> {
-  const r = await run(programRequest(language, task.code[language]!, { stdin: task.stdin }));
+export async function checkPrediction(task: Extract<Task, { kind: 'output' }>, language: TaskLanguage, typed: string, run: Runner, variant = 0): Promise<TaskVerdict> {
+  const r = await run(programRequest(language, outputVariants(task, language)[variant], { stdin: task.stdin }));
   if (r.error) throw new Error(`The snippet of ${task.slug} fails in ${language}: ${r.error.message}`);
-  const printed = r.stdout ?? '';
-  const problem = checkOutput({ kind: 'lines', prompts: 'keep' }, { stdout: typed }, { stdout: printed }, task.stdin);
+  return checkTyped(typed, r.stdout ?? '', task.stdin);
+}
+
+/** What the learner typed against what a snippet prints, line by line, prompts and all. */
+export function checkTyped(typed: string, printed: string, stdin = ''): TaskVerdict {
+  const problem = checkOutput({ kind: 'lines', prompts: 'keep' }, { stdout: typed }, { stdout: printed }, stdin);
   const passed = problem === null;
-  return { passed, cases: [{ name: 'What it prints', hidden: false, passed, message: problem ?? undefined, expected: printed, got: typed, stdin: task.stdin || undefined }], total: 1, failed: passed ? 0 : 1 };
+  return { passed, cases: [{ name: 'What it prints', hidden: false, passed, message: problem ?? undefined, expected: printed, got: typed, stdin: stdin || undefined }], total: 1, failed: passed ? 0 : 1 };
 }
 
 /** A choice task. */

@@ -132,7 +132,7 @@ function TraceInner({ id, offered, prediction }: { id: string; offered: Language
   const run = async () => {
     if (running || locked) return;
     setRunning(true);
-    const result = await runtime.run({ language, code, entry: '', args: [], limits: LINE_LIMITS, mode: 'lines' });
+    const result = await runtime.run({ language, code, entry: '', args: [], limits: LINE_LIMITS, mode: 'lines', ...(snippet.stdin !== undefined && { stdin: snippet.stdin }) });
     setTraced({ id: Date.now(), code, language, result, run: traceFor(result, { code }) });
     setFrameLine(null);
     setRunning(false);

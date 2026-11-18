@@ -12,9 +12,9 @@ import path from 'node:path';
 import { loadPyodide } from 'pyodide';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadConcepts } from '@/content/concepts';
-import { checkChoice, checkCode, checkPrediction, expectedRun, callRequest, programRequest, type Runner } from '@/tasks/check';
+import { checkChoice, checkCode, checkPrediction, checkTyped, expectedRun, callRequest, programRequest, type Runner } from '@/tasks/check';
 import { FIXTURES } from '@/tasks/fixtures';
-import { TaskSchema, taskLanguages, type ExpectedFile, type Task, type TaskExpected, type TaskLanguage } from '@/tasks/schema';
+import { outputVariants, TaskSchema, taskLanguages, type ExpectedFile, type Task, type TaskExpected, type TaskLanguage } from '@/tasks/schema';
 import { blankNumbers, fillTemplate, parseBlanks } from '@/workspace/formats/blanks';
 import { assemble, parsonsLines } from '@/workspace/formats/parsons';
 import { runJs } from '@/workspace/js/runtime';
@@ -103,7 +103,7 @@ describe('tasks', () => {
   });
 
   it.skipIf(WRITE)('keep expected outputs only for published tasks', () => {
-    expect(Object.keys(expected).sort()).toEqual(tasks.filter((t) => 'check' in t && t.check.kind !== 'tests').map((t) => t.slug).sort());
+    expect(Object.keys(expected).sort()).toEqual(tasks.filter((t) => t.kind === 'output' || ('check' in t && t.check.kind !== 'tests')).map((t) => t.slug).sort());
   });
 
   const written: ExpectedFile = {};
@@ -120,7 +120,21 @@ describe('tasks', () => {
           return;
         }
         if (task.kind === 'output') {
-          const printed = (await run(programRequest(language, task.code[language]!, { stdin: task.stdin }))).stdout ?? '';
+          const outputs: string[] = [];
+          for (const code of outputVariants(task, language)) {
+            const r = await run(programRequest(language, code, { stdin: task.stdin }));
+            expect(r.error, `${task.slug} (${language}): a variant fails`).toBeNull();
+            outputs.push(r.stdout ?? '');
+          }
+          // Each variant asks for a fresh answer.
+          expect(new Set(outputs.map((o) => o.trimEnd())).size, `${task.slug}: two variants print the same`).toBe(outputs.length);
+          if (published) {
+            if (WRITE) (written[task.slug] ??= {})[language] = { outputs };
+            else expect(expected[task.slug]?.[language], `${task.slug} (${language}): expected.json is stale; run npm run tasks:expected`).toEqual({ outputs });
+          }
+          // A review checks the typed answer against the variant's own output, never variant 0's.
+          for (const [k, out] of outputs.entries()) if (k > 0) expect(checkTyped(outputs[0], out, task.stdin).passed, `${task.slug}: variant ${k}`).toBe(false);
+          const printed = outputs[0];
           expect(printed.length).toBeGreaterThan(0);
           expect((await checkPrediction(task, language, printed, run)).passed).toBe(true);
           // Typing it without the final newline, or with spaces at line ends, is still right.

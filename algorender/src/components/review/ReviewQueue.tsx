@@ -15,6 +15,12 @@ import type { ProgressEvent } from '@/progress/events';
 import { record, useProgressSnapshot, useReviewCards } from '@/progress/hooks';
 import { CLEAR_AFTER } from '@/progress/misconceptions';
 import { dueToday, endOfDay, GRADE_LABEL, intervals, nextDue, type ReviewCard } from '@/progress/review';
+import { checkTyped, type TaskVerdict } from '@/tasks/check';
+import type { TaskLanguage } from '@/tasks/schema';
+import { OutputDiff } from '@/tasks/ui/OutputDiff';
+import { CodeBlock } from '@/components/ui/CodeBlock';
+import { TextAreaField } from '@/components/ui/Field';
+import { LANGUAGES } from '@/workspace/protocol';
 
 /** What a card shows. Built on the server (src/app/(focused)/review/page.tsx). */
 export type CardFace = (
@@ -44,12 +50,27 @@ export type CardFace = (
       /** Questions that test for the mistake, asked in turn. */
       probes: { q: string; choices: string[]; answer: number; why: string }[];
     }
+  | {
+      id: string;
+      kind: 'output';
+      /** The task (src/content/tasks), and its topic's lesson. */
+      slug: string;
+      title: string;
+      lesson?: string;
+      language: TaskLanguage;
+      stdin: string;
+      /** The snippet's variants, each with what it prints; a review asks the next one along. */
+      variants: { code: string; output: string }[];
+    }
 ) & {
   /** The concept or pattern it's about, for its chip. */
   topic: string;
   /** Its concept-map track, for the chip's colour. */
   track: string;
 };
+
+const KIND_TEXT: Record<CardFace['kind'], string> = { problem: 'Problem', quiz: 'Quiz', misconception: 'Common mistake', output: 'Prediction' };
+const SEEN_TEXT: Record<CardFace['kind'], string> = { problem: 'Solved', quiz: 'Answered', misconception: 'First made', output: 'First predicted' };
 
 const DAY = 86_400_000;
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -177,13 +198,18 @@ function Session({
 }) {
   const [revealed, setRevealed] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
+  const [typed, setTyped] = useState('');
+  const [predicted, setPredicted] = useState<TaskVerdict | null>(null);
   const days = intervals(card.card, now);
   // What a multiple-choice card asks: a quiz card its question, a mistake card its next probe.
   const question = face.kind === 'quiz' ? face : face.kind === 'misconception' ? face.probes[card.reviews % face.probes.length] : null;
-  const right = !!question && picked === question.answer;
+  // A prediction card shows the variant after the one last seen (the topic showed variant 0), so the output is new.
+  const variant = face.kind === 'output' ? face.variants[(card.reviews + 1) % face.variants.length] : null;
+  const answered = question ? picked !== null : predicted !== null;
+  const right = question ? picked === question.answer : predicted?.passed === true;
   // A wrong answer can only be rated Again.
-  const grades = useMemo<Grade[]>(() => (question && picked !== null && !right ? [1] : question ? [2, 3, 4] : [1, 2, 3, 4]), [question, picked, right]);
-  const showing = face.kind === 'problem' ? revealed : picked !== null;
+  const grades = useMemo<Grade[]>(() => (answered && !right ? [1] : question || variant ? [2, 3, 4] : [1, 2, 3, 4]), [question, variant, answered, right]);
+  const showing = face.kind === 'problem' ? revealed : answered;
 
   // Keyboard: Space shows the answer, 1–4 rate.
   useEffect(() => {
@@ -201,9 +227,9 @@ function Session({
   }, [face.kind, revealed, showing, grades, onRate]);
 
   const track = TRACK_CLASSES[trackColour(face.track)];
-  const kind = face.kind === 'problem' ? 'Problem' : face.kind === 'quiz' ? 'Quiz' : 'Common mistake';
+  const kind = KIND_TEXT[face.kind];
   const born = new Date(card.born);
-  const seen = `${face.kind === 'problem' ? 'Solved' : face.kind === 'quiz' ? 'Answered' : 'First made'} ${ago(born, now)}`;
+  const seen = `${SEEN_TEXT[face.kind]} ${ago(born, now)}`;
   const lastRating = [...events].reverse().find((e): e is Extract<ProgressEvent, { kind: 'review.rated' }> => e.kind === 'review.rated' && e.data.card === card.id)?.data.rating as Grade | undefined;
 
   return (
@@ -248,7 +274,57 @@ function Session({
                   </div>
                 )}
               </>
-            ) : question ? (
+            ) : variant && face.kind === 'output' ? (
+              <>
+                <h2 id={`card-${face.id}`} className="font-display text-[clamp(26px,3vw,36px)] leading-[1.1] font-bold tracking-[-0.02em]">
+                  What does this print?
+                </h2>
+                <p className="text-[15px] text-ink-soft">
+                  {face.title}
+                  {face.variants.length > 1 && ' · its values may differ from last time'}
+                </p>
+                <CodeBlock lines={variant.code.replace(/\n$/, '').split('\n')} label={`The ${LANGUAGES[face.language].label} program`} />
+                {face.stdin && (
+                  <p className="text-sm text-ink-soft">
+                    Its input, line by line: <span className="font-mono">{face.stdin.replace(/\n$/, '').split('\n').join(' ⏎ ')}</span>
+                  </p>
+                )}
+                <TextAreaField
+                  label="What does it print?"
+                  mono
+                  rows={4}
+                  value={typed}
+                  readOnly={predicted !== null}
+                  onChange={(e) => setTyped(e.target.value)}
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoComplete="off"
+                />
+                {predicted === null ? (
+                  <button
+                    type="button"
+                    disabled={typed.trim() === ''}
+                    onClick={() => setPredicted(checkTyped(typed, variant.output, face.stdin))}
+                    className="h-12 self-start rounded-full bg-primary px-6 text-[15px] font-semibold text-on-primary transition-colors duration-150 ease-standard hover:bg-primary-hover disabled:opacity-50"
+                  >
+                    Check
+                  </button>
+                ) : (
+                  <div aria-live="polite" className="flex flex-col gap-3" data-verdict={right ? 'passed' : 'failed'}>
+                    <p className={clsx('rounded-well px-4 py-3 text-sm', right ? 'bg-good-soft text-good-title' : 'bg-bad-soft text-bad-title')}>
+                      <span className="font-semibold">{right ? 'Right. ' : 'Not quite. '}</span>
+                      {right ? 'That is exactly what it prints.' : 'Here is what it prints, beside what you typed.'}
+                    </p>
+                    {!right && <OutputDiff expected={variant.output} got={typed} />}
+                    {face.lesson && (
+                      <Link href={`/learn/${face.lesson}`} className="inline-flex items-center gap-1 text-sm font-semibold text-accent-ink hover:underline">
+                        Back to the topic <FiArrowRight aria-hidden />
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : question && (face.kind === 'quiz' || face.kind === 'misconception') ? (
               <>
                 <h2 id={`card-${face.id}`} className="font-display text-[clamp(26px,3vw,36px)] leading-[1.1] font-bold tracking-[-0.02em]">
                   {question.q}
@@ -316,7 +392,7 @@ function Session({
         {showing && (
           // On phones the grades stay pinned to the bottom, so a long answer never hides them.
           <div data-sticks="bottom-tall" className="flex flex-col gap-2.5 max-sm:sticky max-sm:bottom-0 max-sm:-mx-4 max-sm:bg-review-page max-sm:px-4 max-sm:pt-3 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
-            <p className="text-center text-sm text-track-butter-title">{question && !right ? 'It comes back tomorrow.' : 'How well did you remember it?'}</p>
+            <p className="text-center text-sm text-track-butter-title">{answered && !right ? 'It comes back tomorrow.' : 'How well did you remember it?'}</p>
             <div role="group" aria-label="Rate your recall" className={clsx('grid gap-2.5', grades.length === 1 ? 'grid-cols-1' : grades.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4')}>
               {grades.map((g) => (
                 <button
@@ -326,7 +402,7 @@ function Session({
                   aria-keyshortcuts={String(g)}
                   className={clsx('flex h-[76px] flex-col items-center justify-center gap-1 rounded-tile text-base font-semibold transition-transform duration-150 ease-standard hover:-translate-y-0.5', GRADE_STYLE[g].button)}
                 >
-                  {question && !right ? 'Next' : GRADE_LABEL[g]}
+                  {answered && !right ? 'Next' : GRADE_LABEL[g]}
                   <span className="text-xs font-medium opacity-90">
                     {daysText(days[g])} · {g}
                   </span>

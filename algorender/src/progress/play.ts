@@ -32,6 +32,12 @@ export const XP = {
   /** The first mock interview on a problem that meets the bar: without a hint, or with one level-1 hint. */
   interview: { clean: 50, oneHint: 25 },
   exercise: { parsons: 5, fill: 10, write: 20, bug: 15 },
+  /**
+   * A language task (src/tasks/), once per task: a prediction (output) or a
+   * choice only when right at the first check, as a quiz question; code the
+   * first time it passes, as a problem.
+   */
+  task: { output: 5, choice: 5, parsons: 5, fill: 5, bug: 10, program: 15, function: 15, tests: 15 },
   explanation: 20,
   mistakeCleared: 25,
   game: {
@@ -46,6 +52,9 @@ export const XP = {
 } as const;
 
 const DAY_MS = 86_400_000;
+
+/** Task kinds where the learner writes or fixes the program: passing one reaches a concept's implement level. */
+const IMPLEMENTS = new Set(['program', 'function', 'tests', 'bug']);
 
 /** A coding round the server wrote: a device can't claim one (sync drops `verified` from what it sends). */
 const verifiedRound = (e: Extract<ProgressEvent, { kind: 'interview.finished' }>) => e.data.verified === true && e.data.format === 'coding';
@@ -97,6 +106,14 @@ export function xpLedger(events: readonly ProgressEvent[], projects: readonly Pr
       case 'design.checked':
         if (e.data.passed && once(`design:${e.data.study}`)) award(e.at, XP.designPassed, 'A design met every target');
         break;
+      case 'task.checked': {
+        const { task, kind, passed } = e.data;
+        if (kind === 'output' && !born.has(`task:${task}`)) born.set(`task:${task}`, e.at); // its review card (review.ts)
+        // A prediction or a choice earns only when right the first time; written code whenever it first passes.
+        const firstTryOnly = kind === 'output' || kind === 'choice';
+        if (firstTryOnly ? once(`task:${task}`) && passed : passed && once(`task:${task}`)) award(e.at, XP.task[kind], 'A task done');
+        break;
+      }
       case 'interview.finished':
         if (verifiedRound(e) && meetsBar(e.data.scores, e.data.hints, e.data.passed) && e.data.hints <= 1 && once(`interview:${e.data.item}`)) {
           award(e.at, e.data.hints === 0 ? XP.interview.clean : XP.interview.oneHint, 'A mock interview that meets the bar');
@@ -158,9 +175,9 @@ export function xpTotals(ledger: readonly XpEntry[], now: Date): { total: number
 
 /** The four levels of knowing a concept (§7): see it run, call its moves, build it, explain and analyse it. */
 export const LEVELS = [
-  { id: 'trace', label: 'Trace', hint: 'Answer a question about it, or play a round of it.' },
+  { id: 'trace', label: 'Trace', hint: 'Answer a question about it, say what a program prints, or play a round of it.' },
   { id: 'predict', label: 'Predict', hint: 'Score 70% on a prediction challenge, win a round of Be the algorithm, or practise it to “practised”.' },
-  { id: 'implement', label: 'Implement', hint: 'Write it in an exercise, solve a problem that uses it, or meet a design case study’s targets.' },
+  { id: 'implement', label: 'Implement', hint: 'Write it in an exercise or a task, solve a problem that uses it, or meet a design case study’s targets.' },
   { id: 'analyze', label: 'Analyse', hint: 'Explain it back covering most of the key points, meet the bar on approach and complexity in a mock interview, or master it.' },
 ] as const;
 
@@ -205,6 +222,10 @@ export function conceptLevels(
         break;
       case 'problem.submitted':
         if (e.data.passed) add(graph.problems[e.data.problem], 'implement');
+        break;
+      case 'task.checked':
+        // Reading code (what it prints, which choice, lines in order, the gaps) traces; writing or fixing a program implements.
+        if (e.data.passed) add(graph.tasks?.[e.data.task], IMPLEMENTS.has(e.data.kind) ? 'implement' : 'trace');
         break;
       case 'design.checked':
         if (e.data.passed) add(graph.designs?.[e.data.study], 'implement');
@@ -269,6 +290,9 @@ export function badges(events: readonly ProgressEvent[], projects: readonly Proj
       }
       case 'problem.submitted':
         if (e.data.passed && !born.has(`problem:${e.data.problem}`)) born.set(`problem:${e.data.problem}`, e.at);
+        break;
+      case 'task.checked':
+        if (e.data.kind === 'output' && !born.has(`task:${e.data.task}`)) born.set(`task:${e.data.task}`, e.at);
         break;
       case 'misconception.picked': {
         const card = `misconception:${e.data.lesson}:${e.data.misconception}`;

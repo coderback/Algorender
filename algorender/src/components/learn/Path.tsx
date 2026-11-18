@@ -98,8 +98,11 @@ export function PathLegend() {
   );
 }
 
-/** `linked`: the concept named in the link (`/learn?concept=<id>`), selected until the learner picks another. */
-export function LearnPath({ data, linked }: { data: PathData; linked?: string }) {
+/**
+ * `linked`: the concept named in the link (`/learn?concept=<id>`), selected until the learner picks another.
+ * `filtered`: the tracks are one area's (Learn's area filter), so none of them folds away.
+ */
+export function LearnPath({ data, linked, filtered = false }: { data: PathData; linked?: string; filtered?: boolean }) {
   const { graph, goals, tracks, concepts } = data;
   const { ready, events } = useProgressSnapshot();
   const m = useMastery(graph);
@@ -119,15 +122,18 @@ export function LearnPath({ data, linked }: { data: PathData; linked?: string })
   const completed = useMemo(() => new Set(lessons.completed), [lessons.completed]);
   const resumeLesson = ready ? lessonInProgress(events, completed) : null;
   const resumeConcept = resumeLesson ? graph.lessons[resumeLesson] : undefined;
-  const fallback = ready ? nextSteps(m, graph, { limit: 1 })[0]?.concept.id : undefined;
-  const selectedId = picked ?? (linked && concepts[linked] ? linked : undefined) ?? resumeConcept ?? fallback ?? tracks[0]?.concepts[0];
+  // Filtered to an area, only that area's concepts can be the default.
+  const here = useMemo(() => new Set(tracks.flatMap((t) => t.concepts)), [tracks]);
+  const inView = (id: string | undefined) => (id && here.has(id) ? id : undefined);
+  const fallback = ready ? nextSteps(m, graph, { limit: 1, ...(filtered && { toward: [...here] }) })[0]?.concept.id : undefined;
+  const selectedId = picked ?? inView(linked && concepts[linked] ? linked : undefined) ?? inView(resumeConcept) ?? fallback ?? tracks[0]?.concepts[0];
   const selected = selectedId ? concepts[selectedId] : undefined;
 
   // Tracks outside the current goal fold into one bar.
   const plan = ready ? currentPlan(events) : null;
   const goal = plan ? goals.find((g) => g.id === plan.goal) : undefined;
   const inGoal = useMemo(() => (goal ? goalConcepts(goal, graph) : null), [goal, graph]);
-  const shown = (t: PathTrack) => showAll || t.id === selected?.track || (inGoal ? t.concepts.some((id) => inGoal.has(id)) : !t.planned);
+  const shown = (t: PathTrack) => showAll || filtered || t.id === selected?.track || (inGoal ? t.concepts.some((id) => inGoal.has(id)) : !t.planned);
   const visible = tracks.filter(shown);
   const folded = tracks.filter((t) => !shown(t));
 

@@ -1,0 +1,123 @@
+<Section step="hook" title="Programs that listen">
+
+So far every value came from the program itself. Real programs ask: a name, an age, how many tickets. `input()` lets
+a program stop, wait for a line to be typed, and carry on with it. There is one catch, and it trips up nearly
+everyone once: whatever is typed arrives as text.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="input()">Waits for one line of input and gives it back as a string, without the Enter at the end.</Term>
+  <Term name="prompt">The text in the brackets, `input("Age? ")`. It is shown first, so the person knows what to type.</Term>
+  <Term name="int() and float()">Turn text into a number: `int("42")` is `42`, and `float("2.5")` is `2.5`.</Term>
+</Terms>
+
+```python
+name = input("Name? ")     # someone types Ada
+age = int(input("Age? "))  # someone types 36: "36" becomes 36
+print(f"Hi {name}, next year you will be {age + 1}")
+```
+
+Without `int(...)`, `age` would be the string `"36"`, and `age + 1` would stop with a `TypeError`. Each call to
+`input()` reads exactly one line, so a program that needs three values calls it three times.
+
+`int()` only accepts text that looks like a whole number. `int("3.5")` and `int("ten")` both stop with a
+`ValueError: invalid literal for int()`. For a number that may have a decimal point, use `float()`.
+
+</Section>
+
+<Section step="see" title="Watch it read">
+
+This program is given two lines of input: `Ada`, then `7`. Step through and watch the memory view: `text` holds the
+string `'7'`, in quotes, while `age` holds the number `7`.
+
+<TraceCode snippet="py-input" />
+
+<KeyIdea>
+
+**`input()` always gives back a string.** To do arithmetic with what was typed, turn it into a number first with
+`int()` or `float()`.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-input-is-text" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="input-gives-number"
+  title="input() gives back a number when someone types digits"
+  probes={[
+    {
+      q: 'n = input(), and the person types 5. What is n + n?',
+      choices: ['"55"', '10', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'n is the string "5", and + joins strings, so n + n is "55". int(n) + int(n) would be 10.',
+    },
+    {
+      q: 'age = input("Age? "), and the person types 20. What does age + 1 do?',
+      choices: ['Stops with a TypeError', 'Gives 21', 'Gives 201'],
+      answer: 0,
+      trap: 1,
+      why: 'age is the string "20", and + won’t join a string and a number. int(age) + 1 is 21.',
+    },
+  ]}
+>
+
+`input()` gives back exactly what was typed, as a string, even if every character is a digit. `"5" + "5"` is
+`"55"`, and `"20" + 1` is a `TypeError`. Wrap the call in `int(...)` or `float(...)` when you need a number.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'x = input(), and the person types 3. What does print(x * 2) show?',
+      choices: ['33', '6', 'An error'],
+      answer: 0,
+      why: 'x is the string "3", and * repeats a string: "3" * 2 is "33".',
+      traps: { 1: 'input-gives-number' },
+    },
+    {
+      q: 'What does int("12") + 1 give?',
+      choices: ['13', '121', 'An error'],
+      answer: 0,
+      why: 'int("12") turns the text into the number 12, and 12 + 1 is 13.',
+    },
+    {
+      q: 'What does int("3.5") do?',
+      choices: ['Stops with a ValueError', 'Gives 3', 'Gives 4'],
+      answer: 0,
+      why: 'int() only reads text that looks like a whole number. float("3.5") would give 3.5.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+Each task's checks type the input for your program. A prompt in `input("…")` is left out when the output is
+checked, so it can say whatever you like. **Try it** under each task lets you type the input yourself.
+
+<TaskStrip concept="py-input" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `input()` waits for a line and gives it back as a string; the prompt is shown first.
+- Each call reads one line.
+- `int()` and `float()` turn text into numbers, and stop with a `ValueError` when the text isn't one.
+
+</Section>

@@ -1,3 +1,5 @@
+import { PYTHON_TOPICS } from './python';
+
 /**
  * Every lesson, with the metadata pages and tests need. The body lives in
  * src/content/lessons/<slug>.mdx and follows the learning loop: hook → key
@@ -559,6 +561,8 @@ export const lessons: readonly LessonMeta[] = [
     summary: 'How a cluster of servers agrees on one log while machines crash and the network splits: terms, elections, replication and the majority rule that keeps committed entries safe.',
     minutes: 25,
   },
+  // The language tracks' topics, one file per track.
+  ...PYTHON_TOPICS,
 ];
 
 export function getLesson(slug: string): LessonMeta | undefined {

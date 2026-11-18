@@ -3,6 +3,7 @@
 // own functions. snippets.test.ts runs every one in every language it offers.
 
 import type { Language } from '@/workspace/protocol';
+import { PYTHON_SNIPPETS } from './python-snippets';
 
 export type Snippet = {
   id: string;
@@ -10,9 +11,12 @@ export type Snippet = {
   title: string;
   /** The program per language; a lesson offers the languages given here. */
   code: Partial<Record<Language, string>>;
+  /** Input for the program's input() calls, one line each: run as a program, line by line. */
+  stdin?: string;
 };
 
 export const snippets: Snippet[] = [
+  ...PYTHON_SNIPPETS,
   {
     id: 'count-pairs',
     title: 'Counting the pairs two nested loops visit',

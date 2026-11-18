@@ -1,0 +1,136 @@
+<Section step="hook" title="Giving a value a name">
+
+A program that only prints fixed text can't do much. To work with values that change, a score, a price, someone's
+name, a program needs to keep hold of them. In Python you do that by giving a value a **name**. The name lets you
+use the value later, and point it at a new value when things change.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="variable">A name that points at a value, like `score` pointing at `10`.</Term>
+  <Term name="assignment">A line like `score = 10`. The `=` means "make this name point at this value", not "is equal to".</Term>
+  <Term name="value">A thing a name can point at: a number like `10`, or text like `"Ada"`.</Term>
+</Terms>
+
+An assignment works right to left. Python first works out the value on the right, then points the name on the left
+at it:
+
+```python
+score = 10          # score points at 10
+score = score + 5   # works out 10 + 5, then points score at 15
+print(score)        # 15
+```
+
+So `score = score + 5` isn't a puzzling equation. It is an instruction: take the value `score` points at now, add 5,
+and point `score` at the answer.
+
+A few rules for names: they use letters, digits and underscores, they can't start with a digit, they can't be one
+of Python's own words such as `if` or `for`, and capitals count,
+so `score` and `Score` are two different names. Using a name before any line has given it a value stops the program
+with a `NameError`.
+
+</Section>
+
+<Section step="see" title="Watch the values change">
+
+Step through it. The memory view lists each name with the value it points at. Watch
+what happens to `total` when `apples` changes.
+
+<TraceCode snippet="py-variables" />
+
+`total = apples + pears` works out `5 + 3` and points `total` at `8`. It does not remember how 8 was made. So when
+`apples` later points at `10`, `total` is still `8`: only the name on the left of an `=` ever moves.
+
+<KeyIdea>
+
+**`=` points a name at a value.** The right side is worked out first, with the values the names have at that moment.
+Changing one name later never changes another.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-two-names-one-value" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="linked-names"
+  title="After y = x, changing x changes y too"
+  probes={[
+    {
+      q: 'The program sets a = 1, then b = a, then a = 2. What does print(b) show?',
+      choices: ['1', '2', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'b = a points b at the value a had then, 1. Pointing a at 2 afterwards moves only a.',
+    },
+    {
+      q: 'price = 4, then total = price * 2, then price = 10. What does print(total) show?',
+      choices: ['8', '20', '10'],
+      answer: 0,
+      trap: 1,
+      why: 'total was pointed at 8 when price was 4. It is a value, not a formula, so it stays 8.',
+    },
+  ]}
+>
+
+`y = x` points `y` at the value `x` points at right now. It doesn't tie the two names together. When `x` later gets
+a new value, only `x` moves; `y` keeps pointing at the old one. The same goes for `total = a + b`: `total` gets the
+answer, not the sum to redo.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'n = 7, then n = n + 1. What does print(n) show?',
+      choices: ['8', '7', 'n + 1'],
+      answer: 0,
+      why: 'Python works out n + 1 with the current n, 7, and points n at the answer, 8.',
+    },
+    {
+      q: 'width = 3, then area = width * width, then width = 5. What does print(area) show?',
+      choices: ['9', '25', '15'],
+      answer: 0,
+      why: 'area was worked out once, as 3 × 3 = 9. Changing width afterwards doesn’t redo it.',
+      traps: { 1: 'linked-names' },
+    },
+    {
+      q: 'Which of these is a valid variable name?',
+      choices: ['total_score', '2nd_place', 'my score'],
+      answer: 0,
+      why: 'Names use letters, digits and underscores and can’t start with a digit. A space would split it into two names.',
+    },
+    {
+      q: 'print(count) runs before any line has set count. What happens?',
+      choices: ['NameError: Python doesn’t know the name yet', 'It prints 0', 'It prints the word count'],
+      answer: 0,
+      why: 'A name exists only once an assignment has given it a value. Before that, using it is a NameError.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-variables" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `name = value` points a name at a value. The right side is worked out first.
+- `x = x + 1` uses the old `x` to make the new one.
+- A name holds a value, not a formula: changing one name never changes another.
+- Names are case-sensitive, and using one before it has a value is a `NameError`.
+
+</Section>
