@@ -69,10 +69,11 @@ test('the concept map shows the math and ML tracks, with the road ahead coming s
   await expect(interpretability).toBeVisible();
   await expect(interpretability.getByText('Coming soon').first()).toBeVisible();
 
-  // A planned concept opens as coming soon, with what it builds on.
+  // A planned concept opens as coming soon, with what it builds on. Geometry in high
+  // dimensions comes after B3; when a batch makes it live, pick a concept still planned.
   const linear = page.getByRole('region', { name: 'Linear algebra' });
-  await linear.getByRole('button', { name: /Matrix multiplication/ }).click();
-  const selected = page.getByRole('region', { name: 'Matrix multiplication' });
+  await linear.getByRole('button', { name: /Geometry in high dimensions/ }).click();
+  const selected = page.getByRole('region', { name: 'Geometry in high dimensions' });
   await expect(selected.getByText('Coming soon')).toBeVisible();
   await expectAccessible(page);
   expect(errors).toEqual([]);
