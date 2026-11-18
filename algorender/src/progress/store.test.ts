@@ -3,11 +3,13 @@
 // server, with two "devices" (two databases) per learner.
 
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestDatabase, type Database } from '@/server/db';
 import { user } from '@/server/db/schema';
 import { parseSyncRequest, sync } from '@/server/progress';
+import { parseEvent } from './events';
 import { problemProgress } from './projections';
 import { ProgressStore, type StoreEnvironment } from './store';
 
@@ -19,6 +21,8 @@ beforeAll(async () => {
   await db.insert(user).values([
     { id: 'u1', name: 'Ada', email: 'ada@example.com' },
     { id: 'u2', name: 'Grace', email: 'grace@example.com' },
+    { id: 'u3', name: 'Edsger', email: 'edsger@example.com' },
+    { id: 'u4', name: 'Barbara', email: 'barbara@example.com' },
   ]);
 }, 60_000);
 
@@ -184,5 +188,75 @@ describe('the device store', () => {
     expect(s.getSnapshot().sync.pending).toBe(0);
     expect(s.getSnapshot().events.filter((e) => e.id === verdict.id)).toHaveLength(1);
     await s.close();
+  });
+});
+
+describe('devices on different app versions', () => {
+  /** An older app's schema: it doesn't know checkpoints yet. */
+  const older = (raw: unknown) => ((raw as { kind?: unknown } | null)?.kind === 'checkpoint.answered' ? null : parseEvent(raw));
+  const answer = (s: ProgressStore, index: number) =>
+    s.record('checkpoint.answered', { stage: 1, concept: 'vectors', item: `quiz:vectors:check:${index}`, correct: true, index, of: 8 });
+  const ids = (s: ProgressStore) => s.getSnapshot().events.map((e) => e.id).sort();
+
+  it('keeps pulled events an older app can’t read, and reads them once upgraded', async () => {
+    const session = { user: 'u3' };
+    const phone = device(server(session));
+    await phone.setOwner('u3');
+    const a = answer(phone, 0);
+    const b = solve(phone, 'two-sum');
+    await phone.syncNow();
+
+    // The laptop still runs an app from before checkpoints (a tab left open, a cached bundle).
+    const dbName = 'laptop-upgrading';
+    const storage = new MemoryStorage();
+    const old = new ProgressStore({ dbName, storage, syncDelay: 5, parse: older, ...server(session) });
+    await old.setOwner('u3');
+    await old.syncNow();
+    expect(ids(old)).toEqual([b.id]);
+    // More arrives while it runs.
+    const c = answer(phone, 1);
+    await phone.syncNow();
+    await old.syncNow();
+    expect(ids(old)).toEqual([b.id]);
+    expect(old.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 0 });
+    await old.close();
+
+    // The laptop gets the new app: it has every event, once.
+    const upgraded = new ProgressStore({ dbName, storage, syncDelay: 5, ...server(session) });
+    await upgraded.start();
+    await upgraded.syncNow();
+    expect(ids(upgraded)).toEqual([a.id, b.id, c.id].sort());
+    expect(upgraded.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 0 });
+    await upgraded.syncNow();
+    expect(ids(upgraded)).toEqual([a.id, b.id, c.id].sort());
+    await upgraded.close();
+    await phone.close();
+  });
+
+  it('pulls everything again, once, on a device an app from before this fix synced', async () => {
+    const session = { user: 'u4' };
+    const phone = device(server(session));
+    await phone.setOwner('u4');
+    const a = answer(phone, 0);
+    const b = solve(phone, 'two-sum');
+    await phone.syncNow();
+
+    // What that app left: the events it could read, and its cursor past the one it dropped.
+    const dbName = 'laptop-before-fix';
+    const before = new Dexie(dbName);
+    before.version(1).stores({ events: 'id, owner, [owner+synced]', meta: 'key' });
+    await before.table('events').put({ ...b, owner: 'u4', synced: 1 });
+    await before.table('meta').put({ key: 'cursor:u4', value: (await sync(db, 'u4', { events: [], cursor: 0 })).cursor });
+    before.close();
+
+    const storage = new MemoryStorage();
+    storage.setItem('algorender:owner', 'u4');
+    const upgraded = new ProgressStore({ dbName, storage, syncDelay: 5, ...server(session) });
+    await upgraded.start();
+    await upgraded.syncNow();
+    expect(ids(upgraded)).toEqual([a.id, b.id].sort());
+    expect(upgraded.getSnapshot().sync).toMatchObject({ state: 'idle', pending: 0 });
+    await upgraded.close();
+    await phone.close();
   });
 });

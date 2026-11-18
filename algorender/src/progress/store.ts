@@ -10,8 +10,15 @@
 // events from the device. A session that simply expires keeps them, hidden,
 // until the same learner signs in again: nothing unsynced is lost.
 //
-// Without IndexedDB (some private windows), events live in memory for the
-// visit. Other tabs hear about changes over a BroadcastChannel.
+// Pulls page through the server's events from a cursor. An event this app
+// version can't read (a kind or field a newer version added, while an old
+// bundle lives on in an open tab or the service worker) is kept as it came,
+// in `meta` under `unread:<owner>:<id>`, and read again on every visit, so
+// the version that knows it picks it up even though the cursor has moved past.
+//
+// Without IndexedDB (some private windows), events and the sync bookkeeping
+// live in memory for the visit. Other tabs hear about changes over a
+// BroadcastChannel.
 
 import Dexie, { type Table } from 'dexie';
 import { uuidv7 } from 'uuidv7';
@@ -20,6 +27,16 @@ import { importLegacy } from './legacy';
 
 const ANON = 'anon';
 const OWNER_KEY = 'algorender:owner';
+
+/**
+ * Where the owner's next pull starts. Apps before unread events were kept
+ * stored it under `cursor:<owner>` and moved it past events they dropped, so
+ * this one keeps its own, from 0: one full pull (idempotent) brings back what
+ * they dropped, and an old tab still open can't move it.
+ */
+const cursorKey = (owner: string) => `pull:${owner}`;
+const oldCursorKey = (owner: string) => `cursor:${owner}`;
+const unreadPrefix = (owner: string) => `unread:${owner}:`;
 
 type Stored = ProgressEvent & { owner: string; synced: 0 | 1 };
 
@@ -63,6 +80,8 @@ export type StoreEnvironment = {
   now?: () => Date;
   /** Delay before a sync after an event is recorded, in ms. */
   syncDelay?: number;
+  /** Reads an event: this app's schema (tests pass an older app's). */
+  parse?: (raw: unknown) => ProgressEvent | null;
 };
 
 const EMPTY_STATUS: SyncStatus = { state: 'local', pending: 0, lastSynced: null };
@@ -71,6 +90,10 @@ export class ProgressStore {
   private db: ProgressDatabase | null = null;
   /** Events kept in memory only, when IndexedDB isn't available. */
   private memory: Stored[] | null = null;
+  /** The sync bookkeeping that goes with them: a cursor kept across visits would skip the events lost with the visit. */
+  private memoryMeta = new Map<string, unknown>();
+  /** Unread events already tried this visit (this app can't change before the next). */
+  private readonly tried = new Set<string>();
   private snapshot: Snapshot = { ready: false, owner: null, events: [], sync: EMPTY_STATUS };
   private readonly listeners = new Set<() => void>();
   private started: Promise<void> | null = null;
@@ -87,6 +110,7 @@ export class ProgressStore {
       channel: env.channel,
       now: env.now ?? (() => new Date()),
       syncDelay: env.syncDelay ?? 1_500,
+      parse: env.parse ?? parseEvent,
     };
     if (this.env.channel) this.env.channel.onmessage = () => void this.reload();
   }
@@ -126,7 +150,7 @@ export class ProgressStore {
   record<K extends EventKind>(kind: K, data: EventData<K>): ProgressEvent {
     const event = this.make(kind, data);
     // The server would refuse it, so don't keep it (a slug outside a lesson, say).
-    if (!parseEvent(event)) {
+    if (!this.env.parse(event)) {
       console.warn('Progress event not recorded: it is malformed.', event);
       return event;
     }
@@ -147,7 +171,7 @@ export class ProgressStore {
    */
   receive(event: ProgressEvent): void {
     const owner = this.snapshot.owner;
-    if (!owner || !parseEvent(event)) return;
+    if (!owner || !this.env.parse(event)) return;
     void this.start().then(async () => {
       await this.put([{ ...event, owner, synced: 1 }], { keepUnsynced: true });
       this.notifyOthers();
@@ -212,6 +236,10 @@ export class ProgressStore {
     await this.start();
     const owner = this.snapshot.owner;
     if (!owner) return;
+    if (await this.readUnread(owner)) {
+      await this.load(owner);
+      this.notifyOthers();
+    }
     if (!this.env.online()) {
       this.setStatus({ state: 'offline' });
       return;
@@ -221,7 +249,7 @@ export class ProgressStore {
       for (let round = 0; round < 50; round++) {
         if (this.snapshot.owner !== owner) return;
         const outgoing = (await this.unsynced(owner)).slice(0, 500);
-        const cursor = Number((await this.getMeta(`cursor:${owner}`)) ?? 0);
+        const cursor = Number((await this.getMeta(cursorKey(owner))) ?? 0);
         const res = await this.env.fetch('/api/progress', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -236,9 +264,16 @@ export class ProgressStore {
         const body = (await res.json()) as { accepted: string[]; rejected: string[]; events: unknown[]; cursor: number; more: boolean };
         if (this.snapshot.owner !== owner) return;
         await this.markSynced(owner, body.accepted, body.rejected);
-        const pulled = body.events.map(parseEvent).filter((e): e is ProgressEvent => e !== null);
+        const pulled: ProgressEvent[] = [];
+        const unread: unknown[] = [];
+        for (const raw of body.events) {
+          const event = this.env.parse(raw);
+          if (event) pulled.push(event);
+          else unread.push(raw);
+        }
         await this.put(pulled.map((e) => ({ ...e, owner, synced: 1 as const })), { keepUnsynced: true });
-        await this.setMeta(`cursor:${owner}`, body.cursor);
+        await this.keepUnread(owner, unread);
+        await this.setMeta(cursorKey(owner), body.cursor);
         if (!body.more && outgoing.length < 500) break;
       }
       const at = this.env.now().toISOString();
@@ -272,6 +307,36 @@ export class ProgressStore {
     await this.db!.events.bulkPut(events.filter((e) => !existing.has(e.id)));
   }
 
+  /** Keeps pulled events this app can't read, as they came, for a version that can. */
+  private async keepUnread(owner: string, events: unknown[]) {
+    const rows = events.flatMap((raw) => {
+      const id = (raw as { id?: unknown } | null)?.id;
+      return typeof id === 'string' ? [{ key: unreadPrefix(owner) + id, value: raw }] : [];
+    });
+    if (rows.length === 0) return;
+    rows.forEach((r) => this.tried.add(r.key));
+    if (this.memory) rows.forEach((r) => this.memoryMeta.set(r.key, r.value));
+    else await this.db!.meta.bulkPut(rows);
+  }
+
+  /** Reads the events an older app kept unread, moving the ones this app knows into the log. True when there were any. */
+  private async readUnread(owner: string): Promise<boolean> {
+    const prefix = unreadPrefix(owner);
+    const rows = this.memory
+      ? [...this.memoryMeta].filter(([key]) => key.startsWith(prefix)).map(([key, value]) => ({ key, value }))
+      : await this.db!.meta.where('key').startsWith(prefix).toArray();
+    const read = rows
+      .filter((r) => !this.tried.has(r.key))
+      .map((r) => ({ key: r.key, event: this.env.parse(r.value) }))
+      .filter((r): r is { key: string; event: ProgressEvent } => r.event !== null);
+    rows.forEach((r) => this.tried.add(r.key));
+    if (read.length === 0) return false;
+    await this.put(read.map((r) => ({ ...r.event, owner, synced: 1 as const })), { keepUnsynced: true });
+    if (this.memory) read.forEach((r) => this.memoryMeta.delete(r.key));
+    else await this.db!.meta.bulkDelete(read.map((r) => r.key));
+    return true;
+  }
+
   private async unsynced(owner: string): Promise<Stored[]> {
     const rows = this.memory ? this.memory.filter((e) => e.owner === owner && e.synced === 0) : await this.db!.events.where('[owner+synced]').equals([owner, 0]).toArray();
     return rows.sort(byTime);
@@ -296,9 +361,16 @@ export class ProgressStore {
   }
 
   private async removeOwner(owner: string) {
-    if (this.memory) this.memory = this.memory.filter((e) => e.owner !== owner);
-    else await this.db!.events.where('owner').equals(owner).delete();
-    await this.setMeta(`cursor:${owner}`, 0);
+    if (this.memory) {
+      this.memory = this.memory.filter((e) => e.owner !== owner);
+      for (const key of [...this.memoryMeta.keys()]) if (key.startsWith(unreadPrefix(owner))) this.memoryMeta.delete(key);
+    } else {
+      await this.db!.events.where('owner').equals(owner).delete();
+      await this.db!.meta.where('key').startsWith(unreadPrefix(owner)).delete();
+    }
+    await this.setMeta(cursorKey(owner), 0);
+    // An older app opened later starts from 0 too.
+    await this.setMeta(oldCursorKey(owner), 0);
     await this.setMeta(`synced-at:${owner}`, null);
   }
 
@@ -320,12 +392,12 @@ export class ProgressStore {
   }
 
   private async getMeta(key: string): Promise<unknown> {
-    if (this.memory) return this.read(`algorender:meta:${key}`);
+    if (this.memory) return this.memoryMeta.get(key) ?? null;
     return (await this.db!.meta.get(key))?.value ?? null;
   }
 
   private async setMeta(key: string, value: unknown) {
-    if (this.memory) this.write(`algorender:meta:${key}`, value == null ? null : String(value));
+    if (this.memory) this.memoryMeta.set(key, value);
     else await this.db!.meta.put({ key, value });
   }
 
