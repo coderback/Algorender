@@ -582,6 +582,30 @@ const mathEntries = [
     category: 'Linear Algebra'
   },
   {
+    name: 'Determinants and Inverses',
+    description: 'See det A scale areas and flip the plane, why det 0 can’t be undone, the 2×2 inverse, and solving Ax = b by elimination with row swaps.',
+    slug: 'inverse-matrix',
+    category: 'Linear Algebra'
+  },
+  {
+    name: 'Span and Rank',
+    description: 'Combine two vectors to reach the whole plane or just a line, then count a matrix’s independent columns as the pivots elimination finds.',
+    slug: 'span',
+    category: 'Linear Algebra'
+  },
+  {
+    name: 'Change of Basis',
+    description: 'Read one arrow on two grids: coordinates in a new basis with P and P⁻¹, and a matrix that only stretches in its own eigenbasis.',
+    slug: 'change-of-basis',
+    category: 'Linear Algebra'
+  },
+  {
+    name: 'Least Squares',
+    description: 'Drop a point onto a line to find its shadow, then fit a line and a parabola to data with the normal equations XᵀX·w = Xᵀy.',
+    slug: 'least-squares',
+    category: 'Linear Algebra'
+  },
+  {
     name: 'Eigenvectors',
     description: 'Sweep a vector around the circle to find the directions a matrix only stretches: A·v = λ·v.',
     slug: 'eigenvectors',
@@ -640,6 +664,12 @@ const mathEntries = [
     description: 'See how a float32 packs a sign, an exponent and 23 fraction bits, why 0.1 is not stored exactly, and how far apart neighbouring floats are.',
     slug: 'floating-point',
     category: 'Numerical Methods'
+  },
+  {
+    name: 'Learning from Examples',
+    description: 'Examples, a line with two knobs and its mean squared error, then a test set that shows a perfect memoriser guessing worse than the line on new examples.',
+    slug: 'supervised-learning',
+    category: 'Machine Learning'
   },
   {
     name: 'Linear Regression',

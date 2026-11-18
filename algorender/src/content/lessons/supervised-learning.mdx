@@ -1,0 +1,226 @@
+<Section step="hook" title="Nobody writes the rule">
+
+Nobody sits down and writes the rule for spotting a spam email, or for guessing a house's price from its size. There
+are too many cases. Instead we collect **examples** where the answer is already known, emails marked spam or not and
+houses with their sale prices, and let the computer find a rule that fits them. That is **supervised learning**:
+learning from examples that come with the right answers.
+
+Every model on this path, from a straight line to a GPT, is built from the same four pieces: examples, a model with
+knobs, a loss that scores it, and a test on examples it has never seen. This lesson takes the simplest model there is,
+a straight line, and puts all four in front of you.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="example">One row of the data: some **features** $x$ (what we know) and a **label** $y$ (the answer we want to predict).</Term>
+  <Term name="model ŷ">A rule that turns $x$ into a guess $\hat{y}$, said “y-hat”. Here a line, $\hat{y} = wx + b$: the $y = mx + c$ of school, with $w$ for $m$ and $b$ for $c$. ($wx$ is just $w$ times $x$. The visualiser writes it $w \cdot x$, an ordinary times, not a dot product.)</Term>
+  <Term name="parameters">The model's knobs, here $w$ (the slope) and $b$ (the height where $x = 0$). Learning means choosing them.</Term>
+  <Term name="error eᵢ">How far example $i$'s guess misses its label: $e_i = \hat{y}_i - y_i$. Negative when the guess is too low. Some books write it the other way round, $y_i - \hat{y}_i$; once it is squared, the sign makes no difference.</Term>
+  <Term name="loss">One number that says how bad the guesses are. Here the **mean squared error**, MSE.</Term>
+  <Term name="training and test sets">The examples the model may learn from, and the ones kept back to judge it on.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A line, its errors and its loss">
+
+Five students told us how many hours they revised ($x$) and the mark they got ($y$). Each one is an example, one row of
+the table: $(1, 2)$, $(2, 3.5)$, $(3, 5.5)$, $(4, 5)$ and $(5, 6.5)$.
+
+<Explore slug="supervised-learning" settings={{ preset: 'fit' }} caption="Five examples, then line A through them. Step on to see each example's error, the squares, and the loss of two different lines." />
+
+The model is a line; call it line A: $\hat{y} = 1x + 1$, so $w = 1$ and $b = 1$. For the student who revised 2 hours
+it guesses $\hat{y} = 1 \times 2 + 1 = 3$, but the label is 3.5: the error is $e = 3 - 3.5 = -0.5$. Every example gets
+an error like that, and example 3 is missed by the most, 1.5.
+
+To turn five errors into one score, square each one, add the squares and divide by how many there are:
+
+$$
+\text{MSE} = \frac{1}{n} \sum_{i=1}^{n} (\hat{y}_i - y_i)^2
+$$
+
+The squares are 0, 0.25, 2.25, 0 and 0.25. They add up to $0 + 0.25 + 2.25 + 0 + 0.25 = 2.75$, so
+
+$$
+\text{MSE} = \frac{2.75}{5} = 0.55
+$$
+
+Then a second line, B: $\hat{y} = 0.5x + 2.5$. Its loss is 1.15, so line A fits these examples better. That
+comparison is the whole of training: try settings of the knobs, keep the ones with the smaller loss, and repeat until
+the loss won't go any lower.
+
+<KeyIdea>
+
+**Examples, a model with knobs, a loss, and a test.** The loss measures how badly the model's guesses miss the labels,
+and **training** turns the knobs to make it as small as possible. The test, coming next, checks the model on examples
+it never trained on.
+
+</KeyIdea>
+
+<Misconception
+  id="errors-cancel"
+  title="Add up the errors as they are"
+  probes={[
+    {
+      q: 'A line’s errors on four examples are 3, −3, 3 and −3. What is its mean squared error?',
+      choices: ['0', '9', '3'],
+      answer: 1,
+      trap: 0,
+      why: 'Each error squared is 9, and the mean of four 9s is 9. The plain errors add to 0, but the line misses every example by 3.',
+    },
+    {
+      q: 'Line P’s errors are 5 and −5. Line Q’s are 1 and 1. Which has the lower mean squared error?',
+      choices: ['P, because its errors add up to 0', 'Q', 'They tie'],
+      answer: 1,
+      trap: 0,
+      why: 'P’s MSE is (25 + 25) ÷ 2 = 25 and Q’s is (1 + 1) ÷ 2 = 1. P’s errors only cancel on paper.',
+    },
+  ]}
+>
+
+It is tempting to average the errors themselves. But a guess 3 too high and another 3 too low would cancel to 0, and a
+line that misses everything badly would look perfect. Squaring makes every error count as bad whichever side it falls
+on, and it makes big misses count much more than small ones: an error of 1.5 costs 2.25, nine times what an error of
+0.5 costs.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: which model does better on new examples?">
+
+A model is only useful if it guesses well on examples it has **never seen**, like next year's students. So before
+training we hide some examples away as a **test set**. This is a different, made-up dataset: each example is just a
+feature $x$ and a label $y$. Here are 16 examples: 5 are picked at random for the test set and the other 11 are the
+training set.
+
+Two models learn from the 11. The first is a **memoriser**: it stores the training examples, and for any $x$ it answers
+the label of the training example whose $x$ is closest. The second is a straight line. Predict how each does.
+
+<PredictChallenge slug="supervised-learning" settings={{ preset: 'split' }} goal={3} />
+
+On the training examples the memoriser is perfect: its loss is 0, because it answers each one with its own label. The
+line's training loss is 0.187. On the test set it flips: the line's loss is 0.565 and the memoriser's is 1.408.
+
+The data was made from a straight-line trend plus random wobbles. The memoriser learned the wobbles as well as the trend,
+so it jumps about, and the wobbles don't carry over to new examples. The line could only learn the trend, which does.
+A model that does well on new examples **generalises**. Over 500 random datasets like this one, the line beat the
+memoriser on the test set 419 times.
+
+<Misconception
+  id="training-score"
+  title="A model that is perfect on its training examples is a good model"
+  probes={[
+    {
+      q: 'A model gets every training example exactly right: its training loss is 0. What does that tell you about new examples?',
+      choices: ['It will be right on them too', 'Nothing yet: only examples it hasn’t seen can tell you', 'It will be wrong on all of them'],
+      answer: 1,
+      trap: 0,
+      why: 'A memoriser is perfect on its training examples and can still guess badly on new ones. Only a test set, kept out of training, measures that.',
+    },
+    {
+      q: 'Model R has training loss 0.1 and model S has 0.6. On the test set, R scores 2.5 and S scores 0.7. Which should you use on new examples?',
+      choices: ['R, because its training loss is lower', 'S', 'Either: they did equally well'],
+      answer: 1,
+      trap: 0,
+      why: 'S does better on the examples neither model saw, which is what matters. R learned its training examples too closely.',
+    },
+  ]}
+>
+
+A low training loss only says the model fits the examples it was shown, and a model flexible enough to memorise them can
+do that perfectly. What you care about is how it does on new examples, so judge it on a test set it never trained on,
+and never let the test examples leak into training.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Train the line yourself, then write the loss">
+
+Now be the training. Drag the two ends of line A and watch its MSE. Try to get it as low as you can before you read on.
+
+<Explore slug="supervised-learning" settings={{ preset: 'fit', step: '5' }} input caption="Drag the ends of line A (or focus one and use the arrow keys). Each end moves in steps of 0.5." />
+
+With the ends moving in steps of 0.5, the lowest you can reach is 0.3, with the left end at height 1.5 (x = 0) and the
+right end at 7.5 (x = 6). The very best line of all, $w = 1.05$ and $b = 1.35$, gets 0.295: no other straight line does
+better on these five examples. A later lesson in this stage finds that line exactly, with no dragging.
+
+Next, write the loss yourself. `mse(w, b, xs, ys)` gets the line's knobs and the examples' features and labels, and
+returns the mean squared error.
+
+<CodeExercise exercise="mean-squared-error" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A model reads a house’s floor area and number of rooms and predicts its price. What is the label?',
+      choices: ['The price', 'The floor area', 'The number of rooms', 'The model'],
+      answer: 0,
+      why: 'The label is the answer the model must predict, the price. Floor area and rooms are the features it reads.',
+    },
+    {
+      q: 'A line’s errors on three examples are 1, −2 and 3. What is its mean squared error?',
+      choices: ['14 ÷ 3, about 4.67', '2 ÷ 3, about 0.67', '14', '2'],
+      answer: 0,
+      why: 'The squares are 1, 4 and 9, which add to 14, and 14 ÷ 3 is about 4.67. Averaging the errors as they are gives 2 ÷ 3, because the −2 cancels part of the 1 and the 3.',
+      traps: { 1: 'errors-cancel' },
+    },
+    {
+      q: 'Model P has training loss 0 and test loss 3.2. Model Q has training loss 0.8 and test loss 0.9. Which would you use for new examples?',
+      choices: ['P', 'Q', 'Neither can be judged without more training'],
+      answer: 1,
+      why: 'Q’s test loss is far lower, and the test loss is the one that measures new examples. P memorised its training set.',
+      traps: { 0: 'training-score' },
+    },
+    {
+      q: 'Why must the test examples be kept out of training?',
+      choices: [
+        'So the test loss shows how the model does on examples it has never seen',
+        'Because training on more examples always makes a model worse',
+        'To make training faster',
+      ],
+      answer: 0,
+      why: 'If the model learned from the test examples, a low test loss would only show that it remembers them.',
+    },
+    {
+      q: 'A model is ŷ = 2x − 1. For an example with x = 4 and label y = 9, what is its error e = ŷ − y?',
+      choices: ['−2', '2', '7', '9'],
+      answer: 0,
+      why: 'ŷ = 2 × 4 − 1 = 7, and 7 − 9 = −2: the guess is 2 too low.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="learning-from-examples"
+  prompt="What does it mean for a model to learn from examples, and how do you know whether it has learned well?"
+  rubric={[
+    'Each example has features x and a label y, the right answer.',
+    'A model turns x into a guess ŷ, using parameters (knobs) such as w and b.',
+    'A loss, such as the mean squared error, measures how far the guesses are from the labels; training changes the parameters to make it small.',
+    'The model must be judged on test examples kept out of training, because a model can do perfectly on its training examples and still guess badly on new ones.',
+  ]}
+  example="You start with examples where the answer is known: each has some features x, like hours of revision, and a label y, like the mark. The model is a rule with knobs, such as a line ŷ = wx + b, that turns x into a guess. The loss, here the mean squared error, squares each gap between guess and label and averages them, so it is small when the guesses are close. Training means turning the knobs to make the loss as small as possible. But a model can memorise its training examples and score perfectly on them, so you keep some examples back as a test set and judge it there, on examples it has never seen."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- An example is features $x$ and a label $y$. A model turns $x$ into a guess $\hat{y}$, using parameters such as $w$ and $b$.
+- The error is $e_i = \hat{y}_i - y_i$, and the mean squared error is the mean of the $e_i^2$: squaring stops errors cancelling and punishes big misses.
+- Training turns the parameters to make the loss as small as possible.
+- Judge a model on a test set kept out of training: a perfect training loss can hide a model that doesn't generalise.
+
+</Section>

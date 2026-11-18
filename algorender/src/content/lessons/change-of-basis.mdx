@@ -1,0 +1,273 @@
+<Section step="hook" title="Same arrow, different ruler">
+
+Ask for directions in a city laid out on a grid and you might hear "3 blocks east, then 3 blocks north". In a city
+whose streets run on a slant you would hear different numbers for the very same walk, because the streets you count
+along point other ways. The walk hasn't changed; only the ruler has.
+
+Vectors work the same way. The numbers $(3, 3)$ aren't the arrow itself: they are how many steps the arrow takes along
+$\hat{\imath}$ and $\hat{\jmath}$. Choose two other arrows to count along and the same vector gets new numbers. Picking
+good arrows to count along is one of the most useful moves in machine learning: later in the path, principal component
+analysis finds the best axes for a cloud of data, and here you will see a matrix that looks complicated on the usual
+grid become two simple stretches on its own.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="basis">Two arrows $b_1, b_2$ that you measure every vector against. They must not lie on one line, or some points can't be reached. The standard basis is $\hat{\imath} = (1, 0)$ and $\hat{\jmath} = (0, 1)$.</Term>
+  <Term name="coordinates c">The numbers $c = (c_1, c_2)$ with $v = c_1 b_1 + c_2 b_2$: how many steps along $b_1$, then along $b_2$. Change the basis and they change.</Term>
+  <Term name="P = [b₁ b₂]">The matrix whose columns are $b_1$ and $b_2$. It turns coordinates in the new basis into ordinary ones: $v = P c$.</Term>
+  <Term name="P⁻¹">The inverse of $P$, from the lesson on inverses. It goes the other way: $c = P^{-1} v$.</Term>
+  <Term name="eigenvector">A direction a matrix $A$ only stretches, without turning it: $A b = \lambda b$, where the number $\lambda$ (“lambda”) is the stretch.</Term>
+  <Term name="eigenbasis">A basis made of a matrix's eigenvectors.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One arrow, two sets of coordinates">
+
+<Explore slug="change-of-basis" settings={{ preset: 'coords' }} caption="v = (3, 3) on the standard grid, then on the grid of b₁ = (2, 1) and b₂ = (−1, 1). The arrow stays put; the grid behind it changes." />
+
+On the ordinary grid $v = (3, 3)$: 3 steps along $\hat{\imath}$ and 3 along $\hat{\jmath}$. Now take the basis
+$b_1 = (2, 1)$ and $b_2 = (-1, 1)$. The grid drawn behind $v$ is theirs: its lines are whole steps along $b_1$ and
+along $b_2$. It looks like the moved grids of “Matrices move space”, but there every arrow moved with the grid. Here
+$v$ stays exactly where it was, and only the grid behind it is redrawn. Reading off that grid, $v$ is 2 steps along
+$b_1$ and 1 along $b_2$:
+
+$$
+\begin{aligned}
+v &= 2\,b_1 + 1\,b_2 \\
+  &= (4, 2) + (-1, 1) = (3, 3)
+\end{aligned}
+$$
+
+That is the recipe $(a, b)$ from the last lesson, where every point in the span of two vectors was $a$ of the first plus
+$b$ of the second. Those recipe numbers are the point's **coordinates** in the basis. So in this basis $v$ has
+coordinates $c = (2, 1)$. The order of the basis counts: list $b_2$ first and the coordinates become $(1, 2)$.
+
+Stack $b_1$ and $b_2$ side by side as the columns of a matrix:
+
+$$
+P = \begin{bmatrix} 2 & -1 \\ 1 & 1 \end{bmatrix}
+$$
+
+From the lesson on matrices, $P c$ is $c_1$ times the first column plus $c_2$ times the second, which is exactly
+$c_1 b_1 + c_2 b_2$. So $P c = v$: **$P$ turns new coordinates into standard ones.** To go the other way, from $v$ to
+$c$, undo $P$ with the inverse formula from the lesson on inverses:
+
+$$
+P^{-1} = \tfrac{1}{3}\begin{bmatrix} 1 & 1 \\ -1 & 2 \end{bmatrix}
+$$
+
+$$
+\begin{aligned}
+\det P &= 2 \cdot 1 - (-1) \cdot 1 = 3 \\
+c = P^{-1} v &= \tfrac{1}{3}(3 + 3,\ -3 + 6) = (2, 1)
+\end{aligned}
+$$
+
+That only works because $\det P \neq 0$: if $b_1$ and $b_2$ lay on one line, their grid would collapse and most points
+would have no coordinates at all.
+
+<KeyIdea>
+
+**A basis is a choice of ruler.** With $b_1, b_2$ as the columns of $P$: $v = P c$ turns new coordinates into standard
+ones, and $c = P^{-1} v$ turns standard ones into new. The arrow never moves; only its numbers do.
+
+</KeyIdea>
+
+<Misconception
+  id="p-not-inverse"
+  title="To get the new coordinates, multiply v by P"
+  probes={[
+    {
+      q: 'b₁ = (1, 0) and b₂ = (2, 1). In standard coordinates v = (5, 3). What are v’s coordinates in the basis b₁, b₂?',
+      choices: ['(11, 3)', '(−1, 3)', '(5, 3)'],
+      answer: 1,
+      trap: 0,
+      why: '−1·(1, 0) + 3·(2, 1) = (5, 3), so c = (−1, 3). (11, 3) is P·v: that treats (5, 3) as new coordinates and converts them the wrong way.',
+    },
+    {
+      q: 'P has the new basis vectors as its columns. Which gives a vector’s new coordinates c from its standard ones v?',
+      choices: ['c = P·v', 'c = P⁻¹·v', 'c = v, since the vector is the same'],
+      answer: 1,
+      trap: 0,
+      why: 'P·c = v turns new coordinates into standard ones, so going from v to c needs P’s inverse: c = P⁻¹·v.',
+    },
+  ]}
+>
+
+$P$ is built from the new basis, so it feels like the matrix that takes you *into* the new basis. It does the opposite.
+$P c$ means "$c_1$ of $b_1$ plus $c_2$ of $b_2$", which is the arrow written in ordinary numbers. Going from ordinary
+numbers to new coordinates means undoing that: $c = P^{-1} v$. A quick check settles it: $P$ times the coordinates of
+$b_1$ in its own basis, $(1, 0)$, must give $b_1$ itself, and it does, because $(1, 0)$ picks out $P$'s first column.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: back to ordinary coordinates">
+
+Now the other direction. On the grid of $b_1 = (1, 1)$ and $b_2 = (-1, 1)$, a vector has coordinates $c = (3, 1)$.
+Before each step, predict where it is on an ordinary graph, which matrix gets it there, and where one more step along
+$b_2$ takes it.
+
+<PredictChallenge slug="change-of-basis" settings={{ preset: 'back' }} goal={3} />
+
+Three steps along $b_1$ reach $(3, 3)$, and one along $b_2$ adds $(-1, 1)$, so the tip is at $(2, 4)$. That is $P c$,
+and each of its parts is a row of $P$ dotted with $c$, as in the lesson on multiplying matrices:
+$1 \times 3 + (-1) \times 1 = 2$ and $1 \times 3 + 1 \times 1 = 4$. One more step along $b_2$ adds a whole $b_2$ arrow,
+moving the tip to $(1, 5)$, not one square up. When the standard grid comes back, the arrow doesn't move. Only the grid
+behind it does.
+
+<Misconception
+  id="vector-moves"
+  title="Changing the basis moves the vector"
+  probes={[
+    {
+      q: 'v = (−2, 5) in standard coordinates. In a new basis its coordinates come out as (1, 4). Where is v’s tip on an ordinary graph now?',
+      choices: ['(1, 4)', '(−2, 5)', '(−1, 9)'],
+      answer: 1,
+      trap: 0,
+      why: 'Choosing a basis only changes how v is described. The arrow is the same, so on an ordinary graph its tip is still at (−2, 5).',
+    },
+    {
+      q: 'You switch from the standard basis to b₁ = (4, 0) and b₂ = (0, 4). What happens to the arrow v and to its coordinates?',
+      choices: ['The arrow grows 4 times longer; its coordinates stay the same', 'The arrow stays the same; its coordinates become a quarter as big', 'Both shrink to a quarter'],
+      answer: 1,
+      trap: 0,
+      why: 'Each new step is 4 times as long, so a quarter as many of them cover the same arrow. The arrow itself doesn’t change.',
+    },
+  ]}
+>
+
+When the numbers describing something change, it is natural to think the thing itself changed. Here it didn't: a
+matrix *as a transformation* moves arrows, but a change of basis only re-reads the same arrow on a different grid. The
+same $P$ can play either role, so it helps to ask "did the arrow move, or did the ruler?" Stretching a basis vector $k$
+times makes its coordinate $k$ times smaller, and leaves the arrow alone.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="The ruler a matrix likes best">
+
+Some bases make a matrix simple. Take $A = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$. On the standard grid it
+stretches and slants every square, and its four numbers don't say simply what it does.
+
+<Explore slug="change-of-basis" settings={{ preset: 'eigenbasis' }} caption="A = [[2, 1], [1, 2]] on the standard grid, then its two eigen directions, then the grid of those directions before and after A." />
+
+Two directions are special: $A$ only stretches them, without turning them. $b_1 = (1, 1)$ goes to
+$A b_1 = (3, 3)$, which is $3 b_1$, and $b_2 = (1, -1)$ goes to $A b_2 = (1, -1)$, which is $1 b_2$. Arrows like these,
+with $A b = \lambda b$, are **eigenvectors** of $A$, and the stretches are $\lambda_1 = 3$ and $\lambda_2 = 1$. (A later
+lesson on eigenvectors shows how to find them; here they are given.) Use them as the basis. A point with coordinates
+$(1, 1)$ in this basis lands at $(3, 1)$ in the same basis: $A$ just multiplies the first coordinate by 3 and the
+second by 1.
+
+“$A$ written in the eigenbasis” is the matrix that does this: it takes a point's eigen coordinates to the eigen
+coordinates of where $A$ sends it. You can build it from three moves, read right to left in $P^{-1} A P$: $P$ turns
+eigen coordinates into an ordinary arrow, $A$ moves the arrow, and $P^{-1}$ reads the moved arrow back in eigen
+coordinates. Here that gives
+
+$$
+D = P^{-1} A P = \begin{bmatrix} 3 & 0 \\ 0 & 1 \end{bmatrix}
+$$
+
+a **diagonal** matrix: the stretches on the diagonal, in the order of the basis (the first basis vector's stretch
+first), and zeros everywhere else. Turned around, $A = P D P^{-1}$: change into eigen coordinates ($P^{-1}$), stretch
+each one ($D$), change back ($P$). This is why the eigenbasis is so handy. Applying $A$ ten times is
+
+$$
+\begin{aligned}
+A^{10} &= (P D P^{-1})(P D P^{-1}) \cdots (P D P^{-1}) \\
+       &= P D^{10} P^{-1}
+\end{aligned}
+$$
+
+because each $P^{-1} P$ in the middle is the identity $I$, which changes nothing. And $D^{10}$ just has $3^{10}$ and
+$1^{10}$ on its diagonal.
+
+Now write the conversion yourself: given a basis and a vector in ordinary coordinates, find its coordinates in the
+basis. You need $c_1$ and $c_2$ with $c_1 b_1 + c_2 b_2 = v$, two equations in two unknowns, which is what $P^{-1} v$
+solves.
+
+<CodeExercise exercise="basis-coords" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'b₁ = (1, 2) and b₂ = (0, 1). A vector has coordinates (3, −1) in this basis. What is it in ordinary coordinates?',
+      choices: ['(3, 5)', '(3, −1)', '(3, 7)', '(3, −7)'],
+      answer: 0,
+      why: '3·(1, 2) + (−1)·(0, 1) = (3, 6) + (0, −1) = (3, 5). That is P·c. (3, −7) is P⁻¹·c, which goes the other way.',
+      traps: { 3: 'p-not-inverse' },
+    },
+    {
+      q: 'b₁ = (0, 2) and b₂ = (3, 0). In ordinary coordinates v = (6, 8). What are its coordinates in this basis?',
+      choices: ['(4, 2)', '(24, 12)', '(2, 4)', '(6, 8)'],
+      answer: 0,
+      why: 'You need c₁·(0, 2) + c₂·(3, 0) = (3c₂, 2c₁) = (6, 8), so c₂ = 2 and c₁ = 4: c = (4, 2), listed in the basis order. (24, 12) is P·v, the wrong direction.',
+      traps: { 1: 'p-not-inverse' },
+    },
+    {
+      q: 'After a change of basis, v’s coordinates change from (5, 1) to (2, 3). What happened to the arrow v?',
+      choices: ['Nothing: it is the same arrow, read on a different grid', 'It moved to (2, 3)', 'It got shorter', 'It turned onto a new line'],
+      answer: 0,
+      why: 'A change of basis re-reads the same arrow with a different ruler. Only the numbers change.',
+      traps: { 1: 'vector-moves', 2: 'vector-moves', 3: 'vector-moves' },
+    },
+    {
+      q: 'When can two arrows b₁ and b₂ be a basis of the plane?',
+      choices: ['When they don’t lie on one line, so det P ≠ 0', 'Only when they are at right angles', 'Only when both have length 1', 'Always'],
+      answer: 0,
+      why: 'If they lie on one line, every c₁·b₁ + c₂·b₂ stays on that line and P can’t be undone. Any two arrows not on one line will do; they needn’t be at right angles or of length 1.',
+    },
+    {
+      q: 'A stretches b₁ = (1, 1) by 4 and b₂ = (1, −1) by 2. Which matrix is A, written in the basis b₁, b₂?',
+      choices: ['[[4, 0], [0, 2]]', '[[3, 1], [1, 3]]', '[[1, 1], [1, −1]]', '[[4, 2], [4, −2]]'],
+      answer: 0,
+      why: 'In its eigenbasis a matrix only stretches each coordinate by its own λ: D has 4 and 2 on the diagonal, b₁’s first. [[3, 1], [1, 3]] is the same A on the standard grid.',
+    },
+    {
+      q: 'In its eigenbasis, what does applying A three times do to the coordinates (c₁, c₂)?',
+      choices: ['Multiplies them by λ₁³ and λ₂³', 'Multiplies them by 3λ₁ and 3λ₂', 'Multiplies both by λ₁·λ₂', 'Nothing more than applying A once'],
+      answer: 0,
+      why: 'Each application multiplies c₁ by λ₁ and c₂ by λ₂, so three of them multiply by λ₁³ and λ₂³: D³ is diagonal with those entries.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="change-of-basis-meaning"
+  prompt="What changes and what stays the same when you describe a vector in a new basis, and how do you convert between the two descriptions?"
+  rubric={[
+    'The arrow itself stays the same; only its coordinates (the numbers describing it) change.',
+    'Coordinates c in a basis b₁, b₂ mean v = c₁·b₁ + c₂·b₂.',
+    'With b₁ and b₂ as the columns of P, v = P·c turns new coordinates into standard ones, and c = P⁻¹·v goes back.',
+    'This needs b₁ and b₂ not on one line, so that det P ≠ 0.',
+    'In a basis of eigenvectors a matrix becomes diagonal: it only stretches each coordinate.',
+  ]}
+  example="A basis is just the pair of arrows you measure with. The vector itself doesn’t change when you switch basis, only the numbers that describe it. Coordinates c in the basis b₁, b₂ mean v is c₁ steps of b₁ plus c₂ steps of b₂. If you put b₁ and b₂ in the columns of a matrix P, then P times c gives v in ordinary coordinates, and P’s inverse times v gives back c. That only works if b₁ and b₂ don’t lie on one line, so that det P isn’t zero. If you choose the eigenvectors of a matrix as the basis, the matrix just stretches each coordinate, so written in that basis it is diagonal."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A **basis** $b_1, b_2$ is a ruler; a vector's **coordinates** $c$ in it satisfy $v = c_1 b_1 + c_2 b_2$.
+- With $P = [b_1\ b_2]$: $v = P c$ (new to standard) and $c = P^{-1} v$ (standard to new), as long as $\det P \neq 0$.
+- Changing the basis never moves the arrow, only its numbers. Stretch a basis vector $k$ times and its coordinate
+  shrinks $k$ times.
+- An **eigenvector** is a direction $A$ only stretches, $A b = \lambda b$. In a basis of them $A$ is diagonal,
+  $D = P^{-1} A P$, so $A = P D P^{-1}$ and powers of $A$ become powers of its stretches.
+
+</Section>

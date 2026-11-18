@@ -188,6 +188,14 @@ describe('the real checkpoints', () => {
     }
   });
 
+  it('asks stage 1 about B3’s determinants, span, change of basis, learning from examples and least squares', () => {
+    const p = checkpointPools(1);
+    for (const id of ['determinants-inverses', 'span-basis-rank', 'change-of-basis', 'supervised-learning', 'projections-least-squares']) {
+      expect(p.probes.some((q) => q.concept === id), id).toBe(true);
+      expect(p.quiz.some((q) => q.concept === id), id).toBe(true);
+    }
+  });
+
   it('opens the first two stages today, from the lessons already written', () => {
     const open = openCheckpoints().map((c) => c.stage);
     expect(open).toContain(1);
@@ -202,5 +210,14 @@ describe('the real checkpoints', () => {
     const milestones = planMilestones();
     expect(milestones.map((m) => m.stage)).toEqual(openCheckpoints().map((c) => c.stage));
     for (const m of milestones) expect(m).toMatchObject({ checkpoint: true, title: stages.find((s) => s.id === m.stage)!.title });
+  });
+
+  it('gives stage 1’s milestone its project, least squares from scratch (M1), and the time it takes', () => {
+    const one = planMilestones().find((m) => m.stage === 1)!;
+    const checkpoint = openCheckpoints().find((c) => c.stage === 1)!.minutes;
+    expect(one.parts).toEqual(['normal-equations', 'solve-system', 'least-squares-fit', 'fit-curves']);
+    expect(one.minutes).toBe(checkpoint + 4 * 60);
+    // Later stages have no project yet.
+    for (const m of planMilestones().filter((x) => x.stage > 1)) expect(m.parts, `stage ${m.stage}`).toBeUndefined();
   });
 });

@@ -1,6 +1,7 @@
 // Exercises whose judged tests run in 'judge' mode: as written, at full speed,
 // within a time budget (the math and ML path's heavy parts: training loops and
-// forward passes). No exercise uses it yet, so a fixture stands in.
+// forward passes). A fixture stands in here, heavy enough to pass the step limit;
+// the first real users, M1's parts, are run by exercises.test.ts.
 
 import { loadPyodide } from 'pyodide';
 import { beforeAll, describe, expect, it } from 'vitest';

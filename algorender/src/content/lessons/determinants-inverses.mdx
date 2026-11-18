@@ -1,0 +1,339 @@
+<Section step="hook" title="Running a matrix backwards">
+
+You know where a matrix sends a vector: $A$ takes $x$ to $Ax$. Very often the question comes the other way round. You
+know where something landed, $b$, and want to know where it started: find the $x$ with $Ax = b$. That is the same as
+solving a set of equations, such as
+
+$$
+\begin{aligned}
+4x_1 + 2x_2 &= 8 \\
+2x_1 + 3x_2 + x_3 &= 7 \\
+-2x_1 + x_2 + 3x_3 &= -3
+\end{aligned}
+$$
+
+Written with a matrix, the numbers in front of the unknowns go into $A$, the unknowns into $x = (x_1, x_2, x_3)$, and the
+right-hand sides into $b = (8, 7, -3)$:
+
+$$
+A = \begin{bmatrix} 4 & 2 & 0 \\ 2 & 3 & 1 \\ -2 & 1 & 3 \end{bmatrix}
+$$
+
+Row 1 of $A$ dotted with $x$ is $4x_1 + 2x_2 + 0x_3$, the left side of the first equation, and each row works the same
+way. So $Ax = b$ says all three equations at once.
+
+Problems like this are everywhere: balancing a budget, mixing paints, and, at the end of this stage, finding the line
+that best fits some data. This lesson answers three questions. When can a matrix be run backwards at all? How do you
+undo a $2 \times 2$ matrix? And how do you solve equations of any size, step by step?
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="determinant det A">For a $2 \times 2$ matrix, $ad - bc$. Its size is how much $A$ scales every area; a minus sign means $A$ flips the plane over.</Term>
+  <Term name="identity I">The matrix with 1s down its diagonal and 0s elsewhere. It changes nothing: $Ix = x$.</Term>
+  <Term name="inverse A⁻¹">The matrix that undoes $A$, read “A inverse”: $A^{-1}A = I$. Not every matrix has one.</Term>
+  <Term name="augmented matrix [A | b]">The equations written as a grid: each row holds one equation's numbers, with $b$ as an extra last column.</Term>
+  <Term name="row operation">Swapping two rows, or subtracting a multiple of one row from another. It changes the equations but not their solution.</Term>
+  <Term name="pivot">The entry used to clear the numbers below it, one per column, on the diagonal.</Term>
+  <Term name="back substitution">Solving the last equation first, then putting its answer into the one above, and so on up.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="The determinant: what A does to area">
+
+In the lesson on matrices moving space, the unit square turned into a parallelogram, and $\det A = ad - bc$ said how its
+area changed. Here it is again, because it decides whether $A$ can be undone.
+
+<Explore slug="inverse-matrix" settings={{ preset: 'area' }} input caption="A = [[2, 1], [1, 2]]. Watch the unit square become a parallelogram, and the shaded half square with it. Drag either tip." />
+
+For $A = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$:
+
+$$
+\det A = 2 \times 2 - 1 \times 1 = 3
+$$
+
+The square of area 1 becomes a parallelogram of area 3, and the shaded triangle, half the square, goes from 0.5 to
+1.5. Every shape's area is multiplied by the same number. Swap the columns, $A = \begin{bmatrix} 1 & 2 \\ 2 & 1 \end{bmatrix}$,
+and $\det A = -3$: the areas still triple, and the minus sign says the plane has been turned over.
+
+<KeyIdea>
+
+**$|\det A|$ is the factor $A$ scales every area by; a negative sign means the plane is flipped.** When $\det A = 0$, the
+plane is squashed flat.
+
+</KeyIdea>
+
+Now squash it. Below, $A$ sends $î$ to $u = (2, 1)$ and $ĵ$ to half of $u$, $(1, 0.5)$: both columns lie on one line.
+
+<Explore slug="inverse-matrix" settings={{ preset: 'squash' }} input caption="Columns (2, 1) and (1, 0.5) on one line. Watch where P, Q and S land, and whether anything lands on w = (0, 1)." />
+
+The whole plane falls onto that line. Three different points, $P = (0.5, 1)$, $Q = (1, 0)$ and $S = (1.5, -1)$, all land
+on the same spot, $(2, 1)$. To undo $A$, one matrix would have to send $(2, 1)$ back to $P$, $Q$ and $S$ all at once,
+but a matrix sends each point to only one place. And a point off the line, such as $w = (0, 1)$, is never reached, so $Ax = w$ has no solution at all.
+
+<Misconception
+  id="det-zero-solvable"
+  title="If det A = 0, Ax = b still has exactly one answer, it is just harder to find"
+  probes={[
+    {
+      q: 'A has det A = 0. How many solutions can Ax = b have?',
+      choices: ['Exactly one, as for any matrix', 'None or infinitely many, never exactly one', 'Always none'],
+      answer: 1,
+      trap: 0,
+      why: 'det A = 0 squashes the plane onto a line (or a point). A b off it is never reached: no solution. A b on it is reached from a whole line of starting points: infinitely many.',
+    },
+    {
+      q: 'A = [[5, 10], [7, 14]] sends both (0, 0) and (10, −5) to (0, 0). Can A be undone?',
+      choices: ['Yes: its entries are not all 0', 'No', 'Yes: det only matters for areas'],
+      answer: 1,
+      trap: 0,
+      why: 'An undo would have to send (0, 0) back to two different places at once. det A = 5 × 14 − 10 × 7 = 0, so A has no inverse.',
+    },
+  ]}
+>
+
+A matrix with $\det A = 0$ doesn't just make the arithmetic awkward. It throws information away: whole lines of points
+land on one spot, and a whole region of the plane is never reached. So $Ax = b$ has either no solution or infinitely
+many, never exactly one, and no inverse exists. Only $\det A \neq 0$ guarantees one answer for every $b$.
+
+</Misconception>
+
+When $\det A \neq 0$, nothing is squashed, and the move can be undone. For a $2 \times 2$ matrix there is a recipe: swap
+$a$ and $d$, put a minus sign on $b$ and $c$, and divide everything by the determinant.
+
+$$
+A^{-1} = \frac{1}{ad - bc}\begin{bmatrix} d & -b \\ -c & a \end{bmatrix}
+$$
+
+<Explore slug="inverse-matrix" settings={{ preset: 'undo' }} input caption="A = [[2, 1], [2, 2]]. Work out det A, build A⁻¹ from the recipe, then watch î and ĵ after A, then A⁻¹." />
+
+For $A = \begin{bmatrix} 2 & 1 \\ 2 & 2 \end{bmatrix}$, $\det A = 2 \times 2 - 1 \times 2 = 2$, so
+
+$$
+A^{-1} = \frac{1}{2}\begin{bmatrix} 2 & -1 \\ -2 & 2 \end{bmatrix} = \begin{bmatrix} 1 & -0.5 \\ -1 & 1 \end{bmatrix}
+$$
+
+Check it with dot products. $A$ sends $î$ to its first column, $(2, 2)$. Each part of $A^{-1}(2, 2)$ is a row of
+$A^{-1}$ dotted with $(2, 2)$: row 1 gives $1 \times 2 + (-0.5) \times 2 = 1$ and row 2 gives
+$(-1) \times 2 + 1 \times 2 = 0$. So $A^{-1}$ sends $(2, 2)$ back to $(1, 0)$, and the same works for $ĵ$:
+$A^{-1}A = I$. Areas undo too: $\det A^{-1} = 1 / \det A = 0.5$. That is the other reason $\det A = 0$ has no inverse:
+there is no $1/0$.
+
+<Misconception
+  id="inverse-entrywise"
+  title="To invert a matrix, flip each entry over: 1/a, 1/b, 1/c, 1/d"
+  probes={[
+    {
+      q: 'A = [[7, 6], [8, 7]] has det A = 1. What is the top-right entry of A⁻¹?',
+      choices: ['0.17, which is 1/6', '−6', '6'],
+      answer: 1,
+      trap: 0,
+      why: 'Swap a and d, negate b and c, divide by det A = 1: A⁻¹ = [[7, −6], [−8, 7]], so the top-right entry is −6.',
+    },
+    {
+      q: 'A = [[4, 2], [2, 2]] has det A = 4. Which matrix is A⁻¹?',
+      choices: ['[[0.25, 0.5], [0.5, 0.5]]', '[[2, −2], [−2, 4]]', '[[0.5, −0.5], [−0.5, 1]]'],
+      answer: 2,
+      trap: 0,
+      why: 'Swap a and d, negate b and c: [[2, −2], [−2, 4]]. Then divide by det A = 4: [[0.5, −0.5], [−0.5, 1]]. Flipping each entry gives a matrix that doesn’t undo A.',
+    },
+  ]}
+>
+
+With ordinary numbers, undoing “times 4” is “times 1/4”, so it is natural to flip each entry of a matrix. But every entry
+of $A^{-1}$ depends on all four entries of $A$, because undoing a move of the whole plane has to untangle how $î$ and
+$ĵ$ were mixed together. Check any guess by multiplying: $A^{-1}A$ must come out as $I$. Flip the entries of
+$\begin{bmatrix} 2 & 1 \\ 1 & 1 \end{bmatrix}$ to get $\begin{bmatrix} 0.5 & 1 \\ 1 & 1 \end{bmatrix}$ and multiply: the top-left
+cell is $0.5 \times 2 + 1 \times 1 = 2$, not 1, so that is not the inverse.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: solve three equations by elimination">
+
+The recipe for $A^{-1}$ only works for $2 \times 2$ matrices. For any size there is a method you may have met at school
+for two equations: subtract a multiple of one equation from another to get rid of an unknown. Written as a grid, the
+three equations from the start are the augmented matrix
+
+$$
+\left[\begin{array}{ccc|c}
+4 & 2 & 0 & 8 \\
+2 & 3 & 1 & 7 \\
+-2 & 1 & 3 & -3
+\end{array}\right]
+$$
+
+**Elimination** works column by column. Each column's pivot sits on the diagonal (in column 1 here, the 4), and every
+entry below it is cleared by subtracting a multiple of the pivot's row:
+
+$$
+\text{multiple} = \frac{\text{entry to clear}}{\text{pivot}}
+$$
+
+For example, with a pivot of 3 and a 6 below it, the multiple is $6 / 3 = 2$: subtract 2 times the pivot row, written
+$R_2 \leftarrow R_2 - 2R_1$. The multiple can be negative: a $-6$ under a pivot of 3 gives $-2$, and subtracting
+$-2R_1$ is the same as adding $2R_1$. The whole row changes, $b$ included, and the equations still have the same
+solution. Once every entry under every pivot is 0, the last row has a single unknown,
+and **back substitution** solves from the bottom up. Predict each multiple, then each unknown.
+
+<PredictChallenge slug="inverse-matrix" settings={{ preset: 'eliminate' }} goal={5} />
+
+The multiples were 0.5, −0.5 and 1 (subtracting $-0.5R_1$ means adding $0.5R_1$), and the answer is $x = (1, 2, -1)$. Check it against the original equations: each
+row of $A$ dotted with $x$ gives back $b = (8, 7, -3)$.
+
+**The determinant, from the pivots.** For a $3 \times 3$ matrix, $\det A$ is the factor it scales volumes by, as
+$ad - bc$ was for areas. Subtracting a multiple of one row from another doesn't change it: it slides space along one
+direction, like the shear in the lesson on matrices moving space, which keeps area (and volume) the same. Once
+elimination has made a staircase of 0s, the determinant is just the product of the diagonal, the pivots:
+$4 \times 2 \times 2 = 16$.
+
+You have seen this already for $2 \times 2$. Eliminating $\begin{bmatrix} a & b \\ c & d \end{bmatrix}$ subtracts
+$c/a$ times row 1 from row 2, leaving pivots $a$ and $d - bc/a$, and their product is $a(d - bc/a) = ad - bc$. For the
+matrix you undid above, $\begin{bmatrix} 2 & 1 \\ 2 & 2 \end{bmatrix}$, the pivots are 2 and 1, whose product is 2,
+the same as $\det A$.
+
+</Section>
+
+<Section step="do" title="When a pivot is 0, swap">
+
+Elimination divides by each pivot, so a 0 on the diagonal is a problem. Here the first column clears without trouble,
+but then a 0 lands in the pivot spot of column 2.
+
+<Explore slug="inverse-matrix" settings={{ preset: 'pivot' }} caption="After two row operations, a 0 lands on the diagonal in column 2. Watch which row comes to the rescue." />
+
+The fix is to swap in a row from below that has a non-zero entry in that column: swapping two equations doesn't
+change their solution. The usual rule, called **partial pivoting**, always swaps up the row whose entry is biggest in
+size, ignoring its sign, even when the pivot isn't 0. Computers keep only so many digits, so small rounding errors creep
+into every division, and dividing by a big number keeps them small. Each swap flips the sign of the determinant, just as
+swapping $î$ and $ĵ$ turns the plane over: here the pivots are 1, 1 and 1 with one swap, so $\det A = -1$.
+
+<Misconception
+  id="zero-pivot-stuck"
+  title="A 0 in the pivot spot means the equations have no solution"
+  probes={[
+    {
+      q: 'Partway through elimination, the pivot spot holds 0 and the entry below it is 7. What now?',
+      choices: ['Stop: there is no solution', 'Swap the row with the 7 up, and carry on', 'Divide by 0 and see what happens'],
+      answer: 1,
+      trap: 0,
+      why: 'Swapping two equations doesn’t change their solution, and the 7 makes a fine pivot. Only when every entry from the pivot spot down is 0 is there no single solution.',
+    },
+    {
+      q: 'Does [[0, 2], [1, 1]] x = (4, 3) have exactly one solution?',
+      choices: ['No: its first pivot is 0', 'Yes', 'Infinitely many'],
+      answer: 1,
+      trap: 0,
+      why: 'det = 0 × 1 − 2 × 1 = −2, not 0. Swap the rows and solve: x = (1, 2).',
+    },
+  ]}
+>
+
+A 0 in the pivot spot only says this row is in the wrong place. If any row below has a non-zero entry in that column,
+swap it up and carry on. Trouble only comes when the whole column, from the pivot spot down, is 0: then there is no
+pivot, $\det A = 0$, and there is no single solution.
+
+</Misconception>
+
+That last case looks like this. Here $A = \begin{bmatrix} 1 & 2 \\ 2 & 4 \end{bmatrix}$, whose second column is twice
+its first, and $b = (3, 5)$.
+
+<Explore slug="inverse-matrix" settings={{ preset: 'singular' }} caption="A’s second column is twice its first. Watch what elimination leaves in the last row." />
+
+After one swap and one row operation the last row reads $0x_1 + 0x_2 = 0.5$: impossible, so there is no solution. Had
+it read $0 = 0$, there would have been infinitely many.
+
+Now write it yourself. `solve(A, b)` copies $A$ and $b$ into an augmented table, eliminates column by column, swapping
+up the row whose entry is biggest in size each time, then back-substitutes. Code counts rows from 0, so $R_1$ is row 0
+there. As it runs, every swap and row operation shows on the grid. You will reuse this `solve` at the end of the stage:
+it is part 2 of the first project, least squares from scratch, which fits lines to data.
+
+<CodeExercise exercise="solve-system" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is the determinant of [[3, 1], [2, 4]]?',
+      choices: ['10', '14', '12', '2'],
+      answer: 0,
+      why: 'ad − bc = 3 × 4 − 1 × 2 = 10.',
+    },
+    {
+      q: 'A has det A = −2. A triangle has area 3. What is its area after A?',
+      choices: ['6, and it is flipped over', '−6', '1.5', '3'],
+      answer: 0,
+      why: 'Areas scale by |det A| = 2, so 3 becomes 6. The minus sign means the plane was turned over, not that the area is negative.',
+    },
+    {
+      q: 'A = [[3, 1], [5, 2]] has det A = 1. What is A⁻¹?',
+      choices: ['[[2, −1], [−5, 3]]', '[[0.33, 1], [0.2, 0.5]]', '[[2, 1], [5, 3]]', '[[3, −1], [−5, 2]]'],
+      answer: 0,
+      why: 'Swap a and d, negate b and c, divide by det A = 1. Check: row 1 of A⁻¹, (2, −1), dotted with A’s first column (3, 5) is 1.',
+      traps: { 1: 'inverse-entrywise' },
+    },
+    {
+      q: 'A = [[2, 6], [1, 3]]. How many solutions does Ax = (4, 2) have?',
+      choices: ['Exactly one', 'None', 'Infinitely many'],
+      answer: 2,
+      why: 'det A = 2 × 3 − 6 × 1 = 0, so A squashes the plane onto the line through (2, 1). (4, 2) is on that line, so a whole line of x lands on it.',
+      traps: { 0: 'det-zero-solvable' },
+    },
+    {
+      q: 'Partway through, the rows are [1, 2, 3 | 6], [0, 0, 5 | 5] and [0, 4, 1 | 9]. What comes next?',
+      choices: ['Stop: there is no solution', 'Swap R2 and R3', 'Subtract R1 from R3'],
+      answer: 1,
+      why: 'Column 2’s pivot spot holds 0, but R3 has a 4 there. Swap it up and carry on.',
+      traps: { 0: 'zero-pivot-stuck' },
+    },
+    {
+      q: 'After elimination the equations read 2x + y = 7 and 3y = 9. What is x?',
+      choices: ['2', '3', '3.5', '5'],
+      answer: 0,
+      why: 'Back substitution: the last row gives y = 3, then 2x + 3 = 7, so x = 2.',
+    },
+    {
+      q: 'Elimination needed one row swap and ended with pivots 2, −1 and 3. What is det A?',
+      choices: ['6', '−6', '4', '0'],
+      answer: 0,
+      why: 'The product of the pivots is 2 × (−1) × 3 = −6, and one swap flips the sign: det A = 6.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="det-and-elimination"
+  prompt="What does the determinant tell you about whether Ax = b can be solved, and how does elimination solve it?"
+  rubric={[
+    '|det A| is how much A scales areas; a negative sign means the plane is flipped.',
+    'If det A = 0, A squashes the plane, so it has no inverse and Ax = b has no solution or infinitely many.',
+    'Elimination uses row operations, which never change the solution, to clear the entries under each pivot.',
+    'Back substitution then solves the last equation first and works up the rows.',
+    'A 0 in the pivot spot is fixed by swapping up a row from below.',
+  ]}
+  example="The determinant says how much the matrix stretches areas, and its sign says whether it flips the plane over. If it is 0, the plane is squashed onto a line, so different points land in the same place and some places are never reached: you can't undo it, and Ax = b has either no solution or infinitely many. If it isn't 0, you can solve by elimination: subtract multiples of one equation from the others to make 0s under each pivot, which doesn't change the answer, until the last equation has one unknown. Then you solve that and put the answers back into the equations above, one by one. If a 0 lands where a pivot should be, you swap in a row from below."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- $\det A = ad - bc$ for a $2 \times 2$ matrix: $|\det A|$ scales areas, a minus sign flips the plane.
+- $\det A = 0$: the plane is squashed, there is no inverse, and $Ax = b$ has no solution or infinitely many.
+- $A^{-1} = \frac{1}{ad - bc}\begin{bmatrix} d & -b \\ -c & a \end{bmatrix}$, with $A^{-1}A = I$ and $\det A^{-1} = 1 / \det A$.
+- Elimination: clear each column under its pivot with row operations (multiple = entry ÷ pivot), swapping up the row
+  whose entry is biggest in size, then back-substitute from the last row up.
+- $\det A$ scales volumes for a $3 \times 3$ matrix; it is the product of the pivots, with a minus sign for each swap.
+- Next: **span, basis and rank**, which say exactly which $b$ a matrix can reach.
+
+</Section>

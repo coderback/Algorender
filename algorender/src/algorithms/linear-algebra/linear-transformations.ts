@@ -30,6 +30,7 @@ const pseudocode = [
   'A·î = (a, c)        first column',
   'A·ĵ = (b, d)        second column',
   'A·v = x·(A·î) + y·(A·ĵ)',
+  'by hand: A·v = (row 1 · v, row 2 · v)',
   'det A = ad − bc     area scale',
 ];
 
@@ -129,6 +130,15 @@ function* run(input: MatrixInput): Generator<Frame<PlotState>> {
     checkpoint: ask(`So where does v = ${fmtVec(v)} land?`, fmtVec(av), [fmtVec(apply(transpose(m), v)), fmtVec(v), fmtVec([a * v[0], d * v[1]])]),
   });
 
+  // By hand, the same answer comes from the rows: each part of Av is a row of A dotted with v.
+  const r1 = a * v[0] + b * v[1];
+  const r2 = c * v[0] + d * v[1];
+  yield plotFrame(scene(input, { t: 0, i, j, handles: none }), {
+    line: 5,
+    note: `By hand, each part of Av is a row of A dotted with v: row 1, ${fmtVec([a, b])}, gives ${dotText(a, b, v)} = ${fmt(r1)}, and row 2, ${fmtVec([c, d])}, gives ${dotText(c, d, v)} = ${fmt(r2)}. So Av = ${fmtVec(av)}. Now watch the grid carry v there.`,
+    vars: { ...vars, 'row 1 · v': r1, 'row 2 · v': r2 },
+  });
+
   for (const t of STEPS) {
     const g = blend(m, t);
     const notes: Record<number, string> = {
@@ -150,7 +160,7 @@ function* run(input: MatrixInput): Generator<Frame<PlotState>> {
 
   const flat = Math.abs(D) < 1e-9;
   yield plotFrame(scene(input, { t: 1, i, j, handles: { i: true, j: true, v: false }, square: true }), {
-    line: 5,
+    line: 6,
     note: flat
       ? `det A = ${fmt(a)}·${fmt(d)} − ${fmt(b)}·${fmt(c)} = 0: the square is squashed flat, so A crushes the plane onto a line (or a point) and can't be undone.`
       : D < 0
@@ -167,6 +177,10 @@ function* run(input: MatrixInput): Generator<Frame<PlotState>> {
     vars: { ...vars, det: D },
   });
 }
+
+/** a·x + b·y written out for v = (x, y), with negatives in brackets. */
+const dotText = (p: number, q: number, v: Vec) => `${fmt(p)}·${paren(v[0])} + ${fmt(q)}·${paren(v[1])}`;
+const paren = (x: number) => (x < 0 ? `(${fmt(x)})` : fmt(x));
 
 const steps = (n: number) => `${fmt(n)} ${Math.abs(n) === 1 ? 'step' : 'steps'}`;
 
@@ -213,7 +227,7 @@ export const linearTransformations = defineAlgorithm<MatrixInput, PlotState>({
   run,
   content: {
     idea: 'A 2×2 matrix is a way of moving the whole plane. Its first column is where î = (1, 0) lands and its second is where ĵ = (0, 1) lands; every other vector is a mix of î and ĵ, so it lands on the same mix of their images.',
-    invariant: 'A·(x·î + y·ĵ) = x·(A·î) + y·(A·ĵ): grid lines stay straight, parallel and evenly spaced, and the origin never moves. Every area is multiplied by the same number, det A = ad − bc.',
+    invariant: 'Each part of A·v is a row of A dotted with v, and the same vector is A·(x·î + y·ĵ) = x·(A·î) + y·(A·ĵ): grid lines stay straight, parallel and evenly spaced, and the origin never moves. Every area is multiplied by the same number, det A = ad − bc.',
     whenToUse: 'Whenever data is a list of numbers that gets mixed linearly: rotating and scaling graphics, changing coordinates, a layer of a neural network before its activation. Reading a matrix by its columns tells you at a glance what it does to space.',
     traits: [
       { label: 'Columns are where î and ĵ land', good: null },

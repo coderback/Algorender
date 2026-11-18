@@ -78,6 +78,17 @@ describe('scheduling', () => {
     expect(order.indexOf('matrix-multiplication')).toBeGreaterThan(order.indexOf('vectors-matrices'));
   });
 
+  it('reaches B3’s determinants, span, change of basis, learning from examples and least squares, least squares last', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    const chain = ['matrix-multiplication', 'determinants-inverses', 'span-basis-rank', 'change-of-basis'];
+    for (const id of [...chain, 'supervised-learning', 'projections-least-squares']) expect(order, id).toContain(id);
+    for (let i = 1; i < chain.length; i++) expect(order.indexOf(chain[i]), chain[i]).toBeGreaterThan(order.indexOf(chain[i - 1]));
+    for (const before of ['span-basis-rank', 'supervised-learning']) expect(order.indexOf('projections-least-squares'), before).toBeGreaterThan(order.indexOf(before));
+    expect(order.indexOf('supervised-learning')).toBeGreaterThan(order.indexOf('vectors'));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {

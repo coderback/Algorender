@@ -1,8 +1,9 @@
 <Section step="hook" title="A grid of numbers that moves the whole plane">
 
-A $2 \times 2$ matrix is four numbers. It is easy to learn the rule for multiplying it by a vector and never see what it
-*does*. Here is what it does: it picks up the entire plane and moves it, stretching, turning, shearing or flipping it,
-while keeping every grid line straight.
+A $2 \times 2$ matrix is four numbers in two rows. You can already multiply it by a vector, because each part of the
+answer is a dot product: row 1 of the matrix dotted with the vector, then row 2. But it is easy to learn that rule and
+never see what it *does*. Here is what it does: it picks up the entire plane and moves it, stretching, turning, shearing
+or flipping it, while keeping every grid line straight.
 
 By the end of this lesson you will be able to look at a matrix like $\begin{bmatrix} 2 & 1 \\ 0 & 1 \end{bmatrix}$ and
 picture its effect before doing any arithmetic.
@@ -12,6 +13,7 @@ picture its effect before doing any arithmetic.
 <Section step="parts" title="The pieces you will see">
 
 <Terms>
+  <Term name="A·v by rows">Each part of $Av$ is a row of $A$ dotted with $v$: row 1 gives the first part, row 2 the second.</Term>
   <Term name="î and ĵ">The basis vectors $(1, 0)$ and $(0, 1)$: one step right, one step up. Every vector is built from them.</Term>
   <Term name="v = x·î + y·ĵ">A vector's coordinates are a recipe: $x$ steps along î, then $y$ steps along ĵ.</Term>
   <Term name="columns">The first column of a matrix is where î lands; the second is where ĵ lands.</Term>
@@ -22,19 +24,36 @@ picture its effect before doing any arithmetic.
 
 <Section step="see" title="Watch a matrix move the grid">
 
-<Explore slug="linear-transformations" settings={{ preset: 'stretch-shear' }} caption="First î lands on the first column, then ĵ on the second, then the whole grid follows. Step with → and read each line." />
+<Explore slug="linear-transformations" settings={{ preset: 'stretch-shear' }} caption="First î lands on the first column, then ĵ on the second, then v is worked out row by row, then the whole grid follows. Step with → and read each line." />
 
-Because every vector is $x$ steps along î plus $y$ steps along ĵ, it must land on $x$ steps along *where î went* plus
-$y$ steps along *where ĵ went*:
+**By hand, with rows.** Here $A = \begin{bmatrix} 2 & 1 \\ 0 & 1 \end{bmatrix}$ and $v = (1, 2)$. Each part of $Av$ is a
+row of $A$ dotted with $v$, just as in the dot product lesson:
+
+$$
+\begin{aligned}
+\text{row 1} \cdot v &= 2 \times 1 + 1 \times 2 = 4 \\
+\text{row 2} \cdot v &= 0 \times 1 + 1 \times 2 = 2
+\end{aligned}
+$$
+
+So $Av = (4, 2)$. That is how to compute it. The picture comes from the columns.
+
+**With columns.** Every vector is $x$ steps along î plus $y$ steps along ĵ, so it must land on $x$ steps along *where î
+went* plus $y$ steps along *where ĵ went*:
 
 $$
 A\begin{bmatrix} x \\ y \end{bmatrix} = x \begin{bmatrix} a \\ c \end{bmatrix} + y \begin{bmatrix} b \\ d \end{bmatrix}
 $$
 
+For our $v = (1, 2)$ that is $1 \cdot (2, 0) + 2 \cdot (1, 1) = (4, 2)$: the same answer as the rows. The two ways always
+agree: the top part of the column recipe is $ax + by$, which is exactly row 1 dotted with $(x, y)$, and the bottom part is
+$cx + dy$, row 2 dotted with $(x, y)$.
+
 <KeyIdea>
 
-**Read a matrix by its columns.** They are the images of î and ĵ, and those two arrows decide where everything else
-goes. Grid lines stay straight, parallel and evenly spaced, and the origin stays put: that is what *linear* means.
+**Compute with rows, read with columns.** Each part of $Av$ is a row of $A$ dotted with $v$. The columns are where î and
+ĵ land, and those two arrows decide where everything else goes. Grid lines stay straight, parallel and evenly spaced,
+and the origin stays put: that is what *linear* means.
 
 </KeyIdea>
 
@@ -56,7 +75,7 @@ Drag the tips of î and ĵ (or focus one and use the arrow keys) and watch the g
 - Swap the two arrows' places. The grid flips over and the determinant turns negative.
 - Make a shear: leave î at $(1, 0)$ and move ĵ to $(1, 1)$. The square leans, but its area stays 1.
 
-<Explore slug="linear-transformations" settings={{ preset: 'shear', step: '8' }} input />
+<Explore slug="linear-transformations" settings={{ preset: 'shear', step: '9' }} input />
 
 <Misconception
   id="rows-not-columns"
@@ -142,6 +161,13 @@ doubles every area and flips the plane; $\det A = 0.5$ halves areas without flip
       answer: 0,
       why: 'Its columns (1, 2) and (2, 4) point the same way, so det = 1·4 − 2·2 = 0.',
     },
+    {
+      q: 'A = [[1, 3], [2, −1]], written row by row, and v = (2, 1). What is Av?',
+      choices: ['(5, 3)', '(4, 5)', '(2, −1)', '(7, 1)'],
+      answer: 0,
+      why: 'Row 1 dotted with v: 1 × 2 + 3 × 1 = 5. Row 2: 2 × 2 + (−1) × 1 = 3. (4, 5) dots the columns with v instead of the rows.',
+      traps: { 1: 'rows-not-columns' },
+    },
   ]}
 />
 
@@ -165,6 +191,7 @@ doubles every area and flips the plane; $\det A = 0.5$ halves areas without flip
 
 <Section step="recap" title="What to remember">
 
+- Compute $Av$ with **rows**: each part is a row of $A$ dotted with $v$.
 - A matrix moves the whole plane; its **columns** are where î and ĵ land.
 - $A(x\hat{\imath} + y\hat{\jmath}) = x(A\hat{\imath}) + y(A\hat{\jmath})$: knowing two arrows tells you everything.
 - $\det A = ad - bc$ scales area; negative flips the plane, zero squashes it and can't be undone.
