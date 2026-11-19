@@ -1,0 +1,176 @@
+<Section step="hook" title="Many values under one name">
+
+A class has thirty test scores. Thirty names, `score1` to `score30`, would be no way to add them up, and next year
+there might be thirty-one. A **list** keeps any number of values, in order, under one name. You can loop over it,
+pick out any item by its position, and grow or shrink it as the program runs.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="list">An ordered collection in square brackets: `[70, 85, 60]`. It can hold any values, even other lists.</Term>
+  <Term name="index">An item's position, counted from 0: `scores[0]` is the first item. `-1` is the last, `-2` the one before it.</Term>
+  <Term name="method">A function that belongs to a value, called with a dot: `scores.append(90)`.</Term>
+  <Term name="slice">`scores[1:3]`: a new list of the items from index 1 up to, but not including, index 3.</Term>
+</Terms>
+
+Lists work much like strings for reading: `len(scores)` counts the items, `scores[0]` is the first, and
+`for s in scores:` visits each item in turn. New here: `85 in scores` asks whether the list holds 85, giving `True` or
+`False`, and `sum`, `min` and `max` take a whole list.
+
+Unlike a string, a list can be **changed in place**:
+
+```python
+scores = [70, 85, 60]
+scores[0] = 75          # replace an item:     [75, 85, 60]
+scores.append(90)       # add to the end:      [75, 85, 60, 90]
+scores.insert(1, 100)   # add at an index:     [75, 100, 85, 60, 90]
+scores.remove(60)       # take out the first 60: [75, 100, 85, 90]
+last = scores.pop()     # take out the last item, and give it back: last is 90
+first = scores.pop(0)   # take out the item at index 0: first is 75
+```
+
+These methods change the list itself, and (apart from `pop`, which gives back the item it took) they give back
+`None`. So `scores = scores.append(90)` is a mistake: it adds 90, then points `scores` at `None`.
+
+A slice makes a **new** list and leaves the old one alone. Like `range`, it stops just before its end. You can leave
+either end out, and add a step: `scores[:2]` is the first two items, `scores[1:]` all but the first, and
+`scores[::-1]` the whole list in reverse.
+
+Reading an index that isn't there, like `scores[10]` in a list of 5, stops the program with an `IndexError`.
+
+</Section>
+
+<Section step="see" title="Watch a list change">
+
+Step through it. There is one list, and every change happens to that same box in the memory view: an item replaced,
+one added, one taken out. Only the slice on line 6 makes a new list.
+
+<TraceCode snippet="py-lists" />
+
+<KeyIdea>
+
+**A list is one changeable object: assigning to an index (`a[i] = x`), `append`, `insert`, `remove` and `pop` change
+it in place.** Most of
+these methods give back `None`; a slice gives back a new list.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-list-ops" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="method-returns-list"
+  title="A list method like append gives back the changed list"
+  probes={[
+    {
+      q: 'nums = [1, 2], then nums = nums.append(3). What does print(nums) show?',
+      choices: ['None', '[1, 2, 3]', '[1, 2]'],
+      answer: 0,
+      trap: 1,
+      why: 'append changes the list and gives back None, and nums = then points nums at that None.',
+    },
+    {
+      q: 'a = [5], then b = a.append(6). What does b point at?',
+      choices: ['None', '[5, 6]', '6'],
+      answer: 0,
+      trap: 1,
+      why: 'append changes a in place. What it gives back, and so what b points at, is None.',
+    },
+  ]}
+>
+
+Methods that change a list, `append`, `insert`, `remove` and later `sort`, do their work on the list itself and give
+back `None`. Call them on a line of their own: `nums.append(3)`, not `nums = nums.append(3)`. (`pop` is the one that
+gives something back: the item it removed.)
+
+</Misconception>
+
+<Misconception
+  id="slice-includes-end"
+  title="A slice a[1:3] includes index 3"
+  probes={[
+    {
+      q: 'letters = ["a", "b", "c", "d"]. What is letters[1:3]?',
+      choices: ["['b', 'c']", "['b', 'c', 'd']", "['a', 'b', 'c']"],
+      answer: 0,
+      trap: 1,
+      why: 'A slice starts at its first index and stops just before its second: indexes 1 and 2.',
+    },
+    {
+      q: 'nums = [10, 20, 30, 40, 50]. How many items does nums[0:2] hold?',
+      choices: ['2', '3', '1'],
+      answer: 0,
+      trap: 1,
+      why: 'Indexes 0 and 1: the slice stops before index 2. The length of a[i:j] is j - i.',
+    },
+  ]}
+>
+
+A slice stops just before its end index, as `range` does. `a[1:3]` holds the items at 1 and 2, so its length is
+`3 - 1`. That makes slices fit together: `a[:2] + a[2:]` is the whole list, with nothing counted twice.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'nums = [4, 8, 15]. What does nums[-1] give?',
+      choices: ['15', '4', 'An IndexError'],
+      answer: 0,
+      why: 'Negative indexes count from the end: -1 is the last item.',
+    },
+    {
+      q: 'x = [1, 2], then x = x.append(3). What does x point at now?',
+      choices: ['None', '[1, 2, 3]', '3'],
+      answer: 0,
+      why: 'append gives back None, and x = points x at it. The list with the 3 in it has no name left.',
+      traps: { 1: 'method-returns-list' },
+    },
+    {
+      q: 'nums = [1, 2, 3, 4, 5]. What does print(nums[2:4]) show?',
+      choices: ['[3, 4]', '[3, 4, 5]', '[2, 3, 4]'],
+      answer: 0,
+      why: 'Indexes 2 and 3, which hold 3 and 4. The slice stops before index 4.',
+      traps: { 1: 'slice-includes-end' },
+    },
+    {
+      q: 'pets = ["cat", "dog", "cat"], then pets.remove("cat"). What is pets now?',
+      choices: ["['dog', 'cat']", "['dog']", "['cat', 'dog']"],
+      answer: 0,
+      why: 'remove takes out the first item equal to its argument, and only that one.',
+    },
+    {
+      q: 'nums = [3, 1, 2], then x = nums.pop(0). What does x point at?',
+      choices: ['3', '2', '[1, 2]'],
+      answer: 0,
+      why: 'pop(0) takes out the item at index 0 and gives it back. nums is now [1, 2].',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-lists" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A list keeps values in order; index from 0, or from the end with negative numbers.
+- `append`, `insert`, `remove`, `pop` and `a[i] = x` change the list in place.
+- Methods that change a list give back `None`, except `pop`, which gives back the item.
+- A slice `a[i:j]` is a new list, stopping just before `j`.
+
+</Section>

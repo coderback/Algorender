@@ -1,4 +1,5 @@
 import { fieldKey } from '@/workspace/fields';
+import { listWords } from '@/workspace/lines';
 import type { MemValue } from '@/workspace/protocol';
 import { extendOrder, NO_ORDER, orderHeap, type SeenOrder } from './order';
 import type { MemoryState } from './types';
@@ -42,6 +43,26 @@ function binding(name: string, v: MemValue, names: Map<string, string>): string 
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * Objects that two or more of the frames' names refer to (aliasing: two names
+ * for one list, or a caller's list and the parameter it was passed as), with
+ * those names: "nums, items", or "arr in 3 frames" when recursion passes one
+ * name down. The view badges them; the description says it.
+ */
+export function sharedNames(state: MemoryState): Map<string, string> {
+  const slots = new Map<string, string[]>();
+  for (const f of state.frames) {
+    for (const l of f.locals) if ('ref' in l.value) slots.set(l.value.ref, [...(slots.get(l.value.ref) ?? []), l.name]);
+  }
+  const out = new Map<string, string>();
+  for (const [id, names] of slots) {
+    if (names.length < 2) continue;
+    const distinct = [...new Set(names)];
+    out.set(id, distinct.length === 1 ? `${distinct[0]} in ${names.length} frames` : distinct.join(', '));
+  }
+  return out;
+}
+
 /** The call stack, outermost first: "Global frame: nums refers to list 1. add, the current frame: a is 2, b is 3." */
 export function describeFrames(state: MemoryState, seen?: SeenOrder): string {
   if (state.frames.length === 0) return 'No frames.';
@@ -67,9 +88,16 @@ export function describeFrames(state: MemoryState, seen?: SeenOrder): string {
 export function describeObjects(state: MemoryState, seen?: SeenOrder): string {
   const order = extendOrder(seen ?? NO_ORDER, state.heap);
   const names = objectNames(state.heap, order);
+  const shared = sharedNames(state);
   const sentences = orderHeap(state.heap, order).map(({ object: o, fresh, changed }) => {
-    const name = `${capital(names.get(o.id)!)}${fresh ? ' (new)' : changed ? ' (changed)' : ''}`;
-    if (o.kind === 'function') return `${name}.`;
+    const by = shared.get(o.id);
+    const tags = [fresh ? 'new' : changed ? 'changed' : '', by ? `shared by ${by.includes(' in ') ? by : listWords(by.split(', '))}` : ''].filter(Boolean);
+    const name = `${capital(names.get(o.id)!)}${tags.length > 0 ? ` (${tags.join('; ')})` : ''}`;
+    if (o.kind === 'function') {
+      const kept = (title: string, rows: [string, MemValue][] | undefined) =>
+        rows?.length ? ` ${title}: ${rows.map(([n, v]) => binding(n, v, names)).join(', ')}.` : '';
+      return `${name}.${kept('Captured', o.captured)}${kept('Defaults', o.defaults)}`;
+    }
     const more = o.more > 0 ? `, and ${o.more} more` : '';
     if (o.kind === 'dict') {
       if (o.entries.length === 0) return o.more > 0 ? `${name} holds ${o.more} entries not shown.` : `${name} is empty.`;

@@ -169,4 +169,176 @@ print("done")
 `,
     },
   },
+  {
+    id: 'py-functions',
+    title: 'Two calls: one returns, one prints',
+    code: {
+      python: `def square(n):
+    result = n * n
+    return result
+
+def greet(name):
+    print("Hello,", name)
+
+a = square(4)
+b = greet("Ada")
+print(a, b)
+`,
+    },
+  },
+  {
+    id: 'py-parameters',
+    title: 'Defaults, keyword arguments and *args',
+    code: {
+      python: `def describe(name, sound="moo", times=1):
+    return name + " says " + sound * times
+
+print(describe("cow"))
+print(describe("dog", "woof", 2))
+print(describe("cat", times=3, sound="mew"))
+
+def total(*numbers):
+    result = 0
+    for n in numbers:
+        result += n
+    return result
+
+print(total(4, 5, 6))
+`,
+    },
+  },
+  {
+    id: 'py-scope',
+    title: 'A local name, a global one, and a closure',
+    code: {
+      python: `total = 100
+
+def spend(amount):
+    total = amount * 2
+    return total
+
+def make_counter():
+    n = 0
+    def tick():
+        nonlocal n
+        n += 1
+        return n
+    return tick
+
+print(spend(5), total)
+c = make_counter()
+c()
+print(c())
+`,
+    },
+  },
+  {
+    id: 'py-recursion',
+    title: 'A countdown and a factorial, frame by frame',
+    code: {
+      python: `def countdown(n):
+    if n == 0:
+        print("Go!")
+        return
+    print(n)
+    countdown(n - 1)
+
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+countdown(2)
+print(factorial(3))
+`,
+    },
+  },
+  {
+    id: 'py-lambdas',
+    title: 'Functions passed, returned and made with lambda',
+    code: {
+      python: `def apply_twice(f, x):
+    return f(f(x))
+
+def make_adder(n):
+    return lambda x: x + n
+
+add3 = make_adder(3)
+double = lambda x: x * 2
+print(apply_twice(double, 5))
+print(apply_twice(add3, 1))
+print(max("pear", "fig", "banana", key=len))
+`,
+    },
+  },
+  {
+    id: 'py-lists',
+    title: 'A list changed in place, then sliced',
+    code: {
+      python: `scores = [70, 85, 60]
+scores.append(90)
+scores[0] = 75
+last = scores.pop()
+scores.insert(1, 100)
+top = scores[:2]
+print(scores, last, top)
+print(len(scores), 85 in scores)
+`,
+    },
+  },
+  {
+    id: 'py-references',
+    title: 'Two names for one list, and a copy',
+    code: {
+      python: `a = [1, 2]
+b = a
+c = a.copy()
+b.append(3)
+print(a, c)
+print(a == b, a is b)
+print(a == c, a is c)
+`,
+    },
+  },
+  {
+    id: 'py-references-calls',
+    title: 'A list passed to a function, and a default list',
+    code: {
+      python: `def add_bonus(scores):
+    scores.append(10)
+    scores = [0]
+    return scores
+
+mine = [5, 7]
+result = add_bonus(mine)
+print(mine, result)
+
+def add(item, box=[]):
+    box.append(item)
+    return box
+
+x = add("pen")
+y = add("cup")
+print(x, x is y)
+`,
+    },
+  },
+  {
+    id: 'py-tuples',
+    title: 'Packing, unpacking and swapping',
+    code: {
+      python: `point = (3, 4)
+x, y = point
+x, y = y, x
+print(point, x, y)
+
+def min_max(a, b, c):
+    return min(a, b, c), max(a, b, c)
+
+lo, hi = min_max(5, 2, 9)
+pair = min_max(1, 1, 0)
+print(lo, hi, pair)
+`,
+    },
+  },
 ];

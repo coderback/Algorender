@@ -368,3 +368,66 @@ test('/code groups the exercises by kind', async ({ page }) => {
   await page.goto('/code');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Write it', 'Change it', 'Find the bug']);
 });
+
+// L2 batch 2: what the memory view adds for references, scope and closures, on the Python topics that need it.
+/** Starts the k-th traced program on a lesson page and steps until its narration says `text`. */
+async function traceUntil(page: Page, k: number, text: string, limit = 40) {
+  await page.getByRole('button', { name: 'Run it line by line' }).nth(k).click();
+  const narration = page.getByTestId('narration').nth(k);
+  await expect(narration).toHaveText('The program starts at line 1.', { timeout: 60_000 });
+  const forward = page.getByRole('button', { name: /Step forward/ }).nth(k);
+  for (let i = 0; i < limit && (await narration.textContent()) !== text; i++) await forward.click();
+  await expect(narration).toHaveText(text);
+  return page.getByRole('group', { name: 'Memory', exact: true }).nth(k);
+}
+
+test('py-references: two names for one list share a badged box, and a parameter changes the caller’s list', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/learn/py-references');
+  let memory = await traceUntil(page, 0, 'Line 4 appends 3 to b (the same list as a).');
+  await expect(memory.getByRole('group', { name: 'Objects' })).toContainText('List 1 (changed; shared by a and b) holds 1, 2, 3. List 2 holds 1, 2.');
+  await expect(memory.getByText('shared · a, b')).toBeVisible();
+  memory = await traceUntil(page, 1, 'Line 2 appends 10 to scores (the same list as mine).');
+  await expect(memory.getByRole('group', { name: 'Objects' })).toContainText('shared by mine and scores');
+  // The default list lives on the function, between calls.
+  await traceUntil(page, 1, "Line 11 appends 'pen' to box (the default list kept on add).");
+  await traceUntil(page, 1, 'Line 15 makes x and y name the same list.');
+  await expect(memory.getByRole('group', { name: 'Objects' })).toContainText("Defaults: box refers to list 3.");
+  expect(errors).toEqual([]);
+});
+
+test('py-scope: a local leaves the global alone, and a closure keeps what it captured after its frame ends', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/learn/py-scope');
+  await traceUntil(page, 0, 'Line 4 sets a local total to 10 (not the global total).');
+  const memory = await traceUntil(page, 0, 'make_counter returns tick, which keeps n alive after this call ends.');
+  await traceUntil(page, 0, 'Line 11 sets the n that tick captured to 1.');
+  await expect(memory.getByRole('group', { name: 'Frames' })).toContainText('tick, the current frame: no names yet.');
+  await expect(memory.getByRole('group', { name: 'Objects' })).toContainText('Function tick (changed). Captured: n is 1.');
+  await expect(memory.getByText('captured', { exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const vp of [
+    { name: '1440', width: 1440, height: 900 },
+    { name: '390', width: 390, height: 844 },
+  ] as const) {
+    test(`the memory view's shared badge, captured names and defaults pass axe at ${vp.name} in ${theme}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto(`/learn/py-references?theme=${theme}`);
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await traceUntil(page, 0, 'Line 4 appends 3 to b (the same list as a).');
+      await traceUntil(page, 1, 'Line 15 makes x and y name the same list.');
+      const { violations } = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
+        .analyze();
+      expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, 'horizontal page scroll').toBeLessThanOrEqual(0);
+      const memory = page.getByRole('group', { name: 'Memory', exact: true }).nth(1);
+      await memory.scrollIntoViewIfNeeded();
+      await memory.screenshot({ path: `test-results/redesign/l2-memory-references-${vp.name}-${theme}.png` });
+    });
+  }
+}

@@ -21,7 +21,8 @@ const components: Components = {
   li: (props) => <li className="leading-relaxed" {...clean(props)} />,
   strong: (props) => <strong className="font-semibold text-ink" {...clean(props)} />,
   code: (props) => <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[0.9em] text-ink" {...clean(props)} />,
-  pre: (props) => <pre className="overflow-x-auto rounded-lg border border-line bg-sunken p-3 font-mono text-sm text-ink [&_code]:bg-transparent [&_code]:p-0" {...clean(props)} />,
+  // Focusable, so a long line can be scrolled sideways from the keyboard (WCAG 2.1.1).
+  pre: (props) => <pre tabIndex={0} className="overflow-x-auto rounded-lg border border-line bg-sunken p-3 font-mono text-sm text-ink [&_code]:bg-transparent [&_code]:p-0" {...clean(props)} />,
   a: (props) => {
     const { href = '', ...rest } = clean(props);
     return href.startsWith('/') ? (

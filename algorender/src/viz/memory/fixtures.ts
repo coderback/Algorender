@@ -191,6 +191,54 @@ export const MEMORY_FIXTURES: MemoryFixture[] = [
       output: [],
     },
   },
+  {
+    slug: 'parameter',
+    title: 'A function changes its caller’s list',
+    language: 'python',
+    code: 'def add(items, x):\n    items.append(x)\n\nnums = [1, 2]\nadd(nums, 3)',
+    at: 'Inside add, after the append: items and nums are one list, so nums has changed too.',
+    state: {
+      frames: [
+        { id: 'f0', fn: 'Global frame', locals: [local('add', ref('o1')), local('nums', ref('o2'))], active: false },
+        { id: 'f1', fn: 'add', locals: [local('items', ref('o2')), local('x', num(3))], active: true, returning: { prim: 'None', type: 'none' } },
+      ],
+      heap: [
+        { object: { id: 'o1', kind: 'function', type: 'function', name: 'add' }, changed: false, fresh: false },
+        { object: { id: 'o2', kind: 'list', type: 'list', items: nums(1, 2, 3), more: 0 }, changed: true, fresh: false },
+      ],
+      output: [],
+    },
+  },
+  {
+    slug: 'closure',
+    title: 'A closure outlives its frame',
+    language: 'python',
+    code: 'def counter():\n    count = 0\n    def tick():\n        nonlocal count\n        count += 1\n        return count\n    return tick\n\nc = counter()\nc()\nc()',
+    at: 'After the second c(): counter’s frame is long gone, but tick still holds count.',
+    state: {
+      frames: [{ id: 'f0', fn: 'Global frame', locals: [local('counter', ref('o1')), local('c', ref('o2'))], active: true }],
+      heap: [
+        { object: { id: 'o1', kind: 'function', type: 'function', name: 'counter' }, changed: false, fresh: false },
+        { object: { id: 'o2', kind: 'function', type: 'function', name: 'tick', captured: [['count', num(2)]] }, changed: true, fresh: false },
+      ],
+      output: [],
+    },
+  },
+  {
+    slug: 'mutable-default',
+    title: 'One default list for every call',
+    language: 'python',
+    code: 'def add(x, items=[]):\n    items.append(x)\n    return items\n\na = add(1)\nb = add(2)',
+    at: 'After both calls: the default list lives on the function, so a and b are the same list.',
+    state: {
+      frames: [{ id: 'f0', fn: 'Global frame', locals: [local('add', ref('o1')), local('a', ref('o2')), local('b', ref('o2'), true)], active: true }],
+      heap: [
+        { object: { id: 'o1', kind: 'function', type: 'function', name: 'add', defaults: [['items', ref('o2')]] }, changed: false, fresh: false },
+        { object: { id: 'o2', kind: 'list', type: 'list', items: nums(1, 2), more: 0 }, changed: false, fresh: false },
+      ],
+      output: [],
+    },
+  },
 ];
 
 export function fixture(slug: string): MemoryFixture {

@@ -1,0 +1,177 @@
+<Section step="hook" title="Calls that say what they mean">
+
+In the topic on `for` loops you wrote `print(i, end=" ")`. That `end=" "` is a **keyword argument**: `end` has a value
+of its own, a new line, which you only give when you want something else. (`print` has another, `sep`, the text
+between its values: `print("a", "b", sep="-")` prints `a-b`.) Your own functions can work the same way, with values
+that have sensible defaults and arguments you can name.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="positional argument">An argument given without a name. They fill the parameters in order: the first goes to the first parameter, and so on.</Term>
+  <Term name="keyword argument">An argument given as `name=value`. It goes to the parameter with that name, wherever it sits in the call.</Term>
+  <Term name="default value">A value a parameter takes when a call leaves it out, set in the `def` line: `times=1`.</Term>
+  <Term name="*args">A parameter written with a star, like `*numbers`. It collects any number of extra positional arguments into one group.</Term>
+</Terms>
+
+```python
+def describe(name, sound="moo", times=1):
+    return name + " says " + sound * times
+
+describe("cow")                         # sound and times take their defaults
+describe("dog", "woof", 2)              # filled in order
+describe("cat", times=3, sound="mew")   # named, in any order
+```
+
+A parameter with a default can be left out of a call. In the `def` line, parameters with defaults must come after
+the ones without: `def f(a=1, b):` is a `SyntaxError`, because a call like `f(5)` couldn't say which parameter the 5
+is for.
+
+In a call, positional arguments come first, then keyword ones. Each parameter gets one value: `describe("cat",
+name="Tom")` is a `TypeError`, because `name` would be given twice.
+
+A starred parameter collects whatever extra positional arguments a call brings, as a **tuple**, a fixed group of
+values you can loop over with `for` (you'll meet tuples properly in unit 4):
+
+```python
+def total(*numbers):
+    result = 0
+    for n in numbers:
+        result += n
+    return result
+
+total(4, 5, 6)   # numbers is (4, 5, 6), so it returns 15
+total()          # numbers is empty, so it returns 0
+```
+
+Its cousin `**kwargs` collects extra **keyword** arguments, by name, into a dictionary. Dictionaries come in unit 4.
+
+</Section>
+
+<Section step="see" title="Watch the parameters fill">
+
+Step through it. The function's box in the memory view keeps its default values. Each call's frame shows which
+value each parameter got, whether by position, by name or from its default.
+
+<TraceCode snippet="py-parameters" />
+
+<KeyIdea>
+
+**Positional arguments fill the parameters in order; keyword arguments fill them by name; a parameter left out takes
+its default.** A starred parameter collects the extra positional arguments.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-power-defaults" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="keywords-by-position"
+  title="Keyword arguments still fill the parameters in order"
+  probes={[
+    {
+      q: 'def f(a, b): return a - b. What does f(b=1, a=5) return?',
+      choices: ['4', '-4', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'Named arguments go to the parameters with those names: a is 5 and b is 1, so 5 - 1 is 4.',
+    },
+    {
+      q: 'def show(first, last): print(first, last). What does show(last="Lovelace", first="Ada") print?',
+      choices: ['Ada Lovelace', 'Lovelace Ada', 'An error'],
+      answer: 0,
+      trap: 1,
+      why: 'first is "Ada" and last is "Lovelace", whatever order the call names them in.',
+    },
+  ]}
+>
+
+A keyword argument goes to the parameter with its name. Its place in the call doesn't matter. Only arguments
+without names are matched by order. That's why naming arguments makes calls easier to read: `price_after(price=200,
+discount=10)` can't be mixed up.
+
+</Misconception>
+
+<Misconception
+  id="default-anywhere"
+  title="A parameter with a default can go anywhere in the def line"
+  probes={[
+    {
+      q: 'Which of these def lines does Python accept?',
+      choices: ['def f(a, b=2):', 'def f(a=1, b):', 'Both'],
+      answer: 0,
+      trap: 2,
+      why: 'Parameters with defaults have to come after the ones without, so def f(a=1, b): is a SyntaxError.',
+    },
+    {
+      q: 'What happens when Python reads def f(x=0, y):?',
+      choices: ['A SyntaxError: y has no default but comes after x, which has one', 'x gets 0, and every call must give y', 'y gets 0 too'],
+      answer: 0,
+      trap: 1,
+      why: 'Python refuses the line: a call like f(5) couldn’t say whether 5 is for x or y.',
+    },
+  ]}
+>
+
+Parameters without defaults come first, then the ones with defaults. Otherwise a call with fewer arguments would be
+ambiguous, so Python stops at the `def` line with a `SyntaxError` before anything runs.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'def f(a, b=10): return a + b. What does f(1) return?',
+      choices: ['11', '1', 'An error: b is missing'],
+      answer: 0,
+      why: 'b is left out, so it takes its default, 10.',
+    },
+    {
+      q: 'def div(a, b): return a // b. What does div(b=2, a=10) return?',
+      choices: ['5', '0', 'An error'],
+      answer: 0,
+      why: 'a is 10 and b is 2 by name, so 10 // 2 is 5.',
+      traps: { 1: 'keywords-by-position' },
+    },
+    {
+      q: 'Is def f(a=1, b): allowed?',
+      choices: ['No: parameters with defaults come after the ones without', 'Yes: b simply has no default'],
+      answer: 0,
+      why: 'It is a SyntaxError. Put b first: def f(b, a=1):.',
+      traps: { 1: 'default-anywhere' },
+    },
+    {
+      q: 'def count(*items): return len(items). What does count(4, 5, 6) return?',
+      choices: ['3', '1', '15'],
+      answer: 0,
+      why: 'The star collects all three arguments into one group of 3 items.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-parameters" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Positional arguments fill the parameters in order; keyword arguments fill them by name.
+- A parameter with a default can be left out; such parameters come after the ones without.
+- Each parameter gets exactly one value.
+- `*args` collects extra positional arguments, and `**kwargs` extra keyword ones.
+
+</Section>

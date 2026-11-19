@@ -27,8 +27,9 @@ const components: MDXComponents = {
       <a href={href} target="_blank" rel="noopener" className="font-medium text-accent-ink underline decoration-accent-line underline-offset-2" {...props} />
     ),
   code: (props) => <code className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[0.9em] text-ink" {...props} />,
+  // Focusable, so a line too long for a phone can be scrolled sideways from the keyboard (WCAG 2.1.1).
   pre: (props) => (
-    <pre className="overflow-x-auto rounded-well bg-code p-5 font-mono text-[13px] leading-6 text-code-ink [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-inherit" {...props} />
+    <pre tabIndex={0} className="overflow-x-auto rounded-well bg-code p-5 font-mono text-[13px] leading-6 text-code-ink [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-inherit" {...props} />
   ),
   blockquote: (props) => <blockquote className="rounded-r-well border-l-4 border-accent-line bg-surface py-3 pr-4 pl-4 text-ink-soft" {...props} />,
   hr: () => <hr className="my-8 border-line-soft" />,

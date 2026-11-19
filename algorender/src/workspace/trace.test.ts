@@ -366,7 +366,7 @@ const n = 1;
     expect([local(aliased.state, 'nums')!.changed, local(aliased.state, 'other')!.changed]).toEqual([false, true]);
     expect(aliased.state.heap).toMatchObject([{ fresh: false, changed: false }]);
     expect(local(aliased.state, 'nums')!.value).toEqual(local(aliased.state, 'other')!.value);
-    expect(pushed.note).toBe('Line 3 appends 3 to nums.');
+    expect(pushed.note).toBe('Line 3 appends 3 to nums (the same array as other).');
     expect(pushed.state.heap).toMatchObject([{ fresh: false, changed: true }]);
     expect(pushed.state.frames[0].locals.map((l) => l.changed)).toEqual([false, false]);
     expect(end.note).toBe('Line 4 sets n to 1.');
@@ -473,7 +473,7 @@ grow(nums);
 `);
     expect(notes(grow)).toContain('Line 5 calls grow(nums).');
     // Falling off the end after a change says both.
-    expect(notes(grow)).toContain('Line 2 appends 4 to items, and grow returns undefined.');
+    expect(notes(grow)).toContain('Line 2 appends 4 to items (the same array as nums), and grow returns undefined.');
     const first = lines(
       `function first(arr, n) {
   return arr[n];
@@ -492,6 +492,36 @@ grow(nums);
       'first returns 5.',
       'Your function finished and returned 5.',
     ]);
+  });
+
+  it('draws what a closure captured on its object, keeps an arrow’s name, and narrates scope', () => {
+    const r = lines(`let total = 0;
+function counter() {
+  let count = 0;
+  const inc = () => {
+    count += 1;
+    total += 1;
+    return count;
+  };
+  return inc;
+}
+const tick = counter();
+tick();
+function shadow() {
+  let total = 5;
+  return total;
+}
+shadow();
+`);
+    const said = notes(r);
+    expect(said).toContain('Line 4 defines inc, which captures count.');
+    expect(said).toContain('counter returns inc, which keeps count alive after this call ends.');
+    expect(said).toContain('Line 5 sets the count that inc captured to 1.');
+    // total is a top-level name, not captured: setting it from inside is setting the global.
+    expect(said).toContain('Line 6 sets the global total to 1.');
+    expect(said).toContain('Line 14 sets a local total to 5 (not the global total).');
+    const step = r.events.findLast((e) => e.kind === 'step' && e.stack.length > 1 && e.stack.at(-1)!.fn === 'inc');
+    expect(step && step.kind === 'step' && step.heap.find((o) => o.kind === 'function' && o.name === 'inc')).toMatchObject({ captured: [['count', { prim: '1' }]] });
   });
 
   it('follows an exception out of each frame, says when it is caught, and ends on the error', () => {

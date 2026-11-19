@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { CONTRACT, drawnSteps, entryFor, expectedSteps, expectedTests, fileStem, filesFor, stepProblems, testsFor } from '../contract';
 import {
   type Arg,
+  type HeapObject,
   DEFAULT_LIMITS,
   type Limits,
   MAX_DEPTH,
@@ -24,6 +25,7 @@ import {
   type RunResult,
 } from '../protocol';
 import { cpuTime } from '@/testing/timing';
+import { traceLines } from '../lines';
 import { HARNESS } from './harness';
 
 let pyodide: PyodideInterface;
@@ -899,5 +901,44 @@ describe("'program' mode", () => {
   it('writes what the tests print to stdout', () => {
     const r = program(`def hi():\n    print("hi")\n`, { tests: `def test_hi():\n    hi()\n` });
     expect(r.stdout).toBe('hi\n');
+  });
+});
+
+describe("'lines' mode: references, scope and closures", () => {
+  const notes = (code: string) => traceLines(run(code, '', [], {}, 'lines'), { code })!.frames.map((f) => f.note);
+
+  it('says when a function sets a global, or makes a local that leaves the global alone', () => {
+    expect(notes(`count = 0\ndef bump():\n    global count\n    count += 1\nbump()\n`)).toContain('Line 4 sets the global count to 1, and bump returns None.');
+    expect(notes(`total = 10\ndef f():\n    total = 5\n    return total\nf()\n`)).toContain('Line 3 sets a local total to 5 (not the global total).');
+  });
+
+  it('says what a closure captures, that it keeps it alive, and when it changes it', () => {
+    const said = notes(`def counter():\n    count = 0\n    def tick():\n        nonlocal count\n        count += 1\n        return count\n    return tick\nc = counter()\nc()\n`);
+    expect(said).toContain('Line 3 defines tick, which captures count.');
+    expect(said).toContain('counter returns tick, which keeps count alive after this call ends.');
+    expect(said).toContain('Line 5 sets the count that tick captured to 1.');
+  });
+
+  it('tells a change through the name the line used, and an insert or removal in the middle', () => {
+    expect(notes(`a = [1]\nb = a\nb.append(2)\n`)).toContain('Line 3 appends 2 to b (the same list as a).');
+    expect(notes(`nums = [1, 3]\nnums.insert(1, 2)\nnums.remove(2)\n`)).toEqual(expect.arrayContaining(['Line 2 inserts 2 into nums at index 1.', 'Line 3 removes 2 from nums at index 1.']));
+  });
+
+  it('says a change through a parameter reaches the caller’s list', () => {
+    expect(notes(`def add(items, x):\n    items.append(x)\nnums = [1]\nadd(nums, 2)\n`)).toContain('Line 2 appends 2 to items (the same list as nums), and add returns None.');
+  });
+
+  it('keeps a default list on the function, so every call shares it', () => {
+    const r = run(`def add(x, items=[]):\n    items.append(x)\n    return items\na = add(1)\nb = add(2)\n`, '', [], {}, 'lines');
+    const steps = r.events.filter((e): e is Extract<RunEvent, { kind: 'step' }> => e.kind === 'step');
+    const fn = (s: (typeof steps)[number]) => s.heap.find((o) => o.kind === 'function' && o.name === 'add') as Extract<HeapObject, { kind: 'function' }>;
+    const defaults = steps.map((s) => fn(s)?.defaults?.[0]);
+    // Made once, by def: one list, the same on every step after it.
+    const ids = new Set(defaults.flatMap((d) => (d && 'ref' in d[1] ? [d[1].ref] : [])));
+    expect(ids.size).toBe(1);
+    expect(defaults.at(-1)?.[0]).toBe('items');
+    const list = steps.at(-1)!.heap.find((o) => o.id === [...ids][0]);
+    expect(list).toMatchObject({ kind: 'list', items: [{ prim: '1' }, { prim: '2' }] });
+    expect(traceLines(r)!.frames.map((f) => f.note)).toContain('Line 2 appends 2 to items (the same list as a).');
   });
 });

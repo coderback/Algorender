@@ -300,7 +300,26 @@ export type HeapObject =
   | { id: string; kind: 'list' | 'tuple' | 'set'; type: string; items: MemValue[]; more: number }
   | { id: string; kind: 'dict'; type: string; entries: [MemValue, MemValue][]; more: number }
   | { id: string; kind: 'object'; type: string; fields: [string, MemValue][]; more: number }
-  | { id: string; kind: 'function'; type: string; name: string };
+  | {
+      id: string;
+      kind: 'function';
+      type: string;
+      name: string;
+      /**
+       * 'lines' mode: the names a function made inside another function uses
+       * from it (or from the functions around that), with their values now,
+       * in name order: its closure, which outlives the frame that made it.
+       * Left out when it captures nothing; top-level names are never captured.
+       */
+      captured?: [string, MemValue][];
+      /**
+       * 'lines' mode, Python only: the parameters' default values, in
+       * parameter order, made once when `def` ran and kept on the function (so
+       * a list default is the same list on every call). JavaScript works a
+       * default out again on every call, so it has none to show.
+       */
+      defaults?: [string, MemValue][];
+    };
 
 /** One call on the stack, outermost first in a step's `stack`. */
 export type StackFrame = {

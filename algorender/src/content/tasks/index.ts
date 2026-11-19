@@ -1,7 +1,9 @@
 import expectedFile from './expected.json';
 import { TaskSchema, type ExpectedFile, type Task, type TaskInput } from '@/tasks/schema';
 import { PYTHON_BASICS } from './python-basics';
+import { PYTHON_COLLECTIONS } from './python-collections';
 import { PYTHON_CONTROL } from './python-control';
+import { PYTHON_FUNCTIONS } from './python-functions';
 
 // The language tracks' tasks (src/tasks/schema.ts), one file per unit of a
 // track (src/content/units.ts). A topic (a lesson on a language track) ends
@@ -13,7 +15,7 @@ import { PYTHON_CONTROL } from './python-control';
 // `npm run tasks:expected` writes expected.json, and tasks.test.ts fails when
 // it is stale.
 
-const SOURCES: TaskInput[] = [...PYTHON_BASICS, ...PYTHON_CONTROL];
+const SOURCES: TaskInput[] = [...PYTHON_BASICS, ...PYTHON_CONTROL, ...PYTHON_FUNCTIONS, ...PYTHON_COLLECTIONS];
 
 export const tasks: readonly Task[] = SOURCES.map((t) => TaskSchema.parse(t));
 

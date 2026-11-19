@@ -43,6 +43,11 @@
 //   variables until that line has passed, like Python's def: hoisting would
 //   otherwise show every function before the code reaches it.
 // - Captures include `_names` (visual events still leave them out).
+// - A function made inside another function that uses names from it (or from
+//   the functions around that) becomes __viz.closure(fn, reader, "name"): the
+//   reader reads those names, sorted, so the function's object can show what
+//   it captured after the frame that made it is gone (Python's __closure__).
+//   Top-level names aren't captured, as Python's globals aren't.
 
 import { parse } from 'acorn';
 import { generate } from 'astring';
@@ -289,6 +294,90 @@ function functionNames(body: ES.Node[]): string[] {
   return out;
 }
 
+/**
+ * Every name a function declares anywhere in its own body (params, var, let,
+ * const, function, class, catch params, at any block depth), but not in the
+ * functions inside it. Block scope is flattened: close enough for working out
+ * what a function captures, which only asks which names come from outside.
+ */
+function declaredIn(f: AnyFunction): Set<string> {
+  const out = new Set(boundNames({ type: 'ArrayPattern', elements: f.params }));
+  if (f.type === 'FunctionExpression' && f.id) out.add(f.id.name);
+  const visit = (n: ES.Node) => {
+    switch (n.type) {
+      case 'VariableDeclaration':
+        for (const name of declarationNames(n)) out.add(name);
+        break;
+      case 'FunctionDeclaration':
+      case 'ClassDeclaration':
+        if (n.id) out.add(n.id.name);
+        if (n.type === 'FunctionDeclaration') return; // its body is its own
+        break;
+      case 'CatchClause':
+        for (const name of boundNames(n.param)) out.add(name);
+        break;
+      case 'FunctionExpression':
+      case 'ArrowFunctionExpression':
+        return;
+      default:
+        break;
+    }
+    eachChild(n, visit);
+  };
+  visit(f.body);
+  return out;
+}
+
+/** The names a function reads or writes that it doesn't declare itself (nor do the functions inside it, for theirs). */
+function freeNames(f: AnyFunction, out = new Set<string>()): Set<string> {
+  const own = declaredIn(f);
+  const visit = (n: ES.Node) => {
+    switch (n.type) {
+      case 'Identifier':
+        if (!own.has(n.name)) out.add(n.name);
+        return;
+      case 'FunctionDeclaration':
+      case 'FunctionExpression':
+      case 'ArrowFunctionExpression':
+        for (const name of freeNames(n)) if (!own.has(name)) out.add(name);
+        return;
+      case 'MemberExpression':
+        visit(n.object);
+        if (n.computed) visit(n.property);
+        return;
+      case 'Property':
+      case 'PropertyDefinition':
+      case 'MethodDefinition':
+        if (n.computed) visit(n.key);
+        if (n.value) visit(n.value);
+        return;
+      case 'LabeledStatement':
+        visit(n.body);
+        return;
+      case 'BreakStatement':
+      case 'ContinueStatement':
+      case 'MetaProperty':
+        return;
+      default:
+        eachChild(n, visit);
+    }
+  };
+  for (const p of f.params) visit(p);
+  visit(f.body);
+  return out;
+}
+
+/** Calls `visit` on each child node of `n`. */
+function eachChild(n: ES.Node, visit: (child: ES.Node) => void) {
+  const fields = n as unknown as Record<string, unknown>;
+  for (const key of Object.keys(fields)) {
+    if (SKIP_KEYS.has(key)) continue;
+    const v = fields[key];
+    if (Array.isArray(v)) v.forEach((x) => isNode(x) && visit(x));
+    else if (isNode(v)) visit(v);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // The rewrite
 // ---------------------------------------------------------------------------
@@ -381,7 +470,11 @@ class Instrumenter {
    * reads each visible name, skipping ones still in their temporal dead zone.
    */
   private capture(): ES.Expression {
-    const names = this.visible();
+    return this.reader(this.visible());
+  }
+
+  /** The reader of these names, or null for none (shared between sites that read the same names). */
+  private reader(names: string[]): ES.Expression {
     if (names.length === 0) return lit(null);
     const key = names.join(',');
     const cached = this.captures.get(key);
@@ -405,6 +498,31 @@ class Instrumenter {
     const fn: ES.ArrowFunctionExpression = { type: 'ArrowFunctionExpression', params: [], body: block(body), expression: false, generator: false, async: false };
     this.captures.set(key, fn);
     return fn;
+  }
+
+  /**
+   * 'lines' mode: the names a function made here uses from the functions
+   * around it, sorted (Python's co_freevars, in name order): what it captures,
+   * drawn on the function's object. Names from the top level aren't captured,
+   * as in Python, where they are globals.
+   */
+  private captured(f: AnyFunction): string[] {
+    if (!this.lines) return [];
+    const chain: Scope[] = [];
+    for (let s: Scope | null = this.scope; s?.parent; s = s.parent) chain.unshift(s);
+    const outer = new Set<string>();
+    let inFunction = false;
+    for (const s of chain) {
+      inFunction ||= s.fn;
+      if (inFunction) for (const name of s.names) outer.add(name);
+    }
+    if (outer.size === 0) return [];
+    return [...freeNames(f)].filter((name) => outer.has(name)).sort();
+  }
+
+  /** `__viz.closure(fn, reader, "name")`: the function, marked with what it captures and named as it would have been. */
+  private closure(fn: ES.Expression, names: string[], name: string | null): ES.CallExpression {
+    return vizCall('closure', [fn, this.reader(names), lit(name)]);
   }
 
   private marker(line: number): ES.Statement {
@@ -438,7 +556,9 @@ class Instrumenter {
         // Hoisted: nothing runs where it is written, but a step passes over it, like a def.
         if (this.steps) out.push(this.marker(lineOf(s)));
         if (s.id) this.scope.pending?.delete(s.id.name);
+        const captured = this.captured(s);
         out.push(this.statement(s));
+        if (s.id && captured.length > 0) out.push(exprStmt(this.closure(id(s.id.name), captured, null)));
       } else out.push(...this.marked(s));
     }
     return out;
@@ -732,9 +852,12 @@ class Instrumenter {
         if (COMPARISONS.has(n.operator)) return this.compare(n) as unknown as T;
         break;
       case 'FunctionExpression':
-      case 'ArrowFunctionExpression':
+      case 'ArrowFunctionExpression': {
+        const captured = this.captured(n);
+        const name = (n.type === 'FunctionExpression' && n.id?.name) || this.names.get(n) || null;
         this.func(n);
-        return n;
+        return (captured.length > 0 ? this.closure(n, captured, name) : n) as unknown as T;
+      }
       case 'ClassExpression':
         this.cls(n);
         return n;

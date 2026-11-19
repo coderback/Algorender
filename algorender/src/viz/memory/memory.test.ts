@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { describeFrames, describeMemory, describeObjects, objectNames } from './describe';
+import { describeFrames, describeMemory, describeObjects, objectNames, sharedNames } from './describe';
 import { fixture, MEMORY_FIXTURES } from './fixtures';
 import { arrowPath, clampInto, framePath, lanePath, targetPoint, targetPointRight } from './geometry';
 import { MemoryView } from './MemoryView';
@@ -33,8 +33,28 @@ describe('describeMemory', () => {
 
   it('gives two names for one list the same object name', () => {
     expect(describeMemory(fixture('aliasing').state)).toBe(
-      'Global frame, the current frame: a refers to list 1, b refers to list 1. List 1 holds 1, 2, 3, 4.',
+      'Global frame, the current frame: a refers to list 1, b refers to list 1. List 1 (shared by a and b) holds 1, 2, 3, 4.',
     );
+  });
+
+  it('says a list passed as an argument is shared by the caller’s name and the parameter', () => {
+    expect(describeObjects(fixture('parameter').state)).toBe('Function add. List 1 (changed; shared by nums and items) holds 1, 2, 3.');
+    expect(sharedNames(fixture('parameter').state)).toEqual(new Map([['o2', 'nums, items']]));
+  });
+
+  it('says one name in several frames once, with how many frames', () => {
+    const state: MemoryState = {
+      frames: ['f0', 'f1', 'f2'].map((id, k) => ({ id, fn: k ? 'fill' : 'Global frame', locals: [{ name: 'arr', value: { ref: 'o1' }, changed: false }], active: k === 2 })),
+      heap: [{ object: { id: 'o1', kind: 'list', type: 'list', items: [], more: 0 }, changed: false, fresh: false }],
+      output: [],
+    };
+    expect(sharedNames(state).get('o1')).toBe('arr in 3 frames');
+    expect(describeObjects(state)).toBe('List 1 (shared by arr in 3 frames) is empty.');
+  });
+
+  it('reads what a closure captured and what defaults a function keeps', () => {
+    expect(describeObjects(fixture('closure').state)).toBe('Function counter. Function tick (changed). Captured: count is 2.');
+    expect(describeObjects(fixture('mutable-default').state)).toBe('Function add. Defaults: items refers to list 1. List 1 (shared by a and b) holds 1, 2.');
   });
 
   it('reads dicts, instances and nested lists, numbering objects but not functions', () => {
@@ -74,7 +94,7 @@ describe('describeMemory', () => {
     expect(describeMemory(fixture('fresh-and-changed').state)).toBe(
       'Global frame: split_first refers to function split_first, nums refers to list 1. ' +
         'split_first, the current frame: nums refers to list 1, head is 4 (changed), rest refers to list 2 (changed). ' +
-        'Function split_first. List 1 holds 4, 8, 15, 16. List 2 (new) holds 8, 15, 16.',
+        'Function split_first. List 1 (shared by nums in 2 frames) holds 4, 8, 15, 16. List 2 (new) holds 8, 15, 16.',
     );
   });
 
@@ -221,6 +241,19 @@ describe('MemoryView', () => {
     expect(count(fresh, '>↓<')).toBe(2);
     expect(render(fixture('straight-line').state)).toContain('↓ changed');
     expect(render(fixture('recursion').state)).toContain('Return value');
+  });
+
+  it('badges an object two names share, and draws a closure’s captured names and a function’s defaults with arrows', () => {
+    expect(text(render(fixture('aliasing').state))).toContain('shared · a, b');
+    expect(text(render(fixture('recursion').state))).not.toContain('shared ·');
+    const closure = render(fixture('closure').state);
+    expect(closure).toContain('>captured<');
+    expect(text(closure)).toContain('>count<');
+    const defaults = render(fixture('mutable-default').state);
+    expect(defaults).toContain('>defaults<');
+    // The default's arrow leaves the function's box for the list a and b share.
+    expect(defaults).toContain('data-src="o:o1=items"');
+    expect(defaults).toContain('data-arrow="o:o1=items" data-to="o2"');
   });
 
   it('indexes list and tuple cells but not set cells', () => {

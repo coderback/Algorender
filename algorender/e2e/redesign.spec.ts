@@ -122,6 +122,12 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'l2-topic-loops', path: '/learn/py-nested-loops' },
   { name: 'l2-learn-languages', path: '/learn?area=languages' },
   { name: 'l2-task-fill', path: '/learn/tasks/py-is-even' },
+  // L2 batch 2: the flagship references topic, scope (closures), lists, and a function task and a tests task.
+  { name: 'l2-topic-references', path: '/learn/py-references' },
+  { name: 'l2-topic-scope', path: '/learn/py-scope' },
+  { name: 'l2-topic-lists', path: '/learn/py-lists' },
+  { name: 'l2-task-function', path: '/learn/tasks/py-sum-to' },
+  { name: 'l2-task-tests', path: '/learn/tasks/py-make-multiplier' },
 ];
 
 const VIEWPORTS = [

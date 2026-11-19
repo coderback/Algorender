@@ -85,4 +85,62 @@ export const PYTHON_TOPICS: readonly LessonMeta[] = [
     summary: 'The inner loop runs all the way through for every turn of the outer one, so the work multiplies; and break leaves only the loop it’s in.',
     minutes: 14,
   },
+  // Unit 3: Functions
+  {
+    slug: 'py-functions',
+    title: 'Functions: def, return and None',
+    concept: 'py-functions',
+    summary: 'Naming a piece of work with def, calling it with arguments, and why printing an answer is not the same as returning it.',
+    minutes: 14,
+  },
+  {
+    slug: 'py-parameters',
+    title: 'Parameters: defaults, keywords and *args',
+    concept: 'py-parameters',
+    summary: 'Arguments by position or by name, parameters with default values, and a starred parameter that takes any number of arguments.',
+    minutes: 12,
+  },
+  {
+    slug: 'py-scope',
+    title: 'Scope: local, global and closures',
+    concept: 'py-scope',
+    summary: 'Which name a line means, why setting a name in a function makes a new one, global and nonlocal, and functions that keep their enclosing names alive.',
+    minutes: 15,
+  },
+  {
+    slug: 'py-recursion',
+    title: 'Recursion: a function that calls itself',
+    concept: 'py-recursion',
+    summary: 'Each call with its own frame and names, the base case that stops them, and the work done on the way down and back up.',
+    minutes: 14,
+  },
+  {
+    slug: 'py-lambdas',
+    title: 'Lambdas and functions as values',
+    concept: 'py-lambdas',
+    summary: 'Passing a function without calling it, small functions made with lambda, and key= to say what max and min compare.',
+    minutes: 14,
+  },
+  // Unit 4: Collections
+  {
+    slug: 'py-lists',
+    title: 'Lists: ordered and changeable',
+    concept: 'py-lists',
+    summary: 'Indexing, the methods that change a list in place (and give back None), and slices that make new lists.',
+    minutes: 14,
+  },
+  {
+    slug: 'py-references',
+    title: 'References: two names, one list',
+    concept: 'py-references',
+    summary: 'Why = never copies a list, is against ==, shallow and deep copies, lists passed to functions, and the shared default list.',
+    minutes: 16,
+  },
+  {
+    slug: 'py-tuples',
+    title: 'Tuples: fixed groups and unpacking',
+    concept: 'py-tuples',
+    summary: 'Groups of values that can’t change, unpacking them into names, swapping in one line, and returning several values at once.',
+    minutes: 12,
+  },
 ];
