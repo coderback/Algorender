@@ -5,6 +5,9 @@ import { FiArrowRight, FiCheckCircle } from 'react-icons/fi';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { markComplete, useProgress } from './progress';
 
+// A long next title wraps inside the pill instead of pushing the page sideways on a phone.
+const WRAPS = 'h-auto min-h-11 shrink whitespace-normal py-2.5 text-left';
+
 /**
  * The end of a lesson: back to the path, and finishing it, which marks it
  * complete and moves on to the next lesson when there is one. A finished
@@ -25,7 +28,7 @@ export function LessonFinish({ slug, next }: { slug: string; next?: { href: stri
               Completed
             </Button>
             {next && (
-              <ButtonLink href={next.href} trailing={<FiArrowRight aria-hidden />}>
+              <ButtonLink href={next.href} className={WRAPS} trailing={<FiArrowRight aria-hidden />}>
                 Next: {next.title}
               </ButtonLink>
             )}
@@ -33,6 +36,7 @@ export function LessonFinish({ slug, next }: { slug: string; next?: { href: stri
         ) : (
           <Button
             aria-pressed={false}
+            className={WRAPS}
             trailing={<FiArrowRight aria-hidden />}
             onClick={() => {
               markComplete(slug, true);
