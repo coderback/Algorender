@@ -1,0 +1,280 @@
+<Section step="hook" title="Does a new column add anything?">
+
+A table of furniture has a column for each item's length in metres and another for the same length in centimetres.
+That looks like two pieces of information, but the second column is just the first one times 100: it tells a model
+nothing new. In a big table this kind of repeat is rarely so easy to spot. A column can be a mix of three others.
+
+This lesson gives the tools for asking “what is really new here?”. The **span** of some vectors is everywhere their
+combinations can reach. Vectors are **independent** when none of them is a mix of the others, and the **rank** of a
+matrix counts how many independent directions its columns give. Elimination, from the last lesson, counts it for you.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="combination">Any $a \cdot u + b \cdot v$: some amount of $u$ plus some amount of $v$, where $a$ and $b$ are ordinary numbers (they can be negative or fractions).</Term>
+  <Term name="span">Every point the combinations can reach. Written $\text{span}\{u, v\}$.</Term>
+  <Term name="independent">No vector in the set is a combination of the others. Two vectors are independent when neither is a multiple of the other.</Term>
+  <Term name="basis">A set of independent vectors that spans the whole space. Every point then has exactly one recipe $(a, b)$.</Term>
+  <Term name="pivot">In elimination, the non-zero entry used to clear the entries below it. Each row holds at most one, and so does each column.</Term>
+  <Term name="staircase (echelon) form">What elimination leaves: every entry below a pivot is 0, and each pivot sits to the right of the one above it, so the pivots step down like a staircase.</Term>
+  <Term name="rank">How many independent directions a matrix's columns give. It equals the number of pivots elimination finds.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Two directions reach the plane">
+
+<Explore slug="span" settings={{ preset: 'span' }} caption="Start with u = (2, 1) on its own, then add v = (1, 2) and look at every combination of the two. Where does w = (0, 3) fit in?" />
+
+One vector reaches only a line: every multiple $a \cdot u$ of $u = (2, 1)$ lies on the line through the origin and $u$.
+Add $v = (1, 2)$ and combine them. Two $u$'s and then one $v$ from its tip:
+
+$$
+2u + v = (4, 2) + (1, 2) = (5, 4)
+$$
+
+The whole-number combinations sit on a tilted grid, and fractions fill the gaps between its lines, so $u$ and $v$
+together reach every point of the plane. To reach $w = (0, 3)$, find $a$ and $b$ with $a \cdot u + b \cdot v = w$.
+That is one equation per part:
+
+$$
+\begin{aligned} 2a + b &= 0 \\ a + 2b &= 3 \end{aligned}
+$$
+
+Its answer is $a = -1$, $b = 2$: back one $u$, then forward two $v$'s, and $-u + 2v = (-2, -1) + (2, 4) = (0, 3)$.
+
+Put $u$ and $v$ side by side as the columns of a matrix. A matrix times a vector $(a, b)$ is $a$ times its first
+column plus $b$ times its second, which is exactly a combination:
+
+$$
+\begin{aligned} &\begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix} \begin{bmatrix} a \\ b \end{bmatrix} \\ &= a \begin{bmatrix} 2 \\ 1 \end{bmatrix} + b \begin{bmatrix} 1 \\ 2 \end{bmatrix} \end{aligned}
+$$
+
+So solving for the recipe is exactly the $Ax = b$ of the last lesson, with $u$ and $v$ as the columns of the matrix.
+Its determinant is $\det\,[u\ v] = 3$, not 0, so there is exactly one answer.
+
+<KeyIdea>
+
+**Two vectors in the plane span all of it, unless one is a multiple of the other.** Then they are a **basis**: every
+point has exactly one recipe $(a, b)$, and $\det\,[u\ v] \neq 0$.
+
+</KeyIdea>
+
+Now make $v$ a multiple of $u$. Here $v = (-2, -1)$, which is $-u$: the same line, pointing the other way.
+
+<Explore slug="span" settings={{ preset: 'parallel' }} caption="u = (2, 1) and v = (−2, −1), with a target w = (1, 3). Predict where the combinations can reach before you step." />
+
+Every $a \cdot u + b \cdot v$ is now just some amount of $u$, so the tilted grid collapses onto one line and
+$\det\,[u\ v] = 0$. The point $w = (1, 3)$ is off that line, so no recipe reaches it. The closest point on the line is
+$(2, 1)$, still $2.24$ away. Points that are on the line have many recipes instead of one, because some $u$ can always be
+traded for some $v$. Two vectors, but only one direction: they are **dependent**, and they are not a basis.
+
+<Misconception
+  id="two-always-span"
+  title="Any two vectors span the plane"
+  probes={[
+    {
+      q: 'Do the combinations of u = (1, 3) and v = (2, 6) reach every point of the plane?',
+      choices: ['Yes: there are two of them', 'No: v = 2u, so they reach only a line', 'No: only the points between u and v, since a and b must be positive'],
+      answer: 1,
+      trap: 0,
+      why: 'v is twice u, so every a·u + b·v is (a + 2b)·u: always on u’s line. Two vectors give two directions only when neither is a multiple of the other.',
+    },
+    {
+      q: 'u = (3, −1) and v = (−6, 2). How many independent directions do they give?',
+      choices: ['2', '1', '0'],
+      answer: 1,
+      trap: 0,
+      why: 'v = −2u, the same line pointing the other way, so together they give one direction.',
+    },
+  ]}
+>
+
+Counting vectors is not counting directions. Two vectors give two directions only if neither is a multiple of the
+other; if one is, every combination stays on a single line. The quick test for two vectors in the plane: put them side
+by side as a matrix. $\det\,[u\ v] = 0$ means they lie on one line.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: rank by elimination">
+
+With more than two vectors, or vectors with more than two parts, drawing stops working, and elimination takes over.
+Put the vectors in a matrix $A$ as its columns. The rank of $A$ is how many independent directions those columns give,
+and every pivot elimination finds is one of them. Swapping rows and subtracting a multiple of one row from another
+never change the rank. The reason: a row operation does the same thing to every column at once. If column 2 is twice
+column 1 before it, then after it column 2 is still twice column 1, so the columns keep exactly the same mixes.
+
+<Explore slug="span" settings={{ preset: 'rank' }} caption="Elimination on a 3×3 matrix, column by column. Watch which columns get a pivot." />
+
+$$
+A = \begin{bmatrix} 1 & 2 & 1 \\ 2 & 4 & 3 \\ 3 & 6 & 5 \end{bmatrix}
+$$
+
+The first pivot is the 1 in the top-left corner. Subtracting $2$ times row 1 from row 2 leaves $(0, 0, 1)$, and
+subtracting $3$ times row 1 from row 3 leaves $(0, 0, 2)$. Now column 2 has only 0s from row 2 down: no pivot. The
+next pivot is in column 3, but in row 2: when a column has no pivot, the next pivot goes in the same row, one column
+further right. So pivots step down a staircase and need not sit on the diagonal, as they did in the last lesson.
+Clearing below it turns row 3 into $(0, 0, 0)$. Two pivots, so the rank is 2. The
+column that missed out is the repeat: column 2 $= 2 \cdot$ column 1.
+
+Now a matrix where the top-left entry is 0, so a row has to be swapped up first. This visualiser swaps up the first row
+below with a non-zero entry, which keeps the numbers whole. The last lesson (and the exercise below) swaps up the row
+with the biggest entry instead. Both find the same number of pivots, so both give the same rank. Before each step, predict
+whether the next column has a pivot, and what multiple clears the entry below it.
+
+<PredictChallenge slug="span" settings={{ preset: 'rank-full' }} goal={5} />
+
+Row 1 started with a 0, which can't be a pivot, so elimination swapped in row 2 first. After that the pivots were
+$1$, $2$ and $3.5$: one in every column, so the rank is 3 and all three columns are independent.
+
+<Misconception
+  id="rank-counts-columns"
+  title="The rank is the number of columns"
+  probes={[
+    {
+      q: 'A is 3×3 with columns (1, 1, 0), (2, 2, 0) and (0, 0, 5). What is its rank?',
+      choices: ['3', '2', '1'],
+      answer: 1,
+      trap: 0,
+      why: 'The second column is twice the first, so elimination finds only two pivots: rank 2.',
+    },
+    {
+      q: 'A matrix has 2 rows and 4 columns. What is the largest its rank can be?',
+      choices: ['4', '2', '8'],
+      answer: 1,
+      trap: 0,
+      why: 'Each column has only 2 parts, so the columns live in a plane: at most 2 independent directions. Elimination agrees: at most one pivot per row.',
+    },
+  ]}
+>
+
+The number of columns is only the most the rank could be. Count the pivots after elimination: a column that gets no
+pivot is a mix of the columns before it and adds no new direction. And the rank can never be more than the number of
+rows either, since each row holds at most one pivot.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Drag it, then code it">
+
+Go back to the two vectors and drag them. Try these:
+
+- Drag $v$ onto $u$'s line. The tilted grid collapses, $\det\,[u\ v]$ becomes 0 and the rank drops to 1.
+- Drag $w$ around while $u$ and $v$ point different ways. Every place you put it has a recipe.
+- Make $u$ and $v$ point nearly the same way. They are still a basis, but the recipes get large: small changes in $w$
+  need big changes in $a$ and $b$.
+
+<Explore slug="span" settings={{ preset: 'span', step: '4' }} input />
+
+<Misconception
+  id="basis-at-right-angles"
+  title="A basis has to be at right angles, like î and ĵ"
+  probes={[
+    {
+      q: 'Can u = (1, 1) and v = (1, −2) be a basis for the plane?',
+      choices: ['No: they are not at right angles', 'Yes: neither is a multiple of the other', 'No: a basis must be (1, 0) and (0, 1)'],
+      answer: 1,
+      trap: 0,
+      why: 'Any two vectors that are not on one line are a basis for the plane. Right angles make the recipes easy to read off, but they are not needed.',
+    },
+    {
+      q: 'Which statement about bases of the plane is true?',
+      choices: ['Only (1, 0) and (0, 1)', 'Any two vectors at right angles, and only those', 'Any two vectors not on one line'],
+      answer: 2,
+      trap: 1,
+      why: 'Two vectors that are not on one line, such as (−1, 2) and (3, 1), reach every point, each with one recipe. That is all a basis needs; right angles are a convenience.',
+    },
+  ]}
+>
+
+î and ĵ are the most convenient basis, because the recipe for a point is just its coordinates. But any two independent
+vectors are a basis: the tilted grid they make still covers the plane, and each point still sits at exactly one
+crossing of it. Bases at right angles come back later in this stage, where they make projections simple.
+
+</Misconception>
+
+Now write elimination yourself and count the pivots. A pivot is any entry whose size is more than a tiny tolerance
+(rounding can leave a $0.0000000001$ where a 0 should be).
+
+<CodeExercise exercise="matrix-rank" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'u = (1, 0) and v = (0, 2). Which recipe a·u + b·v gives (3, 4)?',
+      choices: ['a = 3, b = 2', 'a = 3, b = 4', 'a = 2, b = 3', 'a = 4, b = 3'],
+      answer: 0,
+      why: '3·(1, 0) + 2·(0, 2) = (3, 0) + (0, 4) = (3, 4). v is two steps long, so two of them make 4.',
+    },
+    {
+      q: 'Which pair spans the whole plane?',
+      choices: ['(2, 4) and (−1, −2)', '(2, 4) and (4, 2)', '(5, 0) and (−2, 0)', '(0, 0) and (3, 2)'],
+      answer: 1,
+      why: '(4, 2) is not a multiple of (2, 4), so they point different ways. (−1, −2) is −½ of (2, 4), (−2, 0) lies along (5, 0), and (0, 0) adds nothing.',
+      traps: { 0: 'two-always-span', 2: 'two-always-span' },
+    },
+    {
+      q: 'det [u v] = 0. What do u and v span?',
+      choices: ['A line through the origin', 'The whole plane', 'One point, away from the origin'],
+      answer: 0,
+      why: 'A zero determinant means u and v lie on one line (unless both are the zero vector), so every combination stays on that line.',
+    },
+    {
+      q: 'After elimination, a 3×5 matrix has pivots in columns 1 and 4 only. What is its rank?',
+      choices: ['5', '2', '3', '1'],
+      answer: 1,
+      why: 'The rank is the number of pivots: 2. Columns 2, 3 and 5 are mixes of the pivot columns before them.',
+      traps: { 0: 'rank-counts-columns' },
+    },
+    {
+      q: 'u = (3, 0) and v = (2, 2) are not at right angles. Are they a basis for the plane?',
+      choices: ['No: a basis must be at right angles', 'Yes: neither is a multiple of the other', 'No: v is longer than one step'],
+      answer: 1,
+      why: 'They point different ways, so every point has exactly one recipe a·u + b·v. Length and angle don’t matter.',
+      traps: { 0: 'basis-at-right-angles' },
+    },
+    {
+      q: 'Elimination does R2 ← R2 − 4·R1. What does that do to the rank?',
+      choices: ['Nothing', 'Lowers it by 1', 'Raises it by 1', 'Multiplies it by 4'],
+      answer: 0,
+      why: 'Subtracting a multiple of one row from another (and swapping rows) never changes the rank. That is why counting pivots at the end works.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="span-rank"
+  prompt="When do two vectors span the whole plane, and how does elimination tell you the rank of a matrix?"
+  rubric={[
+    'The span is every combination a·u + b·v, everything the vectors can reach.',
+    'Two vectors span the plane exactly when neither is a multiple of the other (det [u v] ≠ 0); otherwise they reach only a line.',
+    'The rank is the number of independent directions the columns give.',
+    'Elimination keeps the rank the same, and the number of pivots it finds is the rank; a column with no pivot is a mix of earlier ones.',
+  ]}
+  example="The span of two vectors is every point you can reach with a·u + b·v, some amount of each added together. If the two vectors point different ways, those combinations cover the whole plane and every point has exactly one recipe, so they are a basis. If one is a multiple of the other they lie on one line, the determinant of the matrix with them as columns is 0, and they only reach that line. The rank of a matrix is how many independent directions its columns give. Elimination never changes it, so you eliminate and count the pivots: a column that ends up with no pivot was a mix of the columns before it."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A **combination** is $a \cdot u + b \cdot v$; the **span** is every point the combinations reach.
+- Two vectors span the plane unless one is a multiple of the other, when $\det\,[u\ v] = 0$ and they reach only a line.
+- A **basis** is independent and spans: every point has exactly one recipe. It need not be at right angles.
+- **Rank** = independent directions = pivots after elimination. A column with no pivot is a mix of earlier ones.
+- Next: **change of basis**, reading the same point with a different basis's recipe.
+
+</Section>

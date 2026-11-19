@@ -9,7 +9,8 @@
 // Client-safe and small: Play and the study plan read it. It must not import
 // the exercises themselves; projects.test.ts checks the parts exist.
 //
-// The first project (least squares, M1) arrives with batch B3.
+// The first, least squares from scratch (M1), arrived with batch B3: its
+// parts are in src/content/exercises/least-squares.ts.
 
 export type Project = {
   slug: string;
@@ -28,7 +29,18 @@ export type Project = {
   hours: number;
 };
 
-export const projects: readonly Project[] = [];
+export const projects: readonly Project[] = [
+  {
+    slug: 'least-squares',
+    title: 'Least squares from scratch',
+    summary: 'Transpose, multiply and solve with your own code, then fit the best line and parabola through data.',
+    stage: 1,
+    parts: ['normal-equations', 'solve-system', 'least-squares-fit', 'fit-curves'],
+    concepts: ['matrix-multiplication', 'determinants-inverses', 'projections-least-squares'],
+    showcase: { href: '/visualisers/least-squares', label: 'Fit a line and a parabola' },
+    hours: 4,
+  },
+];
 
 export const getProject = (slug: string) => projects.find((p) => p.slug === slug);
 

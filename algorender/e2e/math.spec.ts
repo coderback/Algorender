@@ -11,8 +11,8 @@ async function open(page: Page, path: string) {
 
 test('dragging a handle records the trace again on the same frame', async ({ page }) => {
   const errors = collectErrors(page);
-  await open(page, '/visualisers/linear-transformations?preset=stretch-shear&step=8');
-  await expect(stepCounter(page)).toHaveText('9 / 9');
+  await open(page, '/visualisers/linear-transformations?preset=stretch-shear&step=9');
+  await expect(stepCounter(page)).toHaveText('10 / 10');
   const i = page.getByRole('button', { name: /^Where î lands at \(2, 0\)/ });
   const box = (await i.boundingBox())!;
   const x = box.x + box.width / 2;
@@ -25,19 +25,19 @@ test('dragging a handle records the trace again on the same frame', async ({ pag
 
   const moved = page.getByRole('button', { name: /^Where î lands at/ });
   await expect(moved).not.toHaveAccessibleName(/\(2, 0\)/);
-  await expect(stepCounter(page)).toHaveText('9 / 9');
+  await expect(stepCounter(page)).toHaveText('10 / 10');
   await expect(page).toHaveURL(/input=/);
   await expect(page.locator('#custom-input')).not.toHaveValue('');
   expect(errors).toEqual([]);
 });
 
 test('arrow keys move a focused handle instead of stepping the trace', async ({ page }) => {
-  await open(page, '/visualisers/linear-transformations?preset=shear&step=8');
+  await open(page, '/visualisers/linear-transformations?preset=shear&step=9');
   const j = page.getByRole('button', { name: /^Where ĵ lands at \(1, 1\)/ });
   await j.focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('button', { name: /^Where ĵ lands at \(1\.5, 1\)/ })).toBeFocused();
-  await expect(stepCounter(page)).toHaveText('9 / 9');
+  await expect(stepCounter(page)).toHaveText('10 / 10');
   await expect(page.locator('#custom-input')).toHaveValue('[[1, 1.5], [0, 1]], v = (1, 2)');
   await expect(narration(page)).toContainText('1.5');
 });
