@@ -42,13 +42,15 @@ export const pct = (v: number) => (v === 0 ? '0%' : v < 0.001 ? '<0.1%' : `${+(v
 export const dollars = (v: number) => `$${Math.round(v).toLocaleString('en-GB')}`;
 
 /** Each target in words, for the brief: "p99 under 100 ms". */
-export function targetList(t: Targets): string[] {
+/** The targets in words. `plain` leaves out the names of techniques (an interview's brief mustn't name the fix). */
+export function targetList(t: Targets, { plain = false } = {}): string[] {
   const out: string[] = [];
   if (t.throughput != null) out.push(`At least ${compact(t.throughput)} successful requests a second`);
   if (t.p99Ms != null) out.push(`p99 latency at most ${ms(t.p99Ms)}`);
   if (t.writeP99Ms != null) out.push(`Write p99 latency at most ${ms(t.writeP99Ms)}`);
   if (t.maxErrorRate != null) out.push(`At most ${pct(t.maxErrorRate)} of requests fail, time out or are rejected`);
-  if (t.maxFailureRate != null) out.push(`At most ${pct(t.maxFailureRate)} of requests fail or time out (turning requests away with a 429 is allowed)`);
+  if (t.maxFailureRate != null)
+    out.push(`At most ${pct(t.maxFailureRate)} of requests fail or time out (${plain ? 'turning requests away at once is allowed' : 'turning requests away with a 429 is allowed'})`);
   if (t.maxStaleRate != null) out.push(`At most ${pct(t.maxStaleRate)} of reads are stale`);
   if (t.maxCost != null) out.push(`Costs at most ${dollars(t.maxCost)} a month`);
   if (t.survive) out.push(`${t.survive.label}: still at most ${pct(t.survive.maxErrorRate)} errors`);

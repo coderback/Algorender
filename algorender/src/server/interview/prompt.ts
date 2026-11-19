@@ -6,7 +6,7 @@
 // the pattern before the learner does.
 
 import { PATTERNS, type PatternId } from '@/problems/patterns';
-import { PHASE_INFO, type WorkPhase } from '@/interview/rules';
+import { PHASE_INFO, type RoundWorkPhase, type WorkPhase } from '@/interview/rules';
 import { LEVEL_NAMES, type Level } from '@/lib/tutor-ladder';
 import type { ModelMessage } from '../tutor/model';
 import { defuse, LADDER, numbered } from '../tutor/prompt';
@@ -28,7 +28,7 @@ export type InterviewGrounding = {
 };
 
 /** Who said a line of the round, in which phase. Interviewer lines from a hint carry its level. */
-export type TranscriptEntry = { role: 'learner' | 'interviewer'; text: string; phase: WorkPhase; at: string; level?: Level; line?: number; scripted?: boolean };
+export type TranscriptEntry = { role: 'learner' | 'interviewer'; text: string; phase: RoundWorkPhase; at: string; level?: Level; line?: number; scripted?: boolean };
 
 /** 'say': answer what the learner said; 'approach': react to the approach they stated; 'hint': the next rung of the ladder. */
 export type InterviewAction = 'say' | 'approach' | 'hint';

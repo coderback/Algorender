@@ -10,21 +10,30 @@ import { Card, FeatureCard } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { cx } from '@/components/ui/cx';
 import { ProgressBar } from '@/components/ui/Numbers';
-import { DIMENSIONS, MODEL_DIMENSIONS, PHASE_INFO, SCORE_LABELS, dimensionLabel, hintCap, meetsBar, suggestedMinutes, type Score, type WorkPhase } from '@/interview/rules';
+import type { Estimate } from '@/interview/design';
+import { cappedDimension, dimensionsOf, PHASE_INFO, SCORE_LABELS, dimensionLabel, hintCap, meetsBar, suggestedMinutes, workPhasesOf, type Score } from '@/interview/rules';
+import { formatQuantity } from '@/systems/design/estimation';
 import { PROBLEM_LANGUAGES } from '@/problems/languages';
 import { minutesText, postInterview, type RoundView } from './api';
 
-/** What the debrief shows about the problem, rendered on the server. */
+/** What the debrief shows about the problem or the case study, rendered on the server. */
 export type DebriefContent = {
   title: string;
-  /** The authored approach, open now that the round has ended. */
+  /** The authored approach (or a case's trade-off and a design that passes), open now that the round has ended. */
   approach: ReactNode;
-  complexity: { time: string; space: string };
-  /** Where to practise: the pattern's lesson and visualiser, and a similar problem. */
+  /** The heading over it ("The approach" unless said). */
+  approachTitle?: string;
+  /** A coding round's problem's complexity. */
+  complexity?: { time: string; space: string };
+  /** A design round's estimates, with their answers and working, open now. */
+  estimates?: readonly Pick<Estimate, 'id' | 'question' | 'unit' | 'unitLabel' | 'answer' | 'working'>[];
+  /** Where to practise: the pattern's lesson and visualiser, and a similar problem; or the case study's page. */
   links: { href: string; label: string }[];
+  /** "Practise this problem" or "Practise this case". */
+  practise: { href: string; label: string };
 };
 
-const WORK: WorkPhase[] = ['clarify', 'approach', 'code', 'test'];
+const VERDICT_LABELS = { 'spot-on': 'Spot on', close: 'The right order', off: 'Off' } as const;
 
 /**
  * A round's debrief: the outcome and the time, a card per dimension (score,
@@ -39,7 +48,11 @@ export function Debrief({ round, content, onChange }: { round: RoundView; conten
   const bar = !pending && meetsBar(scores, round.hints, !!round.passed);
   const minutes = round.endedAt ? Math.round((Date.parse(round.endedAt) - Date.parse(round.startedAt)) / 60_000) : 0;
   const over = minutes - round.limit;
-  const reviewDue = !pending && (!bar || round.hints >= 2);
+  const design = round.format === 'design';
+  // A design round makes no review card (there is no kind of card for a case study).
+  const reviewDue = !design && !pending && (!bar || round.hints >= 2);
+  const capped = cappedDimension(round.format);
+  const outcome = d?.design;
 
   return (
     <>
@@ -62,17 +75,27 @@ export function Debrief({ round, content, onChange }: { round: RoundView; conten
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 px-3 pt-4 pb-10 sm:px-4">
         <FeatureCard className="gap-4">
           <span className="text-eyebrow text-feature-muted uppercase">
-            Coding round · {PROBLEM_LANGUAGES[round.language].label} · {round.limit} minutes
+            {design ? 'System-design round' : `Coding round · ${PROBLEM_LANGUAGES[round.language ?? 'python'].label}`} · {round.limit} minutes
           </span>
           <p className="font-display text-title-page">{pending ? 'Score the rest yourself' : bar ? 'Meets the bar' : 'Not yet'}</p>
           <p className="text-[15px] text-feature-muted">
             Took {minutesText(minutes)} of {round.limit}
             {over > 0 ? ` (${minutesText(over)} over)` : ''}. {round.hints === 0 ? 'No hints.' : `Hints up to level ${round.hints}.`}{' '}
-            {round.passed ? 'Every test passed at the end.' : 'The last submission didn’t pass every test.'}
-            {round.repeat ? ' You’d solved this problem before this round.' : ''}
+            {design
+              ? round.passed
+                ? 'Your final design met every target, the deep dive included.'
+                : 'Your final design missed some targets.'
+              : round.passed
+                ? 'Every test passed at the end.'
+                : 'The last submission didn’t pass every test.'}
+            {round.repeat ? (design ? ' You’d had a round on this brief before.' : ' You’d solved this problem before this round.') : ''}
           </p>
           {d?.summary && <p className="max-w-[760px] text-[15px] leading-relaxed">{d.summary}</p>}
-          {!pending && !bar && <p className="text-sm text-feature-muted">Meeting the bar takes a 3 or more on every dimension, every test passing, and no level-3 hint.</p>}
+          {!pending && !bar && (
+            <p className="text-sm text-feature-muted">
+              Meeting the bar takes a 3 or more on every dimension, {design ? 'every target met at the end' : 'every test passing'}, and no level-3 hint.
+            </p>
+          )}
         </FeatureCard>
 
         {pending && <SelfScore round={round} onChange={onChange} />}
@@ -102,10 +125,46 @@ export function Debrief({ round, content, onChange }: { round: RoundView; conten
                   </blockquote>
                 ))}
                 {s.feedback && <p className="text-sm text-ink">{s.feedback}</p>}
-                {s.dimension === 'approach' && round.hints > 0 && <p className="text-xs text-ink-muted">Capped at {hintCap(round.hints)} by the hints used.</p>}
-                {s.dimension === 'analysis' && round.approach && (
+                {s.dimension === capped && round.hints > 0 && <p className="text-xs text-ink-muted">Capped at {hintCap(round.hints)} by the hints used.</p>}
+                {s.dimension === 'analysis' && round.approach && content.complexity && (
                   <p className="text-xs text-ink-muted">
                     You said time {round.approach.time}, space {round.approach.space}. The best known: time {content.complexity.time}; space {content.complexity.space}.
+                  </p>
+                )}
+                {s.dimension === 'targets' && outcome && outcome.checks.length > 0 && (
+                  <ul className="flex flex-col gap-1 text-sm">
+                    {outcome.checks.map((c) => (
+                      <li key={c.id} className="flex flex-wrap justify-between gap-x-3 rounded-well bg-sunken px-3 py-1.5">
+                        <span className={c.ok ? 'text-ink' : 'font-semibold text-bad-ink'}>
+                          {c.ok ? 'Met' : 'Missed'}: {c.label}
+                        </span>
+                        <span className="text-ink-soft tabular-nums">
+                          {c.actual} (want {c.want})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {s.dimension === 'estimation' && outcome && content.estimates && (
+                  <ul className="flex flex-col gap-2 text-sm">
+                    {content.estimates.map((e) => {
+                      const v = outcome.estimates.find((x) => x.id === e.id);
+                      return (
+                        <li key={e.id} className="flex flex-col gap-0.5 rounded-well bg-sunken px-3 py-2">
+                          <span className="font-semibold text-ink">{e.question}</span>
+                          <span className="text-ink-soft">
+                            You said {v?.value != null ? formatQuantity(v.value, e.unit) : 'nothing'}; about {formatQuantity(e.answer, e.unit)}
+                            {e.unit === 'count' ? ` ${e.unitLabel}` : ''}. {v ? VERDICT_LABELS[v.verdict] : 'Off'}.
+                          </span>
+                          <span className="text-xs text-ink-muted">{e.working.join(' ')}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {s.dimension === 'cost' && outcome && (
+                  <p className="text-xs text-ink-muted">
+                    Yours: ${Math.round(outcome.cost).toLocaleString('en-GB')} a month. A lean design that passes: ${Math.round(outcome.referenceCost).toLocaleString('en-GB')}.
                   </p>
                 )}
               </Card>
@@ -146,7 +205,7 @@ export function Debrief({ round, content, onChange }: { round: RoundView; conten
 
         <Card aria-labelledby="approach-title">
           <h2 id="approach-title" className="font-display text-title-section">
-            The approach
+            {content.approachTitle ?? 'The approach'}
           </h2>
           <div className="text-[15px] text-ink-soft">{content.approach}</div>
         </Card>
@@ -157,8 +216,8 @@ export function Debrief({ round, content, onChange }: { round: RoundView; conten
           <ButtonLink href="/practice/interview" kind="primary">
             Try another
           </ButtonLink>
-          <ButtonLink href={`/practice/${round.item}`} kind="secondary">
-            Practise this problem
+          <ButtonLink href={content.practise.href} kind="secondary">
+            {content.practise.label}
           </ButtonLink>
         </div>
       </div>
@@ -168,7 +227,8 @@ export function Debrief({ round, content, onChange }: { round: RoundView; conten
 
 /** Time in each phase against the suggested, with the numbers in a table for screen readers. */
 function Timeline({ round }: { round: RoundView }) {
-  const suggested = suggestedMinutes(round.limit);
+  const WORK = workPhasesOf(round.format);
+  const suggested = suggestedMinutes(round.limit, round.format) as Record<string, number>;
   const stamps = [...WORK, 'debrief' as const].map((p) => round.phases[p]);
   const spent = WORK.map((p, i) => {
     const from = stamps[i];
@@ -224,13 +284,17 @@ function SelfScore({ round, onChange }: { round: RoundView; onChange: (round: Ro
   const [scores, setScores] = useState<Record<string, Score>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const done = MODEL_DIMENSIONS.every((id) => scores[id]);
+  const toScore = dimensionsOf(round.format).filter((x) => x.by === 'model');
+  const done = toScore.every((x) => scores[x.id]);
   return (
     <Card aria-labelledby="self-title">
       <h2 id="self-title" className="font-display text-title-section">
         Score your round
       </h2>
-      <p className="text-sm text-ink-soft">The interviewer couldn’t score this round just now, so score these yourself against each rubric. Correctness is scored from your submissions already.</p>
+      <p className="text-sm text-ink-soft">
+        The interviewer couldn’t score this round just now, so score these yourself against each rubric.{' '}
+        {round.format === 'design' ? 'Targets, estimation and cost are scored from your design already.' : 'Correctness is scored from your submissions already.'}
+      </p>
       <form
         className="flex flex-col gap-4"
         onSubmit={async (e) => {
@@ -243,7 +307,7 @@ function SelfScore({ round, onChange }: { round: RoundView; onChange: (round: Ro
           else onChange(res.body.round);
         }}
       >
-        {DIMENSIONS.filter((x) => x.by === 'model').map((x) => (
+        {toScore.map((x) => (
           <fieldset key={x.id} className="flex flex-col gap-2">
             <legend className="text-sm font-semibold text-ink">{x.label}</legend>
             <p className="text-[13px] text-ink-soft">{x.rubric}</p>

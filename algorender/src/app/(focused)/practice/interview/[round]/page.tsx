@@ -1,10 +1,16 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { configSummary } from '@/components/design/format';
+import { DesignRound } from '@/components/interview/DesignRound';
 import { InterviewRound } from '@/components/interview/InterviewRound';
 import { Alert } from '@/components/ui/Alert';
 import { ButtonLink } from '@/components/ui/Button';
 import { getConcept } from '@/content/concepts';
+import { getCaseStudy } from '@/content/designs';
+import { getVariant } from '@/content/designs/interviews';
+import { publicVariant } from '@/interview/design';
+import { KIND_INFO } from '@/systems/design';
 import { getVisualiserBySlug } from '@/data/visualisers';
 import { getProblem, loadProblems, specFor } from '@/problems/load';
 import { PATTERNS } from '@/problems/patterns';
@@ -17,7 +23,10 @@ import { interviewConfig } from '@/server/interview/config';
 
 // A mock interview round (src/components/interview/): read from the database
 // for the signed-in learner, so the page starts from the server's round and
-// clock. Its problem's statement is rendered here, as on the practice page.
+// clock. A coding round's problem statement is rendered here, as on the
+// practice page; a design round's brief too, and the page gets its variant
+// without the reference design, hints or deep dive (only its debrief shows
+// a design that passes, once the round has ended).
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +54,48 @@ export default async function InterviewRoundPage({ params }: Props) {
     if (e instanceof InterviewError) notFound();
     return <Off message="Accounts aren’t available right now, so this round can’t be opened. Try again in a moment." />;
   }
+  if (row.format === 'design') {
+    const variant = getVariant(row.variant ?? '');
+    const study = getCaseStudy(row.item);
+    if (!variant || !study) notFound();
+    const ended = row.endedAt != null;
+    const lesson = getConcept(study.concept)?.lesson;
+    return (
+      <main className="min-h-dvh">
+        <DesignRound
+          initial={view(row, config, new Date())}
+          variant={publicVariant(variant)}
+          brief={<Markdown text={variant.brief} />}
+          debrief={{
+            title: variant.title,
+            approachTitle: 'The trade-off',
+            // What passes is shown only once the round has ended.
+            estimates: ended ? variant.estimates : [],
+            approach: ended ? (
+              <>
+                <p>{variant.lesson}</p>
+                <h3 className="mt-4 mb-1 text-sm font-semibold text-ink">One design that meets every target</h3>
+                <ul className="flex list-disc flex-col gap-0.5 pl-5 text-sm">
+                  {variant.reference.components
+                    .filter((c) => c.kind !== 'clients')
+                    .map((c) => (
+                      <li key={c.id}>
+                        {KIND_INFO[c.kind].name}: {configSummary(c)}
+                      </li>
+                    ))}
+                </ul>
+              </>
+            ) : null,
+            links: [
+              { href: `/design/${study.slug}`, label: `The case study: ${study.title}` },
+              ...(lesson ? [{ href: `/learn/${lesson}`, label: 'The system design lesson' }] : []),
+            ],
+            practise: { href: `/design/${study.slug}`, label: 'Practise this case' },
+          }}
+        />
+      </main>
+    );
+  }
   const problem = getProblem(row.item);
   if (!problem) notFound();
   const spec = specFor(problem);
@@ -70,6 +121,7 @@ export default async function InterviewRoundPage({ params }: Props) {
           title: problem.title,
           complexity: problem.complexity,
           links,
+          practise: { href: `/practice/${problem.slug}`, label: 'Practise this problem' },
           approach: (
             <>
               <Markdown text={problem.approach} />

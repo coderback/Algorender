@@ -180,11 +180,14 @@ export const interviewRound = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    /** 'coding' (a practice problem); 'design' rounds come later. */
+    /** 'coding' (a practice problem) or 'design' (a case study's interview variant). */
     format: text('format').notNull(),
-    /** The problem's slug. */
+    /** The problem's slug, or the case study's. */
     item: text('item').notNull(),
-    language: text('language').notNull(),
+    /** A design round's interview variant (src/content/designs/interviews/). */
+    variant: text('variant'),
+    /** A coding round's language; none for a design round. */
+    language: text('language'),
     /** Minutes the round is set for. */
     limitMin: integer('limit_min').notNull(),
     /** 'clarify', 'approach', 'code', 'test' or 'debrief'. */
@@ -199,13 +202,17 @@ export const interviewRound = pgTable(
     replies: integer('replies').notNull().default(0),
     /** The conversation: who said what, in which phase, and when. */
     transcript: jsonb('transcript').notNull(),
-    /** The approach as stated: text, time and space complexity. */
+    /** The approach as stated: text, time and space complexity (a design round: the design explained, text only). */
     approach: jsonb('approach'),
+    /** A design round's estimates as typed and read: id, text, value. */
+    estimates: jsonb('estimates'),
+    /** A design round's design as it stood at the last check or action. */
+    design: jsonb('design'),
     /** The cases the learner said they'd test. */
     edgeCases: text('edge_cases'),
     /** The code as it stood at the last submission or the end. */
     code: text('code'),
-    /** Each submission: tests run and failed, and whether the server judged it. */
+    /** Each submission: tests run and failed, and whether the server judged it. A design round's checks: targets as tests, missed as failed. */
     submissions: jsonb('submissions').notNull(),
     /** The debrief: a score, evidence and feedback per dimension, and what to work on. */
     debrief: jsonb('debrief'),

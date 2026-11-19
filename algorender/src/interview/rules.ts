@@ -1,9 +1,11 @@
 // Mock interviews' rules (REVAMP_PLAN.md 6f): the phases of a coding round
-// and their suggested times, the dimensions a debrief scores, the caps hints
-// put on them, what "meets the bar" means, the Big-O options a learner picks
-// from, and the words that would give a problem's pattern away. Pure, so the
-// server enforces them, the pages label with them and the projections read
-// them (src/progress/), all from one place.
+// and a system-design round and their suggested times, the dimensions a
+// debrief scores, the caps hints put on them, what "meets the bar" means, the
+// Big-O options a learner picks from, and the words that would give a
+// problem's pattern away. Pure, so the server enforces them, the pages label
+// with them and the projections read them (src/progress/), all from one
+// place. What only design rounds need (variants, their scores and giveaway
+// words) is in ./design.ts.
 
 import type { PatternId } from '@/problems/patterns';
 
@@ -13,29 +15,65 @@ export const LENGTHS = [30, 45, 60] as const;
 export type RoundLength = (typeof LENGTHS)[number];
 export const DEFAULT_LENGTH: RoundLength = 45;
 
+/** A coding round on a practice problem, or a system-design round on a case study's interview variant. */
+export const FORMATS = ['coding', 'design'] as const;
+export type Format = (typeof FORMATS)[number];
+
 export const PHASES = ['clarify', 'approach', 'code', 'test', 'debrief'] as const;
 export type Phase = (typeof PHASES)[number];
 /** The phases the learner works in; the debrief comes once the round has ended. */
 export type WorkPhase = Exclude<Phase, 'debrief'>;
 
-export const PHASE_INFO: Record<Phase, { label: string; doing: string }> = {
+/** A design round: requirements, estimates, the design on the canvas, a deep dive into a failure, then the debrief. */
+export const DESIGN_PHASES = ['requirements', 'estimate', 'design', 'deepdive', 'debrief'] as const;
+export type DesignPhase = (typeof DESIGN_PHASES)[number];
+export type DesignWorkPhase = Exclude<DesignPhase, 'debrief'>;
+
+/** A phase of either kind of round. */
+export type RoundPhase = Phase | DesignPhase;
+export type RoundWorkPhase = WorkPhase | DesignWorkPhase;
+
+export const PHASE_INFO: Record<RoundPhase, { label: string; doing: string }> = {
   clarify: { label: 'Clarify', doing: 'Read the problem and ask about anything it leaves open.' },
   approach: { label: 'Approach', doing: 'Say how you’ll solve it, and its time and space complexity.' },
   code: { label: 'Code', doing: 'Write it, and run the examples.' },
   test: { label: 'Test', doing: 'List the cases you’d test, then submit every test.' },
+  requirements: { label: 'Requirements', doing: 'Read the brief and ask about anything it leaves open.' },
+  estimate: { label: 'Estimate', doing: 'Estimate the numbers the design has to handle.' },
+  design: { label: 'Design', doing: 'Build it on the canvas, check it against the targets, and explain it.' },
+  deepdive: { label: 'Deep dive', doing: 'Something goes wrong: say what happens and why, and change the design.' },
   debrief: { label: 'Debrief', doing: 'Scores, evidence and what to work on.' },
 };
 
-/** Each working phase's share of a 45-minute round (5, 10, 20 and 5 minutes, with 5 to spare). */
-const SHARE: Record<WorkPhase, number> = { clarify: 5 / 45, approach: 10 / 45, code: 20 / 45, test: 5 / 45 };
+/** The phases of a round of this format, the debrief last. */
+export const phasesOf = (format: Format): readonly RoundPhase[] => (format === 'design' ? DESIGN_PHASES : PHASES);
+/** The phases the learner works in. */
+export const workPhasesOf = (format: Format) => phasesOf(format).filter((p) => p !== 'debrief') as RoundWorkPhase[];
+
+/** Each working phase's share of a 45-minute round: coding 5, 10, 20 and 5 minutes, design 5, 5, 20 and 10, each with 5 to spare. */
+const SHARE: Record<RoundWorkPhase, number> = {
+  clarify: 5 / 45,
+  approach: 10 / 45,
+  code: 20 / 45,
+  test: 5 / 45,
+  requirements: 5 / 45,
+  estimate: 5 / 45,
+  design: 20 / 45,
+  deepdive: 10 / 45,
+};
 
 /** Suggested minutes per working phase for a round of `limit` minutes. */
-export function suggestedMinutes(limit: number): Record<WorkPhase, number> {
-  return { clarify: Math.round(SHARE.clarify * limit), approach: Math.round(SHARE.approach * limit), code: Math.round(SHARE.code * limit), test: Math.round(SHARE.test * limit) };
+export function suggestedMinutes(limit: number): Record<WorkPhase, number>;
+export function suggestedMinutes(limit: number, format: Format): Partial<Record<RoundWorkPhase, number>>;
+export function suggestedMinutes(limit: number, format: Format = 'coding'): Partial<Record<RoundWorkPhase, number>> {
+  return Object.fromEntries(workPhasesOf(format).map((p) => [p, Math.round(SHARE[p] * limit)]));
 }
 
-/** The phase after this one, or null at the debrief. */
-export const nextPhase = (phase: Phase): Phase | null => PHASES[PHASES.indexOf(phase) + 1] ?? null;
+/** The phase after this one in its round, or null at the debrief. */
+export function nextPhase(phase: RoundPhase): RoundPhase | null {
+  const list: readonly RoundPhase[] = phase !== 'debrief' && (DESIGN_PHASES as readonly string[]).includes(phase) ? DESIGN_PHASES : PHASES;
+  return list[list.indexOf(phase) + 1] ?? null;
+}
 
 /** Minutes left are announced only at these marks, not every second. */
 export const ANNOUNCE_AT = [5, 1] as const;
@@ -142,7 +180,52 @@ export const DIMENSIONS = [
 ] as const;
 export type DimensionId = (typeof DIMENSIONS)[number]['id'];
 export const MODEL_DIMENSIONS = DIMENSIONS.filter((d) => d.by === 'model').map((d) => d.id) as Exclude<DimensionId, 'correctness'>[];
-export const dimensionLabel = (id: string) => DIMENSIONS.find((d) => d.id === id)?.label ?? id;
+
+/** A design round's dimensions: three measured by code (./design.ts scores them), two by the model. */
+export const DESIGN_DIMENSIONS = [
+  {
+    id: 'targets',
+    label: 'Targets',
+    by: 'code',
+    rubric: 'Scored from the server’s run of the final design, the deep dive included: every target met within four checks is strong, met after more checks meets the bar, at least half met is partly.',
+  },
+  {
+    id: 'estimation',
+    label: 'Estimation',
+    by: 'code',
+    rubric: 'An estimate within two times of the answer is spot on, within ten times the right order of magnitude. Every estimate spot on is strong.',
+  },
+  {
+    id: 'cost',
+    label: 'Cost',
+    by: 'code',
+    rubric: 'The final design’s monthly cost: close to a lean design that passes is strong, within the budget meets the bar.',
+  },
+  {
+    id: 'tradeoffs',
+    label: 'Trade-offs',
+    by: 'model',
+    rubric: 'Said what each choice gains and what it costs (latency, consistency, money, complexity), and why it suits these requirements, in the design and in the deep dive. Each hint lowers the most this can score.',
+  },
+  {
+    id: 'communication',
+    label: 'Communication',
+    by: 'model',
+    rubric: 'Asked about what the brief leaves open, explained the design and what went wrong in the deep dive out loud, and answered the interviewer’s questions directly.',
+  },
+] as const;
+export type DesignDimensionId = (typeof DESIGN_DIMENSIONS)[number]['id'];
+export const DESIGN_MODEL_DIMENSIONS = DESIGN_DIMENSIONS.filter((d) => d.by === 'model').map((d) => d.id) as Extract<DesignDimensionId, 'tradeoffs' | 'communication'>[];
+
+/** A dimension of either kind of round. */
+export type AnyDimensionId = DimensionId | DesignDimensionId;
+export type Dimension = { readonly id: AnyDimensionId; readonly label: string; readonly by: 'code' | 'model'; readonly rubric: string };
+export const dimensionsOf = (format: Format): readonly Dimension[] => (format === 'design' ? DESIGN_DIMENSIONS : DIMENSIONS);
+/** The dimensions the model scores (or, when it can't, the learner). */
+export const modelDimensionsOf = (format: Format): readonly AnyDimensionId[] => (format === 'design' ? DESIGN_MODEL_DIMENSIONS : MODEL_DIMENSIONS);
+/** The dimension hints cap: a coding round's approach, a design round's trade-offs. */
+export const cappedDimension = (format: Format): AnyDimensionId => (format === 'design' ? 'tradeoffs' : 'approach');
+export const dimensionLabel = (id: string) => [...DIMENSIONS, ...DESIGN_DIMENSIONS].find((d) => d.id === id)?.label ?? id;
 
 /** The highest approach score after hints: one hint caps it at 3, two at 2, three at 1. */
 export const hintCap = (hints: number): Score => Math.max(1, Math.min(4, 4 - hints)) as Score;
@@ -169,7 +252,7 @@ export function meetsBar(scores: readonly { dimension: string; score: number }[]
   return passed && hints < MAX_HINT && scores.length > 0 && scores.every((s) => s.score >= 3);
 }
 
-export const scoreOf = (scores: readonly { dimension: string; score: number }[], dimension: DimensionId) => scores.find((s) => s.dimension === dimension)?.score ?? 0;
+export const scoreOf = (scores: readonly { dimension: string; score: number }[], dimension: AnyDimensionId) => scores.find((s) => s.dimension === dimension)?.score ?? 0;
 
 // ── Giveaways ───────────────────────────────────────────────────────────────
 
@@ -204,9 +287,9 @@ export const GIVEAWAY_TERMS: Record<PatternId, readonly string[]> = {
 };
 
 /** Lower case, hyphens and underscores as spaces, runs of space as one: "Two-Pointer" and "two  pointer" read alike. */
-const norm = (text: string) => ` ${text.toLowerCase().replace(/[-_]/g, ' ').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()} `;
+export const norm = (text: string) => ` ${text.toLowerCase().replace(/[-_]/g, ' ').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()} `;
 
-const says = (normed: string, term: string) => normed.includes(` ${norm(term).trim()} `);
+export const says = (normed: string, term: string) => normed.includes(` ${norm(term).trim()} `);
 
 /**
  * The first pattern word a reply says that neither the learner nor the
@@ -214,14 +297,23 @@ const says = (normed: string, term: string) => normed.includes(` ${norm(term).tr
  * has written in the round (messages, approach, cases, code).
  */
 export function giveaway(reply: string, patterns: readonly PatternId[], learner: string, statement: string): string | null {
+  return firstUnsaid(reply, patterns.flatMap((p) => GIVEAWAY_TERMS[p]), `${learner}\n${statement}`);
+}
+
+/** The first of `terms` a reply says that `known` (the learner's words and the problem's own text) doesn't, or null. */
+export function firstUnsaid(reply: string, terms: readonly string[], known: string): string | null {
   const r = norm(reply);
-  const known = norm(`${learner}\n${statement}`);
-  for (const p of patterns) for (const term of GIVEAWAY_TERMS[p]) if (says(r, term) && !says(known, term)) return term;
-  return null;
+  const k = norm(known);
+  return terms.find((term) => says(r, term) && !says(k, term)) ?? null;
 }
 
 /** The pattern words nobody has said yet in `known` (the learner's words and the statement): what the interviewer must not say first. */
 export function unsaidTerms(patterns: readonly PatternId[], known: string): string[] {
+  return unsaidOf(patterns.flatMap((p) => GIVEAWAY_TERMS[p]), known);
+}
+
+/** The terms `known` doesn't say yet. */
+export function unsaidOf(terms: readonly string[], known: string): string[] {
   const k = norm(known);
-  return [...new Set(patterns.flatMap((p) => GIVEAWAY_TERMS[p]))].filter((t) => !says(k, t));
+  return [...new Set(terms)].filter((t) => !says(k, t));
 }

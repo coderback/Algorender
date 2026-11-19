@@ -14,8 +14,25 @@ import { Results } from './Results';
 import { decodeDesign, encodeDesign, loadSaved, save } from './url';
 import { addComponent, edgesOf, freshId, PALETTE, problemIds, removeComponent, replaceComponent } from './wiring';
 
-type Variant = 'page' | 'lesson';
+type Variant = 'page' | 'lesson' | 'interview';
 type Persist = 'url' | 'storage' | 'none';
+
+/** A check run by a mock interview's server: the runs, the deep dive's once it has begun, and the checks. */
+export type ServerCheck = { result: SimResult; faultResult: SimResult | null; deepResult: SimResult | null; checks: readonly Check[]; passed: boolean };
+
+/**
+ * A mock interview's canvas (src/components/interview/DesignRound.tsx): the
+ * round keeps the design, so every change goes to `onChange`, and a check
+ * runs on the server through `check` (an error message when it can't).
+ */
+export type InterviewCanvas = {
+  check: (design: Design) => Promise<ServerCheck | string>;
+  onChange: (design: Design) => void;
+  checksLeft: number;
+  maxChecks: number;
+  /** The deep dive's label once it has begun, for its run's results. */
+  deepLabel: string | null;
+};
 
 type Run = {
   result: SimResult;
@@ -44,12 +61,25 @@ const withStudy = (design: Design, study: CaseStudy | undefined): Design => (stu
  * from the URL or storage, so a saved design never causes a hydration mismatch.
  * `seconds` sets how long a sandbox or lesson run starts out (5, 10 or 20).
  */
-export function DesignCanvas({ initial, study, variant = 'page', seconds }: { initial: Design; study?: CaseStudy; variant?: Variant; seconds?: number }) {
+export function DesignCanvas({
+  initial,
+  study,
+  variant = 'page',
+  seconds,
+  interview,
+}: {
+  initial: Design;
+  study?: CaseStudy;
+  variant?: Variant;
+  seconds?: number;
+  /** With `variant="interview"`: the round's checks and where the design goes. */
+  interview?: InterviewCanvas;
+}) {
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
-  const persist: Persist = variant === 'lesson' ? 'none' : study ? 'storage' : 'url';
+  const persist: Persist = variant === 'lesson' || variant === 'interview' ? 'none' : study ? 'storage' : 'url';
   return (
     <MotionConfig reducedMotion="user" transition={{ duration: 0.3 }}>
-      <Canvas key={hydrated ? 'client' : 'server'} initial={withStudy(initial, study)} study={study} variant={variant} persist={persist} restore={hydrated} initialSeconds={seconds} />
+      <Canvas key={hydrated ? 'client' : 'server'} initial={withStudy(initial, study)} study={study} variant={variant} persist={persist} restore={hydrated} initialSeconds={seconds} interview={interview} />
     </MotionConfig>
   );
 }
@@ -68,6 +98,7 @@ function Canvas({
   persist,
   restore,
   initialSeconds,
+  interview,
 }: {
   initial: Design;
   study?: CaseStudy;
@@ -75,6 +106,7 @@ function Canvas({
   persist: Persist;
   restore: boolean;
   initialSeconds?: number;
+  interview?: InterviewCanvas;
 }) {
   const [design, setDesign] = useState<Design>(() => restored(initial, study, persist, restore));
   const [selected, setSelected] = useState<Ref | null>(null);
@@ -86,6 +118,7 @@ function Canvas({
   const [error, setError] = useState<string | null>(null);
   const [mine, setMine] = useState<Design | null>(null); // the learner's design while a solution is shown
   const [copied, setCopied] = useState(false);
+  const [faultLabel, setFaultLabel] = useState<string | null>(study?.targets.survive?.label ?? null);
 
   const problems = validateDesign(design);
   const badIds = problemIds(design);
@@ -94,10 +127,12 @@ function Canvas({
   // A lesson can hold several canvases, so its element ids must be unique on the page.
   const uid = useId().replace(/:/g, '');
   const prefix = variant === 'lesson' ? `design-${uid}` : 'design';
+  const outOfChecks = interview != null && interview.checksLeft <= 0;
 
   const update = (next: Design) => {
     setDesign(next);
     setCopied(false);
+    interview?.onChange(next);
     if (persist === 'url') {
       const url = new URL(window.location.href);
       url.searchParams.set('d', encodeDesign(next));
@@ -118,11 +153,22 @@ function Canvas({
   };
 
   const go = () => {
-    if (problems.length > 0 || running) return;
+    if (problems.length > 0 || running || outOfChecks) return;
     setRunning(true);
     setError(null);
     const key = runKey;
     const used = study ? [] : faults;
+    if (interview) {
+      void interview.check(design).then((out) => {
+        if (typeof out === 'string') setError(out);
+        else {
+          setRun({ result: out.result, faultResult: out.deepResult ?? out.faultResult, checks: out.checks, passed: out.passed, key, faults: [] });
+          setFaultLabel(out.deepResult ? interview.deepLabel : (study?.targets.survive?.label ?? null));
+        }
+        setRunning(false);
+      });
+      return;
+    }
     // Let the button repaint as "Running…" before the simulation takes the thread.
     window.setTimeout(() => {
       try {
@@ -214,7 +260,7 @@ function Canvas({
               onChange={(next) => update(replaceComponent(design, current.id, next))}
               onRemove={() => remove(current.id)}
               workloadLocked={study != null}
-              fixed={study?.fixed}
+              fixed={interview ? { ...study?.fixed, fanout: study?.fixed?.fanout ?? 1 } : study?.fixed}
               idPrefix={variant === 'lesson' ? `${prefix}-inspect` : undefined}
             />
           ) : (
@@ -229,7 +275,15 @@ function Canvas({
           <h3 id={`${prefix}-run`} className="text-[13px] font-semibold tracking-[0.06em] text-feature-muted uppercase">
             {study ? 'Check the design' : 'Run traffic'}
           </h3>
-          {study ? (
+          {interview && study ? (
+            <p className="text-sm text-feature-muted">
+              Runs on the interviewer’s side: {study.seconds} simulated seconds of the traffic{study.targets.survive ? `, then again with ${study.targets.survive.label.toLowerCase()}` : ''}
+              {interview.deepLabel ? `, and through the deep dive (${interview.deepLabel.toLowerCase()})` : ''}, checking every target.{' '}
+              <span className="font-semibold text-on-feature">
+                {interview.checksLeft} of {interview.maxChecks} checks left.
+              </span>
+            </p>
+          ) : study ? (
             <p className="text-sm text-feature-muted">
               Runs {study.seconds} simulated seconds of the case’s traffic{study.targets.survive ? `, then again with ${study.targets.survive.label.toLowerCase()}` : ''}, and checks every target.
             </p>
@@ -269,11 +323,11 @@ function Canvas({
           <button
             type="button"
             onClick={go}
-            disabled={problems.length > 0 || running}
+            disabled={problems.length > 0 || running || outOfChecks}
             aria-describedby={problems.length > 0 ? `${prefix}-problems` : undefined}
             className="inline-flex h-13 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-[15px] font-semibold text-on-accent transition-colors duration-150 ease-standard hover:bg-accent-strong disabled:opacity-60"
           >
-            <FiPlay aria-hidden /> {running ? 'Running…' : study ? 'Run the checks' : 'Run'}
+            <FiPlay aria-hidden /> {running ? 'Running…' : outOfChecks ? 'No checks left' : study ? 'Run the checks' : 'Run'}
           </button>
           {error && (
             <p role="alert" className="text-sm text-code-bad">
@@ -290,18 +344,18 @@ function Canvas({
                 {copied ? <FiCheck aria-hidden /> : <FiLink aria-hidden />} {copied ? 'Link copied' : 'Copy link'}
               </button>
             )}
-            {study && (
+            {study && !interview && (
               <button type="button" onClick={toggleSolution} aria-pressed={mine != null} className={small}>
                 {mine ? 'Back to my design' : 'Show a solution'}
               </button>
             )}
           </div>
-          {study && (
+          {study && !interview && (
             <p className="text-xs text-feature-muted">
               {mine ? 'Showing one design that meets every target. Your own design comes back when you switch back.' : 'Showing a solution replaces your design on screen until you switch back.'}
             </p>
           )}
-          {study && study.hints.length > 0 && <Hints hints={study.hints} />}
+          {study && !interview && study.hints.length > 0 && <Hints hints={study.hints} />}
         </div>
           {problems.length > 0 && (
             <div id={`${prefix}-problems`} role="alert" className="rounded-card bg-bad-soft p-4 text-sm text-bad-ink">
@@ -327,14 +381,14 @@ function Canvas({
           design={design}
           result={run.result}
           faultResult={run.faultResult}
-          faultLabel={study?.targets.survive?.label ?? null}
+          faultLabel={faultLabel}
           checks={run.checks}
           passed={run.passed}
           stale={run.key !== runKey}
           idPrefix={variant === 'lesson' ? `${prefix}-` : undefined}
         />
       )}
-      {run?.passed && study && (
+      {run?.passed && study && !interview && (
         <div className="flex flex-col gap-2.5 rounded-card bg-track-mint p-5 text-track-mint-title">
           <h3 className="w-fit rounded-full bg-surface/70 px-3 py-1 text-xs font-semibold">The trade-off</h3>
           <p className="text-[15px] leading-relaxed">{study.lesson}</p>

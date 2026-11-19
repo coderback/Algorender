@@ -3,7 +3,7 @@
 // then make one check per target.
 
 import { simulate } from './simulate';
-import type { CaseStudy, Check, Design, SimResult } from './types';
+import type { CaseStudy, Check, Design, SimResult, Targets } from './types';
 import { validateDesign } from './validate';
 
 /** The design with its clients sending the study's traffic. */
@@ -33,6 +33,23 @@ export function evaluate(design: Design, study: CaseStudy): { result: SimResult;
   const d = withWorkload(design, study);
   const result = simulate(d, { seconds: study.seconds, seed: EVALUATION_SEED });
   const t = study.targets;
+  const checks = targetChecks(result, t);
+  let faultResult: SimResult | null = null;
+  if (t.survive) {
+    faultResult = simulate(d, { seconds: study.seconds, seed: EVALUATION_SEED, faults: t.survive.faults });
+    checks.push({
+      id: 'survive',
+      label: t.survive.label,
+      ok: faultResult.errorRate <= t.survive.maxErrorRate,
+      want: `errors at most ${percent(t.survive.maxErrorRate)}`,
+      actual: `${percent(faultResult.errorRate)} errors`,
+    });
+  }
+  return { result, faultResult, checks, passed: checks.every((c) => c.ok) };
+}
+
+/** One check per target a run is measured against (every target but `survive`, which needs a run of its own). */
+export function targetChecks(result: SimResult, t: Omit<Targets, 'survive'>): Check[] {
   const checks: Check[] = [];
   if (t.throughput !== undefined)
     checks.push({ id: 'throughput', label: 'Throughput', ok: result.throughput >= t.throughput, want: `at least ${t.throughput.toLocaleString('en-GB')} req/s`, actual: `${Math.round(result.throughput).toLocaleString('en-GB')} req/s` });
@@ -63,16 +80,5 @@ export function evaluate(design: Design, study: CaseStudy): { result: SimResult;
     const rate = result.staleReads / Math.max(1, result.okReads ?? 0);
     checks.push({ id: 'stale', label: 'Stale reads', ok: rate <= t.maxStaleRate, want: `at most ${percent(t.maxStaleRate)} of reads`, actual: percent(rate) });
   }
-  let faultResult: SimResult | null = null;
-  if (t.survive) {
-    faultResult = simulate(d, { seconds: study.seconds, seed: EVALUATION_SEED, faults: t.survive.faults });
-    checks.push({
-      id: 'survive',
-      label: t.survive.label,
-      ok: faultResult.errorRate <= t.survive.maxErrorRate,
-      want: `errors at most ${percent(t.survive.maxErrorRate)}`,
-      actual: `${percent(faultResult.errorRate)} errors`,
-    });
-  }
-  return { result, faultResult, checks, passed: checks.every((c) => c.ok) };
+  return checks;
 }

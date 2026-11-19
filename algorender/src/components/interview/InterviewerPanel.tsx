@@ -5,15 +5,19 @@ import { FiArrowRight, FiEye, FiHelpCircle, FiLoader, FiSend } from 'react-icons
 import { Reply } from '@/components/tutor/TutorPanel';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
-import { SelectField, TextAreaField } from '@/components/ui/Field';
-import { APPROACH_MIN_WORDS, COMPLEXITIES, complexityLabel, edgeCaseList, hintCap, MAX_HINT, nextPhase, PHASE_INFO, wordCount, type WorkPhase } from '@/interview/rules';
+import { Field, SelectField, TextAreaField } from '@/components/ui/Field';
+import type { PublicVariant } from '@/interview/design';
+import { APPROACH_MIN_WORDS, COMPLEXITIES, complexityLabel, edgeCaseList, hintCap, MAX_HINT, nextPhase, PHASE_INFO, wordCount, type RoundWorkPhase } from '@/interview/rules';
 import { LEVEL_NAMES, type Level } from '@/lib/tutor-ladder';
+import { parseEstimate } from '@/systems/design/estimation';
 import type { RoundView } from './api';
 
-// The interviewer beside the editor in a mock interview: the conversation so
-// far, the phase's own inputs (the approach with its complexity, the cases
-// to test), a box to say something, and "I'm stuck" for a hint. A sibling of
-// TutorPanel, sharing its rendering of model replies (no links or HTML).
+// The interviewer beside the editor (or the design canvas) in a mock
+// interview: the conversation so far, the phase's own inputs (a coding
+// round's approach with its complexity and the cases to test; a design
+// round's estimates and the design in words), a box to say something, and
+// "I'm stuck" for a hint. A sibling of TutorPanel, sharing its rendering of
+// model replies (no links or HTML).
 
 export type PanelActions = {
   say: (text: string) => Promise<boolean>;
@@ -21,6 +25,10 @@ export type PanelActions = {
   hint: (account: string) => Promise<boolean>;
   next: () => void;
   end: () => void;
+  /** A design round's estimates, as typed. */
+  estimate?: (answers: { id: string; text: string }[]) => Promise<boolean>;
+  /** A design round's design, in words. */
+  explain?: (text: string) => Promise<boolean>;
 };
 
 export function InterviewerPanel({
@@ -31,6 +39,7 @@ export function InterviewerPanel({
   onCases,
   onPoint,
   actions,
+  estimates = [],
 }: {
   round: RoundView;
   busy: boolean;
@@ -39,8 +48,14 @@ export function InterviewerPanel({
   onCases: (text: string) => void;
   onPoint: (line: number | null) => void;
   actions: PanelActions;
+  /** A design round's estimate questions. */
+  estimates?: PublicVariant['estimates'];
 }) {
-  const phase = round.phase as WorkPhase;
+  const phase = round.phase as RoundWorkPhase;
+  const design = round.format === 'design';
+  const [guesses, setGuesses] = useState<Record<string, string>>(() => Object.fromEntries(round.estimates.map((e) => [e.id, e.text])));
+  const readable = estimates.every((e) => guesses[e.id]?.trim() && !('error' in parseEstimate(guesses[e.id], e.unit)));
+  const estimated = estimates.length > 0 && estimates.every((e) => round.estimates.some((x) => x.id === e.id));
   const [message, setMessage] = useState('');
   const [approach, setApproach] = useState(round.approach?.text ?? '');
   const [time, setTime] = useState(round.approach?.time ?? '');
@@ -50,6 +65,15 @@ export function InterviewerPanel({
   const words = wordCount(approach);
   const stated = !!round.approach?.text;
   const following = nextPhase(phase);
+  /** What the next phase waits for, said on its button. */
+  const waitFor =
+    phase === 'approach' && !stated
+      ? 'Tell the interviewer your approach first'
+      : phase === 'estimate' && !estimated
+        ? 'Tell the interviewer your estimates first'
+        : phase === 'design' && !stated
+          ? 'Explain your design to the interviewer first'
+          : null;
   // New lines scroll into view.
   const log = useRef<HTMLDivElement>(null);
   const lines = round.transcript.length;
@@ -137,6 +161,58 @@ export function InterviewerPanel({
         </form>
       )}
 
+      {phase === 'estimate' && (
+        <form
+          className="flex flex-col gap-3 rounded-[20px] bg-surface p-4 text-ink"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!busy && readable && actions.estimate) void actions.estimate(estimates.map((x) => ({ id: x.id, text: guesses[x.id].trim() })));
+          }}
+        >
+          {estimates.map((x) => {
+            const typed = guesses[x.id] ?? '';
+            const read = typed.trim() ? parseEstimate(typed, x.unit) : null;
+            return (
+              <Field
+                key={x.id}
+                label={x.question}
+                hint={`In ${x.unitLabel}: 300k, 2.5 million and 40 GB all work.`}
+                error={read && 'error' in read ? read.error : undefined}
+                value={typed}
+                onChange={(e) => setGuesses((g) => ({ ...g, [x.id]: e.target.value }))}
+                maxLength={60}
+                autoComplete="off"
+              />
+            );
+          })}
+          <Button type="submit" kind="accent" disabled={busy || !readable} className="self-start">
+            {estimated ? 'Update my estimates' : 'Tell the interviewer'}
+          </Button>
+        </form>
+      )}
+
+      {design && (phase === 'design' || phase === 'deepdive') && (
+        <form
+          className="flex flex-col gap-3 rounded-[20px] bg-surface p-4 text-ink"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!busy && words >= APPROACH_MIN_WORDS && actions.explain) void actions.explain(approach.trim());
+          }}
+        >
+          <TextAreaField
+            label="Your design, in words"
+            hint={`What each part does and why you chose it, in at least ${APPROACH_MIN_WORDS} words (${words} so far).`}
+            value={approach}
+            onChange={(e) => setApproach(e.target.value)}
+            rows={4}
+            maxLength={2400}
+          />
+          <Button type="submit" kind="accent" disabled={busy || words < APPROACH_MIN_WORDS} className="self-start">
+            {stated ? 'Update my explanation' : 'Explain it to the interviewer'}
+          </Button>
+        </form>
+      )}
+
       {phase === 'test' && (
         <div className="rounded-[20px] bg-surface p-4 text-ink">
           <TextAreaField
@@ -167,7 +243,7 @@ export function InterviewerPanel({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={1200}
-          placeholder={phase === 'clarify' ? 'Ask about anything the problem leaves open' : 'Think aloud, or ask a question'}
+          placeholder={phase === 'clarify' ? 'Ask about anything the problem leaves open' : phase === 'requirements' ? 'Ask about anything the brief leaves open' : 'Think aloud, or ask a question'}
           className="h-11 min-w-0 grow rounded-[18px] bg-surface px-4 text-sm text-ink placeholder:text-ink-muted"
         />
         <Button type="submit" kind="onTrack" disabled={busy || !message.trim()} icon={busy ? <FiLoader aria-hidden className="animate-spin" /> : <FiSend aria-hidden />}>
@@ -195,7 +271,7 @@ export function InterviewerPanel({
         >
           <TextAreaField
             label={round.hints === 0 ? 'First, in a sentence: where are you, and what are you stuck on?' : 'Where are you now? (optional)'}
-            hint={`A hint lowers the most your approach can score, to ${hintCap(round.hints + 1)} of 4.`}
+            hint={`A hint lowers the most your ${design ? 'trade-offs' : 'approach'} can score, to ${hintCap(round.hints + 1)} of 4.`}
             value={account}
             onChange={(e) => setAccount(e.target.value)}
             rows={2}
@@ -217,11 +293,11 @@ export function InterviewerPanel({
           <Button
             kind="primary"
             onClick={actions.next}
-            disabled={busy || (phase === 'approach' && !stated)}
-            title={phase === 'approach' && !stated ? 'Tell the interviewer your approach first' : undefined}
+            disabled={busy || !!waitFor}
+            title={waitFor ?? undefined}
             trailing={<FiArrowRight aria-hidden />}
           >
-            {following === 'code' ? 'Start coding' : `Move on: ${PHASE_INFO[following].label}`}
+            {following === 'code' ? 'Start coding' : following === 'design' ? 'Start designing' : `Move on: ${PHASE_INFO[following].label}`}
           </Button>
         ) : (
           <Button kind="primary" onClick={actions.end} disabled={busy}>
