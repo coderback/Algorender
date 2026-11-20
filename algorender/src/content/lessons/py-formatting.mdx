@@ -1,0 +1,217 @@
+<Section step="hook" title="Output that lines up">
+
+Print a total worked out by Python, `1.1 * 3`, and you get `3.3000000000000003`. Print a list of items and their prices,
+and the prices wander left and right with the length of each name. Real receipts, scoreboards and reports have two
+decimal places and tidy columns. Python's f-strings can do all of that, with a few characters inside the curly
+brackets.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="format spec">What comes after a colon inside an f-string's curly brackets: `{price:.2f}`. It says how to show the value, and never changes the value itself.</Term>
+  <Term name="width">The fewest characters a value takes up: `{n:6}` fills any room left over with spaces. A longer value is shown in full.</Term>
+  <Term name="alignment">Which side of its width a value sits on: `<` left, `>` right, `^` centre.</Term>
+  <Term name="padding">The characters added to fill a width: spaces, unless you name another, like `0`.</Term>
+</Terms>
+
+You met f-strings in an earlier topic: `f"{name} has {len(name)} letters"` puts values inside text. A format spec goes
+after a colon, just before the closing bracket:
+
+```python
+x = 3.14159
+print(f"{x:.2f}")       # 3.14        2 decimal places
+print(f"[{42:6}]")      # [    42]    width 6: numbers go right
+print(f"[{'ab':6}]")    # [ab    ]    text goes left
+print(f"[{'ab':>6}]")   # [    ab]    > right, < left, ^ centre
+print(f"{7:03}")        # 007         pad with zeros to width 3
+print(f"{1234567:,}")   # 1,234,567   commas between thousands
+print(f"{0.256:.1%}")   # 25.6%       times 100, 1 decimal, a % sign
+print(f"[{x:8.2f}]")    # [    3.14]  width 8 and 2 decimals
+```
+
+The square brackets in those lines are only there so you can see the spaces. Read `.2f` as "a fixed number of
+decimal places: two". The `f` is for *fixed*, and the digits shown are rounded, so `2.678` shows as `2.68`.
+
+**Width and alignment.** With no arrow, numbers sit on the right of their width and text on the left. That is what
+you want in a table: names read from the left, and numbers line up their last digits. An arrow overrides it, and a
+character before the arrow is the padding: `f"{'hi':*^6}"` is `**hi**`, and `f"{7:0>3}"` is `007`, the same as
+`{7:03}`.
+
+**Putting several together.** The pieces go in a set order: padding and arrow, then width, then the comma, then
+decimals and the letter. `{total:>10,.2f}` is a total on the right of 10 characters, with commas and 2 decimals.
+
+**A format spec makes text.** `f"{x:.2f}"` is the string `"3.14"`, and `x` is still `3.14159`. If you want a rounded
+*number* to go on calculating with, there's `round(x, 2)`, which gives the float `3.14`. But `round` can't add zeros:
+`round(3.1, 2)` prints as `3.1`, while `f"{3.1:.2f}"` shows `3.10`. Do your sums with the full numbers, and format
+only when you print.
+
+Two things you may meet. `f"{x=}"` prints the name too, `x=3.14159`, handy when checking your work. And older code
+does the same job with `"{:.2f}".format(x)` or `"%.2f" % x`; f-strings are the way to write it today.
+
+</Section>
+
+<Section step="see" title="Watch it run">
+
+Step through it, and watch the memory view. `price` keeps all its digits; formatting makes a separate string,
+`label`. In the loop, each `line` is built from a name padded to 10 characters and a price padded to 7, so the
+prices end in the same column.
+
+<TraceCode snippet="py-formatting" />
+
+<KeyIdea>
+
+**A format spec says how to show a value: it builds new text and leaves the value alone.** A width is a minimum,
+with numbers on the right and text on the left unless an arrow says otherwise, and that is what makes columns line
+up.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-format-a-line" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="format-changes-value"
+  title="Formatting with :.2f rounds the number itself"
+  probes={[
+    {
+      q: 'w = 5.678, then s = f"{w:.1f}". What does print(w) show?',
+      choices: ['5.7', '5.678', '5.6'],
+      answer: 1,
+      trap: 0,
+      why: 'The f-string made new text, "5.7", for s. w still points at 5.678.',
+    },
+    {
+      q: 'd = 9.87, then shown = f"{d:.0f}". What does print(d * 2) show?',
+      choices: ['19.74', '20.0', '1010'],
+      answer: 0,
+      trap: 1,
+      why: 'shown is the text "10", but d is still 9.87, so d * 2 is 19.74.',
+    },
+  ]}
+>
+
+A format spec only decides how a value looks in the text being built. `f"{w:.1f}"` makes a new string, `"5.7"`, and
+`w` still points at `5.678`. The formatted result is text, too: you can't add 1 to it. Keep the full numbers for your
+sums, and format them as you print. If you really need a rounded number, `round(w, 1)` gives one.
+
+</Misconception>
+
+<Misconception
+  id="width-cuts"
+  title="A width cuts a value down to fit"
+  probes={[
+    {
+      q: 'word = "butterfly". What does print(f"[{word:4}]") show?',
+      choices: ['[butterfly]', '[butt]', '[    butterfly]'],
+      answer: 0,
+      trap: 1,
+      why: 'A width is the least room a value takes. butterfly needs 9 characters, so it gets 9.',
+    },
+    {
+      q: 'What does print(f"[{98765:3}]") show?',
+      choices: ['[987]', '[765]', '[98765]'],
+      answer: 2,
+      trap: 0,
+      why: 'Python never drops digits to fit a width; it would rather spoil the column than the number.',
+    },
+  ]}
+>
+
+A width is a minimum, not a limit. A shorter value is padded up to it; a longer one is shown in full, and pushes
+whatever follows along the line. If a column comes out ragged, a value is wider than its width: make the width
+bigger.
+
+</Misconception>
+
+<Misconception
+  id="same-default-side"
+  title="Without an arrow, every value lines up on the left"
+  probes={[
+    {
+      q: 'What does print(f"[{58:5}]") show?',
+      choices: ['[58   ]', '[   58]', '[58]'],
+      answer: 1,
+      trap: 0,
+      why: 'With no arrow, a number sits on the right of its width.',
+    },
+    {
+      q: 'A table prints each name and each price with width 8 and no arrow. Where does each sit in its column?',
+      choices: ['Names on the right, prices on the left', 'Both on the left', 'Names on the left, prices on the right'],
+      answer: 2,
+      trap: 1,
+      why: 'Text goes left and numbers go right by default, which is how a table usually wants them.',
+    },
+  ]}
+>
+
+With no `<`, `>` or `^`, text sits on the left of its width and numbers on the right. So a column of numbers lines up
+its last digits without being told. If you want something else, say so: `{n:<5}` puts a number on the left, and
+`{s:>5}` puts text on the right.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 't = 2.346, then label = f"{t:.2f}". What does print(t, label) show?',
+      choices: ['2.35 2.35', '2.346 2.35', '2.346 2.346'],
+      answer: 1,
+      why: 'label is new text with 2 decimals; t is unchanged.',
+      traps: { 0: 'format-changes-value' },
+    },
+    {
+      q: 'day = "Wednesday". What does print(f"[{day:3}]") show?',
+      choices: ['[Wed]', '[day]', '[Wednesday]'],
+      answer: 2,
+      why: 'A width of 3 is the least room, and Wednesday needs 9, so all of it is shown.',
+      traps: { 0: 'width-cuts' },
+    },
+    {
+      q: 'n = 7 and s = "a". What does print(f"[{n:3}][{s:3}]") show?',
+      choices: ['[  7][a  ]', '[7  ][a  ]', '[  7][  a]'],
+      answer: 0,
+      why: 'With no arrow, the number goes on the right of its 3 characters and the text on the left.',
+      traps: { 1: 'same-default-side' },
+    },
+    {
+      q: 'What does print(f"{0.075:.1%}") show?',
+      choices: ['0.1%', '7.5%', '0.075%'],
+      answer: 1,
+      why: '% multiplies by 100 before it shows the number, then adds the % sign.',
+    },
+    {
+      q: 'What does print(f"[{2.5:6.2f}]") show?',
+      choices: ['[  2.50]', '[2.50  ]', '[   2.5]'],
+      answer: 0,
+      why: '.2f makes it 2.50, four characters, and the width pads it to 6 on the right, as a number.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-formatting" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A format spec goes after a colon in an f-string's curly brackets: `{x:.2f}`, `{n:6}`, `{s:<10}`.
+- It only changes how the value is shown: the value stays as it was, and the result is text.
+- A width is a minimum: text sits on the left, numbers on the right, unless `<`, `>` or `^` says otherwise.
+- `0` pads with zeros, `,` adds commas between thousands, and `%` shows a fraction as a percentage.
+- For tables, give every column a width, and format the numbers with both width and decimals: `{price:8.2f}`.
+
+</Section>

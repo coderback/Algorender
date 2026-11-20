@@ -1,0 +1,225 @@
+<Section step="hook" title="Looking things up by name">
+
+Your phone doesn't make you remember that Ann is contact number 14: you type her name and get her number. A list
+finds things by position, which is no help when you only know the name. A **dictionary** finds a value by a **key**
+you choose, such as a name or a word.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="dictionary">A collection of key–value pairs in curly brackets: `{"ann": 31, "bob": 27}`. Python calls it a `dict`. You look values up by key, not by position.</Term>
+  <Term name="key">What you look a value up by: `"ann"`. It must be a value that can’t change, such as a string, a number or a tuple.</Term>
+  <Term name="value">What a key leads to: `31`. Values can be anything, and two keys can share one.</Term>
+  <Term name="KeyError">The error from reading a key the dict doesn’t have.</Term>
+</Terms>
+
+Square brackets with a key read a value, add a pair, or change one:
+
+```python
+ages = {"ann": 31, "bob": 27}
+print(ages["ann"])     # 31: look a value up by its key
+ages["cy"] = 19        # a new key: the pair is added
+ages["bob"] = 28       # a key already there: its value changes
+print(ages)            # {'ann': 31, 'bob': 28, 'cy': 19}
+print(len(ages))       # 3: the number of pairs
+```
+
+A key is in a dict at most once, so assigning to `"bob"` again replaces his value, and he keeps his place: the pairs
+stay in the order their keys were first added.
+
+`in` asks about the **keys** only: `"ann" in ages` is `True`, but `31 in ages` is `False` (`31 in ages.values()`
+asks about the values). `not in` asks the opposite: `"dan" not in ages` is `True`.
+
+Reading a missing key, `ages["dan"]`, stops the program with `KeyError: 'dan'`; it doesn't give `None`. Check first
+with `if "dan" in ages:`, or use `get`: `ages.get("dan")` gives `None`, and `ages.get("dan", 0)` gives `0`, a default
+you choose. `get` only reads; it never adds the key. `del ages["cy"]` takes a pair out, and `ages.pop("cy")` does
+too, giving back its value.
+
+A `for` loop over a dict visits its **keys**, in order. `.values()` gives the values, and `.items()` gives each pair as
+a tuple, which you can unpack:
+
+```python
+ages = {"ann": 31, "bob": 28}
+for name in ages:                 # the keys: ann, then bob
+    print(name, ages[name])
+for name, age in ages.items():    # each pair, unpacked
+    print(name, "is", age)
+```
+
+`get` with a default makes counting easy: a new word is stored as 0 + 1, and a word seen before adds one to its
+count:
+
+```python
+counts = {}
+for word in ["red", "blue", "red"]:
+    counts[word] = counts.get(word, 0) + 1
+print(counts)   # {'red': 2, 'blue': 1}
+```
+
+A dict files each pair by its key, so a key mustn't change later. Strings, numbers and tuples can be keys (a grid point
+like `(0, 0)` makes a good one), but `{[0, 0]: "start"}` stops with `TypeError: cannot use 'list' as a dict key
+(unhashable type: 'list')`.
+
+</Section>
+
+<Section step="see" title="Watch a dictionary grow">
+
+Step through it. `ages` is one dict box in the memory view, with a row per pair. Watch line 2 add a row, line 3 change
+one in place, `get` add nothing, and `del` take a row out. Then `counts` gains a row per new word.
+
+<TraceCode snippet="py-dicts" />
+
+<KeyIdea>
+
+**A dict maps each key to one value: `d[k]` reads, adds or changes by key, and `in` and `for` look at the keys.**
+Reading a missing key with `d[k]` is a `KeyError`; `d.get(k, default)` is the safe way to read.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-dict-stock" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="in-checks-values"
+  title="in looks among a dict’s values"
+  probes={[
+    {
+      q: 'colours = {"sky": "blue", "grass": "green"}. What is "blue" in colours?',
+      choices: ['True', 'False', 'A KeyError'],
+      answer: 1,
+      trap: 0,
+      why: '"blue" is a value, not a key; "sky" in colours would be True.',
+    },
+    {
+      q: 'marks = {"maths": 80, "art": 65}. Which of these is True?',
+      choices: ['80 in marks', '"art" in marks', 'Both'],
+      answer: 1,
+      trap: 0,
+      why: '"art" is a key. 80 is only a value: 80 in marks.values() would be True.',
+    },
+  ]}
+>
+
+On a dict, `in` asks whether something is one of the **keys**, as you would ask a phone book whether a name is in it.
+It never looks at the values; to ask about those, say so: `x in d.values()`.
+
+</Misconception>
+
+<Misconception
+  id="loop-gives-values"
+  title="Looping over a dict gives its values"
+  probes={[
+    {
+      q: 'd = {"x": 10, "y": 20}. What does for v in d: print(v) print?',
+      choices: ['10, then 20', 'x, then y', 'The pairs ("x", 10) and ("y", 20)'],
+      answer: 1,
+      trap: 0,
+      why: 'A loop over a dict visits its keys, whatever name the loop gives them.',
+    },
+    {
+      q: 'prices = {"tea": 2, "cake": 3}. Which loop adds up the prices?',
+      choices: ['total = 0, then for p in prices: total = total + p', 'total = 0, then for p in prices.values(): total = total + p', 'Both'],
+      answer: 1,
+      trap: 2,
+      why: 'for p in prices gives the keys, "tea" and "cake", and 0 + "tea" is a TypeError.',
+    },
+  ]}
+>
+
+A plain `for` loop over a dict gives its keys, in the order they were added, whatever you name the loop's variable.
+Loop over `d.values()` for the values, or `for k, v in d.items():` for both.
+
+</Misconception>
+
+<Misconception
+  id="missing-key-none"
+  title="Reading a missing key gives None"
+  probes={[
+    {
+      q: 'n = {"a": 1}, then if n["b"] is None: print("missing"). What happens?',
+      choices: ['A KeyError, before the if can decide', 'It prints missing', 'Nothing is printed'],
+      answer: 0,
+      trap: 1,
+      why: 'n["b"] stops the program before there is anything to compare.',
+    },
+    {
+      q: 'pets = {"cat": 2}. What does print(pets["dog"]) do?',
+      choices: ['Prints None', 'Prints 0', "Stops with KeyError: 'dog'"],
+      answer: 2,
+      trap: 0,
+      why: 'Square brackets on a missing key are an error; pets.get("dog") would give None.',
+    },
+  ]}
+>
+
+`d[k]` on a key the dict doesn't have stops the program with a `KeyError`; it doesn't hand back `None` or 0. When a
+key might be missing, ask first with `if k in d:`, or read with `d.get(k, default)`.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'team = {"Kim": 9, "Lee": 4}. What does print(4 in team, "Kim" in team) show?',
+      choices: ['False True', 'True True', 'True False'],
+      answer: 0,
+      why: 'in looks only at the keys, and 4 is only Lee’s value.',
+      traps: { 1: 'in-checks-values', 2: 'in-checks-values' },
+    },
+    {
+      q: 'sizes = {"S": 36, "M": 40}. What does sizes["L"] do?',
+      choices: ['Gives None', 'Gives 0', 'Raises a KeyError'],
+      answer: 2,
+      why: '"L" isn’t a key. sizes.get("L", 0) would give 0.',
+      traps: { 0: 'missing-key-none' },
+    },
+    {
+      q: 'points = {"red": 3, "blue": 5}, then for k in points: print(k). What does it print?',
+      choices: ['3, then 5', 'red, then blue', 'red 3, then blue 5'],
+      answer: 1,
+      why: 'A loop over a dict visits the keys, in the order they were added.',
+      traps: { 0: 'loop-gives-values' },
+    },
+    {
+      q: 'c = {}, then for ch in "abca": c[ch] = c.get(ch, 0) + 1. What is c afterwards?',
+      choices: ["{'a': 2, 'b': 1, 'c': 1}", "{'a': 1, 'b': 1, 'c': 1}", 'A KeyError on the first letter'],
+      answer: 0,
+      why: 'get gives 0 for a letter not seen yet, so a goes in as 1 and becomes 2 on its second turn.',
+    },
+    {
+      q: 'Which of these can be a dict key?',
+      choices: ['[1, 2], a list', '(1, 2), a tuple', 'Both'],
+      answer: 1,
+      why: 'A key must be unchangeable. A list can change, so as a key it is a TypeError.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-dicts" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A dict maps keys to values: `d[k]` reads, and `d[k] = v` adds the pair or changes its value.
+- `in` and a plain `for` loop look at the keys; use `.values()` for the values and `.items()` for the pairs.
+- Reading a missing key is a `KeyError`, not `None`: check with `in`, or use `d.get(k, default)`.
+- `del d[k]` and `d.pop(k)` take a pair out; the rest stay in the order their keys were added.
+- Count with `counts[x] = counts.get(x, 0) + 1`.
+- Keys must be unchangeable: strings, numbers and tuples, never lists.
+
+</Section>

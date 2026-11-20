@@ -341,4 +341,176 @@ print(lo, hi, pair)
 `,
     },
   },
+  {
+    id: 'py-dicts',
+    title: 'A dictionary looked up, changed and counted into',
+    code: {
+      python: `ages = {"ann": 31, "bob": 27}
+ages["cy"] = 19
+ages["bob"] = 28
+print(ages["bob"], "ann" in ages, 31 in ages)
+print(ages.get("dan", 0))
+del ages["ann"]
+for name, age in ages.items():
+    print(name, age)
+
+counts = {}
+for w in ["hi", "yo", "hi"]:
+    counts[w] = counts.get(w, 0) + 1
+print(counts)
+`,
+    },
+  },
+  {
+    id: 'py-sets',
+    title: 'A set skips the copies',
+    code: {
+      python: `words = ["cat", "dog", "cat", "owl", "dog"]
+seen = set()
+for w in words:
+    seen.add(w)
+print(len(words), len(seen))
+
+seen.discard("owl")
+print("owl" in seen, "cat" in seen)
+
+pets = {"cat", "emu"}
+print(sorted(seen | pets), sorted(seen & pets))
+`,
+    },
+  },
+  {
+    id: 'py-comprehensions',
+    title: 'A loop and a comprehension, side by side',
+    code: {
+      python: `nums = [3, -1, 4, -5]
+
+doubled = []
+for n in nums:
+    doubled.append(n * 2)
+
+same = [n * 2 for n in nums]
+print(doubled == same, doubled is same)
+
+positives = [n for n in nums if n > 0]
+signs = ["+" if n > 0 else "-" for n in nums]
+squares = {n: n * n for n in positives}
+print(nums, positives, signs, squares)
+`,
+    },
+  },
+  {
+    id: 'py-sorting',
+    title: 'A sorted copy, a sort in place, and a tuple key',
+    code: {
+      python: `scores = [70, 95, 82]
+ranked = sorted(scores, reverse=True)
+print(scores, ranked)
+result = scores.sort()
+print(scores, result)
+
+people = [("Zoe", 82), ("amy", 95), ("Ben", 82)]
+by_score = sorted(people, key=lambda p: (-p[1], p[0]))
+print(by_score)
+`,
+    },
+  },
+  {
+    id: 'py-string-methods',
+    title: 'New strings, never changed ones',
+    code: {
+      python: `word = "hello"
+word.upper()
+print(word)
+loud = word.upper()
+print(word, loud)
+
+line = "  red, green ,blue  "
+parts = line.strip().split(",")
+print(parts)
+tidy = []
+for p in parts:
+    tidy.append(p.strip())
+print(" + ".join(tidy))
+`,
+    },
+  },
+  {
+    id: 'py-formatting',
+    title: 'Formatting makes new text',
+    code: {
+      python: `price = 3.14159
+label = f"{price:.2f}"
+print(price, label)
+print(f"[{label:>8}]")
+print(f"[{'tea':<8}]")
+rows = [("tea", 2.5), ("biscuits", 12.75)]
+for name, cost in rows:
+    line = f"{name:<10}{cost:>7.2f}"
+    print(line)
+`,
+    },
+  },
+  {
+    id: 'py-regex',
+    title: 'Searching, listing and replacing with a pattern',
+    code: {
+      python: `import re
+
+text = "Desk 12, room 3B, floor 104"
+nums = re.findall(r"\\d+", text)
+m = re.search(r"room (\\d+)", text)
+room = m.group(1)
+miss = re.search(r"\\d{4}", text)
+masked = re.sub(r"\\d", "#", text)
+print(nums)
+print(room, miss)
+print(text)
+print(masked)
+`,
+    },
+  },
+  {
+    id: 'py-exceptions',
+    title: 'An error raised and caught',
+    code: {
+      python: `def safe_div(a, b):
+    try:
+        result = a / b
+        print("worked")
+    except ZeroDivisionError as e:
+        print("caught:", e)
+        result = None
+    return result
+
+x = safe_div(6, 3)
+y = safe_div(1, 0)
+print(x, y)
+`,
+    },
+  },
+  {
+    id: 'py-raising',
+    title: 'An error travels up',
+    code: {
+      python: `def take(stock, n):
+    if n > stock:
+        raise ValueError(f"only {stock} left")
+    return stock - n
+
+def order(stock, n):
+    left = take(stock, n)
+    print("ordered", n)
+    return left
+
+stock = 5
+try:
+    stock = order(stock, 2)
+    stock = order(stock, 9)
+except ValueError as e:
+    print("refused:", e)
+print("stock is", stock)
+`,
+    },
+  },
 ];

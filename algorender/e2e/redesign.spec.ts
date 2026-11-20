@@ -128,6 +128,13 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'l2-topic-lists', path: '/learn/py-lists' },
   { name: 'l2-task-function', path: '/learn/tasks/py-sum-to' },
   { name: 'l2-task-tests', path: '/learn/tasks/py-make-multiplier' },
+  // L2 batch 3: dictionaries, the regex topic (a match object on the memory view), errors (a caught exception
+  // traced), and a unit's closing explain-back (sorting ends unit 4).
+  { name: 'l2-topic-dicts', path: '/learn/py-dicts' },
+  { name: 'l2-topic-regex', path: '/learn/py-regex' },
+  { name: 'l2-topic-exceptions', path: '/learn/py-exceptions' },
+  { name: 'l2-topic-sorting', path: '/learn/py-sorting' },
+  { name: 'l2-task-dict', path: '/learn/tasks/py-count-words' },
 ];
 
 const VIEWPORTS = [
