@@ -6,15 +6,16 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FiArrowRight, FiBookOpen, FiCheck, FiCheckCircle, FiX, FiXCircle } from 'react-icons/fi';
 import type { Grade } from 'ts-fsrs';
 import { useXp } from '@/components/shell/hooks';
-import { ButtonLink } from '@/components/ui/Button';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import { DifficultyChip, type Difficulty } from '@/components/ui/Chip';
 import { Kbd } from '@/components/ui/CodeBlock';
 import { TRACK_CLASSES, trackColour } from '@/data/tracks';
+import { choiceOrder } from '@/lib/choices';
 import { useMinute } from '@/lib/now';
 import type { ProgressEvent } from '@/progress/events';
 import { record, useProgressSnapshot, useReviewCards } from '@/progress/hooks';
 import { CLEAR_AFTER } from '@/progress/misconceptions';
-import { dueToday, endOfDay, GRADE_LABEL, intervals, nextDue, type ReviewCard } from '@/progress/review';
+import { dueToday, endOfDay, GRADE_LABEL, intervals, nextDue, upcoming, type ReviewCard } from '@/progress/review';
 import { checkTyped, type TaskVerdict } from '@/tasks/check';
 import type { TaskLanguage } from '@/tasks/schema';
 import { OutputDiff } from '@/tasks/ui/OutputDiff';
@@ -81,6 +82,9 @@ const ago = (when: Date, now: Date) => {
 };
 const daysText = (n: number) => (n === 1 ? '1 day' : n < 30 ? `${n} days` : n < 365 ? `${Math.round(n / 30)} mo` : `${(n / 365).toFixed(1)} yr`);
 
+/** How many cards one round of "Practise ahead" offers. */
+const AHEAD = 10;
+
 /** A rough guide for "about N minutes" of review. */
 const SECONDS_PER_CARD = 30;
 
@@ -113,10 +117,19 @@ export function ReviewQueue({ faces }: { faces: CardFace[] }) {
   const now = useMinute();
   const byId = useMemo(() => new Map(faces.map((f) => [f.id, f])), [faces]);
 
+  // The cards picked by "Practise ahead", once today's are done; each leaves the round once rated.
+  const [ahead, setAhead] = useState<string[] | null>(null);
+
   const loading = !ready || !now;
-  const due = loading ? [] : dueToday(cards, now, (id) => byId.has(id));
+  const known = (id: string) => byId.has(id);
+  const due = loading ? [] : dueToday(cards, now, known);
   const today = loading ? [] : ratedToday(events, now);
   const done = today.length;
+  // A card rated today never comes round again today, so an Again while practising ahead waits for tomorrow.
+  const ratedIds = new Set(today.map((t) => t.card));
+  const early = loading ? [] : upcoming(cards, now, known).filter((c) => !ratedIds.has(c.id));
+  const aheadLeft = due.length === 0 && ahead ? ahead.map((id) => cards.get(id)).filter((c): c is ReviewCard => !!c && !ratedIds.has(c.id)) : [];
+  const queue = due.length > 0 ? due : aheadLeft;
 
   let body: ReactNode;
   if (loading) {
@@ -126,9 +139,10 @@ export function ReviewQueue({ faces }: { faces: CardFace[] }) {
       </p>
     );
   } else if (cards.size === 0) body = <NoCards />;
-  else if (due.length === 0) body = <AllDone reviewed={done} cards={cards} now={now} />;
+  else if (queue.length === 0)
+    body = <AllDone reviewed={done} cards={cards} now={now} early={early.length} onAhead={() => setAhead(early.slice(0, AHEAD).map((c) => c.id))} />;
   else {
-    const card = due[0];
+    const card = queue[0];
     body = (
       <Session
         key={card.id}
@@ -137,6 +151,7 @@ export function ReviewQueue({ faces }: { faces: CardFace[] }) {
         now={now}
         events={events}
         today={today}
+        ahead={due.length === 0}
         onRate={(grade) => record('review.rated', { card: card.id, rating: grade })}
       />
     );
@@ -144,7 +159,7 @@ export function ReviewQueue({ faces }: { faces: CardFace[] }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-review-page text-ink">
-      <Header done={done} total={done + due.length} />
+      <Header done={done} total={done + queue.length} />
       <main className="flex flex-1 flex-wrap items-start justify-center gap-6 px-4 pt-2 pb-10 sm:px-6">{body}</main>
     </div>
   );
@@ -187,6 +202,7 @@ function Session({
   now,
   events,
   today,
+  ahead,
   onRate,
 }: {
   face: CardFace;
@@ -194,6 +210,8 @@ function Session({
   now: Date;
   events: readonly ProgressEvent[];
   today: { card: string; rating: Grade }[];
+  /** Practising ahead: the card isn’t due yet. */
+  ahead: boolean;
   onRate: (g: Grade) => void;
 }) {
   const [revealed, setRevealed] = useState(false);
@@ -334,7 +352,8 @@ function Session({
                   {face.kind === 'misconception' && ' · a mistake you made before'}
                 </p>
                 <div role="group" aria-label="Choices" className="flex flex-col gap-2.5">
-                  {question.choices.map((c, i) => {
+                  {choiceOrder(question.q, question.choices.length).map((i) => {
+                    const c = question.choices[i];
                     const state = picked === null ? 'open' : i === question.answer ? 'right' : i === picked ? 'wrong' : 'other';
                     return (
                       <button
@@ -416,7 +435,7 @@ function Session({
       <aside aria-label="About this card" className="hidden min-w-0 flex-[0_1_300px] flex-col gap-3 pt-[18px] md:flex">
         <section className="flex flex-col gap-2.5 rounded-[28px] bg-review-panel p-5">
           <h2 className="text-[13px] font-semibold tracking-[0.06em] text-track-butter-ink uppercase">Why this card now</h2>
-          <p className="text-sm leading-relaxed text-track-butter-title">{whyNow(face, card, lastRating, now)}</p>
+          <p className="text-sm leading-relaxed text-track-butter-title">{whyNow(face, card, lastRating, now, ahead)}</p>
         </section>
         <section className="flex flex-col gap-3 rounded-[28px] bg-review-panel p-5">
           <h2 className="text-[13px] font-semibold tracking-[0.06em] text-track-butter-ink uppercase">Today so far</h2>
@@ -441,7 +460,11 @@ function tally(today: { rating: Grade }[]): string {
   return `${today.length} ${today.length === 1 ? 'card' : 'cards'} graded today: ${counts.map(([g, n]) => `${n} ${GRADE_LABEL[g]}`).join(', ')}`;
 }
 
-function whyNow(face: CardFace, card: ReviewCard, lastRating: Grade | undefined, now: Date): string {
+function whyNow(face: CardFace, card: ReviewCard, lastRating: Grade | undefined, now: Date, ahead: boolean): string {
+  if (ahead) {
+    const date = card.card.due.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    return `You’re practising ahead: it isn’t due until ${date}. An early review still helps, but it moves the card on less than one on time, since you’re less likely to have forgotten it yet.`;
+  }
   const overdue = daysBetween(card.card.due, now);
   const timing = overdue > 0 ? `It was due ${overdue === 1 ? 'yesterday' : `${overdue} days ago`}, so it may be slipping.` : 'It’s due today, just before you’d start to forget it.';
   if (face.kind === 'misconception') return `You made this mistake ${ago(new Date(card.born), now)}. It keeps coming back until you answer right ${CLEAR_AFTER} times in a row.`;
@@ -466,22 +489,45 @@ function Done({ icon, title, children, actions }: { icon: ReactNode; title: stri
   );
 }
 
-function AllDone({ reviewed, cards, now }: { reviewed: number; cards: Map<string, ReviewCard>; now: Date }) {
+/** Where cards come from, so an empty queue says how to fill it. */
+function WhereCardsComeFrom() {
+  return (
+    <p className="text-[15px]">
+      New cards come from what you do: each quiz question you answer in a lesson, each{' '}
+      <Link href="/practice" className="font-semibold text-accent-ink underline underline-offset-2">
+        practice problem
+      </Link>{' '}
+      you solve, each “What does it print?” task in a{' '}
+      <Link href="/learn?area=languages" className="font-semibold text-accent-ink underline underline-offset-2">
+        Python topic
+      </Link>
+      , and any common mistake you make.
+    </p>
+  );
+}
+
+function AllDone({ reviewed, cards, now, early, onAhead }: { reviewed: number; cards: Map<string, ReviewCard>; now: Date; early: number; onAhead: () => void }) {
   const xp = useXp();
   const tomorrow = new Date(endOfDay(now).getTime() + 1);
   const dueTomorrow = dueToday(cards, tomorrow).length;
   const next = nextDue(cards, now);
+  const round = Math.min(early, AHEAD);
   return (
     <Done
       icon={<FiCheck className="size-10" strokeWidth={2.5} />}
       title={reviewed > 0 ? `All done for today: ${reviewed} reviewed.` : 'Nothing due today.'}
       actions={
         <>
-          <ButtonLink href="/" size="l">
-            Back to Today
-          </ButtonLink>
-          <ButtonLink href="/learn" kind="secondary" size="l">
+          {round > 0 && (
+            <Button size="l" onClick={onAhead}>
+              Practise ahead
+            </Button>
+          )}
+          <ButtonLink href="/learn" kind={round > 0 ? 'secondary' : 'primary'} size="l">
             Keep learning
+          </ButtonLink>
+          <ButtonLink href="/" kind="ghost" size="l">
+            Back to Today
           </ButtonLink>
         </>
       }
@@ -496,7 +542,9 @@ function AllDone({ reviewed, cards, now }: { reviewed: number; cards: Map<string
       </p>
       <p>
         You have {cards.size} {cards.size === 1 ? 'card' : 'cards'} in all.
+        {round > 0 && ` Practise ahead asks the ${round === 1 ? 'one' : round} due soonest now, before ${round === 1 ? 'it’s' : 'they’re'} due.`}
       </p>
+      <WhereCardsComeFrom />
     </Done>
   );
 }
@@ -518,8 +566,8 @@ function NoCards() {
       }
     >
       <p>
-        Cards arrive as you learn: every practice problem you solve, and every quiz question you answer in a lesson, comes back here a few days later, then less and less often as it sticks. A
-        common mistake you make comes back until you’ve cleared it.
+        Cards arrive as you learn: every practice problem you solve, every quiz question you answer in a lesson, and every “What does it print?” task in a Python topic comes back here a few
+        days later, then less and less often as it sticks. A common mistake you make comes back until you’ve cleared it.
       </p>
     </Done>
   );

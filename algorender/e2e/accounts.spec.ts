@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { collectErrors } from './errors';
+import { seed } from './seed';
 
 // Accounts, synced progress and the daily review, against the app's own
 // database (PGlite, or DATABASE_URL). Every test signs up a fresh learner.
@@ -137,14 +138,33 @@ test('a solved problem comes back for review a few days later', async ({ page })
   expect(errors).toEqual([]);
 });
 
+test('with nothing due, the soonest cards can be practised ahead, and each only once a day', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/review');
+  await seed(page, [['problem.submitted', { problem: 'two-sum', language: 'python', passed: true, tests: 12, failed: 0 }, 0]]);
+  await page.goto('/review');
+  await expect(page.getByRole('heading', { name: 'Nothing due today.' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/New cards come from what you do/)).toBeVisible();
+  await expect(page.getByText(/Practise ahead asks the one due soonest now/)).toBeVisible();
+  await page.getByRole('button', { name: 'Practise ahead' }).click();
+  await expect(page.getByRole('heading', { name: 'Two Sum' })).toBeVisible();
+  await expect(page.getByText(/You’re practising ahead: it isn’t due until/)).toBeVisible();
+  await page.keyboard.press('Space');
+  await page.keyboard.press('3');
+  // Rated today, so it isn't offered again until it's due.
+  await expect(page.getByRole('heading', { name: 'All done for today: 1 reviewed.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Practise ahead' })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test('a quiz question answered wrongly comes back the next day', async ({ page }) => {
   await page.goto('/learn/binary-search');
   const first = page.getByRole('group', { name: 'Question 1' });
-  await first.getByRole('button').nth(1).click(); // a wrong answer: the right one is the first
+  await first.getByRole('button', { name: '100', exact: true }).click(); // a wrong answer: the right one is 10
   await page.clock.setFixedTime(new Date(Date.now() + DAY + 3_600_000));
   await page.goto('/review');
   await expect(page.getByText(/^From Binary search/)).toBeVisible();
-  await page.getByRole('group', { name: 'Choices' }).getByRole('button').first().click();
+  await page.getByRole('group', { name: 'Choices' }).getByRole('button', { name: '10', exact: true }).click();
   await expect(page.getByText('Right.')).toBeVisible();
   await page.getByRole('button', { name: /^Good/ }).click();
   await expect(page.getByRole('heading', { name: /All done for today/ })).toBeVisible();

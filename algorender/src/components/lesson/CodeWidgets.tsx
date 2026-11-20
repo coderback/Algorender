@@ -11,6 +11,7 @@ import { LANGUAGES, LINE_LIMITS, type Language, type RunResult } from '@/workspa
 import { ErrorCard, MEMORY_LEGEND, RunOutput, RunPicture, statusText } from '@/workspace/RunOutput';
 import { loadLanguage, saveLanguage } from '@/workspace/storage';
 import { traceFor, type RunTrace } from '@/workspace/trace';
+import { choiceOrder } from '@/lib/choices';
 import { useExerciseRun } from '@/workspace/useExerciseRun';
 import { useRuntime } from '@/workspace/useRuntime';
 import { Workspace, type Stage } from '@/workspace/Workspace';
@@ -232,7 +233,8 @@ function PredictCard({ question, choices, answer, why, picked, onPick }: Predict
         <InlineText text={question} />
       </p>
       <div className="flex flex-wrap gap-2">
-        {choices.map((c, i) => {
+        {choiceOrder(question, choices.length).map((i) => {
+          const c = choices[i];
           const state = picked == null ? 'open' : i === answer ? 'right' : i === picked ? 'wrong' : 'other';
           return (
             <button

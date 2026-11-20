@@ -8,6 +8,7 @@ import { Button, ButtonLink } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { cx } from '@/components/ui/cx';
 import { ProgressBar } from '@/components/ui/Numbers';
+import { choiceOrder } from '@/lib/choices';
 import { useMinute } from '@/lib/now';
 import {
   buildRound,
@@ -155,7 +156,8 @@ function Asking({ stage, round, titles, onDone }: { stage: number; round: Checkp
         <h2 className="font-display text-[clamp(24px,2.6vw,36px)] leading-[1.12] font-bold tracking-[-0.02em]">{q.q}</h2>
       </div>
       <div className="flex flex-col gap-3" role="group" aria-label="Choices">
-        {q.choices.map((c, ci) => {
+        {choiceOrder(q.q, q.choices.length).map((ci, shown) => {
+          const c = q.choices[ci];
           const state = !done ? 'open' : ci === q.answer ? 'right' : ci === picked ? 'wrong' : 'other';
           return (
             <button
@@ -172,7 +174,7 @@ function Asking({ stage, round, titles, onDone }: { stage: number; round: Checkp
               )}
             >
               <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sunken text-[13px] text-ink-soft">
-                {ci + 1}
+                {shown + 1}
               </span>
               {c}
             </button>
