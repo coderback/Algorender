@@ -1,0 +1,292 @@
+<Section step="hook" title="A loss with two knobs">
+
+In the lesson on learning from examples, a line had two knobs, $w$ and $b$. Every choice of the
+pair gave one number, the loss. So the loss is a rule with **two inputs** and one output. A real model has millions of
+knobs, but two are enough to see the problem: how do you draw a rule like that?
+
+A graph with one input is a curve. With two inputs, every point $(w, b)$ of a flat grid gets its own height, so the
+picture is a whole landscape, with hills, valleys and passes. Maps for walkers have long drawn landscapes flat:
+each line on the map joins places at the same height. That map is a **contour map**, and it is how machine learning
+draws a loss over two weights. A later lesson sends gradient descent walking downhill on one.
+
+This lesson teaches you to read one: what a height is, which way is level, where the ground is steep, and what a slice
+through a point looks like.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="function of two inputs">A rule $f(x, y)$ that takes two numbers, $x$ and $y$, and gives back one: a height above the point $(x, y)$.</Term>
+  <Term name="table with two inputs">Its values written out: a column for each $x$, a row for each $y$, and in each cell the height $f(x, y)$.</Term>
+  <Term name="contour line">A line through every point where $f$ has one height, say 5. On a hiking map, the lines of equal height.</Term>
+  <Term name="contour map">Many contour lines at evenly spaced heights, drawn on the same flat grid: the whole landscape, seen from above.</Term>
+  <Term name="slice">Hold one input fixed and let the other vary. What is left is an ordinary curve of one input, like the graphs you already know.</Term>
+  <Term name="saddle">A point where the ground rises one way and falls the other, like the middle of a horse's saddle or a mountain pass.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="From a table of heights to a map">
+
+Our landscape is a hill:
+
+$$
+f(x, y) = 8 - x^2/2 - y^2
+$$
+
+Put in two numbers, get one height. At the top, $f(0, 0) = 8$. Two units along $x$, $f(2, 0) = 8 - 2^2/2 - 0 = 6$. Two
+units along $y$ instead, $f(0, 2) = 8 - 0 - 4 = 4$. The same distance from the top, but not the same height: this hill
+isn't round, and the map will show it.
+
+Work out the height at every whole-number point with $x$ from −3 to 3 and $y$ from 2 down to −2, and you have a table
+with two inputs: 7 columns, one for each $x$, and 5 rows, one for each $y$. The largest $y$ goes on top, so the table
+sits the same way up as the map. Two of its rows:
+
+- the top row, $y = 2$: −0.5, 2, 3.5, 4, 3.5, 2, −0.5
+- the middle row, $y = 0$: 3.5, 6, 7.5, 8, 7.5, 6, 3.5
+
+<Explore slug="contour-maps" settings={{ preset: 'table' }} caption="The hill's heights at the grid points, filled in row by row, then joined into contour lines one height at a time, from 7 down to 1." />
+
+Then the heights become a map. Pick a height, say 7, and draw one line through every point where the height is exactly
+7: that is the contour line $f = 7$. It passes through the grid points $(0, 1)$ and $(0, -1)$, whose heights are 7, and
+curves between them through points the table doesn't list.
+
+Picture the hill standing in a lake filled to height 7: seen from above, the shoreline is the contour $f = 7$. Raise
+the water to 8 and the shore shrinks to the single point at the top. Do the same for 6, 5, 4 and on down to 1, and the
+lines form rings round the top, 1 apart in height, like the lines on a hiking map.
+
+The rings alone don't say which way is up: a hollow looks just the same. The numbers on the lines and the shading do.
+A loss map is a hollow: its rings circle the lowest point, the best knobs.
+
+A contour line doesn't need a grid point. No grid point has height exactly 3: the contour $f = 3$ runs between them, for
+example between $(-3, 0)$ at height 3.5 and $(-3, 1)$ at height 2.5. Somewhere between those two the ground must pass
+through 3, so the line crosses there.
+
+<KeyIdea>
+
+**A function of two inputs is a landscape: one height above every point $(x, y)$.** A contour line joins the points of
+one height, and a contour map draws many of them, evenly spaced in height, on the flat grid. You read the function off
+the map the way a walker reads a hill.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: walk on the map">
+
+Now $P$ stands on the hill at $(1, 1)$. The faint lines are the contours, one for each whole-number height, and the
+shading is darker on higher ground. Predict what happens to the height as you walk along the contour line through $P$, then
+as you step straight across the lines, first along $x$ and then along $y$, and say which way the ground is steeper.
+
+<PredictChallenge slug="contour-maps" settings={{ preset: 'walk' }} goal={5} />
+
+$P$ is at height $f(1, 1) = 8 - 0.5 - 1 = 6.5$, between the contour lines for 6 and 7. Walking along its own contour
+line, the height reads 6.5 after every step, and the line curves round into an oval that brings you back to $P$. That
+is what a contour line is: the path that stays level.
+
+Stepping across is different. From $(0.5, 1)$ to $(1.5, 1)$, one unit along $x$ through $P$, the height falls from
+6.875 to 5.875, a change of −1. From $(1, 0.5)$ to $(1, 1.5)$, one unit along $y$, it falls from 7.25 to 5.25, a change
+of −2. So the ground near $P$ is twice as steep along $y$.
+
+Look at the map to see it. The lines are 1 apart in height, so where the ground drops 2 per unit they come about half a
+unit apart; where it drops 1 per unit, more than twice that. **Close contour lines mean steep ground; wide gaps mean
+gentle ground.**
+
+<Misconception
+  id="contour-is-downhill"
+  title="A contour line is the way downhill"
+  probes={[
+    {
+      q: 'A walker stands on the 400 m contour line of a map and wants to reach the valley as fast as she can. Which way should she go?',
+      choices: ['Along the 400 m line', 'Across the lines, towards the 300 m line', 'Either: both ways lose height'],
+      answer: 1,
+      trap: 0,
+      why: 'Along the 400 m line she stays at 400 m however far she walks. Only crossing the lines, from higher ones to lower ones, loses height.',
+    },
+    {
+      q: 'Points A and B both lie on the contour line g = 40 of a function g(x, y). What is g(B) − g(A)?',
+      choices: ['0', 'It depends on how far apart A and B are', 'Below 0, since a contour line runs downhill'],
+      answer: 0,
+      trap: 2,
+      why: 'Every point on that line has g = 40, so the difference is 0, however far apart they are.',
+    },
+  ]}
+>
+
+Contour lines look like paths, so it is tempting to think water would run along them. It is the opposite: a contour line
+joins points of one height, so walking along it you never climb or drop. To go downhill you cross the lines, from a
+higher one to a lower one. The way that drops fastest is the way the next lesson finds.
+
+</Misconception>
+
+<Misconception
+  id="close-contours-gentle"
+  title="Contour lines close together mean gentle ground"
+  probes={[
+    {
+      q: 'On a map with lines 50 m apart in height, the north face of a hill has lines that nearly touch, and the south face has lines spread wide. Which face is the easier climb?',
+      choices: ['The north face', 'The south face', 'Neither: both climb the same height'],
+      answer: 1,
+      trap: 0,
+      why: 'Both reach the top, but the south face spreads the climb over more ground, so it is gentler. Lines that nearly touch mean a cliff.',
+    },
+    {
+      q: 'Contour lines are 20 m apart in height. Path R climbs steadily, crossing 13 of them in 600 m of walking; path S crosses 9 in the same 600 m. Which path is steeper?',
+      choices: ['Path R', 'Path S: its lines are further apart, so each one is a bigger climb', 'Both are equally steep'],
+      answer: 0,
+      trap: 1,
+      why: 'Every line is the same 20 m of height. R crosses more of them in the same distance, so it climbs more for every metre walked.',
+    },
+  ]}
+>
+
+Crowded lines can look like a busy, flat patch, but every gap between neighbouring lines is the same change in height.
+If that change happens over a short distance the ground is steep; over a long distance it is gentle. So the closer the
+lines, the steeper the ground.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Slice the surface, then build the table">
+
+A contour map shows the whole landscape. To see its shape through one point, **slice** it. Hold $y$ fixed and let only
+$x$ vary, as if walking west to east (left to right) along one line of the map, and the heights along that line make an ordinary curve
+of one input: the **x-slice**. Hold $x$ fixed instead and you get the **y-slice**.
+
+Here $P$ is at $(2, 0)$ on the same hill. Step through, then drag $P$ and watch both slices move with it.
+
+<Explore slug="contour-maps" settings={{ preset: 'slices' }} input caption="The map with the two lines through P, and beside or below it the chart “Slices through P”: the heights along each line drawn as a curve of one input, with a dashed line through P on each." />
+
+Both slices share the chart's axis: $x$ for the x-slice, $y$ for the y-slice. So $P$ appears twice, once on each curve,
+at the same height 6.
+
+Holding $y = 0$ turns the hill into $f(x, 0) = 8 - x^2/2$, an upside-down parabola: the $-$ in front of $x^2$ flips it,
+just as a negative $a$ flipped a graph in the lesson on functions. $P$ sits on its right-hand side, where it falls.
+
+How steeply? Measure it by rise over run across a small step either side of $P$. From $x = 1.9$ to $x = 2.1$ the height
+goes from 6.195 to 5.795: a rise of −0.4 over a run of 0.2, a rate of −2 per unit. The dashed line in the chart falls
+at that rate. Right at $P$ the ground drops at a rate of 2 per unit of $x$; further out it drops faster (2.5 from
+$x = 2$ to 3), because the curve bends. The next lesson makes "the slope at a single point" exact.
+
+Holding $x = 2$ instead gives the y-slice, $f(2, y) = 6 - y^2$, another upside-down parabola, and $P$ is at its top.
+At $y = -0.1$ and at $y = 0.1$ the height is 5.99 both times: a rise of 0, so the rate is 0. Along $y$ the ground at
+$P$ is level, and along $x$ it falls. Two inputs, so two slopes, one for each slice. The next lesson calls these
+**partial derivatives**.
+
+On a hill both slices through the top are hills. A saddle is different:
+
+<Explore slug="contour-maps" settings={{ preset: 'saddle' }} input caption="The saddle (x² − y²)/2 sliced through P = (0, 0): one slice along x, one along y." />
+
+On the saddle $f(x, y) = (x^2 - y^2)/2$, the x-slice through $(0, 0)$ is $x^2/2$, an upright parabola, a valley, and $P$
+is at its bottom. The y-slice is $-y^2/2$, a hill, and $P$ is at its top. Both slopes are 0, so the ground at $P$ is
+level both ways, yet $P$ is neither a peak nor a valley of the surface: walk along $x$ and you climb, walk along $y$ and
+you drop. Loss landscapes of big models are full of saddles like this, so a level point is not always the bottom.
+
+On the map a saddle's contours ring nothing: they open away from $P$, and the contour $f = 0$ crosses itself at $P$ in
+an X.
+
+<Misconception
+  id="one-slice-peak"
+  title="If one slice has a peak at P, P is a peak"
+  probes={[
+    {
+      q: 'For g(x, y) = (y − 1)² − (x + 2)², the x-slice through (−2, 1) is −(x + 2)², which has its top at x = −2. Is (−2, 1) the highest point of g near it?',
+      choices: ['Yes: the slice peaks there', 'No: along y, g rises away from (−2, 1)', 'Yes, because g(−2, 1) is 0'],
+      answer: 1,
+      trap: 0,
+      why: 'The y-slice is (y − 1)², a valley with its bottom at y = 1, so stepping along y climbs. (−2, 1) is a saddle, not a peak.',
+    },
+    {
+      q: 'A walker stands on a mountain pass. The ground falls away to her left and right, and the path rises ahead of her and behind her. Is she on a summit?',
+      choices: ['Yes: across the pass she is at the highest point', 'No: along the path she is at the lowest point', 'Yes, because the ground under her feet is level'],
+      answer: 1,
+      trap: 0,
+      why: 'One slice, left to right, has her at its top; the other, along the path, has her at its bottom. A pass is a saddle.',
+    },
+  ]}
+>
+
+A slice only shows the ground along one line. $P$ can be the top of one slice and the bottom of another, as at a
+saddle. To be a peak, $P$ must be higher than everything around it, whichever way you walk, so one slice is never
+enough to tell.
+
+</Misconception>
+
+Now build a table of heights yourself. The exercise uses a different hill, slanted and steeper along $y$:
+$f(x, y) = 2 - x^2 - 2y^2 + xy + 7y$, whose top is at $(1, 2)$, height 9. Write `heights(xs, ys)`, which fills a
+`table()` with one row for each $y$, the top of the map first, and one column for each $x$.
+
+<CodeExercise exercise="height-table" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'f(x, y) = 2x + y². What is the height at the point (3, 1)?',
+      choices: ['7', '11', '8'],
+      answer: 0,
+      why: 'Put x = 3 and y = 1 in: 2 × 3 + 1² = 6 + 1 = 7. The point (1, 3) would give 2 + 9 = 11: x always goes first.',
+    },
+    {
+      q: 'A walker follows one contour line on a hiking map for an hour. What happens to her height?',
+      choices: ['It goes down: contour lines lead downhill', 'It stays the same', 'It goes up and down, crossing other lines'],
+      answer: 1,
+      why: 'A contour line joins points of one height, so walking along it she never climbs or drops, and she never crosses another line.',
+      traps: { 0: 'contour-is-downhill' },
+    },
+    {
+      q: 'On a map with contour lines 25 m apart in height, the lines are 4 mm apart near place A and 16 mm apart near place B. Where is the ground steeper?',
+      choices: ['Near A', 'Near B', 'Equally steep: every gap is 25 m of height'],
+      answer: 0,
+      why: 'Every gap is the same 25 m of height, but near A it is climbed over a quarter of the distance. Close lines mean steep ground.',
+      traps: { 1: 'close-contours-gentle' },
+    },
+    {
+      q: 'Through a point P of some surface, the y-slice has P at its very top. What can you say about P?',
+      choices: ['P is a peak of the surface', 'Not enough yet: the x-slice could rise away from P, as at a saddle', 'P is the lowest point of the surface'],
+      answer: 1,
+      why: 'One slice only shows one line through P. If the x-slice is a valley there, P is a saddle; it is a peak only if the ground falls every way.',
+      traps: { 0: 'one-slice-peak' },
+    },
+    {
+      q: 'f(x, y) = x² + 3y. The x-slice through P = (1, 2) holds y at 2. Which curve is it?',
+      choices: ['1 + 3y', 'x² + 3y', 'x² + 6', '7'],
+      answer: 2,
+      why: 'Holding y at 2 turns 3y into 6, leaving x² + 6, a curve of x alone. 1 + 3y holds x at 1 instead (the y-slice), and 7 is just the height at P.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="reading-contour-maps"
+  prompt="How does a contour map show a function of two inputs, and what can you read from it about the ground at a point?"
+  rubric={[
+    'A function of two inputs gives one height for every point (x, y), like a table with a row for each y and a column for each x.',
+    'A contour line joins the points of one height, so walking along it the height stays the same.',
+    'Neighbouring contour lines differ by the same height, so where they crowd together the ground is steep and where they spread out it is gentle.',
+    'A slice holds one input fixed, leaving an ordinary curve of the other with its own slope at the point.',
+    'One slice is not enough to call a point a peak: at a saddle one slice is a valley and the other a hill.',
+  ]}
+  example="A function f(x, y) takes two numbers and gives one height, so it fills a table with a row for each y and a column for each x, or a landscape above a flat grid. A contour map joins the points of equal height into lines, one line per height, evenly spaced, like a hiking map. Along a contour line the height never changes; to go up or down you cross the lines, and where they are close together the ground is steep. Holding y fixed gives the x-slice, an ordinary curve with its own slope, and holding x gives the y-slice. At a saddle the x-slice can be a valley and the y-slice a hill, so one slice can't tell you a point is a peak."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A function of two inputs, $f(x, y)$, gives one height above every point: a table with two inputs, or a landscape.
+- A contour line joins the points of one height. Walking along it the height never changes; to climb or drop you cross the lines.
+- Neighbouring contour lines are the same height apart, so close lines mean steep ground and wide gaps mean gentle ground.
+- A slice holds one input fixed and leaves an ordinary curve of the other, with its own slope: two inputs, two slopes.
+- At a saddle one slice is a valley and the other a hill, so one slice can't tell you a point is a peak.
+
+</Section>

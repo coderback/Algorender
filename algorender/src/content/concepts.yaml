@@ -523,44 +523,46 @@ concepts:
     track: calculus
     summary: Surfaces read as contour maps, and the curves you get by slicing through them.
     prereqs: [functions-graphs, vectors]
-    planned: true
+    visualisers: [contour-maps]
+    lesson: contour-maps
   - id: derivatives-gradients
     title: Derivatives and gradients
     track: calculus
     summary: Slopes in one dimension, and the direction of steepest ascent in many.
-    prereqs: [functions-graphs]
+    prereqs: [functions-graphs, contour-maps]
     visualisers: [derivative]
     lesson: derivatives-gradients
-    later: [contour-maps] # B4
   - id: derivative-rules
     title: Derivative rules
     track: calculus
     summary: The derivatives of products, exp, log, sigmoid and ReLU, and checking them numerically.
     prereqs: [derivatives-gradients, exponents-logs]
-    planned: true
+    visualisers: [derivative-rules]
+    lesson: derivative-rules
   - id: chain-rule
     title: The chain rule
     track: calculus
     summary: How changes flow through a computation graph, one link at a time.
-    prereqs: [derivatives-gradients]
+    prereqs: [derivatives-gradients, derivative-rules]
     visualisers: [chain-rule]
     lesson: backpropagation
     links:
       - href: /code/neuron-gradients
         label: 'Build micrograd: backprop through a neuron'
-    later: [derivative-rules] # B4
   - id: taylor-approximation
     title: Linear and quadratic approximation
     track: calculus
     summary: Replacing a curve by its tangent line or parabola near a point, and Newton’s method.
     prereqs: [derivative-rules]
-    planned: true
+    visualisers: [taylor]
+    lesson: taylor-approximation
   - id: jacobians
     title: 'Jacobians: the local linear map'
     track: calculus
     summary: Zoom in far enough and any smooth map looks like a matrix, which is what backprop multiplies.
     prereqs: [chain-rule, matrix-multiplication]
-    planned: true
+    visualisers: [jacobian]
+    lesson: jacobians
   - id: integrals
     title: Integrals as accumulated area
     track: calculus
@@ -822,7 +824,9 @@ concepts:
     track: deep-learning
     summary: Recording a computation as a graph and running the chain rule backwards through all of it at once.
     prereqs: [chain-rule]
-    planned: true
+    visualisers: [autograd]
+    lesson: autograd
+    links: [{ href: /learn/topological-sort, label: 'Topological sort: the order backward runs in' }]
   - id: activations-initialisation
     title: Activations and initialisation
     track: deep-learning

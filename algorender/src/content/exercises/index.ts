@@ -3,6 +3,8 @@
 // The model lives in shared.ts; each file below adds one family.
 
 import { arrayExercises, bugHunts, modifyExercises } from './arrays';
+import { autogradExercises } from './autograd';
+import { calculusExercises } from './calculus';
 import { graphExercises } from './graphs';
 import { gridExercises } from './grids';
 import { leastSquaresExercises } from './least-squares';
@@ -24,6 +26,8 @@ export const exercises: Exercise[] = [
   ...linearAlgebraExercises,
   ...leastSquaresExercises,
   ...mlExercises,
+  ...calculusExercises,
+  ...autogradExercises,
   ...modifyExercises,
   ...bugHunts,
 ];

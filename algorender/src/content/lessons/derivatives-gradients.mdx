@@ -164,7 +164,10 @@ never lands exactly on it.
 
 A loss depends on many weights at once. For $f(x, y)$, the **partial derivative** $\partial f/\partial x$ is the
 ordinary derivative in $x$ with $y$ held fixed like a number, and $\partial f/\partial y$ the other way round.
-In the narrow valley $f(x, y) = x^2/20 + 5y^2$ they are $x/10$ and $10y$. Stacked, they make the gradient
+These are the slopes of the two slices from [contour maps](/learn/contour-maps): hold $y$ fixed and $f$ becomes an
+ordinary curve in $x$, whose slope at $P$ is $\partial f/\partial x$. On the hill $f(x, y) = 8 - x^2/2 - y^2$ they are
+$-x$ and $-2y$, so at $P = (1, 1)$ the x-slice has slope −1 and the y-slice −2: the ground falls twice as steeply in
+$y$, where the contour lines bunch up. In the narrow valley $f(x, y) = x^2/20 + 5y^2$ they are $x/10$ and $10y$. Stacked, they make the gradient
 $\nabla f = (x/10, 10y)$, which at $(-3.5, 1.5)$ is $(-0.35, 15)$.
 
 Walk in the direction of a unit vector $u$, and the slope underfoot is the dot product $\nabla f \cdot u$.

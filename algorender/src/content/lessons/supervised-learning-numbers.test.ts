@@ -20,7 +20,7 @@ const inputOf = (preset: string) => supervisedLearning.input.examples.find((e) =
 const framesOf = (preset: string) => traceOf(supervisedLearning, inputOf(preset)).frames as { state: PlotState; checkpoint?: unknown }[];
 
 function embeds() {
-  return [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}[^>]*?(?:goal=\{(\d+)\})?[^>]*\/>/g)].map((m) => ({
+  return [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}(?:[^>]*?goal=\{(\d+)\})?[^>]*\/>/g)].map((m) => ({
     tag: m[1],
     slug: m[2],
     preset: m[3],

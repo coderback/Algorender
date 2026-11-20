@@ -618,15 +618,45 @@ const mathEntries = [
     category: 'Linear Algebra'
   },
   {
+    name: 'Contour Maps',
+    description: 'Read a function of two inputs as a map: a table of heights, contour lines of equal height, steep ground where they bunch up, and the curves you get by slicing through a point.',
+    slug: 'contour-maps',
+    category: 'Calculus'
+  },
+  {
     name: 'Derivatives',
     description: 'Shrink a secant line until it becomes the tangent, then trace the slope at every point to draw f′.',
     slug: 'derivative',
     category: 'Calculus'
   },
   {
+    name: 'Derivative Rules',
+    description: 'The product rule as a growing rectangle, the derivatives of x³, eˣ, ln x, σ, tanh and ReLU checked against measured slopes, and why a numerical slope gets worse when h is too small.',
+    slug: 'derivative-rules',
+    category: 'Calculus'
+  },
+  {
+    name: 'Taylor Approximation',
+    description: 'Fit a point, a tangent and a parabola to a curve and watch their errors shrink, find √2 with Newton’s method, and see the parabola behind a step downhill.',
+    slug: 'taylor',
+    category: 'Calculus'
+  },
+  {
     name: 'The Chain Rule (Backpropagation)',
     description: 'Run a computation graph forward, then push gradients back node by node: local derivative times upstream gradient.',
     slug: 'chain-rule',
+    category: 'Calculus'
+  },
+  {
+    name: 'Jacobians',
+    description: 'Zoom in on a curved map of the plane until it looks like a matrix, read its columns as where tiny steps go, and run backprop as vector–Jacobian products.',
+    slug: 'jacobian',
+    category: 'Calculus'
+  },
+  {
+    name: 'Automatic Differentiation',
+    description: 'Sort a computation graph into topological order and run the chain rule back along it, compare forward and reverse mode, then train a neuron with the engine.',
+    slug: 'autograd',
     category: 'Calculus'
   },
   {

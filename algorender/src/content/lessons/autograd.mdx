@@ -1,0 +1,323 @@
+<Section step="hook" title="One line that finds every gradient">
+
+In PyTorch, finding the gradient of a model with millions of weights comes down to one line: `loss.backward()`. A moment later every
+weight holds its gradient. Nobody wrote down the derivative of that loss. The library worked it out by itself, from the
+code that computed the loss.
+
+That is **automatic differentiation**, or **autograd**. In the backpropagation lesson you ran the chain rule on a graph
+by hand, then started an engine of your own. This lesson takes the machine apart: how it records what your code did, why
+it must walk that record in one particular order, why it runs backwards rather than forwards, and why training is just
+this, over and over. It ends with the second milestone project: your engine, finished, checked and training a neuron.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="autograd">Working out exact derivatives of a program by recording each operation as it runs, then applying the chain rule to the record.</Term>
+  <Term name="leaf">A value made directly rather than computed from others: an input or a weight.</Term>
+  <Term name="share">What one use of a value sends back to it: the local derivative times the gradient of the value it helped make. A value's gradient is the sum of its shares.</Term>
+  <Term name="topological order">A list of the graph's values in which every value comes after its inputs.</Term>
+  <Term name="depth-first search">A way to build that list: start at the output, and before adding a value, go into each of its inputs and add them first.</Term>
+  <Term name="reverse mode">The chain rule run backwards from the output, as backpropagation does.</Term>
+  <Term name="forward mode">The chain rule run forwards with the values: each value carries a second number, its tangent, for one chosen input.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Record as you compute, then sort">
+
+When your code runs `p = a * b` with $a = 2$ and $b = 3$, the engine doesn't just compute 6. It makes a value that
+remembers its inputs, $a$ and $b$, and its local derivatives: the other factor for each, so $b = 3$ for $a$ and $a = 2$
+for $b$. Every operation adds one box to a graph. By the time the loss is computed, the whole computation is recorded,
+and backward only has to read the record. Your engine's `_backward` functions are exactly that record.
+
+Here is a graph where two values are used twice. With $a = 2$, $b = 3$ and $c = -4$:
+
+$$
+\begin{aligned}
+p &= a \cdot b = 6 \\
+q &= p + c = 2 \\
+r &= q \cdot p = 12 \\
+L &= r + q = 14
+\end{aligned}
+$$
+
+<Explore slug="autograd" settings={{ preset: 'order' }} caption="The forward pass, then a depth-first search that lists the nodes, then backward along the list read from the right, with each gradient's running total." />
+
+$p$ feeds both $q$ and $r$, and $q$ feeds both $r$ and $L$, so each of them gets two shares. $q$ gets 1 from $L$ (an
+addition passes the gradient straight through) and 6 from $r$ (a product's local derivative is the other factor,
+$p = 6$): 7 in all. $p$ gets 2 from $r$ and 7 from $q$: 9 in all. Then $a$ gets $3 \times 9 = 27$, $b$ gets
+$2 \times 9 = 18$, and $c$ gets 7.
+
+The order matters because the engine handles each value **once**, passing on whatever gradient it holds at that moment.
+Suppose $q$ went before $r$. It would pass on 1 when its whole gradient is 7, and $r$'s share of 6 would arrive too late.
+$p$ would end with $2 + 1 = 3$ instead of 9, and $a$ with 9 instead of 27. So the rule is: a value passes its gradient
+on only after every value made from it has sent its share.
+
+A **topological order** guarantees that, read backwards. In it every value comes after its inputs, so anything made
+from $v$ comes after $v$. Read backwards, everything made from $v$ comes before $v$: by $v$'s turn, all its shares have
+arrived. The depth-first search builds one in a few lines, with your engine's names from part 2:
+
+```python
+def visit(v):
+    if v not in seen:
+        seen.add(v)
+        for u in v._prev:
+            visit(u)      # its inputs first
+        order.append(v)   # then v itself
+
+visit(L)
+```
+
+From $L$ it gives $a, b, p, c, q, r, L$, and backward reads it from the right: $L, r, q, c, p, b, a$. $r$ comes before
+$q$ and $q$ before $p$, just as the rule needs. The `seen` set stops a value used twice from being listed twice. If you
+have met [topological sort](/learn/topological-sort) on the algorithms side, this is the same search; you don't need it
+for this lesson.
+
+The last frame checks the answer the slow way: nudging $a$ by 0.001 moves $L$ from 14 to 14.027, about
+$27 \times 0.001$ more.
+
+<KeyIdea>
+
+**Backward visits values in reverse topological order.** Every value made from $v$ comes before $v$, so by $v$'s turn
+its gradient is complete, the sum of all its shares. Each value is visited once, and one pass gives every gradient.
+
+</KeyIdea>
+
+<Misconception
+  id="pass-gradient-early"
+  title="A value can pass its gradient on as soon as it has some"
+  probes={[
+    {
+      q: 'L = m + k, where m = 3 × k and k = 2 × t. What is ∂L/∂t?',
+      choices: ['2', '6', '8', '4'],
+      answer: 2,
+      trap: 0,
+      why: 'k gets 1 from L and 3 from m, so its gradient is 4, and t gets 2 × 4 = 8. If k passed on its first share before m’s arrived, t would get only 2 × 1 = 2.',
+    },
+    {
+      q: 'y = u + v, where u = 2·v and v = 3·x. Backward handles each value once. Which order gives the right ∂y/∂x?',
+      choices: ['y, v, u, x', 'x, v, u, y', 'y, u, v, x'],
+      answer: 2,
+      trap: 0,
+      why: 'v feeds both u and y, so it must wait for u’s share: u goes before v.',
+    },
+  ]}
+>
+
+A share is only part of a gradient when the value is used more than once. In the graph above, $q$ held 1 after $L$'s
+step, but its gradient was 7. Passing on early drops the shares still to come for everything further back, and the
+answers are wrong with no error to warn you. Reverse topological order is what makes every value wait its turn.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: forward mode or reverse mode">
+
+Backward isn't the only way to run the chain rule. **Forward mode** goes along with the values, left to right. Choose
+one input. Every value carries a second number, its **tangent** $\dot{v}$ (said "v dot"): how fast it changes as the
+chosen input moves. The name comes from the tangent line: it is the slope of $v$ along the chosen input. The chosen
+input's tangent is 1, since it changes one-for-one with itself, and the other inputs' are 0. Each new value's tangent is its inputs' tangents, each times its local derivative, added up. For a product
+$p = x_1 \cdot x_2$ that is $\dot{p} = x_2 \cdot \dot{x}_1 + x_1 \cdot \dot{x}_2$. The output's tangent is its
+derivative with respect to the chosen input.
+
+Here is a function with three inputs and one output, where $x_1$ is used twice:
+
+$$
+f = (x_1 \cdot x_2 + x_3) \cdot x_1
+$$
+
+with $x_1 = 2$, $x_2 = 3$ and $x_3 = -1$. We want all three derivatives. Predict the tangents in forward mode, count
+the passes it needs, then predict the gradients in reverse mode.
+
+<PredictChallenge slug="autograd" settings={{ preset: 'modes' }} goal={4} />
+
+Both modes agree: $f = 10$, and $\frac{\partial f}{\partial x_1} = 11$, $\frac{\partial f}{\partial x_2} = 4$,
+$\frac{\partial f}{\partial x_3} = 2$. But a tangent only answers for the input it was seeded on, so forward mode
+needed 3 passes, one per input. Reverse mode needed one forward pass to record the graph and one backward pass, and
+got all three at once.
+
+Now scale it up. Forward mode costs one pass per input; reverse mode costs one forward pass, then one backward pass per
+output. A model with 1,000,000 weights has a million inputs and one output, its loss. For every gradient:
+
+- **forward mode** needs 1,000,000 passes;
+- **reverse mode** needs 1 forward pass and 1 backward pass.
+
+That is why PyTorch, JAX and every other deep-learning library run reverse mode. Turn the shape round, a few inputs
+and many outputs, and forward mode is the cheaper one. (If you've done the Jacobians lesson: forward mode builds the
+Jacobian one column at a time and reverse mode one row at a time.)
+
+There is a third way to get a gradient: nudge each input a little both ways and measure, as the derivatives lesson's
+central difference does. For a weight $w$ and a small $h$, that is
+
+$$
+\frac{\partial L}{\partial w} \approx \frac{L(w + h) - L(w - h)}{2h}
+$$
+
+with every other weight held still. For the million weights that is 2,000,000 runs of the model, and every answer is only
+approximate. Autograd never does that.
+
+<Misconception
+  id="autograd-nudges"
+  title="Autograd works by nudging each input and watching the output"
+  probes={[
+    {
+      q: 'A model has 50,000 weights. Measuring every gradient by central differences takes how many runs of the model, against autograd’s?',
+      choices: ['50,000 runs either way: autograd nudges too', '100,000 runs, against one forward and one backward pass', 'One run either way'],
+      answer: 1,
+      trap: 0,
+      why: 'A central difference runs the model twice per weight, nudged up and nudged down. Autograd records the graph once and runs one backward pass for all 50,000 gradients.',
+    },
+    {
+      q: 'For f(x) = x³ at x = 1, autograd gives f′(1) = 3. A central difference with h = 0.01 gives 3.0001. Which one is approximate?',
+      choices: ['The central difference', 'Autograd’s 3', 'Neither: they differ only by rounding'],
+      answer: 0,
+      trap: 1,
+      why: 'Autograd multiplies exact local derivatives, here 3x² = 3. The central difference measures a secant slope, whose error is proportional to h²: 0.0001 here.',
+    },
+  ]}
+>
+
+Nudging is **numerical** differentiation: two runs per input, and an answer that is only close. Autograd uses each
+operation's exact local derivative, recorded during the forward pass, and costs about one extra pass however many
+inputs there are. Nudging still has a job: it is the independent **check** that the engine's gradients are right,
+which is part 4 of the project below.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Train with it, then build it">
+
+A loss is a program too, so the engine can differentiate it. Fit one neuron, $\hat{y} = \tanh(w \cdot x + b)$, to 5
+points by gradient descent. Each step does the same three things:
+
+1. **Forward:** build a fresh graph of the loss for the current $w$ and $b$: 48 values. The loss is the mean squared
+   error over the 5 points, $L = \frac{1}{5} \sum (\hat{y} - y)^2$.
+2. **Backward:** run backward from the loss $L$ to get $\frac{\partial L}{\partial w}$ and $\frac{\partial L}{\partial b}$.
+3. **Step:** move both against their gradients, $w \leftarrow w - \eta \cdot \frac{\partial L}{\partial w}$ and the same
+   for $b$, with the step size $\eta$ (eta) $= 0.25$.
+
+<Explore slug="autograd" settings={{ preset: 'train' }} caption="The fit, the loss after each step, and the path of (w, b) across the loss's contour lines. Drag the start to another point on the weights plane." />
+
+From $w = -1$ and $b = 1$, where the fit slopes the wrong way, the loss starts at 2.0153. After 80 steps it is 0.0019,
+with $w = 0.964$ and $b = 0.173$. Every step was one forward pass and one backward pass through a brand-new graph.
+
+That fresh graph matters. Backward **adds** each share into `grad`, which is what lets a value used twice collect both
+of its shares. But it also means a gradient left over from the last step would be added to this step's. So every step
+starts its gradients from 0: here by making new leaves for $w$ and $b$, in PyTorch by calling `zero_grad()`.
+
+<Misconception
+  id="gradients-carry-over"
+  title="Gradients don't need resetting between training steps"
+  probes={[
+    {
+      q: 'A training loop keeps the same Value for w and never resets w.grad. Backward gives 0.4 in step 1 and 0.3 in step 2. What does w.grad hold after step 2’s backward?',
+      choices: ['0.3', '0.7', '0.4'],
+      answer: 1,
+      trap: 0,
+      why: 'Backward adds into grad, so step 2’s 0.3 lands on top of step 1’s 0.4. The update then uses 0.7, which is not the gradient at the current weights.',
+    },
+    {
+      q: 'A loop reuses w and never resets w.grad. Earlier steps left 0.5 in it; at the current weights ∂L/∂w = −0.2. With η = 0.1, what does the update do to w?',
+      choices: ['Moves it up by 0.02', 'Moves it down by 0.05', 'Moves it down by 0.03: the wrong way'],
+      answer: 2,
+      trap: 0,
+      why: 'Backward adds −0.2 to the 0.5 already there, so w.grad holds 0.3 and w ← w − 0.1 × 0.3 moves w down by 0.03. The true gradient, −0.2, says w should go up by 0.02.',
+    },
+  ]}
+>
+
+Backward adds; it never overwrites. Within one pass that is exactly right. Across steps it is a bug: each step's
+gradient is piled onto all the earlier ones, so the steps grow and can point the wrong way, and the loss can climb. It throws
+no error, which is why "forgot to zero the gradients" is one of the most common bugs in training code.
+
+</Misconception>
+
+Now finish the engine. This lesson closes the stage with its milestone project, **Micrograd from scratch**, five
+exercises in order: [part 1](/code/value-backward) gives each operation its local gradient, and
+[part 2](/code/topological-backward) runs backward in topological order (you met both in the backpropagation lesson);
+[part 3](/code/value-ops) teaches the engine pow, exp and relu; [part 4](/code/gradient-check), below, checks every
+gradient against central differences; and [part 5](/code/train-neuron) trains a neuron with your engine, the run you
+just watched. Parts 1 to 3 are written out for you above part 4.
+
+<CodeExercise exercise="gradient-check" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'g = e + f and h = g × e. Which list is a topological order?',
+      choices: ['e, f, g, h', 'h, g, f, e', 'g, e, f, h', 'e, g, f, h'],
+      answer: 0,
+      why: 'Every value must come after its inputs: g after e and f, and h after g and e. “h, g, f, e” is the reverse, the order backward walks.',
+    },
+    {
+      q: 's feeds two values, t and u. Backward handles each value once. It has visited t, so s holds t’s share, but u hasn’t been visited yet. What should s do?',
+      choices: ['Pass on what it holds: that is its gradient', 'Wait: u’s share must arrive before s passes anything on', 'Send its share back to t'],
+      answer: 1,
+      why: 'Each value is handled once. If s passed on now, everything before it would miss u’s share. In reverse topological order u comes before s, so it can’t happen.',
+      traps: { 0: 'pass-gradient-early' },
+    },
+    {
+      q: 'A function has 10 inputs and one output. How many passes does each mode need for all 10 derivatives?',
+      choices: ['Both need 10', 'Forward mode 1; reverse mode 10', 'Both need 2', 'Forward mode 10; reverse mode one forward and one backward'],
+      answer: 3,
+      why: 'A tangent answers for one input, so forward mode runs once per input. Reverse mode sends the output’s gradient back to every input in one backward pass.',
+    },
+    {
+      q: 'How does autograd get ∂L/∂w for every weight w?',
+      choices: ['It looks up a formula for the whole loss in a table', 'It nudges each weight a little and measures how the loss moves', 'It runs the chain rule backward through the graph it recorded'],
+      answer: 2,
+      why: 'Nudging is numerical differentiation: approximate, and two runs per weight. Autograd multiplies exact local derivatives, recorded in the forward pass, in one backward pass.',
+      traps: { 1: 'autograd-nudges' },
+    },
+    {
+      q: 'A training loop makes w and b as Values once and reuses them every step, never setting their grad back to 0. What happens?',
+      choices: ['Nothing: each backward replaces the old gradients', 'Each backward adds onto every earlier step’s gradients, so the steps go wrong', 'The loss can no longer be computed'],
+      answer: 1,
+      why: 'Backward adds into grad. Without a reset, the update uses the sum of every gradient so far instead of the gradient at the current weights.',
+      traps: { 0: 'gradients-carry-over' },
+    },
+    {
+      q: 'For which job is forward mode the cheaper choice?',
+      choices: ['The loss of a model with a million weights', 'A function with 1,000 inputs and 2 outputs', 'A function with 2 inputs and 1,000 outputs'],
+      answer: 2,
+      why: 'Forward mode needs a pass per input, 2 here, while reverse mode would need a backward pass per output, 1,000. With many inputs and few outputs, reverse mode wins.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="autograd-reverse-order"
+  prompt="How does an autograd engine get the gradient of every input in one backward pass, and why must it visit the values in reverse topological order?"
+  rubric={[
+    'The forward pass records every operation as a graph: each value’s inputs and its local derivatives.',
+    'Backward sets the output’s gradient to 1 and sends each input a share: its local derivative times the gradient arriving.',
+    'A value used in several places adds up its shares, and must pass its gradient on only once all have arrived.',
+    'Reverse topological order, found by depth-first search, visits every value made from v before v itself.',
+    'One backward pass gives every input’s gradient, where forward mode needs one pass per input.',
+  ]}
+  example="While the code runs forward, the engine records each operation as a node in a graph, with its inputs and its local derivatives. Backward sets the output's gradient to 1 and walks the graph backwards: each node sends every input a share, the local derivative times the node's own gradient. A value used twice adds up both shares, so it must not pass its gradient on until every value made from it has been handled. A depth-first search lists the values so that each comes after its inputs; reading that list backwards visits everything made from a value before the value itself. So one backward pass gets all the gradients, which is why it beats forward mode, which needs a pass per input."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Autograd records every operation as a graph while the code runs forward, with each value's inputs and local derivatives.
+- Backward visits values in reverse topological order, built by depth-first search, so each value's gradient is the complete sum of its shares before it is passed on.
+- Forward mode needs one pass per input; reverse mode one backward pass per output. One loss and a million weights is why deep learning runs reverse mode.
+- Nudging inputs (central differences) is approximate and slow: it checks autograd, it isn't how autograd works.
+- Training is forward, backward, step, repeat, with the gradients starting from 0 each step because backward adds.
+
+</Section>

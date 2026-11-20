@@ -31,7 +31,7 @@ const traceFor = (module: AnyAlgorithm, preset: string) => {
 
 /** Every Explore and PredictChallenge in a lesson: its slug, preset, step and goal. */
 function embeds(body: string) {
-  return [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}[^>]*?(?:goal=\{(\d+)\})?[^>]*\/>/g)].map((m) => ({
+  return [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}(?:[^>]*?goal=\{(\d+)\})?[^>]*\/>/g)].map((m) => ({
     tag: m[1],
     slug: m[2],
     preset: m[3],

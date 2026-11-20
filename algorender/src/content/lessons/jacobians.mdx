@@ -1,0 +1,382 @@
+<Section step="hook" title="Zoom in until it's a matrix">
+
+A layer of a neural network takes in a list of numbers and gives back another list. If the layer were just a matrix, it
+would be easy to reason about. From the lesson on matrices, you know a matrix moves the whole plane in one go, and
+straight lines stay straight. Real layers bend things, with tanh, squares and products. Yet backpropagation passes
+gradients back through them using nothing but multiplications, as if every layer were a matrix.
+
+It can do that because of a fact you already know for curves. Close up, a curve looks like its tangent line:
+$f(a + h) \approx f(a) + f'(a)\,h$. In the same way, a **smooth** map (one with no corners, like $|x|$ had) with two
+inputs and two outputs looks like a **matrix** when you zoom in close. That matrix is its **Jacobian**. In this lesson
+you zoom in until you can see that matrix, read its columns and its determinant, and then see what backprop really does
+with it.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="a map of the plane F">A rule that sends each point $(x, y)$ to a new point $F(x, y) = (F_1, F_2)$. It has two inputs, and two outputs $F_1$ and $F_2$, each a function of both inputs.</Term>
+  <Term name="Jacobian J">The grid of all of $F$'s partial derivatives at a point $p$. Call the inputs $x_1 = x$ and $x_2 = y$. Row $i$ belongs to output $F_i$ and column $j$ to input $x_j$, and the entry where they meet is $\partial F_i / \partial x_j$.</Term>
+  <Term name="local linear map">$F(p + d) \approx F(p) + J\,d$ for a small step $d$ from $p$. It is the best matrix guess near $p$, just as the tangent line is the best straight-line guess near a point of a curve.</Term>
+  <Term name="det J">The Jacobian's determinant: how much $F$ scales tiny areas near $p$.</Term>
+  <Term name="row vector">A vector written lying down in square brackets, like $[1, 2]$. Gradients are written this way here, so they can multiply a matrix from the left.</Term>
+  <Term name="vector–Jacobian product">A row $g$ times a Jacobian, written $g\,J$. Entry $j$ is $g$ dotted with column $j$ of $J$. This is one step of backprop.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A bent plane, close up">
+
+Here is a map that bends the plane:
+
+$$
+F(x, y) = \left(x + \frac{y^2}{4},\ y - \frac{x^2}{4}\right)
+$$
+
+The first output is $x$, pushed along by a quarter of $y^2$. The second is $y$, pulled down by a quarter of $x^2$.
+Take the point $p = (1, 1)$. Then $F(p) = (1 + \tfrac14,\ 1 - \tfrac14) = (1.25, 0.75)$. Is there one matrix that does
+what $F$ does everywhere? Step through to find out, then zoom in on a small square with one corner at $p$, and compare
+what $F$ does to it with what a matrix would do.
+
+<Explore slug="jacobian" settings={{ preset: 'zoom' }} input caption="The grid and where F sends it. Then a square at p, shrinking from side 0.8, with its curved image and, magnified beside it, a dashed parallelogram drawn over the image. Drag p." />
+
+A matrix keeps lines straight and evenly spaced, and $F$ bends them, so no single matrix fits everywhere. Near $p$,
+though, one matrix does fit. Its entries are $F$'s partial derivatives, each found with the other input held fixed:
+
+$$
+\begin{aligned}
+\frac{\partial F_1}{\partial x} &= 1, & \frac{\partial F_1}{\partial y} &= \frac{y}{2}, \\[4pt]
+\frac{\partial F_2}{\partial x} &= -\frac{x}{2}, & \frac{\partial F_2}{\partial y} &= 1
+\end{aligned}
+$$
+
+Put them in a grid with one row for each output and one column for each input. Then fill in $p = (1, 1)$:
+
+$$
+J = \begin{bmatrix} 1 & \frac{y}{2} \\[4pt] -\frac{x}{2} & 1 \end{bmatrix} = \begin{bmatrix} 1 & 0.5 \\ -0.5 & 1 \end{bmatrix}
+$$
+
+The dashed parallelogram shows what $J$ does to the square: $F(p) + J\,d$ for every step $d$ from $p$ to a point of the
+square. The filled patch shows what $F$ really does. For the square of side 0.8, the two outlines are up to 0.226 apart.
+Halve the square to side 0.4 and the biggest gap drops to 0.057, about a quarter of what it was. At side 0.2 it is
+0.014. Compared with the side of the square, the gap goes from 0.283 to 0.141, then 0.071, then 0.035, halving each
+time. When the picture is magnified to the same size on screen, the patch and the parallelogram become one shape.
+
+Why a quarter? Write the step from $p = (x, y)$ as $(a, b)$ and multiply out the squares. Every term lands in one of
+three places:
+
+$$
+F(p + (a, b)) = F(p) + J \begin{bmatrix} a \\ b \end{bmatrix} + \begin{bmatrix} b^2/4 \\ -a^2/4 \end{bmatrix}
+$$
+
+This holds exactly, for any step. The gap between $F$ and the matrix guess is the last part. Halve the step, and $a$
+and $b$ halve, but $a^2/4$ and $b^2/4$ drop to a quarter.
+
+<KeyIdea>
+
+**Zoom in on a smooth map and it looks like a matrix: its Jacobian $J$.** Near $p$,
+$F(p + d) \approx F(p) + J\,d$, the tangent line in two dimensions. Row $i$ of $J$ belongs to output $i$, column $j$
+to input $j$, and the entry where they meet is $\partial F_i / \partial x_j$.
+
+</KeyIdea>
+
+In the lesson on matrices, column 1 of a matrix was where $\hat\imath$ lands. For $J$, column 1 is where a tiny step
+along $x$ goes, for each unit of step. Watch the columns being measured, then see what $J$ does to area.
+
+<Explore slug="jacobian" settings={{ preset: 'columns' }} input caption="Through p, a curve with y held fixed and a curve with x held fixed. Then a step along x, J measured by nudging, a little square for det J, and a second point, q. Drag p." />
+
+Column 1 of $J$ is $(1, -0.5)$, the partial derivatives of both outputs with respect to $x$. Step from $p$ along $x$ by
+a tiny $h$, and $F(p)$ moves by about $h \times (1, -0.5)$, along the curve where $y$ is held fixed. A real step of
+$h = 0.5$ gives $(1, -0.625)$ for each unit of step. That is close to column 1, but by then the curve has bent away from
+its tangent. Step both ways and divide by $2h$, the central difference from the derivatives lesson. With $h = 0.01$ it
+gives column 1 as $(1, -0.5)$ and column 2, from a step along $y$, as $(0.5, 1)$, exactly: for a map built from
+squares, the central difference has no error.
+
+The determinant is $1 \times 1 - 0.5 \times (-0.5) = 1.25$. A matrix's determinant is how much it scales area, so near
+$p$, $F$ scales areas by about 1.25. A square of side 0.25 at $p$ comes out with 1.316 times its area, and smaller
+squares come out closer and closer to 1.25 times. At any point,
+
+$$
+\det J = 1 \cdot 1 - \frac{y}{2} \cdot \left(-\frac{x}{2}\right) = 1 + \frac{xy}{4}
+$$
+
+so it changes as $p$ moves. At the origin, $J$ is the identity matrix and $\det J = 1$. At $q = (2, -2)$,
+$\det J = 0$:
+
+$$
+J = \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}
+$$
+
+Its columns $(1, -1)$ and $(-1, 1)$ lie on one line, so tiny squares near $q$ are squashed flat.
+
+<Misconception
+  id="jacobian-transposed"
+  title="The Jacobian's rows are the inputs"
+  probes={[
+    {
+      q: 'F(x, y) = (x·y, x + 4y). At (3, 5), what is J’s entry in row 1, column 2?',
+      choices: ['5', '1', '4', '3'],
+      answer: 3,
+      trap: 1,
+      why: 'Row 1 is the first output, x·y, and column 2 is the input y: ∂(x·y)/∂y = x = 3. The 1 is ∂(x + 4y)/∂x, which sits in row 2, column 1.',
+    },
+    {
+      q: 'A map has 3 inputs and 2 outputs. What shape is its Jacobian?',
+      choices: ['3 rows and 2 columns', '3 rows and 3 columns', '2 rows and 3 columns'],
+      answer: 2,
+      trap: 0,
+      why: 'One row for each output and one column for each input. Then J times a step of 3 numbers gives a change of 2 numbers, one for each output.',
+    },
+  ]}
+>
+
+It is easy to stack the partial derivatives the other way round, with one row for each input. That gives a different
+matrix. At $p = (1, 1)$ it would be $\begin{bmatrix} 1 & -0.5 \\ 0.5 & 1 \end{bmatrix}$, which sends a step along $x$
+towards $(1, 0.5)$ instead of $(1, -0.5)$. The rule comes from what $J$ is for: $J$ times a step must give the change in
+the outputs. Each row, dotted with the step, gives one output's change, so a map with $n$ inputs and $m$ outputs has
+$m$ rows and $n$ columns.
+
+</Misconception>
+
+<Misconception
+  id="one-jacobian"
+  title="A curved map has one Jacobian"
+  probes={[
+    {
+      q: 'F(x, y) = (x², y). At (1, 0) its Jacobian is [[2, 0], [0, 1]]. What is it at (3, 0)?',
+      choices: ['[[2, 0], [0, 1]]', '[[6, 0], [0, 1]]', '[[3, 0], [0, 1]]'],
+      answer: 1,
+      trap: 0,
+      why: '∂(x²)/∂x = 2x, which is 6 at x = 3. The other entries don’t depend on the point here.',
+    },
+    {
+      q: 'F(x, y) = (2x, x·y) has det J = 2x. A tiny square at (1, 0) comes out with twice its area. What about a tiny square at (3, 0)?',
+      choices: ['Three times its area', 'Twice its area, the same as everywhere', 'Six times its area'],
+      answer: 2,
+      trap: 1,
+      why: 'det J = 2x = 6 at x = 3, so tiny areas there are scaled by 6.',
+    },
+  ]}
+>
+
+A matrix fits $F$ only near one point. $J$ is a grid of formulas, and it only becomes a grid of numbers once you pick
+the point. For the bent plane, $\det J = 1 + xy/4$: it is 1 at the origin, 1.25 at $p = (1, 1)$ and 0 at $q = (2, -2)$.
+A linear map (or one plus a fixed shift) is the exception. Its Jacobian is its own matrix at every point, as the last
+example in the exercise below shows.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: backprop through a chain of maps">
+
+Now put maps in a row, as a network does. Start at a point $x$ of the plane. Here $x$ names a whole point
+$(x_1, x_2)$, as networks name their input. The bend gives $u = F(x)$. A linear layer with matrix
+
+$$
+W = \begin{bmatrix} 1 & 0 \\ 1 & 1 \end{bmatrix}
+$$
+
+gives $v = W u$. Last, a loss measures how far $v$ is from a target $t$:
+
+$$
+L = \tfrac12\left((v_1 - t_1)^2 + (v_2 - t_2)^2\right)
+$$
+
+Backprop needs $\partial L/\partial x$: how fast $L$ changes as each input moves. In a real network, $x$ is the output
+of earlier layers, so this row is what gets passed further back, towards their weights. To get it, follow a tiny step
+$d$ from $x$ along the chain. First $u$ moves by about $J_F\,d$. $W$ is a matrix, so its Jacobian is $W$ itself
+everywhere, and $v$ moves by $W\,(J_F\,d)$. $L$ has two inputs and one output, so its Jacobian is a single row,
+$\left[\partial L/\partial v_1,\ \partial L/\partial v_2\right]$. Only the first square holds $v_1$, and by the
+derivative rules the slope of $\tfrac12(v_1 - t_1)^2$ in $v_1$ is $v_1 - t_1$. So that row is
+$[v_1 - t_1,\ v_2 - t_2]$, and $L$ changes by about $(\partial L/\partial v)\,W\,J_F\,d$. The row that multiplies the
+step $d$ is $\partial L/\partial x$:
+
+$$
+\frac{\partial L}{\partial x} = \frac{\partial L}{\partial v}\, W\, J_F
+$$
+
+This is the chain rule from the backpropagation lesson, with each local derivative now a matrix. The Jacobian of a
+chain of maps is the product of their Jacobians, with the loss's on the left and the first map's on the right. In a
+product of matrices the brackets can go anywhere, $(AB)C = A(BC)$, and the answer comes out the same. The amount of
+work does not. In the challenge you work out the backward pass, then pick the cheaper order, then check the answer by
+nudging $x$.
+
+<PredictChallenge slug="jacobian" settings={{ preset: 'chain' }} goal={4} />
+
+At $x = (2, 2)$, the forward pass gives $u = (3, 1)$ and $v = (3, 4)$, and with $t = (2, 2)$ the loss is 2.5. Going
+backwards, $\partial L/\partial v = [1, 2]$. Times $W$, one column at a time, that becomes $[3, 2]$. Times
+$J_F(x) = \begin{bmatrix} 1 & 1 \\ -1 & 1 \end{bmatrix}$, it gives $\partial L/\partial x = [1, 5]$. To check, nudge each
+coordinate of $x$ by ±0.001 and work out $L$ again: you get the same $[1, 5]$.
+
+Each step was a row times a matrix: a **vector–Jacobian product**. With two numbers in each layer, a row times a
+$2 \times 2$ matrix takes $2^2 = 4$ multiplications, so the two steps take 8. Multiplying $W J_F$ first takes
+$2^3 = 8$, and then the row times the result takes another 4, so 12 in all. The gap grows fast. For layers 1000 numbers
+wide, a row at a time takes 2,000,000 multiplications, and building the product first takes 1,001,000,000, about 500
+times as many. That is why backprop starts at the loss and carries one row backwards, and never builds a product of
+Jacobians.
+
+<Misconception
+  id="backprop-multiplies-jacobians"
+  title="Backprop multiplies the Jacobians together first"
+  probes={[
+    {
+      q: 'A network has 3 layers, each with a 100 × 100 Jacobian, and a loss at the end. How does backprop get ∂L/∂x?',
+      choices: [
+        'It multiplies the three Jacobians together, then the row by the product',
+        'It carries one row backwards, times each Jacobian in turn',
+        'It inverts each Jacobian',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'A row times a 100 × 100 matrix costs 10,000 multiplications. A matrix times a matrix costs 1,000,000. The answer is the same either way, so backprop takes the cheap order.',
+    },
+    {
+      q: 'How many multiplications does a row of 100 numbers times a 100 × 100 matrix take?',
+      choices: ['10,000', '1,000,000', '100'],
+      answer: 0,
+      trap: 1,
+      why: 'Each of the 100 entries of the answer is a dot product of 100 pairs: 100 × 100 = 10,000. The 1,000,000 is for a matrix times a matrix.',
+    },
+  ]}
+>
+
+The chain rule in matrix form looks like an instruction to multiply the Jacobians, and the answer would be right. But a
+matrix times a matrix costs $n^3$ multiplications, and a row times a matrix only $n^2$. Backprop starts from the one row
+it has, $\partial L/\partial(\text{output})$, and multiplies it by one Jacobian at a time, so it never needs a product
+of Jacobians. Each box in the backpropagation lesson's graph did exactly this, with numbers in place of matrices.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Another map, then measure a Jacobian in code">
+
+One more map: **polar coordinates**. To find a point, go out a distance $r$ from the origin, turned $\theta$ radians
+anticlockwise from the $x$-axis. On the [unit circle](/learn/trigonometry), turning by $\theta$ landed at
+$(\cos\theta, \sin\theta)$, so $r$ times further out the point is
+
+$$
+F(r, \theta) = (r\cos\theta,\ r\sin\theta)
+$$
+
+The left plane holds the pairs $(r, \theta)$. Holding $r$ fixed draws a circle, and holding $\theta$ fixed draws a ray
+out from the origin. The point $p = (2, 0.5)$ means 2 out, turned 0.5 radians (about 29°). The same steps as before run
+on this map. Drag $p$ inwards, towards smaller $r$.
+
+<Explore slug="jacobian" settings={{ preset: 'polar' }} input caption="Polar coordinates at p = (2, 0.5): a curve with θ held fixed, a curve with r held fixed, J's columns and det J. Drag p." />
+
+Holding $\theta$ fixed, both outputs are $r$ times a number, so column 1 is $(\cos\theta, \sin\theta)$. For column 2
+you need the slopes of cos and sin. Turning a point a little round the unit circle moves it at right angles to its
+radius, so the slope of $\cos\theta$ is $-\sin\theta$ and the slope of $\sin\theta$ is $\cos\theta$. Check either with
+a central difference: $(\sin 0.51 - \sin 0.49) / 0.02 \approx 0.878$, and $\cos 0.5 \approx 0.878$ too. So
+
+$$
+J = \begin{bmatrix} \cos\theta & -r\sin\theta \\ \sin\theta & r\cos\theta \end{bmatrix}
+$$
+
+Top-left times bottom-right, minus top-right times bottom-left:
+
+$$
+\begin{aligned}
+\det J &= r\cos^2\theta + r\sin^2\theta \\
+&= r\,(\cos^2\theta + \sin^2\theta) = r
+\end{aligned}
+$$
+
+At $p = (2, 0.5)$ that is 2, so tiny squares there come out with twice their area. At $r = 0$, every angle lands on the
+origin, and $\det J = 0$.
+
+Now measure a Jacobian yourself. Write `jacobian(name, x, y, h)`. To get column 0, nudge $x$ alone by $h$ each way and
+take central differences of both outputs. Do the same with $y$ for column 1. Write the four numbers into a $2 \times 2$
+table, with row $i$ for output $i$. In code, rows and columns count from 0.
+
+<CodeExercise exercise="jacobian-numeric" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'F(x, y) = (x² + y, 3y). What is its Jacobian at (2, 1)?',
+      choices: ['[[4, 0], [1, 3]]', '[[2, 1], [0, 3]]', '[[4, 1], [0, 3]]', '[[4, 1], [0, 1]]'],
+      answer: 2,
+      why: 'Row 1 is the first output, x² + y: ∂/∂x = 2x = 4 and ∂/∂y = 1. Row 2 is the second output, 3y: ∂/∂x = 0 and ∂/∂y = 3.',
+      traps: { 0: 'jacobian-transposed' },
+    },
+    {
+      q: 'Column 2 of J at p tells you…',
+      choices: [
+        'how the second output changes as each input moves',
+        'where a tiny step along the second input moves F(p), for each unit of step',
+        'the value of the second output at p',
+      ],
+      answer: 1,
+      why: 'Column j holds every output’s partial derivative with respect to input j. How the second output changes as each input moves is row 2.',
+      traps: { 0: 'jacobian-transposed' },
+    },
+    {
+      q: 'The bent plane has J = [[1, y/2], [−x/2, 1]]. By about how much does it scale a tiny square at (2, 1)?',
+      choices: ['1.25', '1', '0.5', '1.5'],
+      answer: 3,
+      why: 'At (2, 1), J = [[1, 0.5], [−1, 1]], so det J = 1 × 1 − 0.5 × (−1) = 1.5. The 1.25 is det J at (1, 1): J changes from point to point.',
+      traps: { 0: 'one-jacobian' },
+    },
+    {
+      q: 'Backprop has ∂L/∂u = [2, −1] and the next map back has J = [[1, 3], [0, 2]]. What is the gradient it passes on?',
+      choices: ['[2, −2]', '[2, 4]', '[−1, −2]', '[2, 6]'],
+      answer: 1,
+      why: 'The row times each column in turn: [2, −1]·(1, 0) = 2 and [2, −1]·(3, 2) = 6 − 2 = 4. [−1, −2] is what you get by using J’s rows in place of its columns.',
+      traps: { 2: 'jacobian-transposed' },
+    },
+    {
+      q: 'Which way does backprop get ∂L/∂x through a chain of layers, and why?',
+      choices: [
+        'It multiplies the Jacobians together first, then the row: the same answer for less work',
+        'It nudges each input and measures how L changes, because that is exact',
+        'A row times one Jacobian at a time, from the loss backwards: n² multiplications a step, not n³',
+      ],
+      answer: 2,
+      why: 'Both orders give the same numbers, but a matrix times a matrix costs n³, while a row times a matrix costs n². Nudging is only used to check, because it needs two runs of the network for every input.',
+      traps: { 0: 'backprop-multiplies-jacobians' },
+    },
+    {
+      q: 'Near p, F(p + d) ≈ F(p) + J·d. Halve a little square at p. The biggest gap between its true image and the parallelogram…',
+      choices: ['shrinks to about a quarter', 'shrinks to about a half', 'stays about the same'],
+      answer: 0,
+      why: 'The gap comes from the bend, which grows like the square of the step. Halve the step and the gap shrinks to about a quarter, so compared with the square’s side it halves.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="jacobian-local-map"
+  prompt="What is the Jacobian of a map at a point, what do its rows, columns and determinant tell you, and how does backprop use Jacobians?"
+  rubric={[
+    'Close to a point p, a smooth map acts like a matrix J: F(p + d) ≈ F(p) + J·d for a small step d.',
+    'Row i of J belongs to output i and column j to input j, and the entry is ∂Fᵢ/∂xⱼ.',
+    'Column j is where a tiny step along input j moves F(p), for each unit of step, and J changes from point to point.',
+    'det J is how much F scales tiny areas near p.',
+    'Backprop multiplies a row, the gradient so far, by one Jacobian at a time from the loss backwards, which is far cheaper than multiplying the Jacobians.',
+  ]}
+  example="A curved map like F(x, y) = (x + y²/4, y − x²/4) bends the grid, so no one matrix fits it. But zoom in near a point p and it acts like a matrix, the Jacobian J, with F(p + d) ≈ F(p) + J·d for a small step d. J has a row for each output and a column for each input, and each entry is a partial derivative, so column j is where a tiny step along input j sends F(p). The entries depend on p, so a different matrix fits at each point, and det J says how much tiny areas grow or shrink there. For a chain of maps the Jacobians multiply. Backprop starts with the loss's gradient as a row and multiplies it by one Jacobian at a time, which costs n² a step, instead of n³ for multiplying matrices."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Zoom in on a smooth map and it looks like a matrix, its Jacobian: $F(p + d) \approx F(p) + J\,d$ for a small step $d$.
+- $J$ has a row for each output and a column for each input, and its entries are $\partial F_i / \partial x_j$. Column $j$ is where a tiny step along input $j$ goes.
+- $J$ depends on the point, and so does $\det J$, which is how much $F$ scales tiny areas there. Where $\det J = 0$, tiny squares are squashed flat.
+- For a chain of maps the Jacobians multiply: the chain rule in matrix form.
+- Backprop carries one row backwards, a vector–Jacobian product at each step, at $n^2$ multiplications a step instead of $n^3$.
+
+</Section>

@@ -296,11 +296,25 @@ export const lessons: readonly LessonMeta[] = [
     minutes: 15,
   },
   {
+    slug: 'contour-maps',
+    title: 'Contour maps: a function of two inputs',
+    concept: 'contour-maps',
+    summary: 'Read a surface as a table with two inputs and a map of equal heights, see steep ground where contour lines bunch up, and slice through a point to get two ordinary curves.',
+    minutes: 15,
+  },
+  {
     slug: 'derivatives-gradients',
     title: 'Derivatives and gradients: shrink the gap',
     concept: 'derivatives-gradients',
     summary: 'Shrink the gap between two points until the secant becomes the tangent, estimate slopes in code without losing digits to rounding, and see why the gradient points uphill straight across the contour lines.',
     minutes: 15,
+  },
+  {
+    slug: 'derivative-rules',
+    title: 'Derivative rules: slopes without limits',
+    concept: 'derivative-rules',
+    summary: 'The product rule as a growing rectangle, the derivatives of powers, eˣ, ln x, σ, tanh and ReLU checked against measured slopes, and why a numerical slope gets worse when h is too small.',
+    minutes: 20,
   },
   {
     slug: 'gradient-descent',
@@ -343,6 +357,27 @@ export const lessons: readonly LessonMeta[] = [
     concept: 'chain-rule',
     summary: 'Watch gradients flow back through a computation graph, then write the engine yourself, micrograd style.',
     minutes: 30,
+  },
+  {
+    slug: 'taylor-approximation',
+    title: 'Tangents and parabolas: approximating a curve',
+    concept: 'taylor-approximation',
+    summary: 'Fit a tangent and a parabola to a curve and watch their errors shrink, find √2 with Newton’s method, and see the parabola behind every step downhill.',
+    minutes: 20,
+  },
+  {
+    slug: 'jacobians',
+    title: 'Jacobians: zoom in until it’s a matrix',
+    concept: 'jacobians',
+    summary: 'Zoom in on a curved map of the plane until it looks like a matrix, read its columns as where tiny steps go, and run backprop as a row vector times each Jacobian.',
+    minutes: 20,
+  },
+  {
+    slug: 'autograd',
+    title: 'Autograd: the chain rule, automated',
+    concept: 'autograd',
+    summary: 'Record a computation as a graph, run backward in topological order, compare forward and reverse mode, train a neuron, and start building micrograd from scratch.',
+    minutes: 25,
   },
   {
     slug: 'linear-regression',

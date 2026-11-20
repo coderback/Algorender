@@ -30,7 +30,7 @@ const bmatrix = (m: Mat2) => `\\begin{bmatrix} ${tex(fmt(m[0]))} & ${tex(fmt(m[1
 
 describe('determinants-inverses embeds', () => {
   it('embeds real presets, with enough questions for the challenge', () => {
-    const found = [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}[^>]*?(?:goal=\{(\d+)\})?[^>]*\/>/g)];
+    const found = [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}(?:[^>]*?goal=\{(\d+)\})?[^>]*\/>/g)];
     expect(found.length).toBeGreaterThanOrEqual(4);
     expect(found.filter((m) => m[1] === 'PredictChallenge')).toHaveLength(1);
     for (const m of found) {
