@@ -8,6 +8,7 @@ import { Card, TrackCardLink, trackTitle } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { cx } from '@/components/ui/cx';
 import { trackLabel } from '@/data/tracks';
+import { choiceOrder } from '@/lib/choices';
 import { record, useMastery, useProgressSnapshot } from '@/progress/hooks';
 import { nextSteps, type MasteryGraph, type PlacementAnswer } from '@/progress/mastery';
 import { AREAS, areaOf, MAX_QUESTIONS, nextConcept, pickQuestion, settled, type AreaId, type PlacementQuestion } from '@/progress/placement';
@@ -182,7 +183,8 @@ export function Placement({
           <h2 className="font-display text-[clamp(24px,2.6vw,36px)] leading-[1.12] font-bold tracking-[-0.02em]">{q.q}</h2>
         </div>
         <div className="flex flex-col gap-3" role="group" aria-label="Choices">
-          {q.choices.map((c, ci) => {
+          {choiceOrder(q.q, q.choices.length).map((ci, shown) => {
+            const c = q.choices[ci];
             const state = !done ? 'open' : ci === q.answer ? 'right' : ci === current.picked ? 'wrong' : 'other';
             return (
               <button
@@ -199,7 +201,7 @@ export function Placement({
                 )}
               >
                 <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sunken text-[13px] text-ink-soft">
-                  {ci + 1}
+                  {shown + 1}
                 </span>
                 {c}
               </button>

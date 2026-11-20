@@ -25,6 +25,7 @@ import { useRuntime } from '@/workspace/useRuntime';
 import { withoutPrompts } from '../checkers';
 import { checkChoice, checkCode, checkPrediction, errorLine, type CaseVerdict, type TaskVerdict } from '../check';
 import { KIND_LABEL, outputVariants, taskLanguages, WRITTEN, type Task, type TaskExpected, type TaskLanguage } from '../schema';
+import { choiceOrder } from '@/lib/choices';
 import { OutputDiff } from './OutputDiff';
 
 const noSubscribe = () => () => {};
@@ -251,10 +252,10 @@ function Choices({ task, picked, onPick, disabled }: { task: Extract<Task, { kin
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="sr-only">Choices</legend>
-      {task.choices.map((choice, k) => (
+      {choiceOrder(task.slug, task.choices.length).map((k) => (
         <label key={k} className={cx('flex cursor-pointer items-start gap-3 rounded-tile p-3 ring-inset', picked === k ? 'bg-sunken ring-2 ring-primary' : 'ring-[1.5px] ring-line hover:ring-line-strong')}>
           <input type="radio" name={name} className="mt-1 size-4 accent-[var(--color-accent)]" checked={picked === k} disabled={disabled} onChange={() => onPick(k)} />
-          <span className="font-mono text-sm text-ink">{choice}</span>
+          <span className="font-mono text-sm text-ink">{task.choices[k]}</span>
         </label>
       ))}
     </fieldset>
