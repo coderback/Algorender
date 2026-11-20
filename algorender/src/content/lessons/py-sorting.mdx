@@ -1,0 +1,239 @@
+<Section step="hook" title="Highest score first, ties A to Z">
+
+A leaderboard puts the highest score at the top and lists tied players by name. Python sorts in one line, but there
+are two ways to ask: one makes a new list and leaves yours alone, the other rearranges the list you have.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="sorted()">Returns a **new** list of a collection’s items in order, and leaves the collection as it was.</Term>
+  <Term name="in place">Changing an object itself rather than making a new one, as `append` does.</Term>
+  <Term name=".sort()">A list method that sorts the list in place and, like `append`, gives back `None`.</Term>
+  <Term name="key=">As with `max` and `min`: a function called on each item; the items go in order of what it gives back.</Term>
+  <Term name="stable">Items that tie keep the order they had. Python’s sorts always do.</Term>
+</Terms>
+
+```python
+nums = [3, 1, 2]
+new = sorted(nums)          # new is [1, 2, 3]; nums is still [3, 1, 2]
+nums.sort()                 # now nums itself is [1, 2, 3]
+sorted(nums, reverse=True)  # [3, 2, 1]: biggest first
+```
+
+`sorted` takes any collection (a tuple, a string, a set, a dict) and always gives back a list. Because `.sort()` gives
+back `None`, `nums = nums.sort()` sorts the list, then points `nums` at `None`, and the list is lost.
+
+**Sorting by something else.** With `key=`, Python sorts by the function’s answers, but keeps the items
+themselves:
+
+```python
+sorted(["plum", "kiwi", "fig"], key=len)   # ['fig', 'plum', 'kiwi']
+```
+
+`plum` and `kiwi` tie on length, and stability keeps them in the order they came.
+
+**Capitals.** Strings are compared character by character, and each character has a number, its **character code**.
+Every capital, `A` to `Z`, has a smaller code than every small letter, so capitals come first:
+
+```python
+sorted(["amy", "Zoe", "ben"])                 # ['Zoe', 'amy', 'ben']
+sorted(["amy", "Zoe", "ben"], key=str.lower)  # ['amy', 'ben', 'Zoe']
+```
+
+`str.lower` is the string method `lower` as a function: `str.lower("Zoe")` gives `"zoe"` (string methods are the next
+topic). Sorting by the small-letter version gives dictionary order.
+
+**Sorting by several things.** Tuples compare item by item, moving on only when items tie, so a
+tuple key sorts by its first item and breaks ties with the next. For score high to low, then name A to Z,
+make the score negative, so the biggest score is the smallest key:
+
+```python
+players = [("Ola", 7), ("Ben", 9), ("Ade", 7)]
+sorted(players, key=lambda p: (-p[1], p[0]))
+# [('Ben', 9), ('Ade', 7), ('Ola', 7)]
+```
+
+`reverse=True` wouldn’t do here: it flips everything, so the names would come Z to A.
+
+**Dicts.** Sorting a dict gives its keys, and `sorted(d.items())` gives its `(key, value)` pairs in order of
+key; `key=lambda kv: kv[1]` orders them by value.
+
+</Section>
+
+<Section step="see" title="Watch a new list and an old one">
+
+Step through it. `sorted` makes a second list box for `ranked` and leaves `scores` as it was; `scores.sort()`
+rearranges that same box, and `result` points at `None`. Last, the lambda gives each tuple its key.
+
+<TraceCode snippet="py-sorting" />
+
+<KeyIdea>
+
+**`sorted(xs)` makes a new list; `xs.sort()` changes `xs` itself and gives back `None`.** Both take `reverse=True` and
+`key=`, a function whose answers decide the order; a tuple key sorts by its first item and breaks ties with the next.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-sorted-or-sort" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="sort-gives-list"
+  title="xs.sort() gives back the sorted list"
+  probes={[
+    {
+      q: 'nums = [9, 4, 6], then out = nums.sort(). What does print(out) show?',
+      choices: ['[4, 6, 9]', 'None', '[9, 4, 6]'],
+      answer: 1,
+      trap: 0,
+      why: 'sort sorts nums in place and gives back None.',
+    },
+    {
+      q: 'nums = [6, 2, 5]. Which line prints [2, 5, 6]?',
+      choices: ['print(nums.sort())', 'Both', 'print(sorted(nums))'],
+      answer: 2,
+      trap: 1,
+      why: 'nums.sort() gives back None, so the first line prints None.',
+    },
+  ]}
+>
+
+`.sort()` works like `append`: it changes the list and gives back `None`, so `xs = xs.sort()` throws the list away.
+Call `xs.sort()` on its own line, or use `sorted(xs)` for a sorted list to keep.
+
+</Misconception>
+
+<Misconception
+  id="sorted-sorts-original"
+  title="sorted(xs) sorts xs itself"
+  probes={[
+    {
+      q: 'xs = [5, 2, 8], then ys = sorted(xs). What does print(xs) show?',
+      choices: ['[5, 2, 8]', '[2, 5, 8]', '[8, 5, 2]'],
+      answer: 0,
+      trap: 1,
+      why: 'sorted makes a new list for ys. xs isn’t touched.',
+    },
+    {
+      q: 'names = ["Sam", "Al"], then sorted(names) on a line of its own. What is names now?',
+      choices: ["['Al', 'Sam']", "['Sam', 'Al']", 'None'],
+      answer: 1,
+      trap: 0,
+      why: 'sorted made a sorted copy that nothing kept.',
+    },
+  ]}
+>
+
+`sorted` never changes what you give it. Its new list is lost unless a name points at it:
+`names = sorted(names)`.
+
+</Misconception>
+
+<Misconception
+  id="capitals-ignored"
+  title="Strings sort in dictionary order, whatever their capitals"
+  probes={[
+    {
+      q: 'What does sorted(["bob", "Cat", "ann"]) give?',
+      choices: ["['ann', 'bob', 'Cat']", "['bob', 'Cat', 'ann']", "['Cat', 'ann', 'bob']"],
+      answer: 2,
+      trap: 0,
+      why: 'Capitals have smaller codes than small letters.',
+    },
+    {
+      q: 'Which comes first in sorted(["apple", "Zebra"])?',
+      choices: ['Zebra', 'apple', 'They tie'],
+      answer: 0,
+      trap: 1,
+      why: 'Z, a capital, has a smaller code than a, a small letter.',
+    },
+  ]}
+>
+
+Python compares strings by character code, and every capital comes before every small letter, so `"Zoe"` sorts
+before `"amy"`. For dictionary order, sort with `key=str.lower`.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'marks = [40, 90, 65], then top = sorted(marks, reverse=True). What is marks now?',
+      choices: ['[90, 65, 40]', '[40, 65, 90]', '[40, 90, 65]'],
+      answer: 2,
+      why: 'sorted gave top a new list, [90, 65, 40], and left marks as it was.',
+      traps: { 0: 'sorted-sorts-original' },
+    },
+    {
+      q: 'ages = [30, 12, 25], then ages = ages.sort(). What is ages now?',
+      choices: ['None', '[12, 25, 30]', '[30, 12, 25]'],
+      answer: 0,
+      why: 'sort gave back None, and ages now points at it.',
+      traps: { 1: 'sort-gives-list' },
+    },
+    {
+      q: 'What does sorted(["delta", "Echo", "alpha"]) give?',
+      choices: ["['alpha', 'delta', 'Echo']", "['Echo', 'alpha', 'delta']", 'An error: capitals and small letters can’t be compared'],
+      answer: 1,
+      why: 'The capital E has a smaller code than any small letter.',
+      traps: { 0: 'capitals-ignored' },
+    },
+    {
+      q: 'people = [("Ola", 30), ("Ben", 25), ("Ade", 30)]. In what order of names does sorted(people, key=lambda p: (-p[1], p[0])) put them?',
+      choices: ['Ola, Ade, Ben', 'Ade, Ola, Ben', 'Ben, Ade, Ola'],
+      answer: 1,
+      why: '-30 is the smallest first item, so both 30s come first, Ade before Ola on the tie.',
+    },
+    {
+      q: 'd = {"pear": 3, "fig": 1, "kiwi": 2}. What does sorted(d) give?',
+      choices: ['[1, 2, 3]', "[('fig', 1), ('kiwi', 2), ('pear', 3)]", "['fig', 'kiwi', 'pear']"],
+      answer: 2,
+      why: 'Sorting a dict sorts its keys.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-sorting" />
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="choosing-a-collection"
+  prompt="Explain how you choose between a list, a tuple, a dict and a set: what each is for, which can change, and how you find things in each."
+  rubric={[
+    'A list is an ordered collection that can change (append, sort in place); you reach items by index or by looping',
+    'A tuple is a fixed group that can’t change, where each place means something, like a point or the values a function returns',
+    'A dict maps keys to values and looks a value up by its key, quickly; keys are unique, and entries can be added or changed',
+    'A set holds unique items in no order, for asking quickly whether something is in it and dropping repeats; it has no indexes',
+  ]}
+  example="A list is for a collection that grows, shrinks or gets sorted, like scores; I reach items by index and change them in place. A tuple is a fixed group where each place means something, like a point (x, y); it can't change. A dict looks things up by a key, like a name to an age; each key appears once, and entries can be added or changed. A set holds unique items in no order, like words already seen: checking whether something is in it is quick, and it has no indexes."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `sorted(xs)` returns a new list and leaves `xs` alone.
+- `xs.sort()` sorts the list in place and gives back `None`, so never write `xs = xs.sort()`.
+- `reverse=True` flips the order; `key=` sorts by a function’s answer for each item, and a tuple key such as
+  `lambda p: (-p[1], p[0])` sorts by score high to low, then name.
+- Sorting is stable, and capitals come before small letters unless you sort with `key=str.lower`.
+- Sorting a dict gives its keys; `sorted(d.items())` gives its pairs.
+
+</Section>
