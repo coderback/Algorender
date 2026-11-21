@@ -507,6 +507,7 @@ function Solver({
         onRun={() => void judge('run')}
         readOnly={interview ? !interview.canEdit : false}
         minLines={16}
+        symbols
       />
       <div className="flex flex-wrap justify-between gap-2 px-1 text-xs text-code-muted">
         <span>
@@ -860,7 +861,8 @@ function CaseChip({ checked, selected, onSelect }: { checked: Checked; selected:
       onClick={onSelect}
       aria-pressed={selected}
       aria-label={`${checked.test.label}: ${s.label}`}
-      className={`inline-flex h-8 min-w-10 items-center justify-center gap-1 rounded-full px-2.5 text-xs font-semibold ${s.className} ${
+      // Phones: 44px, a fingertip; 32px with a mouse.
+      className={`inline-flex h-11 min-w-12 items-center justify-center gap-1 rounded-full px-2.5 text-xs font-semibold sm:h-8 sm:min-w-10 ${s.className} ${
         selected ? 'ring-2 ring-ink ring-inset' : ''
       }`}
     >

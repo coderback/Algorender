@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Component, Design } from '@/systems/design/types';
 import { configSummary, compact, ms, pct } from './format';
-import { edgePath, layout, NODE, tiersOf } from './layout';
+import { COMPACT_NODE, edgePath, layout, NODE, tiersOf } from './layout';
 import { decodeDesign, encodeDesign, parseDesign } from './url';
 import { addComponent, edgesOf, freshId, PORTS, removeComponent, renameComponent, targetsFor } from './wiring';
 
@@ -78,6 +78,20 @@ describe('layout', () => {
       const ids = a.nodes.map((n) => `${n.x},${n.y}`);
       expect(new Set(ids).size).toBe(ids.length);
     }
+  });
+
+  it("with compact nodes, two side by side fit a phone's diagram top to bottom", () => {
+    // A second, unwired cache shares tier 0 with the clients: a tier two nodes wide.
+    const added: Design = { components: [...design.components, { ...cache, id: 'cache2' }] };
+    const phone = 334; // the diagram's box at 390 wide
+    expect(layout(added, 'horizontal').width).toBeGreaterThan(phone);
+    expect(layout(added, 'vertical').width).toBeGreaterThan(phone);
+    const compact = layout(added, 'vertical', COMPACT_NODE);
+    expect(compact.node).toEqual(COMPACT_NODE);
+    expect(compact.width).toBeLessThanOrEqual(phone);
+    for (const n of compact.nodes) expect(n.x + COMPACT_NODE.w).toBeLessThanOrEqual(compact.width);
+    const [from, to] = compact.nodes;
+    expect(edgePath(from, to, 'vertical', COMPACT_NODE).d.startsWith(`M${from.x + COMPACT_NODE.w / 2},`)).toBe(true);
   });
 
   it('draws edges between facing sides', () => {

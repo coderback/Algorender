@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import { dueLabel, useDueCount } from './hooks';
+import { askForToday } from '@/components/home/returning';
 import { PLACE_ICON } from './icons';
 import { isHub, PLACES, placeOf } from './places';
 
@@ -30,6 +31,7 @@ export function TabBar() {
           <Link
             key={p.id}
             href={p.href}
+            onClick={p.id === 'today' ? askForToday : undefined}
             aria-current={current ? 'page' : undefined}
             aria-label={badge ? `${p.label}: ${due} due today` : undefined}
             className={clsx(

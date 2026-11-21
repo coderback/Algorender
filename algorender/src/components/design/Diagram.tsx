@@ -6,7 +6,7 @@ import { FiDatabase, FiFilter, FiLayers, FiServer, FiShuffle, FiUsers, FiZap } f
 import { componentCost, KIND_INFO } from '@/systems/design';
 import type { Component, ComponentKind, ComponentStats, Design, Ref } from '@/systems/design/types';
 import { compact, configSummary, dollars, pct } from './format';
-import { edgePath, layout, NODE, type Layout } from './layout';
+import { COMPACT_NODE, edgePath, layout, type Layout } from './layout';
 
 export const KIND_ICON: Record<ComponentKind, ComponentType<{ className?: string; 'aria-hidden'?: boolean }>> = {
   clients: FiUsers,
@@ -26,8 +26,9 @@ const tone = (u: number) => (u >= SATURATED ? 'bg-bad-line' : u >= 0.7 ? 'bg-war
 
 /**
  * The design as boxes and arrows, laid out in tiers (src/components/design/layout.ts):
- * left to right when it fits, otherwise top to bottom, and scrolling sideways
- * only when neither fits. Nodes are buttons that select a component for the
+ * left to right when it fits, otherwise top to bottom, then top to bottom with
+ * narrower nodes (a phone), and scrolling sideways only when none fits, as
+ * the narrowest of them. Nodes are buttons that select a component for the
  * inspector. After a run each node carries its numbers.
  */
 export function Diagram({
@@ -50,10 +51,10 @@ export function Diagram({
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const width = useWidth(boxRef);
-  const horizontal = layout(design, 'horizontal');
-  const vertical = layout(design, 'vertical');
-  // Left to right when it fits; top to bottom when that fits instead; else left to right, scrolling.
-  const l: Layout = width == null || horizontal.width <= width || vertical.width > width ? horizontal : vertical;
+  const options = [layout(design, 'horizontal'), layout(design, 'vertical'), layout(design, 'vertical', COMPACT_NODE)];
+  // The first that fits; else the narrowest, scrolling (never a wide left-to-right layout in a phone's box).
+  const l: Layout =
+    width == null ? options[0] : (options.find((o) => o.width <= width) ?? options.reduce((a, b) => (b.width < a.width ? b : a)));
   const marker = useId().replace(/:/g, '');
   const byId = new Map(l.nodes.map((n) => [n.id, n]));
   const overflowing = width != null && l.width > width + 1;
@@ -77,7 +78,7 @@ export function Diagram({
             const from = byId.get(e.from);
             const to = byId.get(e.to);
             if (!from || !to) return null;
-            const { d, label } = edgePath(from, to, l.orientation);
+            const { d, label } = edgePath(from, to, l.orientation, l.node);
             return (
               <g key={e.id}>
                 <path d={d} fill="none" className="stroke-ink-muted" strokeWidth={1.5} markerEnd={`url(#${marker})`} />
@@ -100,7 +101,7 @@ export function Diagram({
           const p = byId.get(c.id);
           if (!p) return null;
           return (
-            <motion.div key={c.id} className="absolute" initial={false} animate={{ left: p.x, top: p.y }} style={{ width: NODE.w, height: NODE.h }}>
+            <motion.div key={c.id} className="absolute" initial={false} animate={{ left: p.x, top: p.y }} style={{ width: l.node.w, height: l.node.h }}>
               <Node c={c} selected={selected === c.id} onSelect={onSelect} stats={stats?.[c.id] ?? null} crashed={crashed[c.id] ?? []} problem={problems.has(c.id)} />
             </motion.div>
           );
@@ -138,12 +139,17 @@ function Node({
         selected ? 'border-accent ring-2 ring-accent' : problem ? 'border-dashed border-bad-ink' : saturated ? 'border-bad-ink' : 'border-line'
       }`}
     >
-      <span className="flex items-center gap-1.5">
-        <Icon aria-hidden className="h-4 w-4 shrink-0 text-accent-ink" />
-        <span className="truncate text-sm font-semibold text-ink">{c.label}</span>
-        <span className="ml-auto shrink-0 rounded-full bg-sunken px-1.5 py-px font-mono text-[10px] font-semibold text-ink tabular-nums">{cost > 0 ? `${dollars(cost)}/mo` : 'free'}</span>
+      {/* The name has the top line to itself, so "Load balancer" is never cut short by the cost tag. */}
+      <span className="flex min-w-0 items-start gap-1.5">
+        <Icon aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" />
+        <span className="line-clamp-2 text-sm leading-tight font-semibold break-words text-ink" title={c.label}>
+          {c.label}
+        </span>
       </span>
-      <span className="truncate text-xs text-ink-soft">{configSummary(c)}</span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="shrink-0 rounded-full bg-sunken px-1.5 py-px font-mono text-[10px] font-semibold text-ink tabular-nums">{cost > 0 ? `${dollars(cost)}/mo` : 'free'}</span>
+        <span className="truncate text-xs text-ink-soft">{configSummary(c)}</span>
+      </span>
       {stats ? (
         <span className="mt-auto flex flex-col gap-1">
           <Bars perInstance={stats.perInstance} crashed={crashed} />

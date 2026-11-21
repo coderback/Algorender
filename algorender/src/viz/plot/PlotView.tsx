@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { useViewEdit, type ViewEdit } from '@/viz/edit';
 import { MARKS, TONES, type MarkKey, type Tone } from '@/viz/marks';
 import { fillFor, PLAIN_CELL } from '@/viz/parts';
@@ -82,6 +82,15 @@ function Plane({ plane }: { plane: PlanePart }) {
   const edit = useViewEdit();
   const interactive = edit != null && plane.handles.length > 0;
   const [said, setSaid] = useState('');
+  // Screen pixels per viewBox unit: a phone draws the plane smaller, and a handle's hit area must stay finger-sized.
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!interactive || !svg) return;
+    const observer = new ResizeObserver(() => setScale(svg.getBoundingClientRect().width / g.w || 1));
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, [interactive, g.w]);
 
   return (
     <figure className="m-0 min-w-0 flex-1 basis-64" style={{ maxWidth: MAX_PLANE_PX }}>
@@ -108,7 +117,7 @@ function Plane({ plane }: { plane: PlanePart }) {
           <ShapeLabels plane={plane} g={g} />
         </g>
         {interactive &&
-          plane.handles.map((h) => <HandleControl key={h.id} handle={h} g={g} svgRef={svgRef} edit={edit} onSay={setSaid} />)}
+          plane.handles.map((h) => <HandleControl key={h.id} handle={h} g={g} hit={Math.max(16, HIT_PX / 2 / scale)} svgRef={svgRef} edit={edit} onSay={setSaid} />)}
       </svg>
       {interactive && (
         <p className="sr-only" aria-live="polite">
@@ -511,6 +520,9 @@ function HandleDot({ handle, g }: { handle: Handle; g: PlaneGeometry }) {
   return <motion.circle initial={false} animate={{ cx, cy }} r={6} className={`stroke-surface ${fl.className}`} style={fl.style} strokeWidth={2} />;
 }
 
+/** A handle's hit area across, in screen pixels: a fingertip (WCAG 2.5.5). */
+const HIT_PX = 44;
+
 const KEY_STEPS: Record<string, Vec> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 
 /**
@@ -522,12 +534,15 @@ const KEY_STEPS: Record<string, Vec> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0],
 function HandleControl({
   handle,
   g,
+  hit,
   svgRef,
   edit,
   onSay,
 }: {
   handle: Handle;
   g: PlaneGeometry;
+  /** The hit area's radius in viewBox units. */
+  hit: number;
   svgRef: RefObject<SVGSVGElement | null>;
   edit: ViewEdit;
   onSay: (text: string) => void;
@@ -536,6 +551,16 @@ function HandleControl({
   const dragging = useRef(false);
   const last = useRef<Vec>(handle.at);
   const fl = fill(handle, 'fill-accent');
+  const group = useRef<SVGGElement>(null);
+  // A touch that starts on a handle drags it and never scrolls the page. touch-action alone isn't
+  // honoured on SVG content by every browser, so the touch is also cancelled (a non-passive listener).
+  useEffect(() => {
+    const el = group.current;
+    if (!el) return;
+    const stop = (e: TouchEvent) => e.preventDefault();
+    el.addEventListener('touchstart', stop, { passive: false });
+    return () => el.removeEventListener('touchstart', stop);
+  }, []);
   const place = (v: Vec): Vec => [snap(v[0], handle.step, handle.min[0], handle.max[0]), snap(v[1], handle.step, handle.min[1], handle.max[1])];
 
   const toWorld = (e: PointerEvent): Vec | null => {
@@ -580,6 +605,7 @@ function HandleControl({
 
   return (
     <g
+      ref={group}
       role="button"
       tabIndex={0}
       aria-roledescription="draggable point"
@@ -592,7 +618,7 @@ function HandleControl({
       onPointerCancel={onPointerEnd}
       onKeyDown={onKeyDown}
     >
-      <motion.circle initial={false} animate={{ cx, cy }} r={16} fill="transparent" />
+      <motion.circle initial={false} animate={{ cx, cy }} r={hit} fill="transparent" style={{ touchAction: 'none' }} />
       <motion.circle
         initial={false}
         animate={{ cx, cy }}

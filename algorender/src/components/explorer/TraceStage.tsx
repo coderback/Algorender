@@ -185,14 +185,18 @@ export function TraceStage<S>({
               step={player.index + 1}
             />
           )}
-          <PlayerControls player={player} share={share} hint={hint ?? (predicting ? '← → step · Space play · Home / End jump · number keys answer' : undefined)} />
+          {/* In full screen the card scrolls when the view is taller than the screen; the player stays pinned to the bottom of it. */}
+          <div className="[:fullscreen_&]:sticky [:fullscreen_&]:bottom-0 [:fullscreen_&]:z-10 [:fullscreen_&]:-mx-6 [:fullscreen_&]:-mb-6 [:fullscreen_&]:bg-surface [:fullscreen_&]:px-6 [:fullscreen_&]:pt-3 [:fullscreen_&]:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+            <PlayerControls player={player} share={share} hint={hint ?? (predicting ? '← → step · Space play · Home / End jump · number keys answer' : undefined)} />
+          </div>
           {panels && sheet && wide && (
             <button
               type="button"
               onClick={() => setSheetOpen(true)}
               aria-haspopup="dialog"
               data-sticks="bottom"
-              className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 rounded-t-[28px] bg-code px-5 pt-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-code-ink lg:hidden"
+              // Not in full screen, where it would cover the player (the sheet can't open over a full-screen card anyway).
+              className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 rounded-t-[28px] bg-code px-5 pt-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-code-ink lg:hidden [:fullscreen_&]:hidden"
             >
               <span aria-hidden className="mx-auto h-1 w-9 rounded-full bg-code-muted/60" />
               <span className="flex items-center justify-between gap-3 text-xs">

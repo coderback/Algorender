@@ -7,6 +7,7 @@ import { clsx } from 'clsx';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Avatar } from './Avatar';
 import { dueLabel, useDueCount } from './hooks';
+import { askForToday } from '@/components/home/returning';
 import { PLACE_ICON } from './icons';
 import { PLACES, placeOf } from './places';
 
@@ -35,6 +36,7 @@ export function Rail() {
               <li key={p.id}>
                 <Link
                   href={p.href}
+                  onClick={p.id === 'today' ? askForToday : undefined}
                   aria-current={current ? 'page' : undefined}
                   aria-label={badge ? `${p.label}: ${due} due today` : undefined}
                   className={clsx(

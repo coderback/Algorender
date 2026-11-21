@@ -27,7 +27,7 @@ import { useAutocomplete, useVim } from '@/lib/preferences';
 import type { ProblemLanguage } from '@/problems/languages';
 import { completionSource } from './complete';
 import { isChecked, syntaxProblems, type CheckedLanguage } from './syntax';
-import { SymbolBar } from './SymbolBar';
+import { SYMBOL_BAR_HEIGHT, SymbolBar } from './SymbolBar';
 import { highlight, phrases, theme } from './theme';
 
 /** 1-based lines to highlight: where the trace is, where an error was raised, and where the tutor points. */
@@ -238,6 +238,8 @@ export function CodeEditor({
           assistSlot.current.of(assists(language, readOnly, complete)),
           EditorView.contentAttributes.of({ 'aria-label': label, spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' }),
           EditorView.theme({ '.cm-content, .cm-gutter': { minHeight: `${minLines * 1.6 + 1}em` } }),
+          // Phones: the symbol bar sits over the bottom of the screen, so scrolling to the cursor keeps it above the bar.
+          symbols ? EditorView.scrollMargins.of(() => (window.matchMedia('(max-width: 767px)').matches ? { bottom: SYMBOL_BAR_HEIGHT + 8 } : null)) : [],
           EditorView.updateListener.of((u) => {
             if (u.docChanged) onChangeRef.current?.(u.state.doc.toString());
             if (u.docChanged || u.transactions.some((tr) => tr.reconfigured || tr.effects.some((e) => e.is(setDiagnosticsEffect)))) {
@@ -306,6 +308,15 @@ export function CodeEditor({
     v.dispatch({ effects: EditorView.scrollIntoView(v.state.doc.line(pointLine).from, { y: 'center' }) });
   }, [pointLine]);
 
+  // The symbol bar appears with focus: keep the line just tapped above it.
+  const showBar = symbols && !readOnly && focused;
+  useEffect(() => {
+    const v = view.current;
+    if (!showBar || !v) return;
+    const frame = requestAnimationFrame(() => v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head) }));
+    return () => cancelAnimationFrame(frame);
+  }, [showBar]);
+
   const goToProblem = () => {
     const v = view.current;
     if (!v) return;
@@ -322,7 +333,7 @@ export function CodeEditor({
       }}
     >
       <div ref={host} />
-      {symbols && !readOnly && focused && <SymbolBar view={view} language={language} />}
+      {showBar && <SymbolBar view={view} language={language} />}
       <div role="status">
         {problem && (
           <p className="flex items-start gap-2 border-t border-code-highlight px-3 py-2 text-[13px] leading-snug text-code-ink" data-syntax-error>

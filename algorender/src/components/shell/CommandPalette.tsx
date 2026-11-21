@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { clsx } from 'clsx';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { IconType } from 'react-icons';
-import { FiBookOpen, FiCode, FiCornerDownLeft, FiGitBranch, FiMap, FiMonitor, FiMoon, FiPlay, FiRefreshCw, FiSearch, FiSun } from 'react-icons/fi';
+import { FiBookOpen, FiCode, FiCornerDownLeft, FiGitBranch, FiMap, FiMonitor, FiMoon, FiPlay, FiRefreshCw, FiSearch, FiSun, FiX } from 'react-icons/fi';
 import { applyTheme, THEME_LABEL, useTheme } from '@/components/ThemeToggle';
 import { ButtonLink } from '@/components/ui/Button';
 import { trackSurface, trackTitle } from '@/components/ui/Card';
@@ -293,8 +293,15 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
           onKeyDown={onKeyDown}
           className="min-w-0 flex-1 bg-transparent text-lg text-ink outline-none placeholder:text-ink-muted sm:text-xl"
         />
-        <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg">
-          <Kbd>esc</Kbd>
+        {/* Phones have no Esc key: a round, finger-sized close button there; the keyboard hint elsewhere. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-sunken hover:text-ink sm:mr-0 sm:size-auto sm:rounded-lg sm:hover:bg-transparent"
+        >
+          <FiX aria-hidden className="size-5 sm:hidden" />
+          <Kbd className="hidden sm:inline-flex">esc</Kbd>
         </button>
         <p id={`${base}-keys`} className="sr-only">
           Up and down arrows move through the results, Enter opens one, Tab changes what to show, Escape closes.

@@ -142,7 +142,8 @@ function LaneView({ lane, state, columns, scale }: { lane: Lane; state: ArraySta
               className="flex min-w-0 justify-center"
               style={{ gridColumn: index + 1, gridRow: 1 }}
             >
-              <Pointer className="max-w-full truncate">{labels.join(',')}</Pointer>
+              {/* Never truncated ("j…" next to "j" says nothing): a label wider than its column spills evenly into the gaps, and narrow columns trim the pill's padding. */}
+              <Pointer className={cx(columns > 8 && 'px-1')}>{labels.join(',')}</Pointer>
             </motion.div>
           ))}
         </div>
