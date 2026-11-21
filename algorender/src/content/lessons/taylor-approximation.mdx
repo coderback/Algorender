@@ -1,0 +1,345 @@
+<Section step="hook" title="How does a calculator know eˣ?">
+
+Press $e^x$ on a calculator and the answer appears at once, yet the chip inside can only add, subtract, multiply and
+divide. Somewhere the curve has been swapped for something built from those four. The trick: close to a point, a
+smooth curve looks almost exactly like a straight line, and even more like a parabola, and both need only adding and
+multiplying.
+
+Training a model leans on the same trick. A loss is a complicated curve, but an optimiser (the code that adjusts the
+weights) standing at one setting of a weight only knows what is nearby: the height, the slope and how the ground
+bends. Every step it takes is a bet on a simple shape that copies some of those. This lesson measures how good the line and the parabola are, how fast they get better
+as you look closer, and where they let you down.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="flat line T₀">$T_0(x) = f(a)$: the simplest guess near the point $P = (a, f(a))$. It keeps only the height.</Term>
+  <Term name="tangent T₁">$T_1(x) = f(a) + f'(a)(x - a)$: the line through $P$ with the curve's slope there, as in the derivatives lesson.</Term>
+  <Term name="second derivative f″">The derivative of $f'$, said “f double-prime”: the slope of the slope. It says how fast the slope changes, which is how much the curve bends. Positive means it bends up, like a bowl; negative, down.</Term>
+  <Term name="parabola T₂">The tangent plus a squared term that copies the bend at $a$ as well. $T_0$, $T_1$ and $T_2$ are called **Taylor approximations**.</Term>
+  <Term name="gap d and miss">Look at $x = a + d$, a gap $d$ from $a$. A guess's **miss** there is how far it is from the curve, up or down.</Term>
+  <Term name="Newton's method">A way to find where a curve crosses zero: replace the curve by its tangent at a guess, move to where the tangent crosses zero, and repeat.</Term>
+  <Term name="step size η">Gradient descent moves a weight $w$ to $w - \eta \cdot L'(w)$, where $L$ is the loss and $\eta$ (“eta”) is a small number you choose (you met it in [derivatives](/learn/derivatives-gradients)).</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A line, then a parabola">
+
+$P$ sits on $f(x) = e^x$ at $a = 0$, so $P = (0, 1)$. Since $e^x$ is its own derivative, the slope there is $f'(0) = 1$.
+How well can simple shapes copy the curve near $P$?
+
+<Explore slug="taylor" settings={{ preset: 'fits' }} caption="eˣ near P: a flat line, the tangent, the slopes either side of P, the parabola, then how much each one misses as the gap halves. Drag P along the curve." />
+
+Judge each guess at $x = 0.5$, a gap $d = 0.5$ to the right of $P$, where $e^{0.5} \approx 1.6487$:
+
+- The flat line $T_0(x) = 1$ keeps only the height. It misses the curve by 0.6487.
+- The tangent $T_1(x) = 1 + x$ copies the slope too. It says 1.5 and misses by only 0.1487.
+
+The tangent still misses, because the curve's slope keeps changing: it is 0.607 at $x = -0.5$, 1 at $P$ and 1.649
+at $x = 0.5$. How fast the slope changes is how much the curve bends, and you measure it the usual way, with a
+derivative: the derivative of $f'$ is the **second derivative** $f''$. Here $f'(x) = e^x$, whose derivative is $e^x$
+again, so $f''(0) = 1$. It is positive: the slope grows, and the curve bends up away from its tangent.
+
+A straight line can't bend, but a parabola can. Add a squared term to the tangent:
+
+$$
+\begin{aligned}
+T_2(x) = {} & f(a) + f'(a)(x - a) \\
+& + \tfrac{1}{2} f''(a)(x - a)^2
+\end{aligned}
+$$
+
+Why the $\tfrac{1}{2}$? The slope of $\tfrac{1}{2} c\,(x - a)^2$ is $c\,(x - a)$ (expand:
+$\tfrac{1}{2} c\,(x^2 - 2ax + a^2)$ has slope $\tfrac{1}{2} c\,(2x - 2a) = c\,(x - a)$). The term and its slope are
+both 0 at $a$, so the tangent's height and slope are kept. The slope of $c\,(x - a)$ is $c$, so the term's bend is
+exactly $c$. With $c = f''(a)$, the parabola bends just as the curve does at $P$. For $e^x$ at 0 that is
+$T_2(x) = 1 + x + \tfrac{1}{2}x^2$. At $x = 0.5$ the new term adds $\tfrac{1}{2} \times 1 \times 0.5^2 = 0.125$, so the
+parabola says 1.625 and misses by just 0.0237.
+
+Now move closer. Here are the misses at $d$ = 0.5, 0.25 and 0.125:
+
+- flat line: 0.6487, then 0.284, then 0.1331 (each about 2 times smaller: ÷2.3, then ÷2.1)
+- tangent: 0.1487, then 0.034, then 0.0081 (about 4 times: ÷4.4, then ÷4.2)
+- parabola: 0.0237, then 0.0028, then 0.00034 (about 8 times: ÷8.5, then ÷8.3)
+
+Halving $d$ halves $d$, quarters $d^2$ and divides $d^3$ by 8. The misses shrink like $d$, $d^2$ and $d^3$, because
+each guess misses by roughly the first thing it leaves out. The flat line leaves out the slope term $f'(a)\,d$, which
+at $d = 0.5$ is 0.5, against its real miss of 0.6487. The tangent leaves out the bend term
+$\tfrac{1}{2} f''(a)\,d^2$, which at $d = 0.5$ is 0.125, against its real miss of 0.1487. The parabola leaves out
+something smaller still, which shrinks like $d^3$. A calculator does the same with a few more terms on a tiny gap, so
+the miss falls below its last digit.
+
+<KeyIdea>
+
+**Near a point, a smooth curve is almost its tangent, and closer still its parabola:**
+
+$$
+\begin{aligned}
+f(a + d) \approx{} & f(a) + f'(a)\,d \\
+& + \tfrac{1}{2} f''(a)\,d^2
+\end{aligned}
+$$
+
+Each term copies one more thing about $f$ at $a$ (height, slope, bend), and makes the miss shrink one power of $d$
+faster: halve $d$ and the misses fall about 2, 4 and 8 times.
+
+</KeyIdea>
+
+<Misconception
+  id="halving-halves-error"
+  title="Halving the gap halves every miss"
+  probes={[
+    {
+      q: 'A tangent misses a smooth curve by 0.12 at a + 0.4. About how much will it miss by at a + 0.2?',
+      choices: ['About 0.06', 'About 0.03', 'About 0.015'],
+      answer: 1,
+      trap: 0,
+      why: 'A tangent’s miss shrinks like d², so halving the gap quarters it: 0.12 ÷ 4 = 0.03.',
+    },
+    {
+      q: 'A parabola T₂ misses a smooth curve by 0.016 at a + 0.2. About how much will it miss by at a + 0.1?',
+      choices: ['About 0.008', 'About 0.004', 'About 0.002'],
+      answer: 2,
+      trap: 0,
+      why: 'A parabola’s miss shrinks like d³, so halving the gap divides it by 8: 0.016 ÷ 8 = 0.002.',
+    },
+  ]}
+>
+
+Only the flat line's miss halves when the gap halves, because only it leaves out a term that grows like $d$. The
+tangent already has the slope right, so what it misses is the bend, which grows like $d^2$: half the gap, a quarter of
+the miss. That is why a tangent is such a good guess close up. Walk half as far from $a$ and it is four times as
+accurate, and the parabola eight times.
+
+</Misconception>
+
+<Misconception
+  id="fit-good-everywhere"
+  title="A fit with more terms is better everywhere"
+  probes={[
+    {
+      q: 'The flat line, tangent and parabola of eˣ at 0 are y = 1, y = 1 + x and y = 1 + x + ½x². At x = −3, where eˣ is about 0.05, which is closest to the curve?',
+      choices: ['The parabola: it copies the most about eˣ', 'The flat line', 'The tangent'],
+      answer: 1,
+      trap: 0,
+      why: 'They say 1, −2 and 2.5, so they miss by about 0.95, 2.05 and 2.45. Far from 0 the extra terms make things worse.',
+    },
+    {
+      q: 'A parabola T₂ copies a curve’s height, slope and bend at a. Is it closer to the curve than the tangent at every x?',
+      choices: ['Yes: it copies more about the curve', 'No: only near a; far away it can miss by more', 'No: it is never closer than the tangent'],
+      answer: 1,
+      trap: 0,
+      why: 'Copying f at a only controls the miss for small gaps, where it shrinks like d³ instead of d². Far from a nothing is promised.',
+    },
+  ]}
+>
+
+The rules about $d$, $d^2$ and $d^3$ are promises about small gaps only. Go to $x = -2$, far from $P$, where $e^{-2}$ is
+only 0.135. The flat line says 1 and misses by 0.865. The tangent says −1, a value $e^x$ never takes, and misses by
+1.135: worse than the flat line. The parabola says 1 and misses by 0.865 again. A Taylor approximation is a local copy.
+To estimate the curve far away, take a point $a$ close to where you need it.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: Newton's method finds √2">
+
+$\sqrt{2}$ is where $f(x) = x^2 - 2$ crosses zero. Finding where a curve crosses zero is hard, but finding where a
+straight line does is easy. So at a guess $x$, swap the curve for its tangent and move to where the tangent crosses
+zero. At a point $t$ the tangent's height is $f(x) + f'(x)(t - x)$. It is 0 at the new guess, so
+$f(x) + f'(x)(x_{\text{new}} - x) = 0$, which gives:
+
+$$
+x_{\text{new}} = x - \frac{f(x)}{f'(x)}
+$$
+
+For $x^2 - 2$ the slope is $f'(x) = 2x$, so each step is $x - (x^2 - 2)/(2x)$. Then step again from the new guess, and
+stop once a step moves $x$ by less than $10^{-12}$, a millionth of a millionth. A guess's **correct decimal places** are
+the digits after the point that agree with $\sqrt{2} = 1.41421356\ldots$: 1.4139 agrees as far as 1.41, so it has 2.
+Start from $x_0 = 3$. Predict where the first tangent lands, the next guess, how the number of correct decimal places
+grows, and what happens if you forget the 2 in $f'(x) = 2x$.
+
+<PredictChallenge slug="taylor" settings={{ preset: 'newton' }} goal={6} />
+
+At 3, $f(3) = 7$ and the slope is $f'(3) = 6$, so $x_1 = 3 - 7/6 = 1.833$. That stops short of $\sqrt{2}$: the curve
+bends up, so its tangent runs below it and reaches zero first. The next guesses, cut off one digit after they stop
+agreeing with $\sqrt{2}$, are $x_2 = 1.46\ldots$, $x_3 = 1.4149\ldots$, $x_4 = 1.4142137\ldots$ and
+$x_5 = 1.4142135623731\ldots$. The correct decimal places went
+0, 0, 1, 3, 6, 12, 15, and the run stopped after 6 steps.
+
+Far away progress is slow, but once close, each step roughly doubles the correct digits. The reason is the tangent's
+$d^2$ miss from the last section. If a guess is off by $d$, the tangent misses the curve at $\sqrt{2}$ by about
+$\tfrac{1}{2} f''\,d^2 = d^2$ (here $f'' = 2$), and dividing by the slope $2x$ turns that height into a distance along
+the axis. So the new guess is off by about $d^2 \div 2x$. Here $x_3$ is off by 0.000785, and
+$0.000785^2 \div 2.83 \approx 2.2 \times 10^{-7}$, which is how far off $x_4$ is. Squaring a small number doubles its
+zeros after the point.
+
+Forget the 2 and the slope is $x$, a line too shallow: $x - (x^2 - 2)/x$ is just $2/x$. From 3 that goes to 0.667,
+then back to 3, and it bounces between the two forever. If a Newton loop never settles, check the derivative first.
+
+<Misconception
+  id="newton-never-overshoots"
+  title="Each Newton step lands between the guess and the root"
+  probes={[
+    {
+      q: 'Newton’s method for √9 uses f(x) = x² − 9 and starts at x₀ = 1. Where is x₁?',
+      choices: ['At 5, past 3', 'Between 1 and 3', 'At exactly 3'],
+      answer: 0,
+      trap: 1,
+      why: 'f(1) = −8 and f′(1) = 2, so x₁ = 1 − (−8)/2 = 5. The shallow tangent at 1 reaches zero far beyond 3.',
+    },
+    {
+      q: 'Newton’s method for √7, about 2.65, starts at x₀ = 1. Will x₁ be below √7 or above it?',
+      choices: ['Below: Newton creeps up on the root from the side it starts', 'Above: it overshoots, to 4'],
+      answer: 1,
+      trap: 0,
+      why: 'f(1) = −6 and f′(1) = 2, so x₁ = 1 + 3 = 4. The tangent goes wherever its own zero is.',
+    },
+  ]}
+>
+
+Newton jumps to wherever the tangent crosses zero, and a shallow tangent crosses far away. Start left of $\sqrt{2}$,
+at $x_0 = 0.5$: there $f(0.5) = -1.75$ and the slope is only 1, so $x_1 = 0.5 + 1.75 = 2.25$, well past $\sqrt{2}$.
+From 2.25 on, every guess stays above $\sqrt{2}$, as in the run from 3: 1.569…, 1.421…, 1.41423…, and so on. A flat tangent
+can throw a guess far off, and a tangent with slope 0 never crosses zero at all. Newton's method is fast once it is
+close, not from anywhere.
+
+</Misconception>
+
+<Explore slug="taylor" settings={{ preset: 'newton-left' }} caption="A replay of the run from x₀ = 0.5, left of √2: the first tangent's long jump past √2, then the guesses closing in from above." />
+
+</Section>
+
+<Section step="do" title="Square roots in code">
+
+Now write it. `newton_sqrt(a)` starts from the guess $x = a$, steps to $x - (x^2 - a)/(2x)$ again and again, keeps
+every guess in `steps`, and stops once a step is at most $10^{-12}$ times $x$ (times $x$, so the test scales with the
+size of the answer). One example is $\sqrt{1{,}000{,}000}$, starting from a guess of 1,000,000, a thousand times too
+big. The first nine steps only roughly halve it, down to about 2121: when $x^2$ is much bigger than $a$,
+$x - (x^2 - a)/2x$ is about $x - x/2$. Far from the root the tangent is a poor copy of the curve. Once close, the
+digits start doubling, and the run is done after 15 steps.
+
+<CodeExercise exercise="newton-sqrt" />
+
+</Section>
+
+<Section step="see" title="The parabola behind a training step">
+
+Back to training. This loss is lowest at $w = 2$:
+
+$$
+L(w) = (w - 2)^2 + \tfrac{1}{4}(w - 2)^4
+$$
+
+A sideways shift doesn't change slopes, so $(w - 2)^n$ has slope $n(w - 2)^{n-1}$, just as $w^n$ has $nw^{n-1}$.
+So its slope is $L'(w) = 2(w - 2) + (w - 2)^3$ and its bend is $L''(w) = 2 + 3(w - 2)^2$. An optimiser standing at
+$w_0 = 4$ finds $L'(4) = 12$ and $L''(4) = 14$. Where should it step?
+
+<Explore slug="taylor" settings={{ preset: 'step' }} caption="A loss lowest at w = 2, starting from w₀ = 4: the tangent, the gradient step, the Newton step, then three more steps of each. Drag w₀ to start elsewhere." />
+
+The tangent only says which way: uphill to the right, so go left. Gradient descent with $\eta = 0.1$ moves to
+$w_1 = 4 - 0.1 \times 12 = 2.8$. That step is the lowest point of a parabola. Take the parabola with $L$'s height and
+slope at $w_0$ and a bend of $1/\eta = 10$, as a function of the step $d$:
+
+$$
+q(d) = L(w_0) + L'(w_0)\,d + \frac{d^2}{2\eta}
+$$
+
+Its slope is $L'(w_0) + d/\eta$, which is 0 at $d = -\eta\,L'(w_0)$: exactly the gradient step. So gradient descent
+quietly assumes the loss bends by $1/\eta$. A small $\eta$ assumes a sharp bend, and takes a small step.
+
+The Taylor parabola uses the real bend, $\tfrac{1}{2} L''(w_0)\,d^2$ in place of $d^2/2\eta$. Its slope
+$L'(w_0) + L''(w_0)\,d$ is 0 at $d = -L'(w_0)/L''(w_0)$, which gives the **Newton step**
+$w_1 = 4 - 12/14 = 3.143$. It is Newton's method again, aimed at the zero of the slope $L'$.
+
+Which lands closer to 2? Here the gradient step, 0.8 away against 1.143. At 4 the loss bends hard ($L'' = 14$) but
+much less on the way down (only 2 at the bottom), so the parabola fitted at 4 turns up too soon. Closer in, the
+parabola fits better and better. After 2, 3 and 4 steps, gradient descent is 0.589, 0.451 and 0.351 from the minimum,
+losing only about a quarter of the distance each step; Newton is 0.504, 0.093 and 0.0008. A Newton step is only as
+good as the parabola, and each one costs more, since $L''$ has to be worked out as well as $L'$.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'f(2) = 5, f′(2) = 3 and f″(2) = 4. What does the parabola T₂ at 2 give for f(2.1)?',
+      choices: ['5.3', '5.34', '5.32', '5.02'],
+      answer: 2,
+      why: '5 + 3 × 0.1 + ½ × 4 × 0.1² = 5 + 0.3 + 0.02 = 5.32. The tangent alone gives 5.3, and leaving out the ½ gives 5.34.',
+    },
+    {
+      q: 'A tangent misses a smooth curve by 0.036 at a + 0.3. About how much does it miss by at a + 0.15?',
+      choices: ['About 0.018', 'About 0.009', 'About 0.0045', 'About 0.036'],
+      answer: 1,
+      why: 'Close to a the tangent’s miss shrinks like d², so halving the gap quarters it: 0.036 ÷ 4 = 0.009.',
+      traps: { 0: 'halving-halves-error' },
+    },
+    {
+      q: 'You fit a tangent and a parabola to a smooth curve at a. At a point far from a, which is closer to the curve?',
+      choices: ['The parabola, always: it copies more about the curve', 'The tangent, always', 'It depends: the rules about d² and d³ only hold near a'],
+      answer: 2,
+      why: 'Near a the parabola wins, but far away either can miss by more. A Taylor approximation is a local copy.',
+      traps: { 0: 'fit-good-everywhere' },
+    },
+    {
+      q: 'Newton’s method for √10 uses f(x) = x² − 10 and starts at x₀ = 3. What is x₁?',
+      choices: ['About 3.333', 'About 2.833', '6.5', 'About 3.167'],
+      answer: 3,
+      why: 'f(3) = −1 and f′(3) = 6, so x₁ = 3 − (−1)/6 = 3.167. Forgetting the 2 gives 3.333, a sign slip 2.833, and averaging 3 and 10 gives 6.5.',
+    },
+    {
+      q: 'Newton’s method for √2 starts at x₀ = 1, below √2 ≈ 1.414. Where does x₁ land?',
+      choices: ['Between 1 and √2, closer from below', 'At 1.5, above √2', 'Exactly on √2'],
+      answer: 1,
+      why: 'f(1) = −1 and f′(1) = 2, so x₁ = 1 + 0.5 = 1.5. The tangent at 1 crosses zero past √2.',
+      traps: { 0: 'newton-never-overshoots' },
+    },
+    {
+      q: 'Close to √5, a Newton guess has 5 correct decimal places. About how many will the next guess have?',
+      choices: ['About 6', 'Still 5', 'About 10 or more', 'About 25'],
+      answer: 2,
+      why: 'Close to the root the new miss is about the old one squared (divided by 2x), so the number of correct digits roughly doubles: on √5, 5 become 12. Squaring the miss doubles the digits; it doesn’t square them.',
+    },
+    {
+      q: 'At w₀ a loss has slope L′(w₀) = 6 and bend L″(w₀) = 3. Where does the Newton step land?',
+      choices: ['w₀ − 2', 'w₀ − 18', 'w₀ + 2', 'w₀ − 0.5'],
+      answer: 0,
+      why: 'The Taylor parabola is lowest where L′ + L″·d = 0, so d = −6/3 = −2.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="tangent-parabola-newton"
+  prompt="How do the tangent and the parabola copy a curve near a point, how fast do their misses shrink, and how does Newton's method use the tangent?"
+  rubric={[
+    'The tangent copies f’s height and slope at a; the parabola adds ½f″(a)(x − a)² to copy its bend, where f″ is the slope of the slope.',
+    'Near a, halving the gap cuts the tangent’s miss about 4 times and the parabola’s about 8 (d² and d³); far from a there is no such promise.',
+    'Newton’s method swaps the curve for its tangent at a guess and moves to where the tangent crosses zero, x − f(x)/f′(x), again and again.',
+    'Once close, each Newton step roughly doubles the correct digits, but from a poor start the tangent can overshoot.',
+    'A gradient step is the bottom of a parabola with bend 1/η; the Newton step is the bottom of the Taylor parabola, with the real bend.',
+  ]}
+  example="Near a point a, the tangent f(a) + f′(a)(x − a) has the curve's height and slope, so it is the best straight-line copy. Adding ½f″(a)(x − a)² also copies the bend, where f″ is the slope of the slope, giving a parabola. Close to a, their misses shrink like d² and d³: halve the gap and they fall about 4 and 8 times. Far away nothing is promised. Newton's method finds where f is zero by sliding down the tangent at a guess to where it crosses zero, x − f(x)/f′(x), and repeating; once close, the digits double each step, but a shallow tangent can overshoot. For a loss, a gradient step goes to the bottom of a parabola that assumes a bend of 1/η, and a Newton step to the bottom of the Taylor parabola."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The tangent $f(a) + f'(a)(x - a)$ copies the height and slope at $a$; adding $\tfrac{1}{2} f''(a)(x - a)^2$ copies the bend too. $f''$ is the slope of the slope.
+- Near $a$ the flat line, tangent and parabola miss by amounts that shrink like $d$, $d^2$ and $d^3$: halve the gap and they fall about 2, 4 and 8 times. Far from $a$ there is no such promise.
+- Newton's method repeats $x \leftarrow x - f(x)/f'(x)$. Once close, each step about doubles the correct digits; from a poor start it can overshoot, and a wrong derivative can stop it settling.
+- A gradient step is the bottom of a parabola with bend $1/\eta$; the Newton step $w - L'(w)/L''(w)$ is the bottom of the Taylor parabola. Which lands closer depends on how well that parabola fits.
+
+</Section>

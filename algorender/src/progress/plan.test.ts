@@ -89,6 +89,17 @@ describe('scheduling', () => {
     expect(order.indexOf('supervised-learning')).toBeGreaterThan(order.indexOf('vectors'));
   });
 
+  it('reaches B4’s contour maps, derivative rules, Taylor, Jacobians and autograd, each after what it builds on', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    const chain = ['contour-maps', 'derivatives-gradients', 'derivative-rules', 'chain-rule', 'autograd'];
+    for (const id of [...chain, 'taylor-approximation', 'jacobians']) expect(order, id).toContain(id);
+    for (let i = 1; i < chain.length; i++) expect(order.indexOf(chain[i]), chain[i]).toBeGreaterThan(order.indexOf(chain[i - 1]));
+    expect(order.indexOf('taylor-approximation')).toBeGreaterThan(order.indexOf('derivative-rules'));
+    for (const before of ['chain-rule', 'matrix-multiplication']) expect(order.indexOf('jacobians'), before).toBeGreaterThan(order.indexOf(before));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {

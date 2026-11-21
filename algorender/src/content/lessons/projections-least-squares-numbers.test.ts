@@ -30,7 +30,7 @@ const framesOf = (preset: string) => traceOf(leastSquares, inputOf(preset)).fram
 
 describe('projections-least-squares embeds', () => {
   it('embeds real presets, with one prediction challenge that asks at least its goal', () => {
-    const found = [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}[^>]*?(?:goal=\{(\d+)\})?[^>]*\/>/g)].map((m) => ({
+    const found = [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}(?:[^>]*?goal=\{(\d+)\})?[^>]*\/>/g)].map((m) => ({
       tag: m[1],
       slug: m[2],
       preset: m[3],

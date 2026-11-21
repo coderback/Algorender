@@ -196,6 +196,14 @@ describe('the real checkpoints', () => {
     }
   });
 
+  it('asks stage 2 about B4’s contour maps, derivative rules, Taylor, Jacobians and autograd', () => {
+    const p = checkpointPools(2);
+    for (const id of ['contour-maps', 'derivative-rules', 'taylor-approximation', 'jacobians', 'autograd']) {
+      expect(p.probes.some((q) => q.concept === id), id).toBe(true);
+      expect(p.quiz.some((q) => q.concept === id), id).toBe(true);
+    }
+  });
+
   it('opens the first two stages today, from the lessons already written', () => {
     const open = openCheckpoints().map((c) => c.stage);
     expect(open).toContain(1);
@@ -217,7 +225,14 @@ describe('the real checkpoints', () => {
     const checkpoint = openCheckpoints().find((c) => c.stage === 1)!.minutes;
     expect(one.parts).toEqual(['normal-equations', 'solve-system', 'least-squares-fit', 'fit-curves']);
     expect(one.minutes).toBe(checkpoint + 4 * 60);
+  });
+
+  it('gives stage 2’s milestone its project, micrograd from scratch (M2), and the time it takes', () => {
+    const two = planMilestones().find((m) => m.stage === 2)!;
+    const checkpoint = openCheckpoints().find((c) => c.stage === 2)!.minutes;
+    expect(two.parts).toEqual(['value-backward', 'topological-backward', 'value-ops', 'gradient-check', 'train-neuron']);
+    expect(two.minutes).toBe(checkpoint + 4 * 60);
     // Later stages have no project yet.
-    for (const m of planMilestones().filter((x) => x.stage > 1)) expect(m.parts, `stage ${m.stage}`).toBeUndefined();
+    for (const m of planMilestones().filter((x) => x.stage > 2)) expect(m.parts, `stage ${m.stage}`).toBeUndefined();
   });
 });
