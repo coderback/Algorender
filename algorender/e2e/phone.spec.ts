@@ -162,11 +162,12 @@ test('a design case keeps its diagram top to bottom with a cache added, and a ru
   const cache = page.getByRole('button', { name: /^Cache, / });
   await expect(cache).toBeVisible();
   // Every node sits inside the diagram's box: no 976px left-to-right layout.
-  const fits = await cache.evaluate((node) => {
-    const box = node.closest('.overflow-x-auto')!;
-    return box.scrollWidth <= box.clientWidth + 1;
-  });
-  expect(fits).toBe(true);
+  const fits = () =>
+    cache.evaluate((node) => {
+      const box = node.closest('.overflow-x-auto')!;
+      return { scroll: box.scrollWidth, client: box.clientWidth };
+    });
+  await expect.poll(async () => { const f = await fits(); return f.scroll <= f.client + 1 ? 'fits' : `${f.scroll} in ${f.client}`; }).toBe('fits');
   // A node's name isn't cut short by its cost tag.
   const lb = page.getByRole('button', { name: /^Load balancer, / });
   if ((await lb.count()) > 0) {
