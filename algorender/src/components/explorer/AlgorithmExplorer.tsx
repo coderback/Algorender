@@ -76,6 +76,7 @@ export function AlgorithmExplorer({
           <Button
             kind="secondary"
             size="s"
+            className="max-sm:h-11"
             onClick={() => {
               const field = document.getElementById('custom-input');
               field?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -87,7 +88,7 @@ export function AlgorithmExplorer({
         </>
       )}
       {reseeds && (
-        <IconButton label="New random input" kind="secondary" size="s" onClick={newValues}>
+        <IconButton label="New random input" kind="secondary" size="s" className="max-sm:size-11" onClick={newValues}>
           <FiShuffle aria-hidden />
         </IconButton>
       )}

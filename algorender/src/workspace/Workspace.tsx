@@ -309,6 +309,7 @@ function Ladder({ exercise, stages, variant, tutor, aside }: { exercise: Exercis
             errorLine={stale ? null : (outcome?.result.error?.line ?? null)}
             pointLine={pointLine}
             onRun={() => void onRun()}
+            symbols
           />
           <p className="text-xs text-ink-muted">Ctrl/⌘ + Enter runs your code, and Ctrl/⌘ + F searches it. Tab indents; press Esc, then Tab, to leave the editor.</p>
         </>
@@ -326,15 +327,18 @@ function Ladder({ exercise, stages, variant, tutor, aside }: { exercise: Exercis
     <div className="flex min-w-0 flex-col gap-4">
       {stages.length > 1 ? (
         <Tabs.Root value={stage} onValueChange={(v) => chooseStage(v as Stage)} className="space-y-4">
-          <Tabs.List aria-label="Ways to practise" className="flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-surface p-1.5">
+          {/* Phones: the stages share the row equally, and a long name takes two lines inside its tab rather than wrapping the row. */}
+          <Tabs.List aria-label="Ways to practise" className="grid w-full auto-cols-fr grid-flow-col gap-1 rounded-[24px] bg-surface p-1.5 sm:flex sm:w-fit sm:max-w-full sm:flex-wrap sm:rounded-full">
             {stages.map((s, i) => (
               <Tabs.Trigger
                 key={s}
                 value={s}
-                className="inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-ink-soft transition-colors duration-150 ease-standard hover:bg-sunken hover:text-ink data-[state=active]:bg-primary data-[state=active]:text-on-primary"
+                className="inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[18px] px-2 py-1 text-center text-[13px] leading-tight font-semibold text-ink-soft transition-colors duration-150 ease-standard hover:bg-sunken hover:text-ink data-[state=active]:bg-primary data-[state=active]:text-on-primary sm:h-10 sm:min-h-0 sm:rounded-full sm:px-4 sm:py-0 sm:text-sm"
               >
                 {passedStage(progress, s, levels.length) && <FiCheck aria-label="done" strokeWidth={3} />}
-                {i + 1} · {stageLabel(s, exercise)}
+                <span>
+                  {i + 1} · {stageLabel(s, exercise)}
+                </span>
               </Tabs.Trigger>
             ))}
           </Tabs.List>

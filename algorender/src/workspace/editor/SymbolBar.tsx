@@ -19,31 +19,47 @@ const insert = (text: string, name: string): Key => ({
   run: (view) => view.dispatch(view.state.replaceSelection(text), { scrollIntoView: true }),
 });
 
-const COMMON: Key[] = [
-  { label: '⇥', name: 'Indent', run: (view) => void indentMore(view) },
-  { label: '⇤', name: 'Dedent', run: (view) => void indentLess(view) },
-  insert('(', 'Opening parenthesis'),
-  insert(')', 'Closing parenthesis'),
-  insert('[', 'Opening square bracket'),
-  insert(']', 'Closing square bracket'),
-  insert('{', 'Opening brace'),
-  insert('}', 'Closing brace'),
-  insert(':', 'Colon'),
-  insert('=', 'Equals sign'),
-  insert('"', 'Double quote'),
-  insert("'", 'Single quote'),
-];
+const KEYS = {
+  indent: { label: '⇥', name: 'Indent', run: (view) => void indentMore(view) },
+  dedent: { label: '⇤', name: 'Dedent', run: (view) => void indentLess(view) },
+  '(': insert('(', 'Opening parenthesis'),
+  ')': insert(')', 'Closing parenthesis'),
+  '[': insert('[', 'Opening square bracket'),
+  ']': insert(']', 'Closing square bracket'),
+  '{': insert('{', 'Opening brace'),
+  '}': insert('}', 'Closing brace'),
+  ':': insert(':', 'Colon'),
+  '=': insert('=', 'Equals sign'),
+  '"': insert('"', 'Double quote'),
+  "'": insert("'", 'Single quote'),
+  '#': insert('#', 'Hash'),
+  _: insert('_', 'Underscore'),
+  ';': insert(';', 'Semicolon'),
+  '<': insert('<', 'Less than'),
+  '>': insert('>', 'Greater than'),
+} satisfies Record<string, Key>;
 
 const ARROWS: Key[] = [
   { label: '←', name: 'Move left', run: (view) => void cursorCharLeft(view) },
   { label: '→', name: 'Move right', run: (view) => void cursorCharRight(view) },
 ];
 
-/** The keys for a language: Python's comment sign, or C-family semicolons. */
+/**
+ * The keys for a language, the most used first, since a phone shows only the
+ * first nine or so without scrolling the bar: Python's colon, brackets, = and
+ * quotes and its comment sign; C-family braces and semicolons. Indent and
+ * dedent come after (a new line after a colon or brace is indented already).
+ */
 export function symbolKeys(language: ProblemLanguage): Key[] {
-  const own = language === 'python' ? [insert('#', 'Hash'), insert('_', 'Underscore')] : [insert(';', 'Semicolon'), insert('<', 'Less than'), insert('>', 'Greater than')];
-  return [...COMMON, ...own, ...ARROWS];
+  const order: (keyof typeof KEYS)[] =
+    language === 'python'
+      ? [':', '(', ')', '[', ']', '=', '"', "'", '#', 'indent', 'dedent', '_', '{', '}']
+      : ['(', ')', '{', '}', ';', '=', '"', "'", '[', ']', 'indent', 'dedent', ':', '<', '>'];
+  return [...order.map((k) => KEYS[k]), ...ARROWS];
 }
+
+/** The bar's height (a 40px key and its padding and border), kept clear below the cursor while typing. */
+export const SYMBOL_BAR_HEIGHT = 53;
 
 /** How far the on-screen keyboard has pushed the visible area up, so the bar can sit on top of it. */
 function useKeyboardInset(): number {

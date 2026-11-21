@@ -144,9 +144,23 @@ export function LearnPath({ data, linked, filtered = false }: { data: PathData; 
   };
   const isOpen = (t: PathTrack) => open[t.id] ?? t.id === selected?.track;
 
+  const details = (titleId: string, className?: string) =>
+    selected && (
+      <Selected
+        concept={selected}
+        status={status(selected.id)}
+        mastery={m.get(selected.id)}
+        resuming={resumeConcept === selected.id}
+        done={!!selected.lesson && completed.has(selected.lesson.slug)}
+        titleId={titleId}
+        className={className}
+      />
+    );
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-[auto_auto_auto_auto_1fr]">
-      {selected && <Selected concept={selected} status={status(selected.id)} mastery={m.get(selected.id)} resuming={resumeConcept === selected.id} done={!!selected.lesson && completed.has(selected.lesson.slug)} />}
+      {/* Phones: once the learner taps a concept, its card opens under the node instead, where they are looking. */}
+      {details('selected-title', picked ? 'hidden md:flex' : undefined)}
 
       <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-span-5 lg:row-start-1">
         {visible.map((t) => (
@@ -157,6 +171,7 @@ export function LearnPath({ data, linked, filtered = false }: { data: PathData; 
             status={status}
             known={(id) => ready && KNOWN.has(m.get(id)?.status ?? 'new')}
             selectedId={selectedId}
+            detail={picked ? details('selected-title-here', 'mt-3 md:hidden') : undefined}
             onSelect={select}
             open={isOpen(t)}
             onToggle={() => setOpen((o) => ({ ...o, [t.id]: !isOpen(t) }))}
@@ -195,6 +210,7 @@ function TrackRow({
   status,
   known,
   selectedId,
+  detail,
   onSelect,
   open,
   onToggle,
@@ -204,6 +220,8 @@ function TrackRow({
   status: (id: string) => Status | null;
   known: (id: string) => boolean;
   selectedId: string | undefined;
+  /** The selected concept's card, shown under its node on phones. */
+  detail?: ReactNode;
   onSelect: (id: string) => void;
   open: boolean;
   onToggle: () => void;
@@ -292,6 +310,7 @@ function TrackRow({
                   )}
                 </span>
               </button>
+              {on && detail}
             </li>
           );
         })}
@@ -300,20 +319,36 @@ function TrackRow({
   );
 }
 
-function Selected({ concept, status, mastery, resuming, done }: { concept: PathConcept; status: Status | null; mastery: ConceptMastery | undefined; resuming: boolean; done: boolean }) {
+function Selected({
+  concept,
+  status,
+  mastery,
+  resuming,
+  done,
+  titleId,
+  className,
+}: {
+  concept: PathConcept;
+  status: Status | null;
+  mastery: ConceptMastery | undefined;
+  resuming: boolean;
+  done: boolean;
+  titleId: string;
+  className?: string;
+}) {
   const lesson = concept.lesson;
   const link = concept.links[0];
   const href = lesson ? `/learn/${lesson.slug}` : concept.visualisers[0] ? `/visualisers/${concept.visualisers[0].slug}` : (link?.href ?? '#');
   const action = lesson ? (resuming ? 'Resume lesson' : done ? 'Open the lesson again' : `Start lesson · ${lesson.minutes} min`) : concept.visualisers.length ? 'Open the visualiser' : (link?.label ?? null);
   const tally = mastery && mastery.observations > 0 ? ` · ${mastery.correct} of ${mastery.observations} right` : '';
   return (
-    <TrackCard track={concept.track} as="section" aria-labelledby="selected-title" className="gap-4 rounded-[28px] lg:col-start-2 lg:row-start-1">
+    <TrackCard track={concept.track} as="section" aria-labelledby={titleId} className={cx('gap-4 rounded-[28px] lg:col-start-2 lg:row-start-1', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-eyebrow uppercase">Selected</span>
         {status && status !== 'locked' && <StatusChip status={status} label={`${STATUS_TEXT[status] || 'Ready'}${tally}`} className="bg-chip-on-track" />}
         {status === 'locked' && <StatusChip status="locked" label={concept.planned ? 'Coming soon' : 'Not yet'} />}
       </div>
-      <h2 id="selected-title" className={cx('font-display text-[30px] leading-[1.05] font-bold tracking-[-0.02em]', trackTitle(concept.track))}>
+      <h2 id={titleId} className={cx('font-display text-[30px] leading-[1.05] font-bold tracking-[-0.02em]', trackTitle(concept.track))}>
         {concept.title}
       </h2>
       <p className="text-[15px] leading-relaxed">{concept.summary}</p>

@@ -10,6 +10,9 @@ import { STAGE_CAPTION } from '@/viz/parts';
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const;
 const FIT = ZOOMS.indexOf(1);
 
+/** Phones: the view tools grow from 36px to 40px, a surer tap beside the caption. */
+const PHONE_TOOL = 'max-sm:size-10';
+
 /** Elements a drag should reach instead of panning the stage. */
 const INTERACTIVE = 'button, a, input, select, textarea, [role="button"], [role="slider"], [tabindex]:not([tabindex="-1"])';
 
@@ -100,17 +103,17 @@ export function StageWell({ caption, card, style, children }: { caption: string;
           {caption}
         </span>
         <div role="group" aria-label="View" className="flex shrink-0 items-center gap-1.5">
-          <IconButton label="Zoom out" kind="soft" size="s" disabled={step === 0} onClick={() => zoomTo(step - 1)}>
+          <IconButton label="Zoom out" kind="soft" size="s" className={PHONE_TOOL} disabled={step === 0} onClick={() => zoomTo(step - 1)}>
             <FiMinus />
           </IconButton>
-          <Button kind="soft" size="s" aria-label="Fit to stage" onClick={() => zoomTo(FIT)}>
+          <Button kind="soft" size="s" className="max-sm:h-10 max-sm:px-3" aria-label="Fit to stage" onClick={() => zoomTo(FIT)}>
             Fit
           </Button>
-          <IconButton label="Zoom in" kind="soft" size="s" disabled={step === ZOOMS.length - 1} onClick={() => zoomTo(step + 1)}>
+          <IconButton label="Zoom in" kind="soft" size="s" className={PHONE_TOOL} disabled={step === ZOOMS.length - 1} onClick={() => zoomTo(step + 1)}>
             <FiPlus />
           </IconButton>
           {fullscreenEnabled && (
-            <IconButton label={full ? 'Exit full screen' : 'Full screen'} kind="soft" size="s" onClick={toggleFull}>
+            <IconButton label={full ? 'Exit full screen' : 'Full screen'} kind="soft" size="s" className={PHONE_TOOL} onClick={toggleFull}>
               {full ? <FiMinimize2 /> : <FiMaximize2 />}
             </IconButton>
           )}

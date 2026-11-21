@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { useProgressSnapshot } from '@/progress/hooks';
-import { hasStarted, isReturning, readHint, writeHint } from './returning';
+import { askedForToday, hasStarted, isReturning, readHint, writeHint } from './returning';
 
 const noop = () => () => {};
 
@@ -16,7 +16,7 @@ export function HomeGate({ landing, today }: { landing: ReactNode; today: ReactN
   const snapshot = useProgressSnapshot();
   // The hint is known on the client only: hydration starts from "both".
   const hint = useSyncExternalStore(noop, readHint, () => null);
-  const decided = snapshot.ready ? (isReturning(snapshot, hasStarted()) ? 'today' : 'landing') : null;
+  const decided = snapshot.ready ? (isReturning(snapshot, hasStarted() || askedForToday()) ? 'today' : 'landing') : null;
   const view = decided ?? hint ?? 'both';
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { MotionConfig } from 'motion/react';
-import { useId, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { FiAlertTriangle, FiCheck, FiLink, FiPlay, FiPlus, FiRotateCcw, FiTrash2 } from 'react-icons/fi';
 import { evaluate, KIND_INFO, LIMITS, newComponent, simulate, validateDesign, withWorkload } from '@/systems/design';
 import type { CaseStudy, Check, Component, Design, Fault, Ref, SimResult } from '@/systems/design/types';
@@ -115,6 +115,14 @@ function Canvas({
   const [faults, setFaults] = useState<readonly Fault[]>([]);
   const [run, setRun] = useState<Run | null>(null);
   const [running, setRunning] = useState(false);
+  // A finished run's results start under the run card, below the fold on a phone: bring them up.
+  const results = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = results.current;
+    if (!run || !el || el.getBoundingClientRect().top < window.innerHeight * 0.75) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+  }, [run]);
   const [error, setError] = useState<string | null>(null);
   const [mine, setMine] = useState<Design | null>(null); // the learner's design while a solution is shown
   const [copied, setCopied] = useState(false);
@@ -377,16 +385,18 @@ function Canvas({
       </p>
 
       {run && (
-        <Results
-          design={design}
-          result={run.result}
-          faultResult={run.faultResult}
-          faultLabel={faultLabel}
-          checks={run.checks}
-          passed={run.passed}
-          stale={run.key !== runKey}
-          idPrefix={variant === 'lesson' ? `${prefix}-` : undefined}
-        />
+        <div ref={results} className="min-w-0">
+          <Results
+            design={design}
+            result={run.result}
+            faultResult={run.faultResult}
+            faultLabel={faultLabel}
+            checks={run.checks}
+            passed={run.passed}
+            stale={run.key !== runKey}
+            idPrefix={variant === 'lesson' ? `${prefix}-` : undefined}
+          />
+        </div>
       )}
       {run?.passed && study && !interview && (
         <div className="flex flex-col gap-2.5 rounded-card bg-track-mint p-5 text-track-mint-title">

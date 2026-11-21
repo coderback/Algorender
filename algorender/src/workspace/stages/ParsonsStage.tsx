@@ -63,7 +63,8 @@ export function ParsonsStage({
     // Lines slide as they're reordered, unless the OS asks for reduced motion.
     <MotionConfig reducedMotion="user">
       <div className="grid gap-4 lg:grid-cols-2">
-        <div role="group" aria-labelledby={`${uid}-pool`} className="rounded-tile bg-surface p-4">
+        {/* min-w-0: a grid item is otherwise as wide as its longest line plus its buttons, wider than a phone. */}
+        <div role="group" aria-labelledby={`${uid}-pool`} className="@container min-w-0 rounded-tile bg-surface p-3 sm:p-4">
           <div id={`${uid}-pool`} className="mb-3 text-[15px] font-semibold text-ink">
             Lines to use <span className="font-normal text-ink-muted">· some aren’t needed</span>
           </div>
@@ -83,7 +84,7 @@ export function ParsonsStage({
           )}
         </div>
 
-        <div role="group" aria-labelledby={`${uid}-program`} className="rounded-tile bg-surface p-4">
+        <div role="group" aria-labelledby={`${uid}-program`} className="@container min-w-0 rounded-tile bg-surface p-3 sm:p-4">
           <div id={`${uid}-program`} className="mb-3 text-[15px] font-semibold text-ink">
             Your program{' '}
             <span className="font-normal text-ink-muted">· {python ? 'order and indent the lines' : 'put the lines in order'}</span>
@@ -152,43 +153,47 @@ function ProgramLine({
       value={id}
       dragListener={false}
       dragControls={controls}
-      className={`flex items-center gap-1.5 rounded-[14px] bg-sunken px-1.5 py-1 ${flagged ? 'ring-2 ring-warn-ink ring-inset' : ''}`}
+      // A narrow card (a phone, or beside the pool on a wide screen): the number and code on the first line, the drag handle and the
+      // finger-sized controls on a second. Wider (a tablet, full width), everything sits on one line.
+      className={`grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-0.5 rounded-[14px] bg-sunken px-1.5 py-1 @sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] ${flagged ? 'ring-2 ring-warn-ink ring-inset' : ''}`}
     >
       <button
         type="button"
         aria-hidden
         tabIndex={-1}
         onPointerDown={(e) => controls.start(e)}
-        className="cursor-grab touch-none rounded-md p-1 text-ink-muted hover:bg-line-soft active:cursor-grabbing"
+        className="col-start-1 row-start-2 inline-flex size-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-ink-muted hover:bg-line-soft active:cursor-grabbing @sm:row-start-1 @sm:size-7"
         title="Drag to reorder"
       >
         <FiMenu />
       </button>
-      <span className="w-6 shrink-0 text-right font-mono text-xs text-ink-muted" aria-hidden>
+      <span className="col-start-1 row-start-1 w-6 shrink-0 justify-self-center text-center font-mono text-xs text-ink-muted @sm:col-start-2 @sm:text-right" aria-hidden>
         {position + 1}
       </span>
-      <code className="min-w-0 flex-1 font-mono text-[13px] break-words whitespace-pre-wrap text-ink" style={{ paddingLeft: `${indent * 2}ch` }}>
+      <code className="col-span-2 col-start-2 row-start-1 min-w-0 font-mono text-[13px] break-words whitespace-pre-wrap text-ink @sm:col-span-1 @sm:col-start-3" style={{ paddingLeft: `${indent * 2}ch` }}>
         {text}
       </code>
-      {python && (
-        <>
-          <IconButton label={`Outdent “${text}”`} onClick={() => onIndent(-1)} disabled={indent === 0}>
-            <FiChevronLeft />
-          </IconButton>
-          <IconButton label={`Indent “${text}”`} onClick={() => onIndent(1)} disabled={indent >= MAX_INDENT}>
-            <FiChevronRight />
-          </IconButton>
-        </>
-      )}
-      <IconButton label={`Move “${text}” up`} onClick={() => onMove(-1)} disabled={position === 0}>
-        <FiArrowUp />
-      </IconButton>
-      <IconButton label={`Move “${text}” down`} onClick={() => onMove(1)} disabled={position === count - 1}>
-        <FiArrowDown />
-      </IconButton>
-      <IconButton label={`Remove “${text}”`} onClick={onRemove}>
-        <FiX />
-      </IconButton>
+      <span className="col-span-2 col-start-2 row-start-2 flex items-center justify-end gap-1 @sm:col-span-1 @sm:col-start-4 @sm:row-start-1">
+        {python && (
+          <>
+            <IconButton label={`Outdent “${text}”`} onClick={() => onIndent(-1)} disabled={indent === 0}>
+              <FiChevronLeft />
+            </IconButton>
+            <IconButton label={`Indent “${text}”`} onClick={() => onIndent(1)} disabled={indent >= MAX_INDENT}>
+              <FiChevronRight />
+            </IconButton>
+          </>
+        )}
+        <IconButton label={`Move “${text}” up`} onClick={() => onMove(-1)} disabled={position === 0}>
+          <FiArrowUp />
+        </IconButton>
+        <IconButton label={`Move “${text}” down`} onClick={() => onMove(1)} disabled={position === count - 1}>
+          <FiArrowDown />
+        </IconButton>
+        <IconButton label={`Remove “${text}”`} onClick={onRemove}>
+          <FiX />
+        </IconButton>
+      </span>
     </Reorder.Item>
   );
 }
@@ -201,7 +206,7 @@ function IconButton({ label, onClick, disabled, children }: { label: string; onC
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors duration-150 ease-standard hover:bg-line-soft hover:text-ink disabled:opacity-30"
+      className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink-soft @sm:size-7 transition-colors duration-150 ease-standard hover:bg-line-soft hover:text-ink disabled:opacity-30"
     >
       {children}
     </button>

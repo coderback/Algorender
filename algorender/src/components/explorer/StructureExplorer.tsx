@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { FiCornerUpLeft, FiPlay } from 'react-icons/fi';
 import type { AnyStructure, OperationSpec } from '@/engine/module';
 import { randomSeed } from '@/engine/random';
@@ -51,6 +51,18 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
   const [mode, setMode] = useStartMode(options);
   const [density, setDensity] = useState<Density>(options.density);
 
+  // An operation plays on the stage, which sits above the Operations card: on a
+  // phone the stage is then off the top of the screen, so bring it back.
+  const stage = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = stage.current;
+    if (!session.animate || !el) return;
+    if (el.getBoundingClientRect().top < 0) {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+    }
+  }, [session.id, session.animate]);
+
   const sync = (next: Session, nextMode = mode) => {
     setSession(next);
     const p = new URLSearchParams({ start: next.start, seed: String(next.seed) });
@@ -99,21 +111,23 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
 
   return (
     <div className="flex flex-col gap-4">
-      <TraceStage
-        key={session.id}
-        trace={session.trace}
-        view={ds.view}
-        pseudocode={session.pseudocode}
-        stats={ds.stats}
-        legend={ds.legend}
-        autoPlay={session.animate}
-        predict={{ mode, density, setMode: changeMode, setDensity }}
-        keyboard={options.keyboard}
-        layout={options.layout}
-        onPrediction={options.onPrediction}
-        panels={options.panels}
-        sheet={options.sheet}
-      />
+      <div ref={stage} data-stage className="min-w-0">
+        <TraceStage
+          key={session.id}
+          trace={session.trace}
+          view={ds.view}
+          pseudocode={session.pseudocode}
+          stats={ds.stats}
+          legend={ds.legend}
+          autoPlay={session.animate}
+          predict={{ mode, density, setMode: changeMode, setDensity }}
+          keyboard={options.keyboard}
+          layout={options.layout}
+          onPrediction={options.onPrediction}
+          panels={options.panels}
+          sheet={options.sheet}
+        />
+      </div>
       <OperationsPanel ds={ds} model={session.model} onRun={run}>
         <div className="flex flex-col gap-3 border-t border-line-soft pt-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">

@@ -53,7 +53,8 @@ export function FillStage({
           ))}
         </div>
       )}
-      <div role="group" aria-label="Code with gaps" className="overflow-x-auto rounded-well bg-code py-2.5 font-mono text-[13.5px] leading-[2] text-code-ink">
+      {/* Phones: taller lines, so each gap is a finger-sized target with room around it. */}
+      <div role="group" aria-label="Code with gaps" className="overflow-x-auto rounded-well bg-code py-2.5 font-mono text-[13.5px] leading-[2.75] text-code-ink sm:leading-[2]">
         {lines.map((line, i) => (
           <div key={i} className="flex">
             <span className="w-10 shrink-0 pr-3 text-right text-code-muted select-none" aria-hidden>
@@ -73,8 +74,8 @@ export function FillStage({
                     autoCapitalize="off"
                     autoCorrect="off"
                     autoComplete="off"
-                    style={{ width: `${Math.max(4, s.answer.length + 2)}ch` }}
-                    className="mx-0.5 rounded-md border border-dashed border-feature-accent bg-code-highlight px-1 font-mono text-code-ink focus:border-solid"
+                    style={{ width: `${Math.max(5, s.answer.length + 2)}ch` }}
+                    className="mx-0.5 h-9 rounded-md border border-dashed border-feature-accent bg-code-highlight px-1 font-mono text-code-ink focus:border-solid sm:h-auto"
                   />
                 ),
               )}

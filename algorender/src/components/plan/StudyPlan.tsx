@@ -145,12 +145,13 @@ function PlanSetup({
         </fieldset>
         <fieldset>
           <legend className="mb-3 text-[15px] font-semibold">Hours a week</legend>
-          <div className="inline-flex flex-wrap gap-1 rounded-full bg-sunken p-1">
+          {/* Phones: six equal columns in one row, never a choice wrapped inside the pill. */}
+          <div className="grid grid-cols-6 gap-1 rounded-full bg-sunken p-1 sm:inline-flex">
             {HOUR_CHOICES.map((h) => (
               <label
                 key={h}
                 className={cx(
-                  'cursor-pointer rounded-full px-4 py-2 text-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+                  'cursor-pointer rounded-full px-1 py-2 text-center text-sm whitespace-nowrap sm:px-4 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
                   hours === h ? 'bg-segment font-semibold text-ink shadow-segment' : 'text-ink-soft hover:text-ink',
                 )}
               >

@@ -166,7 +166,8 @@ function ColumnHeaders({ table, template }: { table: TablePart; template: CSSPro
                 className={`absolute inset-0 rounded transition ${meta ? `${meta.bg} opacity-25` : 'opacity-0'}`}
                 style={{ transitionDuration: 'var(--tween, 300ms)' }}
               />
-              <span className="relative block truncate font-mono text-xs font-semibold text-ink">{col.label}</span>
+              {/* A label wider than its column wraps ("Last used" over two lines on a phone) rather than truncating to "Last…". */}
+              <span className="relative block text-center font-mono text-xs leading-tight font-semibold break-words text-ink">{col.label}</span>
             </span>
             {col.sub != null && <span className="font-mono text-[9px] leading-3 text-ink-muted">{col.sub}</span>}
           </div>
