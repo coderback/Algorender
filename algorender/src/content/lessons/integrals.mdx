@@ -1,0 +1,359 @@
+<Section step="hook" title="How far did the car go?">
+
+A car drives at a steady 20 metres per second for 5 seconds. How far does it go? Speed times time: 100 metres. On a graph
+of speed against time, that is the area of a rectangle under a flat line, 5 wide and 20 tall.
+
+Pulling away from the lights, though, the speed climbs every moment, so there is no single speed to multiply by. The
+distance is still the area under the speed graph, but now its top is a curve. The trick is to cheat a little, many
+times: cut the time into thin strips, pretend the speed is steady in each, and add up the rectangles. Thinner strips,
+smaller cheat. The number the sums settle on is an **integral**, and machine learning is full of them: the next lesson,
+**Densities and the normal distribution**, measures probabilities as areas under a curve. Along the way you will meet
+the surprise at the heart of calculus: building up area is the derivative run backwards.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="strip width Δx">Cut the stretch from $a$ to $b$ into $n$ equal strips. Each is $\Delta x = (b - a)/n$ wide (Δ, "delta", means "a change in"). For time, it is written $\Delta t$.</Term>
+  <Term name="Riemann sum">The rectangles added up: $\sum f(x_i)\,\Delta x$, one term per strip, where $x_i$ is the point in strip $i$ whose height you use. A **left-end** sum uses each strip's left edge, a **right-end** sum its right edge, and a **middle** sum its middle.</Term>
+  <Term name="trapezoid rule">Give each strip a slanted top joining the curve's heights at its two edges, making a trapezoid (in British schools, a trapezium).</Term>
+  <Term name="integral ∫">The number the sums settle on as the strips get thinner: the area under $f$ from $a$ to $b$, written $\int_a^b f(x)\,dx$. The ∫ is a stretched S, for sum, and $dx$ stands for the thin width.</Term>
+  <Term name="signed area">Area above the x-axis counts plus, area below it counts minus. An integral adds the two up.</Term>
+  <Term name="accumulated area A(x)">The signed area under $f$ from a fixed start up to $x$. As $x$ slides, $A(x)$ changes, so it is a function of its own.</Term>
+  <Term name="antiderivative">A function $F$ whose derivative is $f$: $F'(x) = f(x)$. Finding one runs a derivative backwards.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Rectangles under a speed curve">
+
+A car pulls away from the lights, and $t$ seconds later it is doing $t^2$ metres per second. After 3 seconds it is
+doing 9 m/s. How far has it gone?
+
+<Explore slug="integral" settings={{ preset: 'sums' }} caption="The speed t² from 0 to 3 seconds, cut into 2, 4, 8 and 16 strips: rectangles as tall as the speed at each strip's left end, then its right end. A second chart follows the sums. Drag b to stop the clock elsewhere." />
+
+With 2 strips, each is $\Delta t = 3/2 = 1.5$ seconds wide. Make each rectangle as tall as the speed at its left end:
+0 at the start and $1.5^2 = 2.25$ halfway. The area is $(0 + 2.25) \times 1.5 = 3.375$ metres. Too little: the
+car speeds up during every strip, but each rectangle only knows the speed at its start. With 4 strips
+of 0.75 seconds the left-end sum grows to 5.906, still too little but closer.
+
+Take each height from the strip's right end instead and every rectangle is as fast as the car gets in it: 16.875 with 2
+strips, 12.656 with 4. Too much. So the distance is trapped between the two sums, and the trap narrows. The two sums
+use the same heights except at the ends: the right sum drops the very first height, 0, and adds the very last one, 9.
+So they always differ by $(9 - 0) \times \Delta t$: 13.5, then 6.75, then 3.375, then 1.6875 as the strips go from 2
+to 16. Each doubling halves the gap.
+
+With 8 strips the sums are 7.383 and 10.758; with 16, 8.174 and 9.861. Both are closing in on **9 metres** (why exactly 9
+comes later). The left-end sum misses by 5.625, 3.094, 1.617 and then 0.826: each time the
+strips halve, the miss roughly halves. A miss that halves when $n$ doubles shrinks like $1/n$, and that is slow. Each
+left-end rectangle misses a sliver shaped roughly like a triangle, $\tfrac{1}{2} \times \Delta t \times$ the speed's
+rise across the strip, and the rises add up to $9 - 0$, so the miss is about $\tfrac{1}{2} \times 9 \times \Delta t$. With 16 strips
+that is about 0.84, against the real 0.826. Doubling on, it takes 2,048 strips to miss by less than 0.01 metres.
+
+Written as a sum, a left-end sum with $n$ strips, counting the strips $i = 0, 1, \ldots, n - 1$ like list positions, is
+
+$$
+\sum_{i=0}^{n-1} f(a + i\,\Delta x)\,\Delta x
+$$
+
+the loop from [the Σ lesson](/learn/sums-notation): a running total of heights, times the width.
+
+<KeyIdea>
+
+**The integral is the number the sums settle on as the strips get thinner: the area under the curve.**
+
+$$
+\int_a^b f(x)\,dx
+$$
+
+reads "the integral of $f$ from $a$ to $b$". Under a speed graph it is the distance travelled: here
+$\int_0^3 t^2\,dt = 9$ metres.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="see" title="Better heights: middles and trapezoids">
+
+Left and right ends are the slowest and the fastest moments of each strip. Try the middle.
+
+<Explore slug="integral" settings={{ preset: 'rules' }} caption="The same car, 0 to 3 seconds: rectangles as tall as each strip's middle, and trapezoids with slanted tops, for 2, 4, 8 and 16 strips. Drag b to change the end." />
+
+With just 2 strips the middles are at 0.75 and 2.25 seconds, so the middle sum is
+$(0.5625 + 5.0625) \times 1.5 = 8.4375$, missing 9 by only 0.5625. That already beats 16 left-end strips, which missed
+by 0.826. Each middle rectangle pokes above the curve on its left half and falls below it on its right half, and the
+two bits nearly cancel.
+
+A trapezoid's area is its width times the average of its two edge heights. Every inner edge counts half in each of
+the two trapezoids that share it, so in full, while the two end edges count half:
+$(0/2 + 2.25 + 9/2) \times 1.5 = 10.125$. That is 1.125 too much: the curve bends up, so each straight top runs above
+it.
+
+Now double the strips, and double again:
+
+- middles: miss 0.5625, then 0.1406, then 0.0352, then 0.0088
+- trapezoids: miss 1.125, then 0.2813, then 0.0703, then 0.0176
+
+Each doubling makes both misses 4 times smaller, where a left-end sum's only halves: these misses shrink like $1/n^2$.
+Doubling until the miss is under 0.0001, the middles and the trapezoids both stop at 256 strips; the
+left ends need 262,144.
+
+On this curve the trapezoids overshoot by exactly twice what the middles fall short, so
+$(2 \times \text{middles} + \text{trapezoids})/3$ cancels the two misses: with just 2 strips,
+$(2 \times 8.4375 + 10.125)/3 = 9$ on the dot. That mixture is **Simpson's rule**. On most curves the two misses are
+only nearly in that ratio, so it is not exact, but it misses by far less than either rule alone: it is one of the ways
+computers find areas that no formula gives.
+
+</Section>
+
+<Section step="do" title="Strips in code">
+
+Now write the middle sum. `riemann(a, b, n)` puts the curve's height at each strip's middle into `heights[i]` (the run
+draws them as bars) and returns their total times the width. The starter's curve is the car's speed, so
+`riemann(0, 3, 2)` should give the 8.4375 above.
+
+<CodeExercise exercise="riemann-sum" />
+
+Its sister, [the trapezoid rule](/code/trapezoid-rule), is all about which edges count half.
+
+<Misconception
+  id="doubling-halves-miss"
+  title="Doubling the strips halves every miss"
+  probes={[
+    {
+      q: 'A middle sum misses an area by 0.36 with 10 strips. About how much will it miss by with 20 strips?',
+      choices: ['About 0.18', 'About 0.09', 'About 0.045'],
+      answer: 1,
+      trap: 0,
+      why: 'A middle sum’s miss shrinks like 1/n², so doubling the strips divides it by 4: 0.36 ÷ 4 = 0.09.',
+    },
+    {
+      q: 'A trapezoid sum misses an area by 0.8 with 25 strips. About how much will it miss by with 50 strips?',
+      choices: ['About 0.2', 'About 0.4', 'About 0.1'],
+      answer: 0,
+      trap: 1,
+      why: 'Trapezoids, like middles, miss by an amount that shrinks like 1/n²: twice the strips, a quarter of the miss.',
+    },
+  ]}
+>
+
+Only left-end and right-end sums halve their miss when the strips double, because each strip misses a sliver that is
+about as tall as the curve's rise across it, and those rises always add up to the same total. A middle or a trapezoid
+top already allows for the curve's tilt across the strip, so what is left over comes from the curve's bend, and that
+shrinks 4 times with each doubling. In the car's case the middles went from 0.5625 to 0.1406: four times smaller, not two.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: area that builds up">
+
+So far the end of the area was fixed. Now let it slide. Take $f(x) = x^2 - 1$, which is below the x-axis from 0 to 1
+and above it after that, and let $A(x)$ be the signed area under it from 0 up to $x$. Think of $f$ as a speed: below zero the car is reversing, which takes away from how far
+forward it is. $A(0) = 0$, since there is no area yet.
+
+Slide $x$ from 0 to 2 and watch $A(x)$ drawn on its own graph. Predict which way it goes and how fast, whether it
+ends above or below zero, and then what the slope of the $A(x)$ graph has to do with $f$.
+
+<PredictChallenge slug="integral" settings={{ preset: 'accumulate' }} goal={5} />
+
+At first the shaded area is under the axis, so $A$ falls: $A(0.5) = -0.458$, then $A(1) = -0.667$. But the second
+half-step only took away 0.208, against 0.458 for the first, because near 1 the curve is close to the axis and each bit
+of width adds only a thin sliver. Past 1 the curve is above the axis, the new area counts plus, and $A$ climbs:
+$A(1.5) = -0.375$, still negative but rising, and $A(2) = 0.667$. The 1.333 above the axis outweighs the 0.667 below it.
+For the reversing car that means it ends up 0.667 metres ahead of where it started, after driving 2 metres in all.
+
+So $A$ was lowest at $x = 1$, exactly where $f$ crosses the axis, and it fell fastest where $f$ was furthest below the
+axis. How fast $A$ changes looks like how tall $f$ is. Test it at $x = 1.5$, where $f(1.5) = 1.5^2 - 1 = 1.25$. Moving
+from 1.5 to 1.6 adds one thin strip to $A$, almost a rectangle 1.25 tall and 0.1 wide: the strip's area is 0.1403,
+against the rectangle's $1.25 \times 0.1 = 0.125$. The extra is a sliver on top, where the curve rises across the
+strip. Divide by the width to get how fast $A$ grew: 1.403. A strip ten times thinner, from 1.5 to 1.51, has area
+0.01265, and $0.01265 / 0.01 = 1.265$. The width shrank 10 times but the sliver about 100 times, so the rate closes in
+on 1.25. In general, moving from $x$ to $x + h$ adds a strip that is almost a rectangle $f(x)$ tall and $h$ wide, so
+
+$$
+\frac{A(x + h) - A(x)}{h} \approx f(x)
+$$
+
+and the left side is the secant slope from [the derivatives lesson](/learn/derivatives-gradients). As $h$ shrinks to 0
+it becomes the slope of $A$, the sliver's share vanishes, and the "almost" disappears: at 1.5 the $A(x)$ graph's
+slope is exactly 1.25.
+
+<KeyIdea>
+
+**The fundamental theorem of calculus: the slope of the accumulated area is the curve's height.**
+
+$$
+A'(x) = f(x)
+$$
+
+Accumulating area undoes the derivative. So to find an area, find a function whose derivative is $f$.
+
+</KeyIdea>
+
+Which function has slope $x^2 - 1$ and is 0 at 0? Run the power rule backwards. The derivative of $x^3$ is $3x^2$, three
+times too much, so $x^3/3$ has slope $x^2$, and $x$ has slope 1. So $A(x) = x^3/3 - x$, the cubic whose slope the
+[derivatives lesson](/learn/derivatives-gradients) worked out. Its graph runs through every area the strips measured:
+$2^3/3 - 2 = 0.667$.
+
+<Misconception
+  id="area-always-positive"
+  title="Area under a curve can't be negative"
+  probes={[
+    {
+      q: 'A graph is at height 2.5 from x = 0 to 4, then at height −1.5 from x = 4 to 10. What is the integral from 0 to 10?',
+      choices: ['19', '1', '−1'],
+      answer: 1,
+      trap: 0,
+      why: 'The part above the axis adds 2.5 × 4 = 10 and the part below takes away 1.5 × 6 = 9: 10 − 9 = 1.',
+    },
+    {
+      q: 'f is below the x-axis from 0 to 2 and above it from 2 to 3, and each piece has area 2.75. What is the integral of f from 0 to 3?',
+      choices: ['0', '5.5', '2.75'],
+      answer: 0,
+      trap: 1,
+      why: 'The piece below the axis counts −2.75 and the piece above +2.75, so they cancel: 0.',
+    },
+  ]}
+>
+
+An integral adds up $f(x)\,\Delta x$ strip by strip, and where $f$ is negative those terms are negative. So area below
+the axis counts minus. That is what you want for a speed: a car that reverses really does end up less far forward. If
+you want the total size of the shaded region instead, add up the pieces above and below the axis as positive numbers
+yourself.
+
+</Misconception>
+
+<Misconception
+  id="area-slope-is-curve-slope"
+  title="The slope of A(x) is the slope of the curve"
+  probes={[
+    {
+      q: 'A(x) is the area under f(x) = 2x from 0 to x. What is the slope of A at x = 9?',
+      choices: ['2', '81', '18'],
+      answer: 2,
+      trap: 0,
+      why: 'The slope of A is the height of f: A′(9) = f(9) = 18. 2 is the slope of f, and 81 is A(9) itself.',
+    },
+    {
+      q: 'A(x) is the area under f(x) = 11 − x from 0 to x. Between x = 0 and x = 15, where is A highest?',
+      choices: ['At x = 15, the far end', 'At x = 0, where f is tallest', 'At x = 11, where f crosses 0'],
+      answer: 2,
+      trap: 1,
+      why: 'A climbs while f is above the axis and falls once it is below, so A is highest where f crosses 0, at x = 11.',
+    },
+  ]}
+>
+
+$A'(x)$ is how fast area piles up, and a thin strip at $x$ adds about $f(x)$ times its width. So the slope of $A$ is the
+**height** of $f$, not its slope. Where $f$ is tallest, $A$ climbs fastest; where $f$ crosses zero, $A$ is level and has
+a peak or a valley. At $x = 1.5$ above, the slope of $A$ was $f(1.5) = 1.25$, not $f'(1.5) = 2 \times 1.5 = 3$.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="The power rule run backwards">
+
+Is there a formula for $A(b)$, the area under $x^2$ from 0 to $b$? Its slope must be $b^2$, and
+$b^3/3$ has slope $3b^2/3 = b^2$ and is 0 at 0. So the area under $x^2$ from 0 to $b$ is $b^3/3$, and for the car,
+$3^3/3 = 9$ metres: the number every sum was closing in on.
+
+<Explore slug="integral" settings={{ preset: 'power' }} caption="The area under x² from 0 to b = 2, checked against strips; then the end doubled, the area between 2 and 4, and the area under x³. Drag b to change the end." />
+
+With $b = 2$ the formula gives $2^3/3 = 2.667$, and 16 middle strips give 2.6641. Double the end to 4 and the area is
+$4^3/3 = 21.333$, 8 times as much: the region is twice as wide, and at every matching point the curve is 4 times as
+tall, since $(2x)^2 = 4x^2$. Areas under $x^2$ grow like the cube of the end.
+
+The area between 2 and 4 is everything up to 4 take away everything up to 2: $21.333 - 2.667 = 18.667$. But $x^3/3$
+is not the only function with slope $x^2$: $x^3/3 + 5$ has the same slope everywhere, since adding 5 lifts the whole
+graph without tilting it. And if two functions have the same slope everywhere, their difference has slope 0
+everywhere, so it is flat: a constant. So any two antiderivatives differ by a constant, which cancels in a difference:
+$(4^3/3 + 5) - (2^3/3 + 5)$ is still 18.667. It is like a car's odometer: whatever it read at the start, the distance
+between two moments is the later reading take away the earlier one. So for any $F$ with $F' = f$,
+
+$$
+\int_a^b f(x)\,dx = F(b) - F(a)
+$$
+
+And the power rule runs backwards for any whole-number power: raise the power by one and divide by the new power.
+$x^4/4$ has slope $x^3$, so the area under $x^3$ from 0 to 2 is $2^4/4 = 4$. In general the area under $x^n$ from 0 to $b$ is
+$b^{n+1}/(n + 1)$, for $n = 0, 1, 2, \ldots$
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Use 2 strips and the middle of each to estimate the area under f(x) = x² from 0 to 4.',
+      choices: ['20', '10', '40', '8'],
+      answer: 0,
+      why: 'Each strip is 2 wide, with middles at 1 and 3: (1 + 9) × 2 = 20, against an exact 21⅓. 10 forgets the width, 40 uses the whole interval as the width, and 8 uses left ends.',
+    },
+    {
+      q: 'A trapezoid sum misses an area by 0.12 with 6 strips. About how much will it miss by with 12 strips?',
+      choices: ['About 0.06', 'About 0.03', 'About 0.015', 'About 0.12'],
+      answer: 1,
+      why: 'Trapezoid misses shrink like 1/n², so doubling the strips divides the miss by 4: 0.12 ÷ 4 = 0.03.',
+      traps: { 0: 'doubling-halves-miss' },
+    },
+    {
+      q: 'A car goes forward at 5 m/s for 3 s, then reverses at −2 m/s for 4 s. What is the integral of its speed over the 7 s?',
+      choices: ['23 m', '7 m', '−7 m', '15 m'],
+      answer: 1,
+      why: 'Forward 5 × 3 = 15 counts plus and reversing 2 × 4 = 8 counts minus: 15 − 8 = 7 m, where it ends up. 23 m is how far it drove in all.',
+      traps: { 0: 'area-always-positive' },
+    },
+    {
+      q: 'A(x) is the area under f(x) = x³ from 0 to x. What is the slope of A at x = 2?',
+      choices: ['8', '12', '4', '16'],
+      answer: 0,
+      why: 'The slope of the accumulated area is the curve’s height: A′(2) = f(2) = 2³ = 8. 12 is the slope of f there, and 4 is A(2) = 2⁴/4.',
+      traps: { 1: 'area-slope-is-curve-slope' },
+    },
+    {
+      q: 'What is the area under x² from 2 to 5?',
+      choices: ['117', '41.67', '39', '21'],
+      answer: 2,
+      why: 'x³/3 has slope x², so the area is 5³/3 − 2³/3 = 125/3 − 8/3 = 39. 41.67 starts from 0, 117 forgets the ÷3, and 21 is 5² − 2².',
+    },
+    {
+      q: 'A(x) is the signed area under f(x) = x² − 4 from 0 to x. Between x = 0 and x = 5, where is A lowest?',
+      choices: ['At x = 0, where f is lowest', 'At x = 2, where f crosses 0', 'At x = 5, the far end'],
+      answer: 1,
+      why: 'A falls while f is below the axis (x < 2) and climbs once it is above, so A is lowest where f crosses 0, at x = 2.',
+      traps: { 0: 'area-slope-is-curve-slope' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="strips-and-accumulated-area"
+  prompt="How do thin strips give the area under a curve, how fast do left-end, middle and trapezoid sums close in, and why is the slope of the accumulated area A(x) equal to f(x)?"
+  rubric={[
+    'Cut a to b into n strips of width (b − a)/n and add up their rectangles or trapezoids; as the strips thin, the sums settle on the area.',
+    'Left- and right-end sums trap the area and their miss halves when n doubles (like 1/n); middle and trapezoid misses fall 4 times each doubling (like 1/n²).',
+    'Area below the x-axis counts negative, so an integral is a signed area.',
+    'Moving the end from x to x + h adds a strip of area about f(x)·h, so the slope of A(x) is f(x): accumulating undoes the derivative.',
+    'So an area comes from an antiderivative F with F′ = f: the area from a to b is F(b) − F(a), e.g. b³/3 under x².',
+  ]}
+  example="Cut a to b into n strips, each (b − a)/n wide, stand a rectangle as tall as the curve on each, and add them up. As the strips get thinner the sums settle on the integral, the area under the curve. For a rising curve left-end sums are too small and right-end sums too big, and their miss only halves when n doubles; middles and trapezoids miss four times less each doubling. Area under the axis counts negative. If A(x) is the area from a fixed start up to x, nudging x by h adds a strip of about f(x) times h, so A′(x) = f(x). So areas come from running derivatives backwards: x³/3 has slope x², so the area under x² from 0 to b is b³/3, and the area from a to b is F(b) − F(a)."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The area under a curve from $a$ to $b$ is what thin strips add up to: $\sum f(x_i)\,\Delta x$ with $\Delta x = (b - a)/n$, settling on the integral $\int_a^b f(x)\,dx$ as $n$ grows. Under a speed graph it is the distance.
+- Left- and right-end sums trap the area between them and miss by an amount that halves when $n$ doubles. Middle and trapezoid sums miss 4 times less with each doubling, the trapezoids by about twice as much as the middles, on the other side.
+- Area below the axis counts negative: an integral is a signed area.
+- The accumulated area $A(x)$ climbs as fast as the curve is tall, $A'(x) = f(x)$: accumulating undoes the derivative. So $\int_a^b f(x)\,dx = F(b) - F(a)$ for any $F$ with $F' = f$; under $x^n$ from 0 to $b$ that gives $b^{n+1}/(n + 1)$.
+
+</Section>

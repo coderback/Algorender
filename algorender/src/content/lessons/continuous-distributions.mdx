@@ -1,0 +1,327 @@
+<Section step="hook" title="How likely is a wait of exactly 3 minutes?">
+
+You reach a bus stop where buses come at random moments, every 2 minutes on average. How long will you wait? Maybe 1
+minute, maybe 2.7, maybe 0.6. A wait can be any amount of time, not just a whole number of minutes. In
+[random variables](/learn/random-variables) every value had its own bar: a die lands on 1, 2, 3, 4, 5 or 6, and each
+face has a chance. So what is the bar for a wait of exactly 3 minutes? Not 3.0001, not 2.9999: exactly 3.
+
+The answer is a surprise: 0. Yet waits of about 3 minutes happen all the time. Heights, times, the error of a sensor
+and the output of a model all work like this. To give them chances you stop asking about single values and ask
+about stretches of values, and a chance becomes an **area** under a curve called a density. The most famous density,
+the bell-shaped normal curve, is everywhere in machine learning: in the noise a model expects in its data, in how a
+network's starting weights are drawn, and in the models that make pictures out of noise.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="continuous random variable">A random variable $X$ that can land anywhere in a stretch of numbers, like a wait or a height, rather than on a list of separate values like a die.</Term>
+  <Term name="density f(x)">A curve over the number line, never below 0, with a total area of 1 under it. Its height is a chance per unit of $x$ (per minute, per centimetre), not a chance.</Term>
+  <Term name="P(a ≤ X ≤ b)">The chance that $X$ lands between $a$ and $b$. With a density, it is the area under the curve from $a$ to $b$.</Term>
+  <Term name="CDF F(x)">The cumulative distribution function, $F(x) = P(X \le x)$: the area under the density to the left of $x$.</Term>
+  <Term name="normal distribution">The bell-shaped density with centre $\mu$ (“mu”, its mean) and spread $\sigma$ (“sigma”, its standard deviation, from [random variables](/learn/random-variables)).</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="From bars to a curve">
+
+Let $X$ be the wait. You can't draw a bar for every value, because there are endlessly many, but you can group the
+waits into **bins**: one bar for waits from 0 up to 1 minute, one for 1 up to 2, and so on. Each bar is the chance of
+a wait in its bin, just like the bars of a random variable.
+
+<Explore slug="distributions" settings={{ preset: 'bars' }} caption="The chance of a wait in each 1-minute bin, then in half-minute and quarter-minute bins, then every bar divided by its width, and the curve the tops close in on." />
+
+With 1-minute bins, the first bar, $P(0 \le X < 1)$, is 0.393. The bars up to 10 minutes add up to 0.993; the other
+0.007 is waits longer than 10 minutes. Now split every bin in two. The first minute's 0.393 splits into 0.221 for the
+first half-minute and 0.172 for the second, a little more in the first half because short waits are likelier. Halve
+the bins again and the first bar is 0.1175.
+
+Every halving takes each bar to about half its height. Keep halving and the bars shrink towards nothing: a bin of width
+0, one exact moment, holds no chance at all. That answers the opening question. $P(X = 3) = 0$, and the same goes for
+every single value.
+
+So stop drawing chances, and draw **chance per minute**: divide each bar by its width. The first quarter-minute bar
+becomes $0.1175 \div 0.25 = 0.47$. A bar's area, height × width, is then its chance again
+($0.47 \times 0.25 = 0.1175$), and the areas of all 40 bars add up to 0.993, as before.
+
+Divided by their widths, bins of all three sizes stand at about the same heights. The first bar is 0.393 tall with
+1-minute bins, 0.442 with half-minute bins and 0.47 with quarter-minute bins. Narrower bins only trace the same shape
+more finely, and as the width shrinks the tops close in on a smooth curve. For this wait it is
+
+$$
+f(x) = \tfrac{1}{2} e^{-x/2}
+$$
+
+for $x \ge 0$, and 0 for negative $x$ (a wait can't be negative). It uses $e$ from
+[exponents and logs](/learn/exponents-logs): at $x = 0$ it is $\tfrac{1}{2} e^0 = 0.5$, and it falls away from there.
+That curve is the **density** of the wait.
+
+<KeyIdea>
+
+**A density turns chances into areas.** Its height $f(x)$ is a chance per unit of $x$, and the chance of landing in a
+stretch is the area under the curve over that stretch:
+
+$$
+\begin{aligned}
+P(a \le X \le b) = {} & \text{area under } f \\
+& \text{from } a \text{ to } b
+\end{aligned}
+$$
+
+The whole area under a density is 1, and any one exact value has chance 0.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="see" title="A chance is an area">
+
+How likely is a wait of between 1 and 3 minutes? It is the area under the curve from 1 to 3, and you can estimate an
+area the way [integrals](/learn/integrals) did, with rectangles. Drag the ends, $a$ and $b$, to try other stretches.
+
+<Explore slug="distributions" settings={{ preset: 'interval' }} caption="A wait of between 1 and 3 minutes: one rectangle, the exact area, then the stretch squeezed to a single value, and the area outside." />
+
+One rectangle as wide as the stretch, 2 minutes, and as tall as the curve at its middle,
+$f(2) = \tfrac{1}{2} e^{-1} = 0.184$, has area $0.184 \times 2 = 0.368$. Ten thinner rectangles give 0.3832, and the
+exact area, where thinner and thinner rectangles settle, is 0.3834. So about 38% of waits last between 1 and 3 minutes.
+
+For this curve the area to the left of $x$ has a formula, $1 - e^{-x/2}$. It is 0 at $x = 0$, and its slope is
+$\tfrac{1}{2} e^{-x/2}$, the curve itself, as [integrals](/learn/integrals) said the slope of an accumulated area must
+be. It is 0.3935 at 1 and 0.7769 at 3, and the area between is the difference: $0.7769 - 0.3935 = 0.3834$, the same answer without any rectangles.
+
+Now squeeze the stretch until both ends sit at 1. It has no width, so it has no area: $P(X = 1) = 0$, even though the
+curve there is $f(1) = 0.303$ tall. That height is a chance per minute. Multiply it by a width and you get a chance;
+with no width, you get nothing.
+
+That settles a question that never came up with dice: do the end points count? $P(1 < X < 3)$ leaves out the two
+single values 1 and 3, each with chance 0, so it is 0.3834 too. For a continuous $X$, $<$ and $\le$ give the same
+chance. And because the whole area is 1, the chance of a wait outside the stretch, under 1 minute or over 3, is
+$1 - 0.3834 = 0.6166$.
+
+</Section>
+
+<Section step="predict" title="Your turn: the area to the left">
+
+The area to the left of $x$ is so useful it has a name: the **CDF**, $F(x) = P(X \le x)$. With it, every chance of a
+stretch is a subtraction, as you just saw: $P(a < X \le b) = F(b) - F(a)$.
+
+This time $X$ is how long a phone call lasts, in minutes. Most calls are quick chats of about 2.5 minutes and the rest
+are longer calls of about 6.5, so the density has two humps. The challenge slides $x$ from left to right, shading the
+area to its left and plotting that area as a second curve. Predict whether $F$ can ever go down, where it climbs
+fastest, what it does far to the right, how steep it is at $x = 4.5$, and the chance of a call longer than 4.5
+minutes.
+
+<PredictChallenge slug="distributions" settings={{ preset: 'cdf' }} goal={4} />
+
+At 1.5 minutes the area is only 0.063; by 2.5 it is 0.3, and by 4.5 it is 0.615. Moving $x$ to the right only ever adds
+area, and no area is negative, so $F$ can climb or stay level but never fall. Each step to the right adds a thin strip
+as tall as the density there, so $F$ climbs steeply under a hump and barely moves where the density is low, as it is
+between the two humps. Far to the right it levels off at 1, the whole area.
+
+That strip is the reason **the slope of $F$ is the density**. At 4.5, one tiny step $dx$ to the right adds a strip
+about $f(4.5)$ tall and $dx$ wide, so $F$ rises by about $f(4.5) \cdot dx$, and its slope there is $f(4.5) = 0.046$. You
+met this in [integrals](/learn/integrals): $F$ is the accumulated area $A(x)$, whose slope is the curve it adds up. And
+the chance of a call longer than 4.5 minutes is the area to the right, $1 - F(4.5) = 1 - 0.615 = 0.385$.
+
+<Misconception
+  id="density-is-chance"
+  title="The height f(a) is the chance that X = a"
+  probes={[
+    {
+      q: 'A density has f(1.7) = 0.9. What is the chance that X is exactly 1.7?',
+      choices: ['0.9', '0', 'Somewhere between 0 and 0.9'],
+      answer: 1,
+      trap: 0,
+      why: 'A single value is a stretch of width 0, so it has no area: P(X = 1.7) = 0. The height 0.9 is a chance per unit of x.',
+    },
+    {
+      q: 'A density is 0.15 tall at x = 4 and 0.45 tall at x = 9. What does that tell you?',
+      choices: ['X = 9 is three times as likely as X = 4', 'Both have chance 0, but X lands near 9 about three times as often as near 4', 'X = 4 is more likely, because it comes first'],
+      answer: 1,
+      trap: 0,
+      why: 'Heights compare chances of equally narrow stretches: a thin strip at 9 holds about three times the area of one at 4. Each exact value still has chance 0.',
+    },
+  ]}
+>
+
+The height of a density is not a chance. It is a chance **per unit**: per minute, per centimetre, per whatever $x$
+measures. A chance is always an area, height × width, and a single value has no width. At $x = 1$ the wait's density is
+0.303 tall, yet the chance of a wait of exactly 1 minute is 0. What the height does tell you is how crowded the values
+are: a short stretch of width $w$ near $x$ holds a chance of about $f(x) \times w$, so where the curve is twice as tall,
+values land twice as often.
+
+</Misconception>
+
+<Misconception
+  id="density-above-one"
+  title="A density can never be above 1"
+  probes={[
+    {
+      q: 'X is equally likely to be anywhere from 11 to 11.05, and never outside. How tall is its density?',
+      choices: ['20', 'At most 1: anything taller is impossible', '0.05'],
+      answer: 0,
+      trap: 1,
+      why: 'A flat density over a stretch 0.05 wide needs height × 0.05 = 1, so it is 20 tall. Only the area must be 1.',
+    },
+    {
+      q: 'A normal curve with σ = 0.07 peaks at about 5.7. What does that mean?',
+      choices: ['Nothing is wrong: the area under it is still 1', 'It is broken: a chance can’t be bigger than 1', 'Values near the peak are certain'],
+      answer: 0,
+      trap: 1,
+      why: 'Its height is a chance per unit; the curve is so narrow that its area is still 1.',
+    },
+  ]}
+>
+
+A chance can't be above 1, but a density is not a chance. Only its **area** has to be 1, and a narrow curve has to be
+tall to hold that much. Here is a reaction time that is equally likely to be anywhere from 0 to 0.5 seconds: its
+density is a flat block 0.5 wide, so to have area 1 it must be 2 tall. A reaction time between 0.1 and 0.3 seconds then
+has chance $2 \times 0.2 = 0.4$, a perfectly ordinary chance, even though the curve over it is 2 tall.
+
+<Explore slug="distributions" settings={{ preset: 'tall' }} caption="A reaction time equally likely anywhere from 0 to 0.5 seconds: a density 2 tall, whose areas are still chances." />
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="The bell curve">
+
+The **normal distribution** has the density
+
+$$
+f(x) = \frac{1}{\sigma \sqrt{2\pi}} \, e^{-(x - \mu)^2 / (2\sigma^2)}
+$$
+
+It looks busy, but each piece has one job:
+
+- $(x - \mu)^2$ is the squared distance from the centre $\mu$. It is 0 at $\mu$ and the same either side, so the curve is symmetric about $\mu$.
+- The minus sign makes the power of $e$ zero or negative, so $e^{\ldots}$ is 1 at the centre ($e^0 = 1$) and falls away on both sides.
+- Dividing by $2\sigma^2$ sets the width: one $\sigma$ from the centre the power is $-\tfrac{1}{2}$, whatever $\sigma$ is, so a bigger $\sigma$ spreads the curve wider.
+- The number in front, $1/(\sigma\sqrt{2\pi})$, makes the whole area exactly 1. With $\sigma = 1$ it is $1/\sqrt{2\pi} = 0.399$, the height of the peak.
+
+<Explore slug="distributions" settings={{ preset: 'normal' }} caption="The normal curve with μ = 0 and σ = 1: σ doubled, then the area within 1, 2 and 3 σ of μ. Drag μ, and μ + σ to change σ." />
+
+Double $\sigma$ to 2 and the curve gets twice as wide, so the peak halves, from 0.399 to 0.199: the area under every
+density is 1, and a curve twice as wide must be half as tall. Then come the areas within one, two and three
+$\sigma$ of the centre:
+
+- between $\mu - \sigma$ and $\mu + \sigma$: 0.6827
+- between $\mu - 2\sigma$ and $\mu + 2\sigma$: 0.9545
+- between $\mu - 3\sigma$ and $\mu + 3\sigma$: 0.9973
+
+That is the **68–95–99.7 rule**. It holds for every normal curve, whatever $\mu$ and $\sigma$, because changing them
+only slides and stretches the curve, and its bands slide and stretch with it. If marks in an exam are normal with
+$\mu = 60$ and $\sigma = 10$, about 68% of marks are between 50 and 70, and about 95% between 40 and 80. The curve
+never quite reaches 0, so 0.0027 of the area lies beyond three $\sigma$: rare, but possible.
+
+Why this curve, of all curves? Add up many small, independent effects, and the total comes out close to normal,
+whatever the effects look like on their own. That result, the
+**central limit theorem**, is the next lesson, and it is
+why the bell turns up in heights, measurement errors and averages alike.
+
+</Section>
+
+<Section step="do" title="The normal curve in code">
+
+The wait's area had a formula, $1 - e^{-x/2}$, but the normal curve's area to the left has no such formula. Computers
+work it out numerically, and so will you: write `normal_pdf` from the formula above, then `normal_cdf`, which adds up
+thin rectangles under it from far to the left up to $x$. Far left means $\mu - 8\sigma$, where the area still further
+left is below $10^{-15}$, so nothing that matters is missed. The first example uses only 40 rectangles; the tests use
+up to 1,000. One test has $\sigma = 0.25$, so its curve peaks at 1.596, taller than 1.
+
+<CodeExercise exercise="normal-cdf" />
+
+</Section>
+
+<Section step="see" title="Samples pile up into the density">
+
+Where do densities come from in practice? Usually from data: draw many values and make a histogram whose bars stand
+count ÷ (n × bin width) tall, for $n$ values in all. Then a bar's area is the share of the samples in its bin, and all
+the areas add up to 1. Here are calls drawn at random from the two-humped density.
+
+<Explore slug="distributions" settings={{ preset: 'samples' }} caption="10, then 100, 1,000 and 10,000 calls drawn at random: histograms whose bars are count ÷ (n × bin width), next to the density." />
+
+With 10 calls the bars are lumpy, and the share of calls between 2 and 4 minutes is 0.2, far from the area under the
+curve there, 0.43. With 100 calls the share is 0.33, with 1,000 it is 0.425, and with 10,000 it is 0.432. The biggest
+gap between a bar and the curve falls from 0.471 to 0.012. Shares of samples settle on areas under the density as the
+samples pile up, which is the **law of large numbers** at work: the density is what a
+histogram of endless samples would look like. Press New values to draw a fresh set: the 10-call histogram changes a lot, the 10,000-call one hardly
+at all.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Near x = 7 a density is about 0.14 tall and nearly flat. About what is the chance that X lands between 7 and 7.1?',
+      choices: ['0.14', '0.014', '0'],
+      answer: 1,
+      why: 'A chance is an area: about 0.14 tall × 0.1 wide = 0.014. The height alone is a chance per unit, and only a single value has chance 0.',
+      traps: { 0: 'density-is-chance' },
+    },
+    {
+      q: 'X is equally likely to be anywhere from 3 to 3.125, and never outside. How tall is its density?',
+      choices: ['0.125', '1, the most a density can be', '8'],
+      answer: 2,
+      why: 'The area must be 1 and the block is 0.125 wide, so it is 1 ÷ 0.125 = 8 tall.',
+      traps: { 1: 'density-above-one' },
+    },
+    {
+      q: 'F(1.2) = 0.35 and F(3.4) = 0.83. What is the chance that X lands between 1.2 and 3.4?',
+      choices: ['0.48', '1.18', '0.35', '0.83'],
+      answer: 0,
+      why: 'F is the area to the left, so the area between is F(3.4) − F(1.2) = 0.83 − 0.35 = 0.48. Adding them gives 1.18, more than any chance can be.',
+    },
+    {
+      q: 'Scores are normal with μ = 100 and σ = 15. About what share of scores lies between 70 and 130?',
+      choices: ['About 0.68', 'About 0.95', 'About 0.997'],
+      answer: 1,
+      why: '70 and 130 are 30 = 2σ either side of μ, and about 95% of a normal curve’s area lies within 2σ.',
+    },
+    {
+      q: 'A normal curve has σ = 5. About how tall is its peak, 1/(σ√(2π))?',
+      choices: ['About 0.4', 'About 0.016', 'About 0.08'],
+      answer: 2,
+      why: '1/(5 × 2.507) is about 0.08. Leaving out σ gives 0.4, and σ² in place of σ gives 0.016.',
+    },
+    {
+      q: 'Which of these can never be true of a CDF F?',
+      choices: ['F is flat between 13 and 14', 'F(4) = 0.62 and F(6) = 0.58', 'F(12) = 0.9999'],
+      answer: 1,
+      why: 'Moving right only adds area, so F never goes down: F(6) can’t be smaller than F(4). A flat stretch just means the density is 0 there.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="density-area-cdf"
+  prompt="What is a density, how do you get a chance from it, and what are the CDF and the normal curve?"
+  rubric={[
+    'A density is a curve whose height is a chance per unit of x, not a chance; it is never negative and the whole area under it is 1.',
+    'The chance of landing between a and b is the area under the density from a to b, and a single value has chance 0.',
+    'A density can be taller than 1 when it is narrow, because only its area has to be 1.',
+    'The CDF F(x) is the area to the left of x, P(X ≤ x): it climbs from 0 to 1, never falls, and its slope is the density.',
+    'The normal curve has centre μ and spread σ, and holds about 68%, 95% and 99.7% of its area within 1, 2 and 3σ of μ.',
+  ]}
+  example="A density is a curve over the number line, never negative, with total area 1. Its height is a chance per unit, so it can be above 1 if the curve is narrow, like a flat block 2 tall over a stretch 0.5 wide. The chance that X lands between a and b is the area under the curve from a to b, and any single value has chance 0, because a line has no width. The CDF F(x) is the area to the left of x, so F(b) − F(a) is the chance of the stretch between them; F climbs from 0 to 1, never falls, and its slope is the density. The normal curve is a bell centred on μ with spread σ, and about 68%, 95% and 99.7% of its area lies within 1, 2 and 3σ of μ."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A measurement that can be any number gives each single value chance 0. Its chances live in a **density** $f$: the chance of landing between $a$ and $b$ is the area under $f$ from $a$ to $b$.
+- A density's height is a chance per unit, never a chance. It is never negative and its whole area is 1, but it can be taller than 1 where it is narrow.
+- The CDF $F(x) = P(X \le x)$ is the area to the left of $x$. It climbs from 0 to 1 and never falls, its slope is $f$, and $P(a < X \le b) = F(b) - F(a)$.
+- The normal density $e^{-(x - \mu)^2/(2\sigma^2)} / (\sigma\sqrt{2\pi})$ is a bell centred on $\mu$, with about 68%, 95% and 99.7% of its area within 1, 2 and 3$\sigma$.
+- Histograms of samples, scaled as count ÷ (n × bin width), settle on the density as the samples pile up.
+
+</Section>

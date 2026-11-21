@@ -1,0 +1,360 @@
+<Section step="hook" title="Which sum is most likely?">
+
+Roll two dice and add them up. The sum can be anything from 2 to 12: eleven possible sums. So is each one a
+1 in 11 chance? Plenty of people think so, but a sum of 7 turns up about six times as often as a sum of 2.
+
+Chance is the language machine learning speaks. A spam filter gives each message a chance of being spam, and a language
+model gives every possible next word a chance. All of that rests on a few rules about **events**: what an event is, how to find its chance by
+counting, and when chances may be added or multiplied.
+
+Two dice are the perfect place to learn them: every outcome fits on one small board. This lesson builds the board,
+finds chances as shares of it, and ends with a question that trips up even experts: when is it safe to multiply two
+chances?
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="outcome">One complete result of the experiment. For two dice, a pair $(a, b)$: the first die shows $a$, the second shows $b$.</Term>
+  <Term name="event">A yes-or-no question about the outcome, such as "is the sum 7?", or, the same thing, the set of outcomes where the answer is yes. Events get capital letters: $A$, $B$.</Term>
+  <Term name="P(A)">The probability, or chance, of event $A$: a number from 0 (it never happens) to 1 (it always happens).</Term>
+  <Term name="not A">The event that $A$ does not happen: every outcome $A$ leaves out. Also called the complement of $A$.</Term>
+  <Term name="A or B">At least one of $A$ and $B$ happens (perhaps both).</Term>
+  <Term name="A and B">Both $A$ and $B$ happen, on the same roll.</Term>
+  <Term name="independent">Knowing that one event happened doesn't change the chance of the other.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Every outcome on one board">
+
+How many outcomes do two dice have? The first die can show 6 faces, and whatever it shows, the second can show 6. By the
+multiplication principle from the lesson on [counting](/learn/counting-combinatorics), that makes $6 \times 6 = 36$
+outcomes. Draw them as a board: a row for each face of the first die, a column for each face of the second, and one
+cell for each outcome.
+
+Each die is fair, so each face is equally likely, and the dice don't affect each other. That makes all 36 cells equally
+likely. When outcomes are equally likely, the chance of an event is the share of them it covers:
+
+$$
+P(A) = \frac{\text{outcomes in } A}{\text{all outcomes}}
+$$
+
+Take $A$ = "the sum is 7". Step through to see its cells.
+
+<Explore slug="two-dice" settings={{ preset: 'sum-seven' }} caption="The 36 outcomes of two dice as a 6 × 6 board, then the cells where the sum is 7, the cells where it is not, and how many cells each sum gets." />
+
+The sum is 7 on six cells: $(1, 6)$, $(2, 5)$, $(3, 4)$, $(4, 3)$, $(5, 2)$ and $(6, 1)$. They run along a diagonal of
+the board. And $(1, 6)$ and $(6, 1)$ are different cells: a 1 on the first die and a 6 on the second is not the
+same outcome as a 6 on the first and a 1 on the second. Paint the dice different colours and you can tell them apart.
+So
+
+$$
+P(\text{sum is } 7) = \frac{6}{36} = \frac{1}{6}
+$$
+
+Thrown many times, about one throw in every 6 should come out at 7.
+
+Now the eleven sums. A sum of 2 needs both dice to show 1: just one cell, so its chance is $1/36$. A sum of 12
+needs two 6s: also one cell. A sum of 7 has six cells, the most of any sum, which is why it turns up six times as
+often as 2. The sums are not equally likely, so you can't count sums. You count the 36 cells, which are.
+
+**Not A.** Every outcome is either in $A$ or not in $A$, never both. So the cells of "not $A$" are the $36 - 6 = 30$
+cells that $A$ leaves out, and $P(\text{not } A) = 30/36 = 5/6$. The two chances always add up to 1:
+
+$$
+P(\text{not } A) = 1 - P(A)
+$$
+
+Often the quickest way to a chance is to count what is left out.
+
+<KeyIdea>
+
+**An event is a region of the board, and when every outcome is equally likely, its chance is its share of the board.**
+Count equally likely outcomes, never results like the eleven sums, and remember that "not $A$" is whatever $A$ leaves
+out: $P(\text{not } A) = 1 - P(A)$.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: or">
+
+"$A$ or $B$" means at least one of them happens. On the board it is every cell in $A$, in $B$, or in both. Here $A$ is
+"the first die shows 6", the bottom row, and $B$ is "the second die shows 6", the last column. Predict how many cells
+"$A$ or $B$" covers, then two more counts.
+
+<PredictChallenge slug="two-dice" settings={{ preset: 'or' }} goal={3} />
+
+$A$ has 6 cells and $B$ has 6 cells, but "$A$ or $B$" has only 11. Adding $6 + 6$ counts the corner $(6, 6)$ twice:
+once in the row and once in the column. That cell is in both events, so take it away once:
+$6 + 6 - 1 = 11$, and $P(A \text{ or } B) = 11/36$. In general:
+
+$$
+\begin{aligned}
+P(A \text{ or } B) &= P(A) + P(B) \\
+&\quad - P(A \text{ and } B)
+\end{aligned}
+$$
+
+When two events have no cell in common, the overlap is empty and the chances simply add. A sum of 7 and a double
+(both dice the same) are like that: the 7s run along one diagonal and the doubles along the other, and they never meet,
+because a double always has an even sum. So $P(\text{a 7 or a double}) = 6/36 + 6/36 = 12/36 = 1/3$.
+
+The last question counted the cells with no 6 at all: both dice show 1 to 5, so the first five rows meet the first
+five columns in a $5 \times 5$ square of 25 cells. "At least one 6" is everything else, so $P(\text{at least one } 6) = 1 - 25/36 = 11/36$: the same
+answer as adding and taking away the overlap. Two ways of counting, one answer.
+
+<Misconception
+  id="sums-equally-likely"
+  title="Every sum of two dice is equally likely"
+  probes={[
+    {
+      q: 'Two coins are tossed. A friend says there are three results, two heads, two tails or one of each, so each has a chance of 1/3. What is the chance of one head and one tail?',
+      choices: ['1/3', '1/2', '1/4'],
+      answer: 1,
+      trap: 0,
+      why: 'The equally likely outcomes are HH, HT, TH and TT: four of them, and two (HT and TH) give one of each, so the chance is 2/4 = 1/2. The three results are not equally likely.',
+    },
+    {
+      q: 'Three coins are tossed. Which is more likely: exactly one head, or three heads?',
+      choices: ['Exactly one head', 'Three heads', 'Equally likely: each number of heads is one of the four possible results'],
+      answer: 0,
+      trap: 2,
+      why: 'There are 2 × 2 × 2 = 8 equally likely outcomes. Exactly one head happens in three of them (HTT, THT, TTH), three heads in only one (HHH).',
+    },
+  ]}
+>
+
+A list of possible results is not a list of equally likely outcomes. The sum 7 can be made six ways and the sum 2
+only one way, so 7 is six times as likely. To find a chance by counting, first find outcomes that really are equally
+likely, here the 36 ordered pairs, and count those.
+
+</Misconception>
+
+<Misconception
+  id="or-just-adds"
+  title="P(A or B) is always P(A) + P(B)"
+  probes={[
+    {
+      q: 'In a club of 31 people, 14 play football, 9 play chess and 4 play both. How many play at least one of the two?',
+      choices: ['23', '19', '27'],
+      answer: 1,
+      trap: 0,
+      why: 'Adding 14 + 9 counts the 4 who play both twice. Take them away once: 14 + 9 − 4 = 19.',
+    },
+    {
+      q: 'One die is rolled. A is "an even number" and B is "more than 3". What is P(A or B)?',
+      choices: ['6/6', '4/6', '2/6'],
+      answer: 1,
+      trap: 0,
+      why: 'A is 2, 4, 6 and B is 4, 5, 6. Adding 3/6 + 3/6 counts 4 and 6 twice. A or B is 2, 4, 5, 6: 4/6.',
+    },
+  ]}
+>
+
+Adding the two chances counts every outcome in both events twice. Take the overlap away once:
+$P(A \text{ or } B) = P(A) + P(B) - P(A \text{ and } B)$. Only when the events can't happen together is the overlap
+empty, and then adding is right.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="And: rows times columns">
+
+"$A$ and $B$" means both happen on the same roll: on the board, the cells where the two regions overlap. Take $A$ = "the
+first die is even" and $B$ = "the second die shows 5 or 6".
+
+<Explore slug="two-dice" settings={{ preset: 'and' }} caption="A is three whole rows, B is two whole columns, and A and B is where they cross; then B's share of each row." />
+
+$A$ is three whole rows (2, 4 and 6), so $P(A) = 18/36 = 3/6$. $B$ is two whole columns (5 and 6), so $P(B) = 12/36 = 2/6$. Where
+they cross is a rectangle of $3 \times 2 = 6$ cells, so
+
+$$
+P(A \text{ and } B) = \frac{6}{36} = \frac{3}{6} \times \frac{2}{6}
+$$
+
+The chance of both is the product of the two chances. That works because every row of $A$ meets every
+column of $B$: in each row of the board, $B$ takes the same 2 cells of 6, so whatever the first die shows, the second
+still shows 5 or 6 a third of the time. Knowing $A$ happened tells you nothing new about $B$. That is what
+**independent** means, and it is exactly when the product rule holds:
+
+$$
+\begin{aligned}
+&A \text{ and } B \text{ are independent exactly when} \\
+&P(A \text{ and } B) = P(A) \times P(B)
+\end{aligned}
+$$
+
+One die can't affect the other, so any event about the first die alone and any event about the second alone are
+independent: they always make a rectangle of rows and columns. Trouble starts when an event, like a sum, depends on
+both dice. Step through three such pairs; in Predict mode you count each overlap before you see it.
+
+<Explore slug="two-dice" settings={{ preset: 'dependent' }} caption="Three pairs of events: a sum of 10 or more with a first die of 6, a 7 with a double, and a 7 with a first die of 6. Each time the product of the chances is set against the real count." />
+
+**A sum of 10 or more, and a first die of 6.** Each has 6 cells, so each has chance $1/6$, and multiplying gives
+$1/6 \times 1/6 = 1/36$: one cell. But the bottom row holds three cells with a sum of 10 or more, $(6, 4)$, $(6, 5)$
+and $(6, 6)$, so $P(A \text{ and } B) = 3/36 = 1/12$, three times the product. A first die of 6 makes a big sum much
+likelier: half of that row has a sum of 10 or more, against a sixth of the whole board. The events are not independent,
+so multiplying gives the wrong answer.
+
+**A sum of 7, and a double.** They never happen together, so $P(A \text{ and } B) = 0$, yet the product is
+$1/36$. Events that can't happen together are as far from independent as events can be: knowing one happened rules the
+other out.
+
+**A sum of 7, and a first die of 6.** These sound related, since the first die is part of the sum. But they meet in
+exactly one cell, $(6, 1)$, and $1/36 = 1/6 \times 1/6$: they are independent. Every row of the board has exactly one 7,
+so whatever the first die shows, a 7 stays a 1 in 6 chance. You can't tell independence from how two events sound.
+You check it by counting.
+
+<Misconception
+  id="always-multiply"
+  title="P(A and B) is always P(A) × P(B)"
+  probes={[
+    {
+      q: 'One die is rolled. A is "the number is even" and B is "the number is 2", so P(A) = 1/2 and P(B) = 1/6. What is P(A and B)?',
+      choices: ['1/12', '1/6', '2/3'],
+      answer: 1,
+      trap: 0,
+      why: 'If the number is 2, it is even, so A and B is just "the number is 2": 1/6. Multiplying assumes the events are independent, and these aren’t.',
+    },
+    {
+      q: 'Two dice are rolled. A is "the sum is 3" and B is "the first die shows 4". What is P(A and B)?',
+      choices: ['0', 'P(A) × P(B), a small chance above 0', 'P(A) + P(B)'],
+      answer: 0,
+      trap: 1,
+      why: 'With a 4 on the first die the sum is at least 5, so A and B can’t both happen: the chance is 0. The product would be right only for independent events.',
+    },
+  ]}
+>
+
+The product rule holds only for independent events: those where knowing one happened leaves the other's chance where it
+was. Events about two separate dice are independent; events that share a die, like a sum and one of the faces, may
+not be. When in doubt, count the cells in both and compare with the product.
+
+</Misconception>
+
+**Rolling instead of counting.** The board gives chances exactly. What happens if you actually throw the dice, again and
+again? Tally each throw in its cell, and watch the share of throws that sum to 7.
+
+<Explore slug="two-dice" settings={{ preset: 'throws' }} caption="One run of throws of two dice, tallied on the board after 36, 360, 3600 and 36,000 throws, with the share of 7s against the exact 1/6." />
+
+After 36 throws this run had 8 sevens, a share of 0.222, well above $1/6 \approx 0.167$; and 15 of the 36 cells had no
+throw at all. After 360 throws it had 66 sevens (0.183), after 3600 it had 607 (0.169), and after 36,000 it had 5970
+(0.166). The share closes in on the chance counted on the board. The count of sevens is never exactly a sixth of the
+throws; it even drifts further from it, 2 off, then 6, 7 and 30. That doesn't matter: what settles is the share. The
+**law of large numbers**, a later lesson, says why, and how fast.
+
+<Misconception
+  id="dice-make-up"
+  title="After a run without sevens, a seven is due"
+  probes={[
+    {
+      q: 'A fair coin has landed heads 5 times in a row. What is the chance the next toss is heads?',
+      choices: ['Less than 1/2: tails is due', '1/2', 'More than 1/2: heads is on a streak'],
+      answer: 1,
+      trap: 0,
+      why: 'The coin has no memory. Each toss is independent of the ones before, so heads is still 1/2.',
+    },
+    {
+      q: 'A spinner has 5 equal parts, one of them red. It has missed red 17 times in a row. What is the chance of red on the next spin?',
+      choices: ['1/5', 'More than 1/5: red is due', 'Less than 1/5: the spinner avoids red'],
+      answer: 0,
+      trap: 1,
+      why: 'Each spin is independent of the last 17, so red is still 1 part in 5.',
+    },
+  ]}
+>
+
+Dice have no memory: each throw is independent of every throw before it, so the chance of a 7 is $1/6$ on every throw,
+whatever came before. The share settles because a bad run is soon swamped by thousands of ordinary throws, not because
+the dice make up for it.
+
+</Misconception>
+
+Now write the board in code. Two loops, one inside the other, visit all 36 outcomes; each one writes its sum on a
+6 × 6 board and adds 1 to a count when the sum hits the target. The chance is the count divided by 36.
+
+<CodeExercise exercise="dice-sum-chance" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Two dice are rolled. What is the chance their sum is 8?',
+      choices: ['1/11', '5/12', '5/36', '3/21'],
+      answer: 2,
+      why: 'A sum of 8 comes from (2, 6), (3, 5), (4, 4), (5, 3) and (6, 2): 5 of the 36 equally likely outcomes. The 11 sums are not equally likely, and 6 + 6 = 12 is not the number of outcomes. Counting (2, 6) and (6, 2) as one gives 3 of 21 unordered pairs, but those 21 are not equally likely either: (4, 4) is one cell, while (2, 6) stands for two.',
+      traps: { 0: 'sums-equally-likely' },
+    },
+    {
+      q: 'A bag holds 10 counters numbered 1 to 10, and one is drawn at random. What is the chance it is not a multiple of 3?',
+      choices: ['3/10', '7/10', '3/7'],
+      answer: 1,
+      why: 'The multiples of 3 are 3, 6 and 9: 3 of the 10. Not a multiple of 3 is everything else, 1 − 3/10 = 7/10.',
+    },
+    {
+      q: 'A whole number from 1 to 20 is picked at random. A is "even" and B is "a multiple of 5". What is P(A or B)?',
+      choices: ['12/20', '14/20', '10/20', '2/20'],
+      answer: 0,
+      why: 'A has 10 numbers and B has 4 (5, 10, 15, 20). Two of them, 10 and 20, are in both, so 10 + 4 − 2 = 12.',
+      traps: { 1: 'or-just-adds' },
+    },
+    {
+      q: 'Two dice are rolled. A is "the sum is 4" and B is "the first die shows 1". P(A) = 3/36 and P(B) = 6/36. What is P(A and B)?',
+      choices: ['3/36 × 6/36 = 1/72', '1/36', '9/36'],
+      answer: 1,
+      why: 'Both happen only at (1, 3): one cell, 1/36. The events share the first die, so they need not be independent, and here the product is wrong.',
+      traps: { 0: 'always-multiply' },
+    },
+    {
+      q: 'One die is rolled. A is "the number is 1 or 2" and B is "the number is odd". Are A and B independent?',
+      choices: ['Yes: the chance of both is the product of their chances', 'No: one roll decides both, so they must depend on each other', 'No: they share the outcome 1, so they can’t be independent'],
+      answer: 0,
+      why: 'P(A) = 2/6 = 1/3 and P(B) = 3/6 = 1/2. Both happen only on a 1, so P(A and B) = 1/6 = 1/3 × 1/2: the product rule holds, so they are independent, however related they sound.',
+    },
+    {
+      q: 'A fair die has not shown a 6 in its last 9 rolls. What is the chance that the next roll is a 6?',
+      choices: ['More than 1/6: a 6 is due', 'Less than 1/6: this die avoids 6', '1/6'],
+      answer: 2,
+      why: 'Each roll is independent of the rolls before it. The die has no memory, so a 6 is 1/6 every time.',
+      traps: { 0: 'dice-make-up' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="events-and-independence"
+  prompt="How do you find the chance of an event by counting, and when are you allowed to multiply two chances?"
+  rubric={[
+    'An event is a set of outcomes; when the outcomes are equally likely, its chance is the number of outcomes in it divided by the number of all outcomes.',
+    'You must count outcomes that really are equally likely, such as the 36 ordered pairs of two dice, not results such as the 11 sums.',
+    'For “A or B”, add the two chances and take away the chance of both, which was counted twice.',
+    'You may multiply P(A) × P(B) to get P(A and B) only when A and B are independent: knowing one happened does not change the chance of the other.',
+    'Independence is checked by counting, not by how the events sound: a sum and one die can be independent, and events that can’t happen together are not.',
+  ]}
+  example="When every outcome is equally likely, the chance of an event is its share of the outcomes: count the outcomes in the event and divide by the number of all outcomes. For two dice those are the 36 ordered pairs, so a sum of 7 has chance 6/36; the 11 sums are not equally likely. For “A or B” you add the two chances and take away the overlap, which got counted twice. For “A and B” you can multiply the chances only if the events are independent, meaning that knowing one happened doesn’t change the chance of the other, like two different dice. You check that by counting, not by how the events sound."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- An outcome is one complete result; an event is a set of outcomes, a region of the board.
+- When outcomes are equally likely, $P(A)$ is the outcomes in $A$ over all outcomes: two dice have $6 \times 6 = 36$, and a sum of 7 has 6 of them.
+- Count equally likely outcomes, never results like the 11 sums: $(1, 6)$ and $(6, 1)$ are different outcomes.
+- $P(\text{not } A) = 1 - P(A)$, and $P(A \text{ or } B) = P(A) + P(B) - P(A \text{ and } B)$.
+- $A$ and $B$ are independent when $P(A \text{ and } B) = P(A) \times P(B)$: knowing one doesn't change the other's chance. Check it by counting.
+- Thrown again and again, the share of throws in an event settles near its chance; dice have no memory, so nothing is ever "due".
+- Next: what happens to a chance once you know another event happened. That is **conditional probability and Bayes' rule**, where the test result changes the chance of the disease.
+
+</Section>

@@ -10,7 +10,16 @@ lesson shows why, with a picture that makes the answer obvious instead of surpri
 
 <Section step="parts" title="The pieces you will see">
 
+In the lesson on [chance, events and independence](/learn/probability-basics), events were regions of the two-dice
+board, and two events were independent when knowing one happened left the other's chance where it was. Many pairs of
+events are not like that. Knowing the first die showed 6 left the chance of a sum of 7 at 1/6, but raised the chance of
+a sum of 10 or more from 1/6 to 1/2: inside the bottom row, 3 of the 6 cells have a sum of 10 or more. That is
+**conditional probability**: once you know $B$ happened, keep only the outcomes where $B$ happened, and ask what share
+of them are in $A$. A positive test and a disease are a pair like that, and this lesson measures how much knowing one
+changes the other.
+
 <Terms>
+  <Term name="P(A | B)">The chance of A given B: the share of the outcomes where B happened that are also in A. Read the bar as "given".</Term>
   <Term name="H and E">H is the hypothesis ("has the disease"); E is the evidence ("tests positive").</Term>
   <Term name="prior P(H)">How likely H is before you see any evidence: here 1%.</Term>
   <Term name="likelihoods">$P(E \mid H)$, how often H produces the evidence (90%), and $P(E \mid \neg H)$, how often it appears without H (9%).</Term>

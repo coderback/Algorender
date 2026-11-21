@@ -1,0 +1,330 @@
+<Section step="hook" title="Why does a casino never worry?">
+
+A casino loses money every night to somebody. A lucky player can walk out with a fortune, and on a single spin the
+house has no idea who wins. Yet the casino knows, to within a few per cent, what it will earn over a year. It isn't
+counting on luck turning against the players. It is counting on something stranger: average enough independent
+games and the average stops moving.
+
+That fact, the **law of large numbers**, does a second job in computing. If a number you want is an average, you can
+estimate it by sampling: throw random darts and count, play out random games and score them, and average the
+results. That is the **Monte Carlo method**, named after the casino. It measures areas no formula covers, prices
+risks, and is how a training step estimates the loss over a whole dataset from a small random batch. This lesson
+watches averages settle, measures how fast, and uses darts to find π.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="expected value E[X]">The balance point of a random number $X$, from [random variables](/learn/random-variables): each value times its chance, added up. For a fair die it is 3.5.</Term>
+  <Term name="standard deviation σ">How far $X$ typically lands from $E[X]$: the square root of the variance $\text{Var}(X)$, each squared gap from $E[X]$ weighted by its chance, as in [random variables](/learn/random-variables).</Term>
+  <Term name="running average">After $n$ samples, their total divided by $n$, written $\bar{x}_n$ (“x bar n”). It changes with every new sample.</Term>
+  <Term name="independent">Each sample ignores the others: a die doesn't know what it rolled before, as in [chance and events](/learn/probability-basics).</Term>
+  <Term name="the band">The range $E[X] \pm 2\sigma/\sqrt{n}$, drawn shaded. The running average sits inside it in most runs.</Term>
+  <Term name="Monte Carlo estimate">A number found by averaging random samples, for example 4 × (darts inside a quarter circle) ÷ (darts thrown).</Term>
+  <Term name="seed">The number a random-number generator starts from. The same seed gives the same “random” numbers, so a run can be repeated exactly.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A die's average settles down">
+
+A fair die shows 1 to 6, each with chance $\tfrac{1}{6}$, so $E[X] = (1 + 2 + 3 + 4 + 5 + 6)/6 = 3.5$. No single roll
+can be 3.5, but the average of many rolls can get as close to it as you like. Its variance, as in random variables,
+weights each squared gap from 3.5 by its chance:
+
+$$
+\begin{aligned}
+\sigma^2 &= \tfrac{1}{6}\,(6.25 + 2.25 + 0.25 \\
+&\qquad + 0.25 + 2.25 + 6.25) \\
+&= 17.5 / 6 \approx 2.92
+\end{aligned}
+$$
+
+so $\sigma \approx 1.71$. Now roll, and keep the running average. The horizontal axis is a log scale, as in
+[exponents and logs](/learn/exponents-logs): equal steps to the right multiply the number of rolls by the same amount,
+so the marks 1, 4, 16, … 4,096 are evenly spaced.
+
+<Explore slug="monte-carlo" settings={{ preset: 'dice', seed: 26 }} caption="One run of 4,096 rolls of a fair die. Left: the running average against the number of rolls on a log scale, inside the shaded band 3.5 ± 2σ/√n. Right: the share of rolls showing each face." />
+
+In this run the first roll is a 4 and the next three are 5, 4 and 1, so after 4 rolls the average is exactly 3.5. That
+is luck, not settling: after 16 rolls it has climbed to 4.188, because the total is 67 where the expected total is
+3.5 × 16 = 56. Then it creeps back down: 3.672 after 64 rolls, 3.656 after 256, 3.605 after 1,024 and 3.544
+after 4,096, just 0.044 from 3.5.
+
+The shaded band shows how close the average should be. Its half-width is $2\sigma/\sqrt{n}$: ± 3.42 after one roll,
+± 1.71 after 4, ± 0.85 after 16, ± 0.43 after 64 and ± 0.053 after 4,096. Where does $\sqrt{n}$ come from? Two facts
+from random variables. First, the rolls are independent, so their variances add: the total of $n$ rolls has variance
+$n\sigma^2$, and its typical drift from $3.5n$ is $\sqrt{n\sigma^2} = \sigma\sqrt{n}$. The drift grows, but only like
+$\sqrt{n}$, not like $n$, because high and low rolls partly cancel. Second, the average is the total divided by $n$,
+which divides every gap, and so the standard deviation, by $n$:
+
+$$
+\frac{\sigma\sqrt{n}}{n} = \frac{\sigma}{\sqrt{n}}
+$$
+
+For 16 rolls the total's variance is 16 × 2.92 = 46.7, so its typical drift is $\sqrt{46.7} \approx 6.8$ either side of
+56, and the average's typical miss is 6.8 ÷ 16 ≈ 0.43, which is $1.71/\sqrt{16}$. The band is twice that either
+side: ± 0.85 at 16 rolls. How often does a run stay inside? Rolling 1,024 dice in each of 1,000
+separate runs, 949 of the 1,000 averages landed inside ± 0.107: about 19 in 20. Why that share comes out so steadily
+is the business of the **central limit theorem**, a later lesson.
+
+<KeyIdea>
+
+**The law of large numbers:** the running average of $n$ independent samples settles on the expected value $E[X]$.
+Its typical miss is $\sigma/\sqrt{n}$, so in most runs it sits inside the band
+
+$$
+E[X] \pm \frac{2\sigma}{\sqrt{n}}
+$$
+
+Four times the samples halve the band. A hundred times the samples make it ten times narrower.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Does the die make up for a lucky start?">
+
+Look again at the run above. After 16 rolls the total was 11 more than $3.5 \times 16$. It is tempting to think the die
+now owes some low rolls, and that the average comes back down because those low rolls arrive. Decide before you read
+on: for the average to reach 3.5, must that surplus of 11 shrink back to 0? Then watch the total's gap from $3.5n$ in
+the readouts: it was 11 after 16 rolls, still 11 after 64, then 40 after 256, 108 after 1,024
+and 181 after 4,096. The early surplus was never paid back. It grew.
+
+Yet the average settled, because the gap is shared out over all the rolls: 181 ÷ 4,096 is only 0.044. New rolls don't
+correct old ones. They swamp them.
+
+<Misconception
+  id="die-evens-out"
+  title="After a streak, the die evens things out"
+  probes={[
+    {
+      q: 'A fair coin has landed heads 9 times in a row. What is the chance the next toss lands heads?',
+      choices: ['Less than ½: tails is due', 'Exactly ½', 'More than ½: heads is on a streak'],
+      answer: 1,
+      trap: 0,
+      why: 'The coin has no memory. Each toss is heads with chance ½ whatever came before; streaks are not corrected.',
+    },
+    {
+      q: 'After 300 tosses of a fair coin you have 163 heads, 13 more than half. After 30,000 tosses, what is most likely?',
+      choices: [
+        'Heads will stay exactly 13 ahead',
+        'Heads will be back to exactly half, as the coin catches up',
+        'Heads may be further ahead or behind than 13, but their share will be close to ½',
+      ],
+      answer: 2,
+      trap: 1,
+      why: 'The count’s gap from half wanders and tends to grow like √n, but divided by 30,000 tosses it is tiny. The share settles; the gap is not paid back.',
+    },
+  ]}
+>
+
+Dice, coins and roulette wheels have no memory, so after a streak each new roll is exactly as random as the first.
+The law of large numbers is about the **average**, and the average settles because each early surplus is divided by
+an ever larger $n$. The gap in the **total** is free to grow, and usually does, like $\sqrt{n}$. Betting on a number
+because it is “due” is the gambler's fallacy.
+
+</Misconception>
+
+Now darts. Throw darts at random into a square of side 1, with every point equally likely, and count those inside the
+quarter circle $x^2 + y^2 \le 1$ around the corner. Predict the chance one dart lands inside, which estimates are
+possible after 2 darts, how fast the band narrows when you double the darts, how many darts a really narrow band
+needs, and whether 4,096 darts are likely to get within 0.01 of π.
+
+<PredictChallenge slug="monte-carlo" settings={{ preset: 'darts', seed: 3 }} goal={5} />
+
+The chance of landing inside is the quarter circle's share of the square: its area is $\pi \times 1^2 / 4$ and the
+square's is 1, so the chance is $\pi/4 \approx 0.785$. So 4 × (darts inside) ÷ (darts thrown) estimates π. In this run
+the first 4 darts all land inside, an estimate of 4. After 16 darts 14 are inside, so the estimate is 3.5. Then it
+wanders: 2.9375 after 64, 3.1484 after 512, 3.1367 after 1,024. After 4,096 darts, 3,237 are inside, and the estimate
+is 3.1611, off by 0.0195.
+
+Inside or not is one flip with chance $p = 0.785$, whose variance is $p(1 - p)$, as for the binomial in random
+variables. A dart scores 4 (inside) or 0 (outside), four times the flip, which multiplies the variance by $4^2 = 16$
+and the spread by 4: $\sigma = 4\sqrt{0.785 \times 0.215} \approx 1.64$. The band is $\pi \pm 2 \times 1.64/\sqrt{n}$. At 16 darts that
+is ± 0.82; doubling to 32 only narrows it by $\sqrt{2} \approx 1.41$, to ± 0.58. At 4,096 darts it is ± 0.051, so a run
+of that size usually lands within about 0.05 of π, and this one did. For ± 0.01 you need
+$(2 \times 1.64 / 0.01)^2$, about 108,000 darts. Each extra correct decimal place needs the band ten times narrower,
+which costs 100 times the darts.
+
+<Misconception
+  id="twice-samples-half-error"
+  title="Twice the samples, half the error"
+  probes={[
+    {
+      q: 'A simulation with 400 samples gives an answer good to about ± 0.6. About how many samples would give ± 0.3?',
+      choices: ['About 800', 'About 1,600', 'About 160,000'],
+      answer: 1,
+      trap: 0,
+      why: 'The miss shrinks like 1/√n, so halving it takes 2² = 4 times the samples: 4 × 400 = 1,600.',
+    },
+    {
+      q: 'You go from 200 samples to 5,000, 25 times as many. About how much smaller does the typical error get?',
+      choices: ['About 5 times smaller', 'About 25 times smaller', 'No smaller: more samples add more noise'],
+      answer: 0,
+      trap: 1,
+      why: '√25 = 5, so the typical miss σ/√n gets 5 times smaller, not 25.',
+    },
+  ]}
+>
+
+The miss of an average shrinks like $1/\sqrt{n}$, not $1/n$. Doubling the darts from 16 to 32 took the band from
+± 0.82 only to ± 0.58; it takes four times the darts to halve it. That is why Monte Carlo is slow to polish: going from
+± 0.15 at 512 darts to ± 0.01 needs about 210 times as many darts, not 15 times.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="Twenty runs at once">
+
+One run can be lucky or unlucky. To see how far runs typically stray, give twenty people their own darts and draw all
+twenty running estimates together.
+
+<Explore slug="monte-carlo" settings={{ preset: 'runs', seed: 1 }} caption="Twenty independent runs of darts, each its own faint line, inside the band π ± 2σ/√n. The readouts give the spread of the twenty estimates and how many sit inside the band." />
+
+With one dart each, every run says 4 or 0: here 18 say 4 and 2 say 0. As the darts pile up the lines close in on π.
+At 64 darts each the twenty estimates spread by 0.25 (their standard deviation); at 1,024, sixteen times as many, they
+spread by 0.058, 0.23 of what they were, close to the $1/\sqrt{16} = 0.25$ the rule predicts. Inside the band sat 18 of
+20 runs at 64 darts, 19 at 256, 18 at 1,024 and all 20 at 4,096: most, not all, as promised.
+
+This is what the band means. Nobody knows which run is yours, so the spread of all the runs you might have got is the
+uncertainty of the one you have.
+
+</Section>
+
+<Section step="do" title="Darts in code">
+
+A computer can't throw darts, so it makes random-looking numbers with a rule. The exercise uses one of the oldest, the
+Park–Miller generator. Start from a whole number, the seed, as the **state**. Each step replaces the state by
+$16807 \times \text{state}$, keeping only the remainder after dividing by 2,147,483,647. From seed 1 the states go
+16,807, then 282,475,249, then 1,622,650,073. Dividing a state by 2,147,483,647 gives a number between 0 and 1, and a
+dart takes two of them, one for $x$ and one for $y$. Every step must keep the new state, or the next number is the
+same as the last.
+
+Nothing about these numbers is random: the same seed gives the same darts, on any computer, in Python or JavaScript.
+That is a feature. A training run that sets its seed can be repeated exactly, and a bug that appears once can be made
+to appear again.
+
+With seed 7, 1,000 darts give 3.004, 10,000 give 3.1512 and 100,000 give 3.13812. The misses are 0.1376, 0.0096 and
+0.0035: they shrink, but not smoothly, because each run of darts is luck as well as size. The band at 1,000 darts is
+± 0.10, so 3.004 is one of the few runs that land outside it; at 10,000 and 100,000 the bands are ± 0.033 and ± 0.010,
+and both estimates sit inside.
+
+<CodeExercise exercise="estimate-pi" />
+
+</Section>
+
+<Section step="see" title="The area of a lens">
+
+Darts measure any shape you can test a point against. Two circles of radius 1 with centres 1 apart overlap in a lens.
+Throw darts into a box around it, here 1 wide and 2 tall, so area 2, and count those landing inside both circles.
+
+<Explore slug="monte-carlo" settings={{ preset: 'area', seed: 1 }} caption="Darts in a box around the lens where two unit circles overlap, and the running estimate of its area with the error bar the darts give themselves. Drag the second centre to change the lens." />
+
+After 16 darts, 10 are inside: the share is 10/16, so the lens covers about $\tfrac{10}{16}$ of the box, and its area
+is about $2 \times 10/16 = 1.25$. The share alone is not the area. It has to be multiplied by the box's area, just as
+the π story multiplied by 4 (the square had area 1, and the quarter circle is a quarter of a circle of area π).
+
+Here nobody tells the darts the true answer, so they measure their own uncertainty. With $\hat{p}$ (“p hat”) the share
+inside standing in for the unknown chance, one dart's score (2 inside, 0 outside) has spread
+$2\sqrt{\hat{p}(1 - \hat{p})}$ by the same rule as the π darts, and the error bar is twice
+that over $\sqrt{n}$: ± 0.484 after 16 darts. After 4,096 darts, 2,506 are inside, giving 1.224 ± 0.03.
+
+Geometry can check it. The centres and the two crossing points make two triangles with all sides 1: equilateral, with
+height $\sqrt{3}/2$ by Pythagoras, so area $\sqrt{3}/4$ each. At each centre the angle between the crossing points is
+2 × 60° = 120°. Cut the lens along the line through the crossing points. Each half is a 120° slice of a circle, a third
+of it with area $\pi/3$, less the triangle between that slice's centre and the crossing points; that triangle is half the
+diamond the two equilateral triangles make, so its area is $\sqrt{3}/4$ too. The lens is two such pieces:
+
+$$
+\begin{aligned}
+\text{area} &= 2\left(\frac{\pi}{3} - \frac{\sqrt{3}}{4}\right) \\
+&\approx 1.2284
+\end{aligned}
+$$
+
+The darts' 1.224 is off by 0.0047, well inside their error bar. Drag the second centre to 0 and the lens becomes a whole
+circle: the darts then estimate π itself.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'You roll a fair die 90 times and get 24 sixes, well above the 15 you expected. What is the chance of a six on roll 91?',
+      choices: ['Less than 1 in 6: the other faces must catch up', '1 in 6, as on every roll', 'More than 1 in 6: sixes are on a roll'],
+      answer: 1,
+      why: 'The die has no memory. The extra sixes are never paid back; they are swamped by the rolls to come.',
+      traps: { 0: 'die-evens-out' },
+    },
+    {
+      q: 'A Monte Carlo estimate from 900 samples has an error bar of ± 0.08. About how wide is it with 3,600 samples?',
+      choices: ['± 0.02', '± 0.08', '± 0.16', '± 0.04'],
+      answer: 3,
+      why: '3,600 is 4 times 900, and the error bar shrinks like 1/√n, so it halves: ± 0.04. A quarter, ± 0.02, would need 16 times the samples.',
+      traps: { 0: 'twice-samples-half-error' },
+    },
+    {
+      q: 'You throw 2,500 random darts into the unit square, and 1,950 land in the quarter circle x² + y² ≤ 1. What is the estimate of π?',
+      choices: ['3.12', '0.78', '1.56', '3.9'],
+      answer: 0,
+      why: '4 × 1,950 / 2,500 = 3.12. The share alone, 0.78, estimates π/4.',
+    },
+    {
+      q: 'Darts thrown evenly into a 4 by 3 rectangle land inside a leaf-shaped patch 35% of the time. About what is the leaf’s area?',
+      choices: ['0.35', '1.4', '4.2', '7.8'],
+      answer: 2,
+      why: 'The rectangle has area 12, and the leaf covers about 35% of it: 12 × 0.35 = 4.2. The share alone is not the area.',
+    },
+    {
+      q: 'A friend throws 6,400 random darts to estimate π. One dart’s spread is σ ≈ 1.64. In most runs, how far from π does the estimate land?',
+      choices: ['Within about ± 0.04', 'Within about ± 3.3', 'Within about ± 0.0005'],
+      answer: 0,
+      why: 'The band is 2σ/√n = 2 × 1.64 / √6,400 = 3.28 / 80 ≈ 0.041. Dividing by 6,400 itself, not its square root, would give 0.0005, far too optimistic.',
+      traps: { 2: 'twice-samples-half-error' },
+    },
+    {
+      q: 'Why does a die’s running average settle near 3.5?',
+      choices: [
+        'After a high streak the die rolls low more often, balancing the total',
+        'The total always returns to 3.5 × n',
+        'Any early surplus in the total is divided by an ever larger number of rolls',
+      ],
+      answer: 2,
+      why: 'Nothing pulls the total back; its gap from 3.5n tends to grow like √n. Divided by n, that gap shrinks like 1/√n.',
+      traps: { 0: 'die-evens-out', 1: 'die-evens-out' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="law-of-large-numbers-monte-carlo"
+  prompt="Why does the running average of many independent samples settle on the expected value, how fast does it settle, and how does that let darts estimate π or an area?"
+  rubric={[
+    'The running average of independent samples settles on the expected value E[X]: that is the law of large numbers.',
+    'It settles because each early surplus is divided by an ever larger n; the dice never correct a streak, and the gap in the total can grow.',
+    'The typical miss is σ/√n, so four times the samples halve it and an extra correct decimal place costs 100 times the samples.',
+    'Monte Carlo averages random samples: the share of darts inside a shape times the box’s area estimates its area, and 4 × the share gives π.',
+  ]}
+  example="If you average many independent samples, the running average settles on the expected value: a die's average heads for 3.5. It isn't because the die makes up for a lucky streak; the extra in the total is never paid back, it is just divided by more and more rolls, so its effect on the average fades. The average's typical miss is σ/√n, so it sits inside E[X] ± 2σ/√n in most runs, and quadrupling the samples only halves the miss; a hundred times the samples give one more correct decimal place. Monte Carlo uses this: throw random darts into a box, and the share inside a shape estimates the shape's share of the box, so share × box area estimates its area. In the unit square the quarter circle's share is π/4, so 4 × inside / n estimates π."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The running average of $n$ independent samples settles on the expected value: the law of large numbers.
+- Nothing evens out: an early surplus in the total is never paid back. It is divided by an ever larger $n$.
+- The average's typical miss is $\sigma/\sqrt{n}$, and most runs sit inside $E[X] \pm 2\sigma/\sqrt{n}$. Four times the samples halve it; one more correct decimal place costs 100 times the samples.
+- Monte Carlo estimates a number by averaging random samples: share of darts inside × area of the box is the area of a shape, and 4 × inside / n in the unit square is π.
+- A seeded generator makes the same “random” numbers every time, so a simulation can be repeated exactly.
+
+</Section>

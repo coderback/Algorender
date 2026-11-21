@@ -1,0 +1,377 @@
+<Section step="hook" title="Should you play?">
+
+A stall at a fair offers a game: roll two dice, and if they show the same number (a double) you win £4. Otherwise you
+lose £1. Doubles feel common enough, and £4 is four times what you risk. Should you play?
+
+One game can't tell you: what matters is what happens **on average**, over many games. That takes three ideas. A
+**random variable** turns the outcome of the dice into a number, here your winnings. Its **expected value** is the
+average that number settles to, and its **variance** says how far from it a single game tends to land. Machine
+learning runs on the same ideas: a model's loss is an expected value over the data it might see.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="random variable">A rule that gives every outcome of a chance experiment a number. Written with a capital letter, $X$. The sum of two dice is one; your winnings in a game are another.</Term>
+  <Term name="distribution">Every value $x$ that $X$ can take, each with its probability $P(X = x)$, or $P(x)$ for short: a bar chart with one bar per value. The probabilities add up to 1.</Term>
+  <Term name="expected value E[X]">$E[X] = \sum x \cdot P(x)$: every value times its probability, added up. The balance point of the bars, and the long-run average of $X$. Also written $\mu$ ("mu").</Term>
+  <Term name="variance Var(X)">$\text{Var}(X) = \sum P(x)\,(x - \mu)^2$: the squared distance of each value from $\mu$, weighted by its probability. A measure of spread.</Term>
+  <Term name="standard deviation σ">$\sigma = \sqrt{\text{Var}(X)}$, "sigma": the spread in the same units as $X$.</Term>
+  <Term name="independent">Two random variables are independent when knowing one tells you nothing about the other, like two separate dice.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="A rule that turns outcomes into numbers">
+
+In the lesson on [chance, events and independence](/learn/probability-basics), the sum of two dice sat in each of the
+36 equally likely cells, and you saw how many cells each sum gets. That sum was already a random variable: a rule that
+gives **every** outcome a number. Call it $X$: the outcome (2, 5) gets 7, and (6, 6) gets 12.
+
+What is new is how to read those counts. Each count over 36 is $P(X = x)$, so the counts become a bar chart with one
+bar per value:
+
+<Explore slug="random-variables" settings={{ preset: 'dice-sum', step: '12' }} caption="X, the sum, in each of the 36 cells, and a bar for each value: its cells over 36. Step back to see each value's cells boxed and counted." />
+
+The counts, from a sum of 2 up to 12, are 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1. Every outcome lands in exactly one bar, so
+the heights add up to 36/36 = 1. These values with their probabilities are the **distribution** of $X$.
+
+The same 36 outcomes can carry other random variables, such as your winnings $W$ in the fair's game: $W = 4$ on the
+6 doubles and $W = -1$ on the other 30 outcomes, so $P(W = 4) = 6/36$ and $P(W = -1) = 30/36$.
+
+Now the average. Suppose a bag holds 10 tickets: four marked 1, three marked 2, and one each marked 3, 4 and 5. Draw a
+ticket and let $X$ be its number. Play many times and the 1s come up about 40% of the time, the 2s about 30%, and each
+of the others about 10%. So the long-run average is each value times its share, added up:
+
+$$
+\begin{aligned}
+E[X] &= 1 \times 0.4 + 2 \times 0.3 + 3 \times 0.1 \\
+&\quad + 4 \times 0.1 + 5 \times 0.1 \\
+&= 0.4 + 0.6 + 0.3 + 0.4 + 0.5 = 2.2
+\end{aligned}
+$$
+
+That is the **expected value**, $E[X] = \sum x \cdot P(x)$: a Σ, read as a loop that adds a term $x \cdot P(x)$ for
+every value, as in the lesson on [Σ notation](/learn/sums-notation). Step through it, then drag the bars to change the
+bag:
+
+<Explore slug="random-variables" settings={{ preset: 'tickets' }} input caption="A bag of 10 tickets: E[X] built term by term, then drawn as the point where the bars balance. Drag the bars to change the bag." />
+
+Picture the bars as weights on a see-saw, each at its own value. Weight each value's gap from 2.2 by its probability,
+and the pulls from the left and from the right are both 0.54: they cancel, as the gaps from a mean did in the Σ lesson.
+So $E[X]$ is the balance point of the bars.
+
+It is **not** the middle of the values, which would be 3. That plain average forgets that a 1 is four times as likely
+as a 5. Nor is it under the tallest bar, at 1. And it need not be a value $X$ can take at all: no ticket is marked 2.2.
+
+Put one more ticket marked 5 in the bag. Now 11 tickets carry numbers adding up to 27, so $E[X] = 27/11 = 2.455$: the
+far ticket pulls the balance point towards it, but only a little.
+
+Back to the fair. Weight each prize by its probability:
+
+$$
+\begin{aligned}
+E[W] &= 4 \times \tfrac{6}{36} + (-1) \times \tfrac{30}{36} \\
+&= \tfrac{24 - 30}{36} = -\tfrac{1}{6}
+\end{aligned}
+$$
+
+That is about −0.17: on average you lose about 17p a game, or about £60 over 360 games. Doubles come up only once in
+six rolls, and four times your stake isn't enough to make up for it.
+
+<KeyIdea>
+
+**A random variable turns outcomes into numbers, and its expected value $E[X] = \sum x \cdot P(x)$ is where its
+distribution balances.** It is the long-run average of $X$: not the most likely value, and not always a value $X$ can
+take.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: the larger of two dice">
+
+Now let $X$ be the larger of the two dice: for (2, 5) that is 5, and for (4, 4) it is 4. The table fills with the new
+rule, then the cells for each value are counted, smallest first. Before each bar appears, predict how many of the 36
+outcomes give that value. Look at the shape the boxed cells make.
+
+<PredictChallenge slug="random-variables" settings={{ preset: 'dice-max' }} goal={5} />
+
+The counts were 1, 3, 5, 7, 9 and 11. The cells where the larger die is $m$ make an L in the table: $m$ cells along
+row $m$ and $m$ down column $m$, with the corner $(m, m)$ shared, so $2m - 1$ cells. Counting $m + m$ counts the double
+twice, and counting $m \times m$ counts every outcome whose larger die is **at most** $m$.
+
+So the most likely value is 6, at 11/36. The balance point is
+
+$$
+\begin{aligned}
+E[X] &= (1 \times 1 + 2 \times 3 + 3 \times 5 \\
+&\quad + 4 \times 7 + 5 \times 9 + 6 \times 11) / 36 \\
+&= 161/36
+\end{aligned}
+$$
+
+which is about 4.47, left of the tall bar at 6, pulled there by the shorter bars below it.
+
+<Misconception
+  id="expected-is-likely"
+  title="The expected value is the value you should expect to see"
+  probes={[
+    {
+      q: 'A spinner lands on 0 with probability 0.75 and on 16 with probability 0.25. What is its expected value?',
+      choices: ['0, since it lands there most often', '4', '8, halfway between 0 and 16'],
+      answer: 1,
+      trap: 0,
+      why: 'E = 0 × 0.75 + 16 × 0.25 = 4. The spinner never shows 4, but 4 is its average over many spins.',
+    },
+    {
+      q: 'A raffle ticket pays £45 with probability 1/15 and nothing otherwise, so its expected value is £3. What does one ticket pay?',
+      choices: ['£45 or nothing: £3 is the average over many tickets', '£3, the expected payout', 'Usually £3, sometimes £45'],
+      answer: 0,
+      trap: 1,
+      why: 'One ticket pays £45 or £0. £3 is what the tickets average out to, not something any single ticket pays.',
+    },
+  ]}
+>
+
+"Expected" sounds like a forecast for one try, but it means the long-run average. It can be a value no single try
+gives, like 2.2 from a bag with no 2.2 ticket, and it is not the most likely value: for the larger of two dice, 6 is
+most likely, but the balance point is about 4.47. Weight every value by its probability and add; never just pick the
+tallest bar.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Spread, sums, and many coin flips">
+
+The expected value says where $X$ balances, but not how far from that point $X$ tends to land. To measure spread,
+look at each value's gap from the balance point, $x - \mu$, where $\mu$ (mu) is short for $E[X]$. Weighted by
+probability, the gaps always add up to 0, because $\mu$ is the balance point. So square each gap first, as the
+variance of a list of numbers did in the Σ lesson, and weight it by its probability:
+
+$$
+\text{Var}(X) = \sum P(x)\,(x - \mu)^2
+$$
+
+Squaring makes far values count much more than near ones. Step through bag A, then compare bag B:
+
+<Explore slug="random-variables" settings={{ preset: 'spread' }} input caption="Two bags of 10 tickets, each with its balance point; bag A's variance built term by term, then both bags' spread drawn as μ ± σ. Drag either bag's bars." />
+
+Bag A (one 1, two 2s, four 3s, two 4s and one 5) balances at $\mu = 3$. Its terms are 0.4, 0.2, 0, 0.2 and 0.4: the
+1 is 2 below 3, its squared gap is 4, and 1 ticket in 10 has it, so it adds 0.4. So bag A's variance is 1.2. Bag B
+(three 1s, one 2, two 3s, one 4 and three 5s) also balances at 3, but its variance is 2.6: six of its ten tickets sit
+at the far ends.
+
+A variance is in squared units: metres would become square metres. Its square root, the **standard deviation**
+$\sigma$ (sigma), is back in the units of $X$: 1.095 for bag A and 1.612 for bag B, drawn as $\mu \pm \sigma$.
+
+There is a shortcut worth knowing: the variance is also $E[X^2] - \mu^2$, the average of the squares,
+$E[X^2] = \sum x^2 \cdot P(x)$, minus the square of the average. For bag A, $E[X^2] = (1 + 8 + 36 + 32 + 25)/10 = 10.2$, and $10.2 - 9 = 1.2$, the same. Forgetting the
+$- \mu^2$, and calling $E[X^2]$ the variance, is a common slip.
+
+<Misconception
+  id="same-mean-same-spread"
+  title="Two random variables with the same expected value spread the same"
+  probes={[
+    {
+      q: 'Spinner P shows 11 or 13 with equal chances; spinner Q shows 2 or 22 with equal chances. Both have expected value 12. Which has the bigger variance?',
+      choices: ['Neither: the same expected value means the same spread', 'P', 'Q'],
+      answer: 2,
+      trap: 0,
+      why: 'P lands 1 from 12 every time, so its variance is 1; Q lands 10 away every time, so its variance is 100.',
+    },
+    {
+      q: 'Fund A always returns 3%. Fund B returns −9% or 15% with equal chances. Both are expected to return 3%. Which is riskier, measured by variance?',
+      choices: ['Fund A', 'Fund B', 'Neither, since the expected returns are equal'],
+      answer: 1,
+      trap: 2,
+      why: 'Fund A never moves from 3%, so its variance is 0. Fund B is always 12 points away from 3%, a variance of 144.',
+    },
+  ]}
+>
+
+The expected value is only the balance point. Bars bunched close to it and bars pushed far out can balance at the
+same place, as bags A and B do at 3. The variance measures what the balance point can't: how far the values sit from
+it.
+
+</Misconception>
+
+Now add two random variables: roll two dice, $X$ and $Y$, independently. Each fair die balances at 3.5 and has
+variance $35/12$, about 2.917. Their total $X + Y$ has the bars you counted at the start.
+
+<Explore slug="random-variables" settings={{ preset: 'two-dice' }} caption="Die X and die Y with their balance points, then X + Y, its variance, and die X doubled. Drag die X's bars to load it." />
+
+Its bars balance at 7, which is 3.5 + 3.5. **Expected values always add**: $E[X + Y] = E[X] + E[Y]$, whatever $X$ and
+$Y$ are, even if one depends on the other. Load die X by dragging its bars, and the sum's balance point follows.
+
+Variances add too, but only when $X$ and $Y$ are independent: $\text{Var}(X + Y) = 35/12 + 35/12 = 35/6$, about
+5.833. Standard deviations don't add: $\sigma = \sqrt{35/6}$, about 2.415, less than the two dice's own $\sigma$s
+added, $1.708 + 1.708 = 3.416$, because a high roll on one die is often softened by a lower roll on the other.
+
+Doubling one die is different. $2X$ also balances at 7, twice 3.5, but it doubles every gap from the balance point, so
+every squared gap grows 4 times: $\text{Var}(2X) = 4 \times 35/12 = 35/3$, about 11.667, twice the variance of $X + Y$.
+
+The same goes for multiplying by any number $a$. Every value is multiplied by $a$, so the balance point is too, and
+every gap from it: each squared gap is multiplied by $a^2$.
+
+$$
+E[aX] = a\,E[X] \qquad \text{Var}(aX) = a^2\,\text{Var}(X)
+$$
+
+That holds for fractions too: halving $X$ quarters its variance, since $(1/2)^2 = 1/4$.
+
+<Misconception
+  id="double-is-sum"
+  title="Doubling a random variable spreads it like adding two of them"
+  probes={[
+    {
+      q: 'Z has variance 7. What is Var(3Z)?',
+      choices: ['21', '63', '7'],
+      answer: 1,
+      trap: 0,
+      why: 'Multiplying by 3 triples every gap from the mean, so every squared gap is 9 times bigger: Var(3Z) = 9 × 7 = 63. 21 would be three independent copies added up.',
+    },
+    {
+      q: 'Two independent spinners each have variance 0.9. What is the variance of their total, and of twice one spinner?',
+      choices: ['Both 1.8', 'Both 3.6', 'The total 1.8, twice one spinner 3.6'],
+      answer: 2,
+      trap: 0,
+      why: 'Independent variances add: 0.9 + 0.9 = 1.8. Doubling one spinner doubles its gaps, so it quadruples the variance: 4 × 0.9 = 3.6.',
+    },
+  ]}
+>
+
+$X + X$ is $2X$: the same luck twice, so every gap doubles and the variance grows 4 times. $X + Y$ adds a second,
+independent dose of luck, which often softens the first, so the variances only add. Scaling by $a$ multiplies the
+variance by $a^2$.
+
+</Misconception>
+
+Adding up independent pieces builds one of the most useful distributions. Flip a coin $n$ times, each flip heads with
+probability $p$ whatever the others did, and let $K$ be the number of heads. Draw a run of flips as a path: one step
+right for each flip and one up for each head. The paths reaching each point are the orders of heads and tails that get
+there, counted by $C(n, k)$, "n choose k", from the lesson on [counting](/learn/counting-combinatorics): each point's
+count is the sum of the two behind it, as in Pascal's triangle.
+
+<Explore slug="random-variables" settings={{ preset: 'coins' }} caption="Six fair coins: the paths of heads and tails counted flip by flip, the bars of K, its balance point and spread, then simulated runs against the true bars. Drag the balance point to change p." />
+
+The flips are independent, so the chance of one whole path is the product of its flips' chances, as with "and" for
+two dice: $p$ for each of its $k$ heads and $1 - p$ for each of its $n - k$ tails. So every path with $k$ heads has
+the same probability, $p^k (1 - p)^{n - k}$, and $C(n, k)$ paths have $k$ heads, so
+
+$$
+P(K = k) = C(n, k)\, p^k (1 - p)^{n - k}
+$$
+
+This is the **binomial distribution**. With 6 fair coins, 20 of the 64 paths have 3 heads, so $P(K = 3) = 20/64$,
+about 0.313.
+
+Its balance point and spread need no Σ over all the $k$s. Start with one flip, $F$: 1 head with probability $p$ and 0
+with probability $1 - p$. It averages $E[F] = 1 \times p + 0 \times (1 - p) = p$ heads. A head lands $1 - p$ above
+that and a tail lands $p$ below it, so
+
+$$
+\begin{aligned}
+\text{Var}(F) &= p\,(1 - p)^2 + (1 - p)\,p^2 \\
+&= p(1 - p)\big((1 - p) + p\big) = p(1 - p)
+\end{aligned}
+$$
+
+For a fair coin that is $0.5 \times 0.5 = 0.25$. $K$ adds up $n$ such flips. Expectations add, so $E[K] = np$; the
+flips are independent, so variances add too: $\text{Var}(K) = np(1 - p)$. For the 6 fair coins that is $E[K] = 3$ and
+$\text{Var}(K) = 1.5$, so $\sigma = 1.22$.
+
+The simulation checks it. The average number of heads was 3.4 after 10 runs of six flips, 2.7 after 100 and 3.018
+after 1000, against $E[K] = 3$, and the runs' average squared gap from their average was 1.552, against 1.5. Averages
+of many tries settle near the expected value, as the lesson on **the law of large numbers and Monte Carlo** makes
+precise.
+
+Now write both formulas as code, for a random variable given as two lists: its values and their probabilities. One
+test is a die loaded towards 1 and 6, each with probability 0.25 and the other faces 0.125: it balances at 3.5 like a
+fair die, but its variance is 3.75, against a fair die's 2.917.
+
+<CodeExercise exercise="expectation-variance" />
+
+To run the binomial yourself, [simulate it](/code/binomial-simulation): flip $n$ coins with a small random-number
+generator, count the heads, and repeat.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A game pays £10 with probability 0.2 and nothing otherwise. What is the expected payout of one game?',
+      choices: ['£0, since that is what usually happens', '£2', '£5'],
+      answer: 1,
+      why: 'E = 10 × 0.2 + 0 × 0.8 = 2. Most games pay nothing, but on average a game pays £2.',
+      traps: { 0: 'expected-is-likely' },
+    },
+    {
+      q: 'X is 1, 2 or 3, each with probability 1/3. Y is 0, 2 or 4, each with probability 1/3. Both have expected value 2. Which has the bigger variance?',
+      choices: ['X', 'Neither: they have the same expected value', 'Y'],
+      answer: 2,
+      why: 'Y’s values sit 2 from the mean where X’s sit 1 from it: Var(X) = 2/3 and Var(Y) = 8/3, four times bigger.',
+      traps: { 1: 'same-mean-same-spread' },
+    },
+    {
+      q: 'X is 0 or 6, each with probability 1/2. What is Var(X)?',
+      choices: ['18', '0', '9'],
+      answer: 2,
+      why: 'μ = 3, and both values are 3 away, so Var = ½ × 9 + ½ × 9 = 9. 18 is E[X²], without subtracting μ², and 0 is what the gaps give if you forget to square them.',
+    },
+    {
+      q: 'X has variance 1.4. What is Var(2X)?',
+      choices: ['2.8', '5.6', '1.4'],
+      answer: 1,
+      why: 'Doubling X doubles every gap from the mean, so every squared gap is 4 times bigger: 4 × 1.4 = 5.6. 2.8 is the variance of two independent copies of X added together.',
+      traps: { 0: 'double-is-sum' },
+    },
+    {
+      q: 'K is the number of heads in 10 flips of a coin that lands heads with probability 0.2. What are E[K] and Var(K)?',
+      choices: ['E[K] = 5, Var(K) = 2.5', 'E[K] = 2, Var(K) = 2', 'E[K] = 2, Var(K) = 1.6'],
+      answer: 2,
+      why: 'E[K] = np = 10 × 0.2 = 2, and Var(K) = np(1 − p) = 2 × 0.8 = 1.6. 5 and 2.5 are for a fair coin, and Var = 2 forgets the (1 − p).',
+    },
+    {
+      q: 'X is a roll of a spinner numbered 1 to 8, all equally likely, and Y = 9 − X. What is E[X + Y]?',
+      choices: ['9', '4.5', 'It can’t be worked out, since Y depends on X'],
+      answer: 0,
+      why: 'X + Y is 9 every time. Expectations add even when the parts depend on each other: 4.5 + 4.5 = 9.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="expectation-and-variance"
+  prompt="What are a random variable, its expected value and its variance? How would you work out the last two from its distribution, and what happens to them when you add two random variables?"
+  rubric={[
+    'A random variable is a rule that gives each outcome of a chance experiment a number, and its distribution gives each value a probability.',
+    'The expected value is the sum of each value times its probability: the balance point of the bars and the long-run average, not necessarily the most likely value.',
+    'The variance weights each squared gap from the expected value by its probability and adds them; the gaps are squared because, unsquared, they cancel to 0.',
+    'The standard deviation is the square root of the variance, in the same units as the random variable.',
+    'Expected values always add; variances add when the random variables are independent, while doubling one multiplies its variance by 4.',
+  ]}
+  example="A random variable turns every outcome into a number, like the sum of two dice; its distribution lists each value with its probability. The expected value Σ x·P(x) is where the bars balance and what the variable averages over many tries, not necessarily the most likely value. The variance Σ P(x)(x − μ)² squares each gap from μ, weights it by its probability and adds; unsquared, the weighted gaps cancel to 0. Its square root σ is the spread in the variable's own units. E[X + Y] = E[X] + E[Y] always, Var(X + Y) = Var(X) + Var(Y) when they are independent, and 2X has four times the variance of X."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A random variable is a rule that gives every outcome a number. Its distribution is a bar for each value, the bars adding up to 1.
+- $E[X] = \sum x \cdot P(x)$ is the balance point of the bars and the long-run average. It need not be the most likely value, or a value $X$ can take.
+- $\text{Var}(X) = \sum P(x)\,(x - \mu)^2$ measures spread: the gaps are squared because, weighted, they cancel to 0. $\sigma = \sqrt{\text{Var}(X)}$ is in $X$'s own units.
+- The same expected value can come with very different spreads.
+- $E[X + Y] = E[X] + E[Y]$ always. $\text{Var}(X + Y) = \text{Var}(X) + \text{Var}(Y)$ for independent $X$ and $Y$.
+- Multiplying by a number $a$: $E[aX] = a\,E[X]$ and $\text{Var}(aX) = a^2\,\text{Var}(X)$, so $\text{Var}(2X) = 4\,\text{Var}(X)$, not the $2\,\text{Var}(X)$ of two independent copies added.
+- One flip that is 1 with chance $p$ and 0 otherwise has mean $p$ and variance $p(1 - p)$. $n$ independent flips give the binomial distribution: $P(K = k) = C(n, k)\,p^k(1 - p)^{n - k}$, with $E[K] = np$ and $\text{Var}(K) = np(1 - p)$.
+
+</Section>
