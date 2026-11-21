@@ -568,7 +568,8 @@ concepts:
     track: calculus
     summary: Adding up thin slices, and how accumulated area undoes the derivative.
     prereqs: [derivatives-gradients, sums-notation]
-    planned: true
+    visualisers: [integral]
+    lesson: integrals
   - id: hessian-curvature
     title: Curvature and the Hessian
     track: calculus
@@ -594,46 +595,55 @@ concepts:
     track: probability
     summary: Counting arrangements and choices, and Pascal’s triangle.
     prereqs: [sums-notation, exponents-logs]
-    planned: true
+    visualisers: [counting]
+    lesson: counting-combinatorics
+    links:
+      - href: /visualisers/subsets
+        label: 'Subsets: every yes-or-no choice as a tree'
+      - href: /visualisers/permutations
+        label: 'Permutations: every ordering as a tree'
   - id: probability-basics
     title: Chance, events and independence
     track: probability
     summary: Events as regions of outcomes, adding and multiplying chances, and when events are independent.
     prereqs: [counting-combinatorics]
-    planned: true
+    visualisers: [two-dice]
+    lesson: probability-basics
   - id: probability
     title: Probability and Bayes
     track: probability
     summary: Conditional probability as areas, and updating beliefs with evidence.
+    prereqs: [probability-basics]
     visualisers: [bayes]
     lesson: bayes
-    later: [probability-basics] # B5
   - id: random-variables
     title: Random variables, expectation and variance
     track: probability
     summary: Numbers decided by chance, their average, and how far they spread.
     prereqs: [probability-basics]
-    planned: true
+    visualisers: [random-variables]
+    lesson: random-variables
   - id: law-of-large-numbers
     title: The law of large numbers and Monte Carlo
     track: probability
     summary: Why averages settle down, how fast, and estimating anything by simulation.
     prereqs: [random-variables]
-    planned: true
+    visualisers: [monte-carlo]
+    lesson: law-of-large-numbers
   - id: continuous-distributions
     title: Densities and the normal distribution
     track: probability
     summary: Probability as area under a density curve, the CDF, and the bell curve.
     prereqs: [random-variables, integrals]
-    planned: true
+    visualisers: [distributions]
+    lesson: continuous-distributions
   - id: sampling-clt
     title: Sampling and the central limit theorem
     track: probability
     summary: Why averages of almost anything pile up into a bell curve, and how fast they settle.
-    prereqs: [probability]
+    prereqs: [probability, law-of-large-numbers, continuous-distributions]
     visualisers: [central-limit-theorem]
     lesson: central-limit-theorem
-    later: [law-of-large-numbers, continuous-distributions] # B5
   - id: covariance-correlation
     title: Covariance and correlation
     track: probability
@@ -644,10 +654,9 @@ concepts:
     title: Entropy and KL divergence
     track: probability
     summary: Information as surprise in bits, and the cost of believing the wrong distribution.
-    prereqs: [probability, exponents-logs]
+    prereqs: [probability, exponents-logs, random-variables]
     visualisers: [entropy]
     lesson: entropy
-    later: [random-variables] # B5
   - id: maximum-likelihood
     title: Maximum likelihood
     track: probability

@@ -100,6 +100,22 @@ describe('scheduling', () => {
     for (const before of ['chain-rule', 'matrix-multiplication']) expect(order.indexOf('jacobians'), before).toBeGreaterThan(order.indexOf(before));
   });
 
+  it('reaches B5’s counting, chance, random variables, the law of large numbers, integrals and densities, each after what it builds on', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    const chain = ['counting-combinatorics', 'probability-basics', 'random-variables', 'continuous-distributions'];
+    for (const id of [...chain, 'law-of-large-numbers', 'integrals', 'probability', 'sampling-clt']) expect(order, id).toContain(id);
+    for (let i = 1; i < chain.length; i++) expect(order.indexOf(chain[i]), chain[i]).toBeGreaterThan(order.indexOf(chain[i - 1]));
+    expect(order.indexOf('counting-combinatorics')).toBeGreaterThan(order.indexOf('sums-notation'));
+    for (const before of ['derivatives-gradients', 'sums-notation']) expect(order.indexOf('integrals'), before).toBeGreaterThan(order.indexOf(before));
+    expect(order.indexOf('continuous-distributions')).toBeGreaterThan(order.indexOf('integrals'));
+    expect(order.indexOf('law-of-large-numbers')).toBeGreaterThan(order.indexOf('random-variables'));
+    // Bayes now builds on chance, and the central limit theorem on the law of large numbers and densities.
+    expect(order.indexOf('probability')).toBeGreaterThan(order.indexOf('probability-basics'));
+    for (const before of ['law-of-large-numbers', 'continuous-distributions']) expect(order.indexOf('sampling-clt'), before).toBeGreaterThan(order.indexOf(before));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {

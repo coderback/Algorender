@@ -64,6 +64,12 @@ const lessonPaths = [
   'taylor-approximation',
   'jacobians',
   'autograd',
+  'counting-combinatorics',
+  'probability-basics',
+  'random-variables',
+  'law-of-large-numbers',
+  'integrals',
+  'continuous-distributions',
   'optimizers',
   'rate-limiting',
 ];

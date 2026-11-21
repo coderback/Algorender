@@ -660,6 +660,12 @@ const mathEntries = [
     category: 'Calculus'
   },
   {
+    name: 'Integrals',
+    description: 'Add up thin rectangles and trapezoids under a curve and watch them close in on the area, then trace the accumulated area A(x), whose slope is the curve itself.',
+    slug: 'integral',
+    category: 'Calculus'
+  },
+  {
     name: 'Gradient Descent',
     description: 'Walk downhill on a contour map by stepping against the gradient, and see what the step size does.',
     slug: 'gradient-descent',
@@ -672,9 +678,39 @@ const mathEntries = [
     category: 'Optimization'
   },
   {
+    name: 'Counting and Combinations',
+    description: 'Outfits as the cells of a table, a podium filled place by place, teams of two as ordered picks folded in half, and Pascal’s triangle built cell by cell from the two cells above.',
+    slug: 'counting',
+    category: 'Probability'
+  },
+  {
+    name: 'Two Dice',
+    description: 'Two dice as a 6 × 6 board of equally likely outcomes: events are regions, “or” adds them minus the overlap, “and” is where they overlap, and simulated throws close in on the exact chance.',
+    slug: 'two-dice',
+    category: 'Probability'
+  },
+  {
     name: "Bayes' Rule",
     description: 'Update a belief with evidence by drawing everyone as a square: the answer is the share of the evidence strip where the hypothesis holds.',
     slug: 'bayes',
+    category: 'Probability'
+  },
+  {
+    name: 'Random Variables',
+    description: 'Turn two dice into numbers, balance the bars at E[X], measure their spread with Var(X), add two dice, and build the binomial from paths of coin flips.',
+    slug: 'random-variables',
+    category: 'Probability'
+  },
+  {
+    name: 'Monte Carlo',
+    description: 'Roll a die until its running average settles on 3.5, throw random darts to estimate π inside a band that narrows like 1/√n, and measure the area of a lens by sampling.',
+    slug: 'monte-carlo',
+    category: 'Probability'
+  },
+  {
+    name: 'Densities and the Normal Curve',
+    description: 'Bars of chance shrink into a density, a draggable interval’s area is its probability, the CDF is the area to the left with the density as its slope, and the normal curve holds 68–95–99.7% within 1, 2 and 3σ.',
+    slug: 'distributions',
     category: 'Probability'
   },
   {

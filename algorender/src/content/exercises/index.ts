@@ -5,11 +5,17 @@
 import { arrayExercises, bugHunts, modifyExercises } from './arrays';
 import { autogradExercises } from './autograd';
 import { calculusExercises } from './calculus';
+import { chanceExercises } from './chance';
+import { countingExercises } from './counting';
+import { distributionExercises } from './distributions';
 import { graphExercises } from './graphs';
 import { gridExercises } from './grids';
+import { integralExercises } from './integrals';
 import { leastSquaresExercises } from './least-squares';
 import { linearAlgebraExercises } from './linear-algebra';
 import { mlExercises } from './ml';
+import { monteCarloExercises } from './monte-carlo';
+import { randomVariableExercises } from './random-variables';
 import { toolkitExercises } from './toolkit';
 import type { Exercise } from './shared';
 import { treeExercises } from './trees';
@@ -28,6 +34,12 @@ export const exercises: Exercise[] = [
   ...mlExercises,
   ...calculusExercises,
   ...autogradExercises,
+  ...countingExercises,
+  ...chanceExercises,
+  ...randomVariableExercises,
+  ...monteCarloExercises,
+  ...integralExercises,
+  ...distributionExercises,
   ...modifyExercises,
   ...bugHunts,
 ];

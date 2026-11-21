@@ -1,0 +1,349 @@
+<Section step="hook" title="Count before you guess">
+
+How likely is it that two dice show a total of 7? That a shuffled deck comes out in perfect order? Both start the same
+way: count how many ways something can happen, then how many ways anything at all can happen. Chance comes later;
+counting comes first.
+
+Counting sounds easy until the numbers get big. A deck of 52 cards can be shuffled into about $8.07 \times 10^{67}$
+different orders, a number with 68 digits. No computer will ever list them, yet one line of arithmetic counts them. A
+model that reads 20 numbers about each example, its **features**, can be trained on any group of them, from none to
+all: 1,048,576 groups.
+
+This lesson builds three rules: choices made one after another **multiply**, picking in order without repeats shrinks
+each choice by one, and when order doesn't matter you **divide** away the orders counted twice. Then you build Pascal's
+triangle, which lists every "how many ways to choose" at once.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="multiplication principle">If one choice has $a$ options and, for each of them, a second choice has $b$ options, there are $a \times b$ ways to make both.</Term>
+  <Term name="ordered pick">A list of $k$ different things taken from $n$, where the order counts: 1st, 2nd, 3rd. Also called an arrangement, or a permutation.</Term>
+  <Term name="factorial">$n!$, read "n factorial": $n \times (n - 1) \times \cdots \times 2 \times 1$, the number of orders of $n$ things. So $3! = 3 \times 2 \times 1 = 6$, and $0! = 1$.</Term>
+  <Term name="choice">A group of $k$ things taken from $n$, where the order doesn't count: a team, a hand of cards. Also called a combination.</Term>
+  <Term name="n choose k">$C(n, k)$, also written $\binom{n}{k}$: the number of ways to choose $k$ things from $n$ when order doesn't count.</Term>
+  <Term name="Pascal's triangle">A table of every $C(n, k)$: row $n$ lists $C(n, 0), C(n, 1), \ldots, C(n, n)$. Its edges are 1, and every number inside is the sum of the two above it.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="AND multiplies">
+
+Start with a wardrobe: 3 tops (red, blue, green) and 4 bottoms (jeans, shorts, a skirt and chinos). An outfit is one
+top **and** one bottom. How many outfits are there?
+
+Draw a table with a row for each top and a column for each bottom. Every cell is exactly one outfit and every outfit is
+exactly one cell, so counting outfits is counting cells.
+
+<Explore slug="counting" settings={{ preset: 'outfits' }} caption="The outfits as a table: a row for each top and a column for each bottom, filled in a row at a time. Then shoes join in." />
+
+The red top goes with each of the 4 bottoms: a row of 4 outfits. The blue top makes a whole new row of 4, not just one
+more outfit, and so does the green. Three rows of four: $3 \times 4 = 12$ outfits.
+
+Adding would give $3 + 4 = 7$, which counts something else: the pieces of clothing. If you were giving away one item, a
+top **or** a bottom, you would have 7 to pick from. "Or" between separate piles adds; "and" across choices multiplies.
+
+Now add shoes: trainers or boots. Every one of the 12 outfits can be worn with either pair, so the table appears twice:
+$3 \times 4 \times 2 = 24$. Each new choice multiplies the count by its number of options.
+
+When the same choice is made again and again, the product is a power. A phone PIN has 4 digits, each one of the 10
+digits 0 to 9, and repeats are allowed, so there are
+
+$$
+10 \times 10 \times 10 \times 10 = 10^4 = 10{,}000
+$$
+
+PINs. This is the exponent from the lesson on [exponents and logarithms](/learn/exponents-logs): $k$ choices, each from
+the same $n$ options, give $n^k$ ways. It is also a product, $\prod$, as in the lesson on
+[sums and products](/learn/sums-notation): multiply one factor per choice.
+
+The 20 features from the start work the same way. Each feature is either in the group or out of it: two options, made
+20 times. That is $2^{20} = 1{,}048{,}576$ groups, the empty group and the full one included.
+
+<KeyIdea>
+
+**Choices made one after another multiply.** If every option of one choice goes with every option of the next, the
+number of ways is the product of the numbers of options: $3 \times 4 = 12$ outfits, $10^4$ PINs, $2^{20}$ groups of
+features. Adding is for "or": one thing from one pile or another.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: a podium">
+
+Five runners, Ada, Ben, Cy, Dee and Eli, run a race. A **podium** is who comes 1st, who comes 2nd and who comes 3rd.
+The order matters: Cy first and Ada second is a different podium from Ada first and Cy second. And nobody can take two
+places.
+
+In the table each row is a place and each column a runner. A tick means that runner could still take that place, and a
+solid cell means they have already been placed. Predict how many runners each place can choose from, how many podiums
+there are in all, and then what happens when every runner is ranked.
+
+<PredictChallenge slug="counting" settings={{ preset: 'orders' }} goal={4} />
+
+Any of the 5 runners can win. Whoever wins, 4 are left for 2nd place, and whoever comes 2nd, 3 are left for 3rd. Every
+way of filling the earlier places goes with each option for the next, so by the multiplication principle there are
+
+$$
+5 \times 4 \times 3 = 60
+$$
+
+podiums. The usual wrong answers each come from a real slip. Adding, $5 + 4 + 3 = 12$, treats the places as separate
+piles. Multiplying runners by places, $5 \times 3 = 15$, forgets that each place has its own choice. And $5^3 = 125$
+lets one runner take every place: that would be right for a PIN, where a digit can repeat, but not for a race.
+
+Ranking all five, the 4th place has 2 runners left and the 5th has just 1, so there are
+$5 \times 4 \times 3 \times 2 \times 1 = 120$ orders. That product is $5!$, "five factorial". With a sixth runner,
+1st place has 6 choices, and whoever wins, the other five finish in any of those 120 orders. So 6 runners finish in
+$6! = 6 \times 5! = 720$ orders: multiplied by 6, not 6 more. Factorials grow fast. Ten runners finish in $10! = 3{,}628{,}800$ orders, and a deck of
+52 cards in $52!$, the $8.07 \times 10^{67}$ from the start.
+
+One more link between the two counts. Every podium is the start of exactly 2 full rankings, because the two runners left
+off it can come 4th and 5th in $2! = 2$ orders. So the 120 rankings are the 60 podiums, each counted 2 times:
+
+$$
+\text{podiums} = \frac{5!}{2!} = \frac{120}{2} = 60
+$$
+
+In general, an ordered pick of $k$ things from $n$ has $k$ factors, $n \times (n - 1) \times \cdots$, which is
+$n! \div (n - k)!$: the orders of all $n$, divided by the orders of the $n - k$ left off, as with the podiums. The [permutations](/visualisers/permutations) visualiser draws every order as a leaf of a tree, one
+level per place, each with one fewer branch; the lesson on [backtracking](/learn/backtracking) builds that tree in code.
+And $0! = 1$: there is exactly one way to put nothing in order, which keeps $n! \div 0! = n!$ right when $k = n$.
+
+<Misconception
+  id="add-not-multiply"
+  title="Choices made one after another add up"
+  probes={[
+    {
+      q: 'A menu has 8 starters and 29 main courses. A meal is one starter and one main course. How many different meals are there?',
+      choices: ['37', '232', '841'],
+      answer: 1,
+      trap: 0,
+      why: 'Each of the 8 starters goes with each of the 29 mains, so 8 × 29 = 232 meals. 37 counts the dishes on the menu, not the meals.',
+    },
+    {
+      q: 'A flag has two stripes, and each stripe is painted one of 17 colours (both stripes may be the same colour). How many different flags are there?',
+      choices: ['289', '34', '272'],
+      answer: 0,
+      trap: 1,
+      why: 'The top stripe has 17 options and, for each, the bottom stripe has 17: 17 × 17 = 289. Adding 17 + 17 = 34 counts each stripe’s colours separately, as if a flag had only one stripe.',
+    },
+  ]}
+>
+
+Two numbers of options, so it is tempting to add them. But adding counts the options in separate piles, one thing from
+one pile **or** the other. When you choose one from each pile, **and**, each option of the first goes with every option
+of the second: a row of outfits for each top, not one outfit. Draw the table and count its cells: rows times columns.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="When order doesn't matter, then Pascal's triangle">
+
+Now the five runners pick a team of two for a relay. A team has no order: Ada with Ben is the same team as Ben with Ada.
+How many teams are there?
+
+Count ordered picks first, then fix the double counting. In the table, a cell is an ordered pick: the first person's
+row and the second person's column.
+
+<Explore slug="counting" settings={{ preset: 'pairs' }} caption="Ordered picks of two from five people, one cell for each pick, then sorted into teams of two." />
+
+Nobody can be picked twice, so the 5 cells where the row and the column are the same person are walls, a diagonal line
+across the table. That leaves $5 \times 4 = 20$ ordered picks out of the 25 cells. Each team sits in two of them, mirror
+images across the walls: AB (Ada first, Ben second) above them and BA below. Keep the copy above the walls and drop its
+mirror: $20 \div 2 = 10$ teams.
+
+For teams of three, the same idea. There are $5 \times 4 \times 3 = 60$ ordered picks of three, and each team of three
+shows up once for each of its orders: $3! = 6$ of them. So there are $60 \div 6 = 10$ teams of three. In general:
+
+$$
+C(n, k) = \frac{n \times (n - 1) \times \cdots \ (k \text{ factors})}{k!}
+$$
+
+Both answers came out as 10, and that is no accident. Choosing 3 of the 5 to run is the same as choosing the 2 who sit
+out, so $C(5, 3) = C(5, 2)$. In general $C(n, k) = C(n, n - k)$.
+
+<Misconception
+  id="order-counted-twice"
+  title="Choosing a group counts every order of it"
+  probes={[
+    {
+      q: 'At a meeting of 11 people, everyone shakes hands once with everyone else. How many handshakes are there?',
+      choices: ['55', '110', '121'],
+      answer: 0,
+      trap: 1,
+      why: 'There are 11 × 10 = 110 ordered pairs, but Kai shaking hands with Lena is the same handshake as Lena with Kai, so each one is counted twice: 110 ÷ 2 = 55.',
+    },
+    {
+      q: 'A club of 12 picks 3 members to go to a conference, all with the same role. How many different groups of 3 are there?',
+      choices: ['4', '1,320', '220'],
+      answer: 2,
+      trap: 1,
+      why: '12 × 11 × 10 = 1,320 counts ordered picks, and each group of 3 appears in 3! = 6 orders, so there are 1,320 ÷ 6 = 220 groups. 4 is how many groups of 3 the club splits into, not how many ways to choose one.',
+    },
+  ]}
+>
+
+The product $n \times (n - 1) \times \cdots$ counts **ordered** picks, so it counts each group once for every order its
+members can be listed in. When only the group matters, divide by that number of orders: by 2 for pairs, by $3! = 6$ for
+groups of three, by $k!$ for groups of $k$. Ask yourself: would swapping two of the picks make a different answer? If
+not, divide.
+
+</Misconception>
+
+There is also a way to get every $C(n, k)$ by adding alone, all in one table: **Pascal's triangle**, whose row $n$
+lists $C(n, 0), C(n, 1), \ldots, C(n, n)$.
+
+The edges are easy. There is exactly one way to choose none of $n$ things, and exactly one way to choose all of them,
+so every row starts and ends with 1. To the right of the diagonal, $k$ is more than $n$, and there is no way to choose more
+than you have: those cells are 0.
+
+The inside comes from one argument. Take five people and choose a team of 2, and look at one person, say Eli. Either
+Eli is in the team, and the other member is chosen from the 4 others, $C(4, 1)$ ways; or Eli isn't, and both members
+come from the other 4, $C(4, 2)$ ways. Every team is exactly one of the two, so
+
+$$
+C(5, 2) = C(4, 1) + C(4, 2)
+$$
+
+and in general
+
+$$
+C(n, k) = C(n - 1, k - 1) + C(n - 1, k)
+$$
+
+In the table, those are the cell above on the left and the cell straight above. Each cell is the sum of the two cells
+above it. Step through and watch the arrows.
+
+<Explore slug="counting" settings={{ preset: 'pascal' }} caption="Pascal's triangle filled row by row, with arrows into each new cell, and each row's sum in the last column." />
+
+For example, $C(4, 2) = C(3, 1) + C(3, 2) = 3 + 3 = 6$. The usual slips give other numbers: the cell straight above
+plus the one above on the right gives $3 + 1 = 4$; the cell to the left plus the one above, as in a grid of paths,
+gives $4 + 3 = 7$; multiplying gives $3 \times 3 = 9$.
+
+Row 6 reads 1, 6, 15, 20, 15, 6, 1. It is symmetrical, as $C(n, k) = C(n, n - k)$ says it must be, and its middle,
+$C(6, 3) = 20$, is the biggest: there are more ways to choose half than any other number.
+
+Now add up each row: 1, 2, 4, 8, 16, 32, 64. Each row doubles the last, and row $n$ adds up to $2^n$. In the table,
+every cell of a row is added into two cells of the row below, so the row below adds up to twice as much. In counting
+terms, row $n$ counts every group you can take from $n$ things, sorted by size, and there are $2^n$ such groups, since
+each thing is in or out. A group taken from some things is called a **subset** of them. Four things have $2^4 = 16$
+subsets but $4! = 24$ orders; the [subsets](/visualisers/subsets) visualiser draws all 16 as a tree, taking or leaving
+one thing per level.
+
+<Misconception
+  id="choose-none-is-zero"
+  title="There is no way to choose nothing"
+  probes={[
+    {
+      q: 'A shelf holds 19 books. In how many ways can you choose 0 of them to take on holiday?',
+      choices: ['0', '1', '19'],
+      answer: 1,
+      trap: 0,
+      why: 'There is exactly one way: take none of them. C(19, 0) = 1, like every left edge of Pascal’s triangle.',
+    },
+    {
+      q: 'A laptop comes with any selection of 7 add-ons: all of them, some of them, or none. How many different selections are there?',
+      choices: ['127', '128', '8'],
+      answer: 1,
+      trap: 0,
+      why: 'Each add-on is in or out, so 2⁷ = 128 selections. 127 leaves out the selection with no add-ons, which is a selection too, and 8 counts only the selections of one add-on or none.',
+    },
+  ]}
+>
+
+Choosing nothing sounds like no choice at all, but it is one way to choose: take none. That is why every row of Pascal's
+triangle starts with 1, why $0! = 1$, and why the row sums are exactly $2^n$. Leave out the empty choice and every count of
+groups comes out one short.
+
+</Misconception>
+
+Now build the triangle yourself. Write `choose(n, k)`: make a table with `table(n + 1, n + 1, 0)` (rows and columns
+numbered 0 to $n$), set each row's edges to 1, fill every cell between them from the two cells above it, and return
+`C[n][k]`, or 0 when $k$ is more than $n$. Watch the example: every cell your code writes gets an arrow from the two
+cells it read.
+
+<CodeExercise exercise="pascal-choose" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A T-shirt comes in 23 colours and 3 sizes. How many different T-shirts are there?',
+      choices: ['26', '69', '23'],
+      answer: 1,
+      why: 'Each of the 23 colours comes in each of the 3 sizes: 23 × 3 = 69. Adding gives 26, which counts the colours and sizes, not the shirts.',
+      traps: { 0: 'add-not-multiply' },
+    },
+    {
+      q: 'A society of 16 members elects a chair and a secretary, who must be different people. In how many ways can it do that?',
+      choices: ['31', '120', '240', '256'],
+      answer: 2,
+      why: '16 choices for chair, then 15 for secretary: 16 × 15 = 240. The roles differ, so order counts and nothing is divided. 256 = 16 × 16 lets one person hold both jobs, 120 divides by 2 as if the two jobs were the same, and 31 adds instead of multiplying.',
+      traps: { 0: 'add-not-multiply' },
+    },
+    {
+      q: 'A committee of 2 people, with no roles, is chosen from 14. How many committees are possible?',
+      choices: ['91', '182', '196'],
+      answer: 0,
+      why: '14 × 13 = 182 ordered picks, and each committee appears twice in them (A then B, B then A), so 182 ÷ 2 = 91. 196 = 14 × 14 also lets one person fill both places.',
+      traps: { 1: 'order-counted-twice' },
+    },
+    {
+      q: 'Row 9 of Pascal’s triangle is 1, 9, 36, 84, 126, 126, 84, 36, 9, 1. Using the rule for a cell, what is C(10, 4)?',
+      choices: ['252', '210', '126'],
+      answer: 1,
+      why: 'C(10, 4) = C(9, 3) + C(9, 4) = 84 + 126 = 210: the cell above on the left plus the cell straight above. 126 + 126 = 252 adds the cell straight above and the one above on the right, and 126 only copies the cell straight above.',
+    },
+    {
+      q: 'How many ways are there to choose 0 of 25 photos to delete?',
+      choices: ['0', '1', '25'],
+      answer: 1,
+      why: 'Exactly one: delete none. C(25, 0) = 1.',
+      traps: { 0: 'choose-none-is-zero' },
+    },
+    {
+      q: 'A set of 18 things has how many subsets, counting the empty set and the whole set?',
+      choices: ['324', '262,143', '262,144'],
+      answer: 2,
+      why: 'Each thing is in or out, 2 options made 18 times: 2¹⁸ = 262,144, the sum of row 18 of Pascal’s triangle. 262,143 leaves out the empty set, and 324 is 18², a power the wrong way round.',
+      traps: { 1: 'choose-none-is-zero' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="counting-rules"
+  prompt="How do you count arrangements and choices without listing them, and how is each number in Pascal's triangle made?"
+  rubric={[
+    'Choices made one after another multiply, since each option of one goes with every option of the next; adding is for one pile or another.',
+    'Picking k of n in order without repeats gives n × (n − 1) × … with k factors, and all n in order gives n!.',
+    'When order does not matter, each group was counted once for each of its orders, so divide by k!.',
+    'In Pascal’s triangle the edges are 1 and each inside number adds the two above it, because a choice either takes one particular thing or leaves it.',
+    'Row n adds up to 2ⁿ, the number of groups of n things, since each thing is in or out.',
+  ]}
+  example="To count without listing, split the count into choices made one after another and multiply their numbers of options: 3 tops and 4 bottoms give 3 × 4 = 12 outfits. Adding is only for one thing from one pile or another. Picking k of n in order with no repeats, each pick has one fewer option, so it is n × (n − 1) × … with k factors, and all n in order is n!. If order doesn't matter, every group was counted once per order, k! times, so I divide by k!. Pascal's triangle has 1 on its edges, and every other number adds the two above it: fix one thing, and a choice either takes it, C(n − 1, k − 1), or leaves it, C(n − 1, k). Row n adds up to 2ⁿ, since each thing is in or out."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Choices made one after another multiply; "or" between separate piles adds. The same choice made $k$ times from $n$ options gives $n^k$.
+- Picking $k$ of $n$ in order, without repeats: $n \times (n - 1) \times \cdots$ with $k$ factors. All $n$ in order: $n!$, and $0! = 1$.
+- When order doesn't matter, divide by the $k!$ orders of each group: $C(n, k) = n \times (n - 1) \times \cdots \div k!$, and $C(n, k) = C(n, n - k)$.
+- Pascal's triangle: edges 1, every other number the sum of the two above it, $C(n, k) = C(n - 1, k - 1) + C(n - 1, k)$, and 0 when $k$ is more than $n$.
+- Row $n$ adds up to $2^n$: every group of $n$ things, sorted by size, with the empty group counted once.
+- Next comes **Chance, events and independence**, which turns these counts into chances, starting with two dice.
+
+</Section>
