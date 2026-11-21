@@ -1,0 +1,326 @@
+<Section step="hook" title="Slopes without limits">
+
+Training a network asks the same question of every weight, on every step: if this number moved a little, how fast
+would the loss change? In the last lesson you answered it by shrinking a secant until its slope settled. That works,
+but nobody can do it by hand for every weight, and a computer doing it that way is slow and, as you will see, never
+quite exact.
+
+So mathematicians found **rules**: shortcuts that turn a formula straight into its derivative. $x^3$ gives $3x^2$, with
+no limit in sight. This lesson adds the rules a network needs: products, $\ln x$, and the three activations σ, tanh and
+ReLU. Then it checks each rule the way a programmer checks their own gradient code: by measuring a secant, with the gap
+$h$ chosen neither too big nor too small.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="derivative rule">A shortcut that gives a function's derivative straight from its formula. Each one is proved once from the limit, then just used.</Term>
+  <Term name="Δ (delta)">"The change in". If $f$ goes from 3 to 3.5, then $\Delta f = 0.5$.</Term>
+  <Term name="product rule">$(fg)' = f'g + fg'$: the slope of $f(x) \cdot g(x)$, from the two functions' values and slopes.</Term>
+  <Term name="ln x">The natural log, which undoes $e^x$: $\ln(e^x) = x$. Its derivative is $1/x$.</Term>
+  <Term name="activation">The function a neuron applies to its weighted sum before passing the result on.</Term>
+  <Term name="σ (sigmoid)">$\sigma(x) = \frac{1}{1 + e^{-x}}$, an activation that squashes any number into the range 0 to 1.</Term>
+  <Term name="tanh">An activation shaped like σ that squashes any number into −1 to 1.</Term>
+  <Term name="ReLU">$\max(0, x)$: 0 for negative inputs, the input itself for positive ones.</Term>
+  <Term name="saturated">An activation whose input is far from 0, where its curve is nearly flat, so its slope is nearly 0.</Term>
+  <Term name="central difference">$\frac{f(a + h) - f(a - h)}{2h}$: the slope of the secant reaching a step $h$ either side of $a$.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Two strips and a corner">
+
+From the last lesson you already have the power rule, $e^x$, and the rule that constant multiples and sums go **term by
+term**: work out each piece's slope on its own, keep its number in front, and add. The slope of $4x^3 - 2x + 7$ is
+
+$$
+4 \cdot 3x^2 - 2 \cdot 1 + 0 = 12x^2 - 2
+$$
+
+The 7 never changes, so its slope is 0.
+
+Products are different. Take $f(x) = x + 1$, whose slope is 1 everywhere, and $g(x) = x^2$, whose slope is $2x$. At
+$a = 2$, $f = 3$ and $g = 4$, and their slopes are 1 and 4. What is the slope of the product $f \cdot g$ there? It is
+tempting to multiply the slopes. Instead, picture the product as the area of a rectangle, $g(a)$ wide and $f(a)$ tall,
+and watch what happens to it when $a$ moves a little.
+
+<Explore slug="derivative-rules" settings={{ preset: 'product' }} caption="f = x + 1 and g = x² at a = 2. Their product is the area of a rectangle; nudge a by h and see which pieces it gains. Drag P to move a." />
+
+Nudge $a$ by $h = 0.5$, to 2.5. Then $f$ goes from 3 to 3.5, so $\Delta f = 0.5$, and $g$ goes from 4 to
+$2.5^2 = 6.25$, so $\Delta g = 2.25$. The rectangle gains a strip along the top, $g \cdot \Delta f$, a strip down the
+right, $f \cdot \Delta g$, and a corner, $\Delta f \cdot \Delta g$:
+
+$$
+\begin{aligned}
+g \cdot \Delta f &= 4 \times 0.5 = 2 \\
+f \cdot \Delta g &= 3 \times 2.25 = 6.75 \\
+\Delta f \cdot \Delta g &= 0.5 \times 2.25 = 1.125
+\end{aligned}
+$$
+
+Together they make 9.875. That is exactly how much $f \cdot g$ grew: it went from 12 to $3.5 \times 6.25 = 21.875$.
+Divided by $h$, that is the secant's slope, 19.75.
+
+Now shrink $h$. The strips are a fixed side times a small change, so they shrink like $h$, and divided by $h$ they
+settle: $g \cdot \frac{\Delta f}{h}$ becomes $g \cdot f'$, and $f \cdot \frac{\Delta g}{h}$ becomes $f \cdot g'$. The
+corner is a small change times a small change, so it shrinks like $h^2$, and even divided by $h$ it vanishes. At
+$h = 0.01$ the corner is just 0.000401, and the secant's slope is 16.0701. In the limit:
+
+$$
+\begin{aligned}
+(fg)' &= f'g + fg' \\
+&= 1 \times 4 + 3 \times 4 = 16
+\end{aligned}
+$$
+
+Check it another way. $(x + 1) \cdot x^2 = x^3 + x^2$, so term by term its slope is $3x^2 + 2x$, which at 2 is
+$12 + 4 = 16$. Two routes, one answer. Multiplying the slopes instead gives $f' \cdot g' = 1 \times 4 = 4$, a quarter
+of the truth.
+
+<KeyIdea>
+
+**The product rule: $(fg)' = f'g + fg'$.** When $x$ moves, each factor's change is weighted by the other factor's size:
+the two strips of a growing rectangle. $f' \cdot g'$ only ever turns up in the corner, as roughly $f' g' h^2$, and the
+corner vanishes.
+
+</KeyIdea>
+
+<Misconception
+  id="product-of-slopes"
+  title="The slope of a product is the product of the slopes"
+  probes={[
+    {
+      q: 'f(x) = x and g(x) = x², so f·g = x³. What is the slope of x³ at x = 3?',
+      choices: ['6', '9', '27'],
+      answer: 2,
+      trap: 0,
+      why: 'The product rule gives f′g + fg′ = 1 × 9 + 3 × 6 = 27, the same as the power rule’s 3x² = 27. 6 is f′(3) × g′(3) = 1 × 6: multiplying the slopes keeps only the vanishing corner.',
+    },
+    {
+      q: 'A rectangle is 4 m wide and 10 m long. Its width grows by 1 m a second and its length by 2 m a second. How fast is its area growing right now?',
+      choices: ['2 m² a second', '18 m² a second', '40 m² a second'],
+      answer: 1,
+      trap: 0,
+      why: 'The width’s growth adds a strip 1 × 10 and the length’s a strip 4 × 2 each second: 18 in all. 1 × 2 = 2 is only the tiny corner.',
+    },
+  ]}
+>
+
+Sums go term by term, so it feels natural for products to go factor by factor. They don't. If slopes multiplied, then
+$x \cdot x = x^2$ would have slope $1 \times 1 = 1$ everywhere, a straight line, yet $x^2$ curves. The product rule gives
+$1 \cdot x + x \cdot 1 = 2x$, the power rule's answer. Each factor's slope is multiplied by the *other factor's value*,
+not by its slope.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: six rules, each measured">
+
+Recall the power rule, which brings the power down and takes one off it, $(x^n)' = n x^{n-1}$, and that $e^x$ is its
+own derivative: the slope of its graph at any point is its height there. One rule is new. The natural log has
+
+$$
+(\ln x)' = \frac{1}{x}
+$$
+
+Here is why. In the exponents lesson, the graph of $\ln x$ was the graph of $e^x$ mirrored in the line $y = x$.
+Mirroring swaps rise and run, so it turns a slope $s$ into $1/s$. The point $(4, \ln 4)$ on $\ln x$ is the mirror image
+of $(\ln 4, 4)$ on $e^x$, where the slope is the height, 4. So the slope of $\ln x$ at 4 is $1/4$.
+
+The three activations have rules too:
+
+- $\sigma' = \sigma \cdot (1 - \sigma)$
+- $\tanh' = 1 - \tanh^2$
+- ReLU′ is 0 left of 0 and 1 right of 0, with no slope at the corner, as in the last lesson.
+
+The first two are written with the function itself, which is handy: a network has already worked out $\sigma(x)$ when
+it computed the neuron's output. Both follow from the chain rule, which comes next; here you check them by measuring
+instead.
+
+Step through the six functions. Each states its rule; predict the slope at P, and something about the slope
+everywhere, before a central secant with $h = 0.001$ measures it.
+
+<PredictChallenge slug="derivative-rules" settings={{ preset: 'gallery' }} goal={10} />
+
+At every point the sweep tried, the measured slope and the rule agreed to within $10^{-5}$. Look again at the
+activations. σ is steepest at 0, where $\sigma(0) = 0.5$ and $\sigma'(0) = 0.5 \times 0.5 = 0.25$. tanh is steepest at
+0 too, where $\tanh 0 = 0$ and its slope is $1 - 0 = 1$, four times σ's best. Far from 0 both curves flatten out. Here
+they are at larger inputs:
+
+<Explore slug="derivative-rules" settings={{ preset: 'saturated', step: '10' }} caption="The same six rules, with σ at x = 5, tanh at x = 2.5 and ReLU at x = 2. Step on to compare the three activations' slopes." />
+
+At $x = 5$, $\sigma(5) \approx 0.9933$, so $\sigma'(5) = \sigma(5)\,(1 - \sigma(5)) \approx 0.0066$: almost flat. tanh at
+2.5 has slope 0.0266. A neuron out there is **saturated**.
+
+That matters for training. To learn, a network needs each weight's effect on the loss, and as the next lesson shows,
+that signal is multiplied by the activation's slope on its way back through each neuron. A slope of 0.0066 cuts it to
+0.66% of itself, so a saturated sigmoid's weights barely move. ReLU's slope is exactly 1 for every positive input, however
+big, which is one reason deep networks use it.
+
+</Section>
+
+<Section step="do" title="Measure it in code">
+
+A rule can be misremembered, and gradient code can have a typo. The check is to measure: compute the slope from the
+function's values, and compare. The last lesson met the central difference, and saw rounding spoil a tiny $h$. Here you
+watch both happen across fifteen values of $h$, from $10^{-1}$ down to $10^{-15}$, for $x^3$ at $a = 1$, with two
+recipes side by side. Switch to Predict and answer as you go.
+
+<Explore slug="derivative-rules" settings={{ preset: 'numeric' }} caption="Forward and central differences for x³ at a = 1, as h shrinks from 10⁻¹ to 10⁻¹⁵, with each one's distance from the exact slope on log axes. Drag P to move a." />
+
+For $x^3$, algebra gives both recipes exactly. Multiplying out the brackets,
+
+$$
+(a + h)^3 = a^3 + 3a^2h + 3ah^2 + h^3
+$$
+
+$$
+(a - h)^3 = a^3 - 3a^2h + 3ah^2 - h^3
+$$
+
+The forward difference takes away $a^3$ and divides by $h$:
+
+$$
+\frac{(a + h)^3 - a^3}{h} = 3a^2 + 3ah + h^2
+$$
+
+The central difference takes away the second line, leaving $6a^2h + 2h^3$, and divides by $2h$:
+
+$$
+\frac{(a + h)^3 - (a - h)^3}{2h} = 3a^2 + h^2
+$$
+
+The true slope is $3a^2$. The forward secant leans to one side, so it is off by $3ah + h^2$, which shrinks like $h$.
+Reaching both sides cancels the $3ah$ part and leaves only $h^2$. At $a = 1$ and $h = 0.1$, forward gives 3.31 and
+central 3.01, against the true 3. Each tenfold cut in $h$ takes one digit off the forward error and two off the central
+one.
+
+Until it doesn't. A float64 (often called a double) keeps about 16 significant digits (see
+[floating point](/learn/floating-point)). As $h$ shrinks, $f(a + h)$ and $f(a - h)$ agree in more and more of those
+digits, so their difference keeps only the last few, which are rounding noise, and dividing by a tiny $2h$ magnifies
+it. Here the central difference did best at $h = 10^{-6}$, off by only 2.5 × 10⁻¹¹; by $h = 10^{-15}$ it was off by
+1.6 × 10⁻¹. The forward difference did best at $h = 10^{-8}$, off by 4.0 × 10⁻⁹. Drag P to $a = 2$ and central's best
+moves to $h = 10^{-5}$.
+
+So the working recipe for a **gradient check** is: a central difference, with $h$ around $10^{-5}$ or $10^{-6}$ in
+float64. Too big and the secant bends away from the tangent; too small and rounding noise wins.
+
+<Misconception
+  id="forward-as-good"
+  title="A forward difference is as good as a central one"
+  probes={[
+    {
+      q: 'For x² at a = 4 with h = 0.5, the forward difference gives 8.5. What does the central difference give?',
+      choices: ['8.5', '8.25', '8'],
+      answer: 2,
+      trap: 0,
+      why: '(4.5² − 3.5²) / 1 = 20.25 − 12.25 = 8, exactly the slope. For x² the two sides’ errors cancel completely, while forward is off by h = 0.5.',
+    },
+    {
+      q: 'Two gradient checks use the same h = 10⁻³ on a smooth function, one forward and one central. How do their errors usually compare?',
+      choices: ['About the same: they use the same h', 'Central’s is far smaller: it shrinks like h², forward’s only like h', 'Forward’s is smaller, since it uses f(a) itself'],
+      answer: 1,
+      trap: 0,
+      why: 'At h = 10⁻³ an error like h is about 10⁻³, while one like h² is about 10⁻⁶: a thousand times smaller.',
+    },
+  ]}
+>
+
+Both recipes settle on the slope as $h$ shrinks to 0, but a program never gets there. At any $h$ it can use, the
+forward secant leans the way the curve bends, so its error shrinks only like $h$; the central secant's errors on the two
+sides cancel, leaving one like $h^2$. At $h = 0.1$ above that was 0.31 against 0.01. Even at their best, forward's
+smallest error was more than 150 times central's.
+
+</Misconception>
+
+Now build the measuring tool yourself. Write `derivative(f, x, h)`, the central difference; the code around it measures
+the slopes of $x^2$, $x^3$ and $1/x$ at several points so you can compare them with the rules. For the last one,
+$1/x = x^{-1}$, so the power rule gives $-x^{-2} = -1/x^2$.
+
+<CodeExercise exercise="numeric-derivative" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'f(2) = 3 and f′(2) = 1; g(2) = 5 and g′(2) = −2. What is the slope of f·g at 2?',
+      choices: ['−2', '11', '−1', '15'],
+      answer: 2,
+      why: 'f′g + fg′ = 1 × 5 + 3 × (−2) = 5 − 6 = −1. Multiplying the slopes gives −2, 11 drops the minus sign, and 15 is f·g itself.',
+      traps: { 0: 'product-of-slopes' },
+    },
+    {
+      q: 'What is the slope of ln x at x = 0.5?',
+      choices: ['0.5', '2', '−0.693', '−4'],
+      answer: 1,
+      why: '(ln x)′ = 1/x, and 1/0.5 = 2: ln climbs steeply close to 0. −0.693 is ln 0.5 itself, the height, not the slope.',
+    },
+    {
+      q: 'At some input, tanh(x) = 0.8. What is the slope of tanh there?',
+      choices: ['0.2', '0.64', '0.16', '0.36'],
+      answer: 3,
+      why: 'tanh′ = 1 − tanh² = 1 − 0.64 = 0.36. 0.16 is 0.8 × (1 − 0.8), the sigmoid’s rule used on tanh.',
+    },
+    {
+      q: 'A sigmoid neuron’s input is 8. Training multiplies the signal passing back through it by σ′(8). That factor is…',
+      choices: ['about 0.25, its usual value', 'almost 0, since σ is nearly flat out there', 'about 1, since σ(8) is almost 1'],
+      answer: 1,
+      why: 'σ(8) ≈ 0.9997, so σ′ = σ(1 − σ) ≈ 0.0003. The neuron is saturated, and its weights barely learn.',
+    },
+    {
+      q: 'Why does a gradient check measure with (f(x + h) − f(x − h)) / (2h) rather than (f(x + h) − f(x)) / h?',
+      choices: [
+        'No reason: both settle on the slope as h shrinks, so they are equally good',
+        'It needs fewer values of f',
+        'At the same h its error is far smaller: it shrinks like h², not h',
+        'It finds a slope at corners, such as ReLU’s at 0',
+      ],
+      answer: 2,
+      why: 'The two sides’ errors cancel, leaving one like h². Both recipes use two values of f, and at a corner the central one only averages the two sides.',
+      traps: { 0: 'forward-as-good' },
+    },
+    {
+      q: 'For x³ at 1 in float64, the central difference gets worse once h is below about 10⁻⁶. Why?',
+      choices: [
+        'The h² error starts growing again',
+        'f(a + h) and f(a − h) agree in nearly every digit, so their difference is mostly rounding noise, which dividing by 2h magnifies',
+        'x³ has a corner at 1',
+      ],
+      answer: 1,
+      why: 'A float64 keeps about 16 significant digits. The h² error keeps shrinking; it is the rounding noise, divided by a tiny 2h, that grows.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="product-rule-and-checks"
+  prompt="Why is the slope of a product f′g + fg′ and not f′g′, and how would you check a derivative rule in code?"
+  rubric={[
+    'A product f·g is a rectangle’s area; nudging x adds two strips, g·Δf and f·Δg, plus a corner Δf·Δg.',
+    'Divided by h, the strips become f′g and fg′, while the corner shrinks like h² and vanishes, so f′g′ never survives.',
+    'To check a rule, compare it with a central difference, (f(x + h) − f(x − h)) / (2h), whose error shrinks like h².',
+    'h must be neither too big (the secant bends away) nor too small (rounding noise wins); about 10⁻⁵ to 10⁻⁶ in float64.',
+  ]}
+  example="Think of f·g as the area of a rectangle f tall and g wide. When x moves by h, the rectangle gains a strip g·Δf along the top, a strip f·Δg down the side, and a little corner Δf·Δg. Dividing by h, the strips become g·f′ and f·g′, but the corner is a small change times a small change, so it shrinks like h² and disappears. That is why (fg)′ = f′g + fg′, and f′g′ never appears. To check any rule in code, measure the slope with a central difference, (f(x + h) − f(x − h)) / (2h), whose error shrinks like h². Take h around 10⁻⁵ or 10⁻⁶: bigger and the secant bends away from the tangent, smaller and floating-point rounding noise takes over."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Sums and constant multiples go term by term; powers come down, $(x^n)' = n x^{n-1}$; $e^x$ is its own derivative, and $(\ln x)' = 1/x$.
+- The product rule is $(fg)' = f'g + fg'$: two strips of a growing rectangle. Never $f' \cdot g'$, which lives only in the vanishing corner.
+- The activations: $\sigma' = \sigma(1 - \sigma)$, at most 0.25; $\tanh' = 1 - \tanh^2$, at most 1; ReLU′ is 0 or 1. Far from 0, σ and tanh saturate and their slopes are nearly 0, and training multiplies by those slopes.
+- Check any rule by measuring with a central difference, whose error shrinks like $h^2$, using $h$ around $10^{-5}$ to $10^{-6}$ in float64: too small an $h$ drowns in rounding noise.
+- Next: [backpropagation](/learn/backpropagation) and the chain rule, which pass a gradient back through a whole network, multiplying by slopes like these.
+
+</Section>

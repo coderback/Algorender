@@ -10,7 +10,9 @@
 // the exercises themselves; projects.test.ts checks the parts exist.
 //
 // The first, least squares from scratch (M1), arrived with batch B3: its
-// parts are in src/content/exercises/least-squares.ts.
+// parts are in src/content/exercises/least-squares.ts. The second, micrograd
+// from scratch (M2), arrived with B4: its first two parts are the "build
+// micrograd" exercises in ml.ts, the rest are in autograd.ts.
 
 export type Project = {
   slug: string;
@@ -38,6 +40,16 @@ export const projects: readonly Project[] = [
     parts: ['normal-equations', 'solve-system', 'least-squares-fit', 'fit-curves'],
     concepts: ['matrix-multiplication', 'determinants-inverses', 'projections-least-squares'],
     showcase: { href: '/visualisers/least-squares', label: 'Fit a line and a parabola' },
+    hours: 4,
+  },
+  {
+    slug: 'micrograd',
+    title: 'Micrograd from scratch',
+    summary: 'Write an autograd engine: each operation’s local gradient, backward in topological order, more operations, a numerical check, then train a neuron with it.',
+    stage: 2,
+    parts: ['value-backward', 'topological-backward', 'value-ops', 'gradient-check', 'train-neuron'],
+    concepts: ['chain-rule', 'autograd'],
+    showcase: { href: '/visualisers/autograd?preset=train', label: 'Train a neuron with autograd' },
     hours: 4,
   },
 ];

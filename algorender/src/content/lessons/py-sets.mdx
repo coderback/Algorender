@@ -1,0 +1,223 @@
+<Section step="hook" title="Each thing once">
+
+Which different words appear in a story? Which numbers did two players both pick? Have I seen this name before? A list
+keeps every copy, and checking a long list means looking at its items one by one. Python's **set** keeps each value
+once, and tells you straight away whether a value is in it.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="set">A collection that holds each value at most once, in no order: `{"red", "green"}`.</Term>
+  <Term name="duplicate">A second copy of a value that is already there. A set drops duplicates.</Term>
+  <Term name="membership">Whether a value is in a collection: `x in s` is `True` or `False`.</Term>
+  <Term name="union, intersection, difference">Ways to combine two sets: everything in either, only what is in both, and what is in the first but not the second.</Term>
+</Terms>
+
+Write a set with curly brackets, like a dict without the colons, or make one from a list with `set(...)`. Either way,
+duplicates go:
+
+```python
+colours = {"red", "green", "red"}
+print(len(colours))        # 2: the second "red" was dropped
+nums = set([3, 1, 3, 2, 1])
+print(sorted(nums))        # [1, 2, 3]
+print(2 in nums)           # True
+```
+
+`sorted(...)` gives a new list of a collection's items, smallest first (A to Z for words), so it shows a set's items in a
+fixed order. `set("hello")` works too: it's the set of the string's letters, with one `l`. And `x in s` is fast for the same reason a
+dict finds a key fast: Python jumps straight to where `x` would be kept. So a set's items follow the dict-key rule: they
+must be values that can't change, like numbers, strings and tuples. `{[1, 2]}` is a `TypeError` that says a list is
+"unhashable", Python's word for a value it can't file away like this.
+
+A set can grow and shrink:
+
+```python
+s = {1, 2}
+s.add(2)          # already there: nothing changes
+s.add(5)          # s now holds 1, 2 and 5
+s.remove(1)       # takes 1 out; a KeyError if it isn't there
+s.discard(9)      # takes 9 out if it's there; never an error
+```
+
+Three operators combine two sets into a new one:
+
+```python
+a = {1, 2, 3}
+b = {2, 3, 4}
+print(sorted(a | b))   # union, in either:        [1, 2, 3, 4]
+print(sorted(a & b))   # intersection, in both:   [2, 3]
+print(sorted(a - b))   # difference, in a not b:  [1]
+print(sorted(b - a))   #                          [4]
+```
+
+Difference keeps what is in the **first** set, so `a - b` and `b - a` differ.
+
+Two traps. `{}` is an empty **dict**, not a set: dicts had the curly brackets first. An empty set is `set()`, which is
+also how Python prints one; `{}.add(4)` stops with an `AttributeError`, Python's error for a method a value doesn't
+have. And a set has no order and no positions: `s[0]` is a `TypeError`, and the order a set prints in, or a `for` loop
+visits, isn't the order you added things. Whenever order matters, use `sorted(s)`.
+
+</Section>
+
+<Section step="see" title="Watch a set skip the copies">
+
+Step through it. `seen` starts as an empty set box in the memory view. Watch the loop add each word: the second `"cat"`
+and `"dog"` leave the set as it was. Then `discard` takes `"owl"` out, and the last line combines two sets.
+
+<TraceCode snippet="py-sets" />
+
+<KeyIdea>
+
+**A set keeps each value once and has no order.** Adding a value it already holds changes nothing, `x in s` is a quick
+yes or no, and `|`, `&` and `-` combine two sets. Print `sorted(s)` whenever order matters.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-set-predict" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="empty-braces-set"
+  title="{} makes an empty set"
+  probes={[
+    {
+      q: 'box = {}, then box.add(4). What happens?',
+      choices: ['An AttributeError: box is an empty dict, which has no add', 'box becomes a set holding 4', 'box becomes the list [4]'],
+      answer: 0,
+      trap: 1,
+      why: '{} is an empty dict. Dicts have no add, so the second line fails.',
+    },
+    {
+      q: 'What does print({} == set()) show?',
+      choices: ['True', 'False', 'An error'],
+      answer: 1,
+      trap: 0,
+      why: '{} is an empty dict and set() an empty set: different kinds of thing, so not equal.',
+    },
+  ]}
+>
+
+Curly brackets meant dicts before Python had sets, so `{}` on its own is still an empty dict. A set written with curly
+brackets needs at least one item, like `{4}`. For an empty set, write `set()`, then `add` to it.
+
+</Misconception>
+
+<Misconception
+  id="sets-keep-order"
+  title="A set keeps its items in the order they were added"
+  probes={[
+    {
+      q: 'pets = {"rat", "ant"}. What does pets[0] give?',
+      choices: ['"rat", the first one written', 'A TypeError: a set has no positions', '"ant", the first from A to Z'],
+      answer: 1,
+      trap: 0,
+      why: 'A set has no order and no indexes, so pets[0] means nothing to it.',
+    },
+    {
+      q: 'You want a set’s items printed smallest first, the same way every run. What do you write?',
+      choices: ['print(s), since a set remembers the order', 'print(s[0:])', 'print(sorted(s))'],
+      answer: 2,
+      trap: 0,
+      why: 'sorted(s) makes a new list in order. Printing the set shows its items in whatever order it keeps them.',
+    },
+  ]}
+>
+
+A set files each item where it can find it fast, not in a row. So there is no first item, `s[0]` is a `TypeError`, and
+printing or looping over a set needn't follow the order you added things. When order matters, use `sorted(s)`.
+
+</Misconception>
+
+<Misconception
+  id="remove-missing-is-fine"
+  title="remove quietly does nothing when the item isn’t there"
+  probes={[
+    {
+      q: 's = {7, 8}, then s.remove(5). What happens?',
+      choices: ['s stays as it was, and the program carries on', 'A KeyError: 5 isn’t in the set', '5 is added instead'],
+      answer: 1,
+      trap: 0,
+      why: 'remove raises a KeyError when the item is missing. discard is the one that carries on quietly.',
+    },
+    {
+      q: 'You want "tea" out of drinks if it’s there, and no error if it isn’t. Which line?',
+      choices: ['drinks.discard("tea")', 'drinks.remove("tea")', 'drinks - "tea"'],
+      answer: 0,
+      trap: 1,
+      why: 'discard takes the item out if it’s there and does nothing otherwise. remove raises a KeyError when it’s missing.',
+    },
+  ]}
+>
+
+`remove(x)` expects `x` to be there, and raises a `KeyError` when it isn't, as a missing dict key does. `discard(x)` is
+the forgiving one. Use `remove` when a missing item would be a mistake, and `discard` when either way is fine.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'What does print(len(set([4, 4, 5, 4]))) show?',
+      choices: ['4', '2', '1'],
+      answer: 1,
+      why: 'The set keeps 4 once and 5 once, so it has two items.',
+    },
+    {
+      q: 'You want an empty set to collect words in. Which line starts it?',
+      choices: ['words = {}', 'words = ()', 'words = set()'],
+      answer: 2,
+      why: '{} is an empty dict and () an empty tuple. An empty set is set().',
+      traps: { 0: 'empty-braces-set' },
+    },
+    {
+      q: 'letters = {"c", "a", "b"}. Which line prints a, b and c in that order, every time?',
+      choices: ['print(sorted(letters))', 'print(letters)', 'print(letters[0], letters[1], letters[2])'],
+      answer: 0,
+      why: 'sorted gives a new list in order. A set has no order to print in and no indexes to read.',
+      traps: { 1: 'sets-keep-order', 2: 'sets-keep-order' },
+    },
+    {
+      q: 'tags = {"new", "sale"}, then tags.remove("old"). What happens?',
+      choices: ['Nothing: "old" wasn’t there', 'A KeyError', 'tags becomes empty'],
+      answer: 1,
+      why: 'remove raises a KeyError for an item that isn’t in the set. discard would have done nothing.',
+      traps: { 0: 'remove-missing-is-fine' },
+    },
+    {
+      q: 'a = {1, 2, 3} and b = {3, 4}. What is sorted(a - b)?',
+      choices: ['[1, 2]', '[1, 2, 4]', '[3]'],
+      answer: 0,
+      why: 'a - b keeps what is in a and not in b. [3] would be a & b.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-sets" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A set holds each value once: `set(a_list)` drops duplicates, and adding a value already there changes nothing.
+- `x in s` is a fast yes or no; a set's items must be values that can't change, like a dict's keys.
+- `add` puts an item in; `remove` takes one out or raises a `KeyError`; `discard` takes it out if it's there.
+- `a | b` is in either, `a & b` in both, `a - b` in `a` but not `b`.
+- `{}` is an empty dict; an empty set is `set()`.
+- A set has no order and no indexes: print `sorted(s)` when order matters.
+
+</Section>

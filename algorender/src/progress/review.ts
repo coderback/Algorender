@@ -111,6 +111,18 @@ export function dueToday(cards: Map<string, ReviewCard>, now: Date, known?: (id:
     .sort((a, b) => a.card.due.getTime() - b.card.due.getTime() || (a.id < b.id ? -1 : 1));
 }
 
+/**
+ * Cards not due yet, soonest first: what "Practise ahead" offers once today's
+ * are done. Reviewing one early is an ordinary rating; FSRS counts how little
+ * time has passed, so an early Good moves the card on less than an on-time one.
+ */
+export function upcoming(cards: Map<string, ReviewCard>, now: Date, known?: (id: string) => boolean): ReviewCard[] {
+  const until = endOfDay(now).getTime();
+  return [...cards.values()]
+    .filter((c) => c.card.due.getTime() > until && (!known || known(c.id)))
+    .sort((a, b) => a.card.due.getTime() - b.card.due.getTime() || (a.id < b.id ? -1 : 1));
+}
+
 /** When the next card falls due after today, or null when there are none. */
 export function nextDue(cards: Map<string, ReviewCard>, now: Date): Date | null {
   const until = endOfDay(now).getTime();

@@ -1,0 +1,235 @@
+<Section step="hook" title="Tidying up text">
+
+Text that comes from people is messy. Someone types `  Yes ` with spaces round it, or `YES` in capitals, and your
+`if answer == "yes":` says no. A line like `3,4,5` holds three numbers but arrives as one string. Strings come with
+tools for tidying, splitting, joining and searching, and they all follow one rule that people trip over: a string
+never changes.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="method">A function that belongs to a value, called with a dot after it: `word.upper()`. You've met list methods such as `append`; strings have their own.</Term>
+  <Term name="whitespace">The characters you can't see: spaces, tabs and the newline at the end of a line. Inside quotes, `\t` writes a tab and `\n` a newline.</Term>
+  <Term name="separator">The text that goes between pieces: the comma in `3,4,5`, or the `", "` you put between words when joining them.</Term>
+</Terms>
+
+Strings are immutable: once made, they can't change. So a string method never changes the string it's called on. It
+**gives back a new string**, and the old one stays as it was:
+
+```python
+s = "  Hello  "
+t = s.strip()                # t is 'Hello': whitespace gone from both ends
+print(t.upper())             # HELLO
+print(t.replace("l", "L"))   # HeLLo
+print(len(s), len(t))        # 9 5: s still has its spaces
+```
+
+`lstrip()` and `rstrip()` strip one end only, and `lower()` makes small letters. A line like `s.strip()` on its own
+makes the new string and throws it away; to keep it, write `s = s.strip()`. That's the opposite of a list, whose
+`append` changes the list and gives back `None`.
+
+**Splitting** cuts a string into a list of strings:
+
+```python
+"a  b\tc\n".split()        # ['a', 'b', 'c']
+"a,,b".split(",")          # ['a', '', 'b']
+"2024-11-20".split("-")    # ['2024', '11', '20']
+```
+
+With nothing in the brackets, `split()` cuts at any run of whitespace and never gives empty pieces: the right choice
+for words. Given a separator, it cuts at exactly that text and keeps the rest, spaces and empty pieces included.
+
+**Joining** goes the other way. The separator comes first, and the list goes in the brackets:
+
+```python
+" ".join(["a", "b", "c"])  # 'a b c'
+", ".join(["tea", "milk"]) # 'tea, milk'
+```
+
+Every item must be a string: `",".join([1, 2])` stops with a `TypeError`. Turn numbers into text first, for example
+with a comprehension: `"/".join([str(d) for d in [20, 11, 2024]])` is `"20/11/2024"`.
+
+**Searching** asks where, how many, or whether:
+
+```python
+t = "banana"
+t.find("an")         # 1: where it first starts
+t.find("x")          # -1: not there
+t.index("x")         # ValueError: substring not found
+t.count("a")         # 3
+t.startswith("ban")  # True (and endswith works the same way at the end)
+"2024".isdigit()     # True: at least one character, and all of them digits
+```
+
+When the text isn't there, `find` gives back `-1` but `index` stops the program, so use `find` when "not there" is a
+normal answer. `isdigit()` is a handy check before `int()`, though it says `False` for `"-5"` and `"3.5"`. Slices
+work on strings as on lists: `"hello"[1:4]` is `"ell"`.
+
+Because each method gives back a string, you can **chain** them, left to right: `"  Tea, MILK ".strip().lower()`
+strips, then lowers what strip gave back.
+
+</Section>
+
+<Section step="see" title="Watch the strings">
+
+Step through it and watch `word` in the memory view as line 2 runs `word.upper()`, and again when line 4 points
+`loud` at the same call's result. Then a chain strips and splits in one line, and the loop tidies each piece
+before `join` glues them back together.
+
+<TraceCode snippet="py-string-methods" />
+
+<KeyIdea>
+
+**A string method never changes the string: it gives back a new one, which you keep by pointing a name at it.**
+`split` turns a string into a list of strings, and `"sep".join(list)` turns one back.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-upper-split-join" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="string-changed-in-place"
+  title="A string method like upper() changes the string itself"
+  probes={[
+    {
+      q: 's = "cat", then s.upper() on a line of its own. What does print(s) show?',
+      choices: ['CAT', 'cat', 'None'],
+      answer: 1,
+      trap: 0,
+      why: 'upper() made a new string, CAT, but nothing kept it. s still points at "cat".',
+    },
+    {
+      q: 't = "a-b", then t.replace("-", "+") on a line of its own. What does print(t) show?',
+      choices: ['a+b', 'None', 'a-b'],
+      answer: 2,
+      trap: 0,
+      why: 'replace gives back a new string and leaves t alone. Write t = t.replace("-", "+") to keep it.',
+    },
+  ]}
+>
+
+Strings are immutable, so no method can change one. `upper`, `strip`, `replace` and the rest each give back a **new**
+string, which a call on a line of its own throws away. To keep it, point a name at it: `s = s.upper()`.
+
+</Misconception>
+
+<Misconception
+  id="split-separator-tidies"
+  title="split(',') drops spaces and empty pieces, as split() does"
+  probes={[
+    {
+      q: 'What does "a, b".split(",") give?',
+      choices: ["['a', ' b']", "['a', 'b']", "['a,', 'b']"],
+      answer: 0,
+      trap: 1,
+      why: 'It cuts exactly at the comma, so the space after it stays at the front of the second piece.',
+    },
+    {
+      q: 'What does "1,,2".split(",") give?',
+      choices: ["['1', '2']", "['1', ',', '2']", "['1', '', '2']"],
+      answer: 2,
+      trap: 0,
+      why: "Between the two commas there is nothing, so that piece is the empty string ''.",
+    },
+  ]}
+>
+
+Only `split()` with empty brackets is forgiving: it cuts at any run of whitespace and never gives empty pieces. Given a
+separator, `split` cuts at exactly that text and keeps everything between, spaces and all, and two separators in a
+row give an empty string. Strip each piece if you need to.
+
+</Misconception>
+
+<Misconception
+  id="join-on-the-list"
+  title="join belongs to the list: words.join(' ')"
+  probes={[
+    {
+      q: 'parts = ["a", "b", "c"]. Which line gives "a-b-c"?',
+      choices: ['"-".join(parts)', 'parts.join("-")', 'join(parts, "-")'],
+      answer: 0,
+      trap: 1,
+      why: 'join is a string method: the separator is the string it’s called on, and the list goes in the brackets.',
+    },
+    {
+      q: 'words = ["hi", "there"]. What does words.join(" ") do?',
+      choices: ['Gives "hi there"', 'Stops with an AttributeError', 'Gives "hi" and "there" with no space'],
+      answer: 1,
+      trap: 0,
+      why: 'Lists have no join method. Write " ".join(words).',
+    },
+  ]}
+>
+
+`join` is a string method, and the string it's called on is the separator: `", ".join(words)`. A list has no `join`,
+so `words.join(", ")` stops with an `AttributeError`. The items must be strings too: turn numbers into text first.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'msg = "  hi  ", then msg.strip() on a line of its own. What does print(len(msg)) show?',
+      choices: ['2', '6', 'An error'],
+      answer: 1,
+      why: 'strip() made a new string, "hi", but nothing kept it. msg still has its four spaces.',
+      traps: { 0: 'string-changed-in-place' },
+    },
+    {
+      q: 'What does "7, 8,9".split(",") give?',
+      choices: ["['7', ' 8', '9']", "['7', '8', '9']", "['7, 8', '9']"],
+      answer: 0,
+      why: 'split(",") cuts exactly at each comma, so the space before 8 stays with it.',
+      traps: { 1: 'split-separator-tidies' },
+    },
+    {
+      q: 'nums = [1, 2, 3]. Which gives "1+2+3"?',
+      choices: ['nums.join("+")', '"+".join(nums)', '"+".join([str(n) for n in nums])'],
+      answer: 2,
+      why: 'The separator calls join, and every item must be a string. "+".join(nums) is a TypeError, because the items are numbers.',
+      traps: { 0: 'join-on-the-list' },
+    },
+    {
+      q: 'What do "hello".find("z") and "hello".index("z") do?',
+      choices: ['find gives -1; index stops with a ValueError', 'Both give -1', 'Both stop with a ValueError'],
+      answer: 0,
+      why: 'They agree when the text is there. When it isn’t, find answers -1 and index raises an error.',
+    },
+    {
+      q: 'What does "  Tea,Milk ".strip().lower().split(",") give?',
+      choices: ["['  tea', 'milk ']", "['tea', 'milk']", "['Tea', 'Milk']"],
+      answer: 1,
+      why: 'Left to right: strip takes off the outer spaces, lower makes small letters, and split cuts at the comma.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-string-methods" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Strings never change: a method gives back a new string, so keep it with `s = s.strip()`.
+- `strip`, `lower`, `upper` and `replace` tidy text; chain them, reading left to right.
+- `split()` cuts at any whitespace and drops empty pieces; `split(",")` cuts at exactly each comma and keeps the rest.
+- `"sep".join(items)`: the separator calls it, and every item must be a string.
+- `find` gives `-1` when the text isn't there, while `index` stops with a `ValueError`; `count`, `startswith`,
+  `endswith` and `isdigit` answer the other questions.
+
+</Section>

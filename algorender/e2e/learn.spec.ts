@@ -58,7 +58,12 @@ const lessonPaths = [
   'change-of-basis',
   'supervised-learning',
   'projections-least-squares',
+  'contour-maps',
   'derivatives-gradients',
+  'derivative-rules',
+  'taylor-approximation',
+  'jacobians',
+  'autograd',
   'optimizers',
   'rate-limiting',
 ];

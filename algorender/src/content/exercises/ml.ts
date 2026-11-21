@@ -133,7 +133,7 @@ export function expectedGrads({ expr, vals }: GraphInput): number[] {
 const EXPRESSIONS = 'For `neuron` it is tanh(x1·w1 + x2·w2 + b); for `reuse` it is a·b + a·a (a is used three times); for `chain` it is tanh applied to `out × w` ten times over, starting from x.';
 
 /** The Value class with the local gradients filled in (or, for the starter, left empty). */
-function valuePy(filled: boolean): string {
+export function valuePy(filled: boolean): string {
   const body = (lines: string[]) => (filled ? lines.map((l) => `            ${l}`).join('\n') : '            pass  # TODO');
   return `import math
 
@@ -175,7 +175,7 @@ ${body(['self.grad += (1 - t * t) * out.grad'])}
 `;
 }
 
-function valueJs(filled: boolean, typed: boolean): string {
+export function valueJs(filled: boolean, typed: boolean): string {
   const body = (lines: string[]) => (filled ? lines.map((l) => `      ${l}`).join('\n') : '      // TODO');
   const field = typed ? '  data: number;\n  grad: number;\n  _prev: Value[];\n  _backward: () => void;\n\n' : '';
   const ctor = typed ? 'constructor(data: number, children: Value[] = []) {' : 'constructor(data, children = []) {';
@@ -218,7 +218,7 @@ ${body(['this.grad += (1 - t * t) * out.grad;'])}
 }
 
 /** backward(out): reverse topological order, from the output back to the leaves. */
-function backwardPy(filled: boolean): string {
+export function backwardPy(filled: boolean): string {
   if (!filled) {
     return `def backward(out):
     # Set out.grad to 1, then call _backward() on every value,
@@ -244,7 +244,7 @@ function backwardPy(filled: boolean): string {
 `;
 }
 
-function backwardJs(filled: boolean, typed: boolean): string {
+export function backwardJs(filled: boolean, typed: boolean): string {
   const sig = typed ? 'function backward(out: Value): void {' : 'function backward(out) {';
   if (!filled) {
     return `${sig}
@@ -485,6 +485,7 @@ ${entryJs('backward(out);', true)}`,
     'For tanh, use the output `t` you already computed: `self.grad += (1 - t * t) * out.grad`.',
   ],
   legend: GRAD_LEGEND,
+  judge: { budget: 'project' },
 };
 
 const topologicalExercise: Exercise<GraphInput> = {
@@ -547,6 +548,7 @@ ${entryJs('backward(out);', true)}`,
     'Set `out.grad = 1`, then go through the order from the end to the start, calling `_backward()` on each value.',
   ],
   legend: GRAD_LEGEND,
+  judge: { budget: 'project' },
 };
 
 export const mlExercises: Exercise[] = [neuronExercise, valueBackwardExercise, topologicalExercise];

@@ -1,0 +1,235 @@
+<Section step="hook" title="Text you can only describe">
+
+Some text you can spell out, like a comma or the word `total`, and a string method finds it: `"total" in line`. Other
+text you can only describe: every number in a message, or a code that is "two capital letters, then four digits". No
+string method searches for "any digit". A **regular expression** is a short pattern for such text, and Python's `re`
+module searches with one.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="regular expression">A pattern for text, or regex for short: `\d+` means "one or more digits in a row".</Term>
+  <Term name="match">A piece of the text that fits the pattern.</Term>
+  <Term name="raw string">A string with an `r` before the quote, `r"\d+"`, in which every backslash stays exactly as typed.</Term>
+  <Term name="quantifier">A mark after a piece of a pattern that says how many times it repeats: `+`, `*`, `?` or `{3}`.</Term>
+</Terms>
+
+`import re` loads Python's regex tools. Take it as a recipe for now: modules get a unit of their own later.
+
+```python
+import re
+
+text = "Order 66 left on 12 May in 3 boxes"
+m = re.search(r"\d+", text)        # the first fit, anywhere
+print(m)                           # <re.Match object; span=(6, 8), match='66'>
+print(m.group())                   # 66
+print(re.findall(r"\d+", text))    # ['66', '12', '3']
+print(re.sub(r"\d", "#", text))    # Order ## left on ## May in # boxes
+print(re.fullmatch(r"\d+", text))  # None: the whole text isn't digits
+```
+
+A pattern is built from small pieces:
+
+- Most characters match themselves: `cat` matches c, a and t in a row.
+- `\d` is a digit, `\w` a letter, digit or underscore, `\s` a space, tab or new line, and `.` any one character but a
+  new line.
+- Square brackets match any one character inside them: `[aeiou]` is a vowel, `[A-Z]` a capital letter.
+- After a piece, `+` means one or more, `*` zero or more, `?` zero or one, `{4}` exactly four and `{2,3}` two or three.
+  Each repeats **only the piece just before it**: `ha+` matches `haaa`, not `haha`.
+- Round brackets make a **group**, a part to take out on its own: `re.search(r"room (\d+)", "room 3B").group(1)` is
+  `'3'`.
+
+Why the `r`? In an ordinary string, a backslash starts a special character: `"\n"` is one character, a new line. The
+`r` keeps every backslash as typed: `len(r"\n")` is 2. Without it, Python warns that `"\d"` is an invalid escape
+sequence. Write every pattern as a raw string.
+
+The four functions:
+
+- `re.search(pattern, text)`: the first match anywhere, as a match object, or `None`. Its `.group()` is the text that
+  fitted, so check first: `if m:` is true for a match and false for `None`.
+- `re.fullmatch(pattern, text)`: a match only if the **whole** text fits: use it to check input.
+- `re.findall(pattern, text)`: a list of every match, as strings. With one group, it lists just the groups.
+- `re.sub(pattern, new, text)`: a **new** string with every match replaced. Strings never change in place.
+
+A regex is harder to read than a method call. When the text is fixed, a string method is clearer: `"@" in email`,
+`date.replace("-", "/")`. Reach for a regex when you can only describe the text by its shape.
+
+</Section>
+
+<Section step="see" title="Watch the matches">
+
+Step through it, and watch what each name points at: a list, a match object, a string or `None`. `text` never
+changes.
+
+<TraceCode snippet="py-regex" />
+
+<KeyIdea>
+
+**A pattern describes a shape of text.** `search` finds the first fit anywhere (or `None`), `fullmatch` checks the
+whole text, `findall` lists every fit, and `sub` builds a new string. The text you search never changes.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-regex-digit-runs" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="search-whole-text"
+  title="re.search checks that the whole text fits the pattern"
+  probes={[
+    {
+      q: 'Does re.search(r"\\d\\d", "Year 2026") find a match?',
+      choices: ['No: the text isn’t just two digits', 'Yes: it finds 20', 'Yes: it finds 2026'],
+      answer: 1,
+      trap: 0,
+      why: 'search looks anywhere and stops at the first fit: the first two digits, 20.',
+    },
+    {
+      q: 'Which of these gives None?',
+      choices: ['re.fullmatch(r"[a-z]+", "abc!")', 're.search(r"[a-z]+", "abc!")', 'Both'],
+      answer: 0,
+      trap: 2,
+      why: 'search finds abc and ignores the rest. fullmatch needs the whole text to fit, and ! isn’t a small letter.',
+    },
+  ]}
+>
+
+`re.search` looks **anywhere** in the text and stops at the first fit; the rest can be anything:
+`re.search(r"\d{3}", "x1234")` finds `123`. To check a whole string's shape, use `re.fullmatch`.
+
+</Misconception>
+
+<Misconception
+  id="search-gives-text"
+  title="re.search gives back the text it found"
+  probes={[
+    {
+      q: 'What does print(re.search(r"\\d+", "Bus 42")) show?',
+      choices: ['42', 'True', '<re.Match object; span=(4, 6), match=\'42\'>'],
+      answer: 2,
+      trap: 0,
+      why: 'search gives back a match object, saying what fitted and where. Its .group() is the text, 42.',
+    },
+    {
+      q: 'm = re.search(r"\\d", "none here"), then print(m.group()). What happens?',
+      choices: ['It prints an empty line', 'It prints None', 'An AttributeError: None has no group'],
+      answer: 2,
+      trap: 0,
+      why: 'Nothing fits, so m is None, and None has no .group() to call.',
+    },
+  ]}
+>
+
+`re.search` gives back a match object; `.group()` gives the text. When nothing fits, it gives back `None`, not an empty
+string, and calling `.group()` on `None` is an `AttributeError`. Check with `if m:` first.
+
+</Misconception>
+
+<Misconception
+  id="quantifier-repeats-all"
+  title="A quantifier repeats everything before it"
+  probes={[
+    {
+      q: 'Which text does re.fullmatch(r"go+", …) accept?',
+      choices: ['gogo', 'gooo', 'g'],
+      answer: 1,
+      trap: 0,
+      why: '+ repeats only the o: a g, then one or more o’s.',
+    },
+    {
+      q: 'What does re.search(r"ab*", "xabbby").group() give?',
+      choices: ['abbb', 'ab', 'abbby'],
+      answer: 0,
+      trap: 1,
+      why: '* repeats only the b, as many times as it can.',
+    },
+  ]}
+>
+
+A quantifier repeats only the piece just before it: a character, a `\d` or a `[aeiou]`. `no+` matches `nooo` but not
+`nono`. To repeat several characters together, put them in round brackets: `(no)+`.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'code = re.search(r"[A-Z]\\d", "ok"). What is code?',
+      choices: ['An empty string', 'False', 'None'],
+      answer: 2,
+      why: 'Nothing fits, so search gives back None. A fit would give a match object, never the bare text.',
+      traps: { 0: 'search-gives-text' },
+    },
+    {
+      q: 'Which check is true only when pin is exactly four digits (so false for pin = "12345")?',
+      choices: ['if re.search(r"\\d{4}", pin):', 'if re.fullmatch(r"\\d{4}", pin):', 'Both'],
+      answer: 1,
+      why: 'search finds 1234 inside 12345. fullmatch needs the whole pin to be four digits.',
+      traps: { 0: 'search-whole-text', 2: 'search-whole-text' },
+    },
+    {
+      q: 'What does re.findall(r"ha+", "hahaa haaa") give?',
+      choices: ["['ha', 'haa', 'haaa']", "['haha', 'ha']", "['ha', 'ha', 'ha']"],
+      answer: 0,
+      why: '+ repeats only the a: each match is an h and all the a’s after it. Repeating ha would need (ha)+.',
+      traps: { 1: 'quantifier-repeats-all' },
+    },
+    {
+      q: 'What does re.findall(r"(\\d+)kg", "3kg of flour, 12kg of rice") give?',
+      choices: ["['3kg', '12kg']", "['3', '12']", "['3', 'kg', '12', 'kg']"],
+      answer: 1,
+      why: 'With one group, findall lists just what the group matched.',
+    },
+    {
+      q: 'msg = "call 0123", then re.sub(r"\\d", "*", msg), then print(msg). What does it show?',
+      choices: ['call ****', 'call *', 'call 0123'],
+      answer: 2,
+      why: 'sub builds a new string, which this line throws away. msg never changes.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-regex" />
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="working-with-text"
+  prompt="You have some text to work with. When would you reach for a string method, for formatting, or for a regular expression, and what happens to the original string each time?"
+  rubric={[
+    'String methods suit fixed text you can spell out: splitting, joining, stripping, finding or replacing it',
+    'Formatting builds new text from values, with widths, decimals and alignment set by a format spec',
+    'A regular expression suits text you can only describe by its shape, like any run of digits',
+    'Strings never change in place: methods, formatting and re.sub all give back a new string',
+  ]}
+  example="For fixed text I can spell out, like a comma or a word, a string method is clearest: split, strip, find or replace. To show values, I use an f-string with a format spec for the width, decimals and alignment. A regular expression is for text I can only describe by its shape, like any run of digits. None of them changes the original string; each gives back a new one, which I keep in a name."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A regex describes a shape of text: `\d` a digit, `[A-Z]` a capital, `+` one or more.
+- Write patterns as raw strings, `r"..."`, so backslashes reach `re`.
+- `re.search` gives the first match anywhere, or `None`: check before calling `.group()`.
+- `re.fullmatch` checks the whole string, `re.findall` lists every match, and `re.sub` builds a new string.
+- A quantifier repeats only the piece just before it.
+- When the text is fixed, a string method is clearer than a regex.
+
+</Section>

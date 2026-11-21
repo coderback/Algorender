@@ -523,44 +523,46 @@ concepts:
     track: calculus
     summary: Surfaces read as contour maps, and the curves you get by slicing through them.
     prereqs: [functions-graphs, vectors]
-    planned: true
+    visualisers: [contour-maps]
+    lesson: contour-maps
   - id: derivatives-gradients
     title: Derivatives and gradients
     track: calculus
     summary: Slopes in one dimension, and the direction of steepest ascent in many.
-    prereqs: [functions-graphs]
+    prereqs: [functions-graphs, contour-maps]
     visualisers: [derivative]
     lesson: derivatives-gradients
-    later: [contour-maps] # B4
   - id: derivative-rules
     title: Derivative rules
     track: calculus
     summary: The derivatives of products, exp, log, sigmoid and ReLU, and checking them numerically.
     prereqs: [derivatives-gradients, exponents-logs]
-    planned: true
+    visualisers: [derivative-rules]
+    lesson: derivative-rules
   - id: chain-rule
     title: The chain rule
     track: calculus
     summary: How changes flow through a computation graph, one link at a time.
-    prereqs: [derivatives-gradients]
+    prereqs: [derivatives-gradients, derivative-rules]
     visualisers: [chain-rule]
     lesson: backpropagation
     links:
       - href: /code/neuron-gradients
         label: 'Build micrograd: backprop through a neuron'
-    later: [derivative-rules] # B4
   - id: taylor-approximation
     title: Linear and quadratic approximation
     track: calculus
     summary: Replacing a curve by its tangent line or parabola near a point, and Newton’s method.
     prereqs: [derivative-rules]
-    planned: true
+    visualisers: [taylor]
+    lesson: taylor-approximation
   - id: jacobians
     title: 'Jacobians: the local linear map'
     track: calculus
     summary: Zoom in far enough and any smooth map looks like a matrix, which is what backprop multiplies.
     prereqs: [chain-rule, matrix-multiplication]
-    planned: true
+    visualisers: [jacobian]
+    lesson: jacobians
   - id: integrals
     title: Integrals as accumulated area
     track: calculus
@@ -822,7 +824,9 @@ concepts:
     track: deep-learning
     summary: Recording a computation as a graph and running the chain rule backwards through all of it at once.
     prereqs: [chain-rule]
-    planned: true
+    visualisers: [autograd]
+    lesson: autograd
+    links: [{ href: /learn/topological-sort, label: 'Topological sort: the order backward runs in' }]
   - id: activations-initialisation
     title: Activations and initialisation
     track: deep-learning
@@ -1110,7 +1114,8 @@ concepts:
   # ── Python (the language tracks) ─────────────────────────────
   # The units of the language tracks' proposal (§1a, src/content/units.ts),
   # planned until each topic is written (L2's batch 1 wrote units 1 and 2,
-  # batch 2 unit 3 and the start of unit 4).
+  # batch 2 unit 3 and the start of unit 4, batch 3 the rest of unit 4 and
+  # units 5 and 6).
   # DS&A concepts don't depend on them: a learner coming from another
   # language mustn't be sent through Python first.
   # Basics
@@ -1234,58 +1239,58 @@ concepts:
     title: Dictionaries
     track: python
     summary: Looking values up by key, adding, changing and walking through them.
-    prereqs: [py-lists]
-    planned: true
+    prereqs: [py-tuples]
+    lesson: py-dicts
   - id: py-sets
     title: Sets
     track: python
     summary: Collections without duplicates, membership and set operations.
-    prereqs: [py-lists]
-    planned: true
+    prereqs: [py-dicts]
+    lesson: py-sets
   - id: py-comprehensions
     title: Comprehensions
     track: python
     summary: Building lists, dicts and sets in one expression.
-    prereqs: [py-lists, py-dicts]
-    planned: true
+    prereqs: [py-dicts, py-sets]
+    lesson: py-comprehensions
   - id: py-sorting
     title: Sorting
     track: python
     summary: sorted, sort and key=, and sorting by several things at once.
-    prereqs: [py-lists, py-lambdas]
-    planned: true
+    prereqs: [py-lambdas, py-tuples, py-dicts]
+    lesson: py-sorting
   # Strings
   - id: py-string-methods
     title: String methods
     track: python
     summary: split, join, strip, replace and find, and why strings never change in place.
-    prereqs: [py-strings-intro, py-lists]
-    planned: true
+    prereqs: [py-strings-intro, py-comprehensions]
+    lesson: py-string-methods
   - id: py-formatting
     title: Formatting output
     track: python
     summary: Format specs for widths, decimals and alignment.
     prereqs: [py-string-methods]
-    planned: true
+    lesson: py-formatting
   - id: py-regex
     title: Regular expressions
     track: python
     summary: Matching patterns in text with the re module.
-    prereqs: [py-string-methods]
-    planned: true
+    prereqs: [py-string-methods, py-formatting]
+    lesson: py-regex
   # Errors
   - id: py-exceptions
     title: Handling errors
     track: python
     summary: try, except, else and finally, and reading a traceback.
-    prereqs: [py-functions]
-    planned: true
+    prereqs: [py-functions, py-while, py-dicts]
+    lesson: py-exceptions
   - id: py-raising
     title: Raising errors
     track: python
     summary: raise, and exceptions of your own.
     prereqs: [py-exceptions]
-    planned: true
+    lesson: py-raising
   # Classes
   - id: py-classes
     title: Classes and objects

@@ -7,7 +7,7 @@ import path from 'node:path';
 import { Rating } from 'ts-fsrs';
 import { parseEvent, type EventData, type EventKind, type ProgressEvent } from './events';
 import { exerciseProgress, inOrder, lessonProgress, problemProgress, taskProgress } from './projections';
-import { dueToday, intervals, nextDue, problemCard, quizCard, reviewCards, taskCard } from './review';
+import { dueToday, intervals, nextDue, problemCard, quizCard, reviewCards, taskCard, upcoming } from './review';
 
 let clock = Date.parse('2026-10-16T09:00:00Z');
 function ev<K extends EventKind>(kind: K, data: EventData<K>, at?: string): ProgressEvent {
@@ -94,6 +94,24 @@ describe('review cards', () => {
     expect(cards.get(quizCard('recursion', 'check', 0))!.card.due.toISOString()).toBe(day(1));
     expect(dueToday(cards, new Date(day(1, 12))).map((c) => c.id)).toEqual(['quiz:recursion:check:0']);
     expect(nextDue(cards, new Date(day(1, 12)))!.toISOString()).toBe(day(3));
+  });
+
+  it('offers cards not due yet, soonest first, and an early review moves a card on less than an on-time one', () => {
+    const born = ev('problem.submitted', { problem: 'two-sum', language: 'python', passed: true, tests: 5, failed: 0 }, day(0));
+    const quiz = ev('quiz.answered', { lesson: 'recursion', quiz: 'check', question: 0, correct: true }, day(2));
+    const cards = reviewCards([born, quiz]);
+    const soon = upcoming(cards, new Date(day(0, 12)));
+    expect(soon.map((c) => c.id)).toEqual(['problem:two-sum', 'quiz:recursion:check:0']);
+    expect(soon[0].card.due.getTime()).toBeLessThanOrEqual(soon[1].card.due.getTime());
+    // Due today is not "ahead".
+    const due = cards.get('problem:two-sum')!.card.due;
+    expect(upcoming(cards, due).map((c) => c.id)).not.toContain('problem:two-sum');
+
+    const rated = (at: string) => reviewCards([born, ev('review.rated', { card: 'problem:two-sum', rating: Rating.Good }, at)]).get('problem:two-sum')!.card;
+    const early = rated(day(1));
+    const onTime = rated(due.toISOString());
+    expect(early.stability).toBeLessThan(onTime.stability);
+    expect(early.due.getTime()).toBeLessThan(onTime.due.getTime());
   });
 
   it('reviews move a card on, further each time it is remembered', () => {

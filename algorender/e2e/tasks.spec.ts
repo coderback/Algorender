@@ -223,6 +223,24 @@ test('a tests task: a closure that keeps its own n passes every hidden test', as
   await expect(page.getByRole('region', { name: 'This topic’s tasks' }).getByRole('link')).toHaveCount(5);
 });
 
+// L2 batch 3: a function that returns a dict is compared by its contents, so building the keys in another
+// order (here, every word set to 0 first) still passes.
+test('a function task returning a dict passes whatever order its keys were made in', async ({ page }) => {
+  const errors = collectErrors(page);
+  await openTask(
+    page,
+    'py-count-words',
+    'def count_words(words):\n    counts = {}\n    for w in sorted(words):\n        counts[w] = 0\n    for w in words:\n        counts[w] += 1\n    return counts\n',
+  );
+  await check(page).click();
+  await expect(results(page)).toHaveAttribute('data-verdict', 'passed', { timeout: 60_000 });
+  await expect(results(page)).toContainText('All 4 calls pass');
+  // The strip of the topic's tasks: py-dicts has five.
+  await page.goto('/learn/py-dicts');
+  await expect(page.getByRole('region', { name: 'This topic’s tasks' }).getByRole('link')).toHaveCount(5);
+  expect(errors).toEqual([]);
+});
+
 const VIEWPORTS = [
   { name: '1440', width: 1440, height: 900 },
   { name: '390', width: 390, height: 844 },

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FiCheckCircle, FiRotateCcw, FiXCircle } from 'react-icons/fi';
 import { cx } from '@/components/ui/cx';
+import { choiceOrder } from '@/lib/choices';
 import { mistakeAnchor } from './anchors';
 import { useLessonMistakes, useLessonSlug } from './LessonContext';
 import { recordAnswer, recordMistake, recordScore } from './progress';
@@ -63,7 +64,8 @@ export function Quiz({ id = 'quiz', questions }: { id?: string; questions: Quest
               </p>
               <p className="-mt-2 font-display text-[22px] leading-snug font-bold tracking-[-0.01em]">{question.q}</p>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2" role="group" aria-label={`Question ${qi + 1}`}>
-                {question.choices.map((c, ci) => {
+                {choiceOrder(question.q, question.choices.length).map((ci) => {
+                  const c = question.choices[ci];
                   const state = choice === null ? 'open' : ci === question.answer ? 'right' : ci === choice ? 'wrong' : 'other';
                   return (
                     <button

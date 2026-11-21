@@ -1,0 +1,258 @@
+<Section step="hook" title="When a program meets bad input">
+
+A program asks for your age and you type `twelve`. `int("twelve")` can't make a number from that, so the program
+stops with a `ValueError`. Here you'll learn to read errors like that, and to **catch** the ones you
+expect, so the program can say "please type a number" and carry on.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="exception">An error Python meets while running, such as `ValueError`. Python **raises** it: it stops the line it was on and looks for code that handles it.</Term>
+  <Term name="traceback">What Python prints when nothing handles an exception: the calls that led to it, then the error's type and message.</Term>
+  <Term name="try / except">Run the `try` block; if it raises an exception of the type named, run the `except` block instead of stopping.</Term>
+</Terms>
+
+**Reading a traceback.** Start at the bottom and work up. Here a function, `per_person`, shares 12 sweets among 0
+people:
+
+```text
+Traceback (most recent call last):
+  File "main.py", line 4, in <module>
+    print(per_person(12, 0))
+          ~~~~~~~~~~^^^^^^^
+  File "main.py", line 2, in per_person
+    return total // people
+           ~~~~~~^^~~~~~~~
+ZeroDivisionError: division by zero
+```
+
+The last line says **what** went wrong: the type and a message. Just above it is **where**: line 2, inside
+`per_person`, which line 4 called.
+
+The types you'll meet most: `ValueError` (a right type but wrong value, `int("hi")`), `TypeError` (the wrong type,
+`"3" + 4`), `KeyError` (no such key in a dictionary), `IndexError` (no such position in a list), `ZeroDivisionError`
+and `NameError` (a name never set, often a typo).
+
+**Catching one.** Put the line that might fail in a `try` block, and what to do about it in an `except` block:
+
+```python
+text = input()
+try:
+    n = int(text)
+    print("Double:", n * 2)
+except ValueError:
+    print("Not a whole number:", text)
+print("Done")
+```
+
+For `seven`, `int(text)` raises, so Python leaves the `try` block **at that line**, skipping the `print` under it,
+and runs the `except` block, then `print("Done")`. Nothing goes back to finish the `try` block.
+
+**Several kinds.** Give each type its own `except`; Python runs the first that matches. `as e` points `e` at the
+exception, so you can print its message:
+
+```python
+prices = {"tea": 2, "cake": 3}
+try:
+    item = input()
+    count = int(input())
+    print(prices[item] * count)
+except KeyError as e:
+    print("We don't sell", e)
+except ValueError as e:
+    print("Bad count:", e)
+```
+
+For `pie` it prints `We don't sell 'pie'`. A type with no `except` of its own still stops the program.
+
+**else and finally.** Two more blocks may follow the `except`s, in this order: `else` runs only when the `try`
+block raised nothing, so the `try` can hold just the risky line, and `finally` runs last, every time.
+
+**Ask until it works.** Put the `try` inside `while True:`. The `break` is only reached when `int(...)` worked:
+
+```python
+while True:
+    try:
+        age = int(input("Age: "))
+        break
+    except ValueError:
+        print("Please type a whole number.")
+```
+
+**Catch only what you expect.** A bare `except:` catches **every** error (`except Exception:` nearly every one),
+your own mistakes too:
+
+```python
+try:
+    total = int(input())
+    print(totl * 2)
+except:
+    print("Please type a number.")
+```
+
+Type `5` and it says `Please type a number.` The real error was the typo `totl`, a `NameError`. With
+`except ValueError:` the typo stops the program with `NameError: name 'totl' is not defined. Did you mean: 'total'?`,
+pointing at the line to fix.
+
+</Section>
+
+<Section step="see" title="Watch an error being caught">
+
+Step through it. In the second call `a / b` raises, and the run jumps straight to the `except` block, skipping
+`print("worked")`; `e` points at the exception.
+
+<TraceCode snippet="py-exceptions" />
+
+<KeyIdea>
+
+**When a line in a `try` block raises, the rest of the block is skipped and the first matching `except` runs.**
+Name the errors you expect, so your own bugs still show up.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-which-except-runs" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="rest-of-try-runs"
+  title="After an error is caught, the rest of the try block still runs"
+  probes={[
+    {
+      q: 'try: print("A"), then x = int("hi"), then print("B"); except ValueError: print("C"); then after the try: print("D"). What is printed?',
+      choices: ['A, B, C, D', 'A, C, D', 'A, C, B, D'],
+      answer: 1,
+      trap: 0,
+      why: 'int("hi") raises, so print("B") is skipped; the except block runs, then the line after the try.',
+    },
+    {
+      q: 'try: count = 1, then count = int("2x"), then count = 5; except ValueError: pass. What is count now?',
+      choices: ['5', '2', '1'],
+      answer: 2,
+      trap: 0,
+      why: 'int("2x") raises before count changes, and count = 5 is skipped.',
+    },
+  ]}
+>
+
+The moment a line in a `try` block raises, Python leaves the block: the lines after it are skipped, the matching
+`except` runs, and the program carries on **after** the whole `try`.
+
+</Misconception>
+
+<Misconception
+  id="except-catches-anything"
+  title="An except clause catches any error, whatever type it names"
+  probes={[
+    {
+      q: 'try: nums = [1, 2], then print(nums[5]); except ValueError: print("oops"). What happens?',
+      choices: ['It prints oops', 'It stops with an IndexError', 'It carries on silently'],
+      answer: 1,
+      trap: 0,
+      why: 'nums[5] raises an IndexError, which except ValueError doesn’t catch.',
+    },
+    {
+      q: 'try: total = "3" + 4; except ValueError: print("bad"). What happens?',
+      choices: ['It stops with a TypeError', 'It prints bad', 'total becomes 7'],
+      answer: 0,
+      trap: 1,
+      why: 'Adding a string and a number is a TypeError, not a ValueError.',
+    },
+  ]}
+>
+
+`except ValueError:` catches `ValueError`s and nothing else; any other type goes straight past it and stops the
+program. A traceback's last line tells you which type a line really raises.
+
+</Misconception>
+
+<Misconception
+  id="bare-except-is-safe"
+  title="A bare except: is the safe choice, since it catches everything"
+  probes={[
+    {
+      q: 'try: price = int("12"), then print(pirce + 1); bare except: print("Not a number"). What is printed?',
+      choices: ['Not a number', '13', 'A NameError pointing at pirce'],
+      answer: 0,
+      trap: 2,
+      why: 'The typo raises a NameError, and a bare except catches that too.',
+    },
+    {
+      q: 'A program’s bare except: prints Bad input even for 7. What is wrong?',
+      choices: ['7 is bad input', 'A bug in the try, hidden by the bare except', 'int() can’t read "7"'],
+      answer: 1,
+      trap: 0,
+      why: 'int("7") works, so something else raised, and the bare except hid it.',
+    },
+  ]}
+>
+
+Catching everything doesn't make a program safe; it makes its bugs silent: a typo gets the same polite message as
+bad input. Name the type you expect, so anything else still stops with a traceback.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'A traceback ends with ZeroDivisionError: division by zero. Where is the line of code that failed?',
+      choices: ['On the traceback’s first line', 'Nowhere: a traceback only names the error', 'In the last File … line, just above the error'],
+      answer: 2,
+      why: 'Read from the bottom up: the error, then just above it the line that raised it.',
+    },
+    {
+      q: 'try: print("start"), then print(10 // 0), then print("end"); except ZeroDivisionError: print("caught"). What is printed?',
+      choices: ['start, caught', 'start, end, caught', 'start, caught, end'],
+      answer: 0,
+      why: '10 // 0 raises, so print("end") is skipped, and nothing goes back to the try block.',
+      traps: { 1: 'rest-of-try-runs', 2: 'rest-of-try-runs' },
+    },
+    {
+      q: 'ages = {"Ada": 36}; try: print(ages["Alan"]); except IndexError: print("unknown"). What happens?',
+      choices: ['It prints unknown', 'It stops with a KeyError', 'It prints None'],
+      answer: 1,
+      why: 'A missing key is a KeyError, which except IndexError doesn’t match.',
+      traps: { 0: 'except-catches-anything' },
+    },
+    {
+      q: 'Round int(input()), which handler is better: except ValueError: or a bare except:?',
+      choices: ['A bare except:, so the program never stops with an error', 'except ValueError:, so other mistakes, like a typo, still show up', 'Either: they catch the same errors'],
+      answer: 1,
+      why: 'A bare except catches your own bugs too, and hides them.',
+      traps: { 0: 'bare-except-is-safe', 2: 'except-catches-anything' },
+    },
+    {
+      q: 'try: n = int("8"); except ValueError: print("bad"); else: print("good"); finally: print("end"). What is printed?',
+      choices: ['bad, then end', 'good', 'good, then end'],
+      answer: 2,
+      why: 'Nothing was raised, so else runs; finally runs every time.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-exceptions" />
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Read a traceback from the bottom up: the type and message, then the line that raised it.
+- When a line in a `try` block raises, the rest of the block is skipped and the first matching `except` runs.
+- `except ValueError as e:` names the exception, so you can print its message.
+- `else` runs only when nothing was raised; `finally` runs every time.
+- Catch only the types you expect: a bare `except:` or `except Exception:` hides your own bugs.
+
+</Section>

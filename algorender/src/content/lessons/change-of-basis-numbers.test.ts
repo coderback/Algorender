@@ -22,7 +22,7 @@ const answer = (f: { checkpoint?: { choices: readonly string[]; answer: number }
 
 describe('change-of-basis lesson', () => {
   it('embeds real presets, with one prediction challenge that asks at least its goal', () => {
-    const found = [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}[^>]*?(?:goal=\{(\d+)\})?[^>]*\/>/g)];
+    const found = [...body.matchAll(/<(Explore|PredictChallenge) slug="([a-z-]+)" settings=\{\{ preset: '([a-z-]+)'(?:, step: '(\d+)')? \}\}(?:[^>]*?goal=\{(\d+)\})?[^>]*\/>/g)];
     expect(found.length).toBeGreaterThanOrEqual(3);
     expect(found.filter((m) => m[1] === 'PredictChallenge')).toHaveLength(1);
     for (const m of found) {

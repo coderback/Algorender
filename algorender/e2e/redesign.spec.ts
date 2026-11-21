@@ -114,6 +114,24 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'b3-lesson-matrices', path: '/learn/linear-transformations' },
   { name: 'b3-exercise-solve', path: '/code/solve-system' },
   { name: 'b3-exercise-fit', path: '/code/fit-curves' },
+  // Math and ML B4: contour maps to autograd, a few steps in, its lessons and the second project's parts.
+  { name: 'b4-contour-table', path: '/visualisers/contour-maps?preset=table&step=8' },
+  { name: 'b4-contour-slices', path: '/visualisers/contour-maps?preset=slices&step=3' },
+  { name: 'b4-rules-product', path: '/visualisers/derivative-rules?preset=product&step=3' },
+  { name: 'b4-rules-numeric', path: '/visualisers/derivative-rules?preset=numeric&step=10' },
+  { name: 'b4-taylor-fits', path: '/visualisers/taylor?preset=fits&step=6' },
+  { name: 'b4-taylor-newton', path: '/visualisers/taylor?preset=newton&step=3' },
+  { name: 'b4-jacobian-zoom', path: '/visualisers/jacobian?preset=zoom&step=3' },
+  { name: 'b4-jacobian-chain', path: '/visualisers/jacobian?preset=chain&step=3' },
+  { name: 'b4-autograd-order', path: '/visualisers/autograd?preset=order&step=6' },
+  { name: 'b4-autograd-train', path: '/visualisers/autograd?preset=train&step=8' },
+  { name: 'b4-lesson-contour', path: '/learn/contour-maps' },
+  { name: 'b4-lesson-rules', path: '/learn/derivative-rules' },
+  { name: 'b4-lesson-taylor', path: '/learn/taylor-approximation' },
+  { name: 'b4-lesson-jacobians', path: '/learn/jacobians' },
+  { name: 'b4-lesson-autograd', path: '/learn/autograd' },
+  { name: 'b4-exercise-heights', path: '/code/height-table' },
+  { name: 'b4-exercise-train', path: '/code/train-neuron' },
   // Language tracks L1: a sample task of each kind shipped (e2e/tasks.spec.ts shoots them after a failed check).
   { name: 'task-program', path: '/learn/tasks/py-greet-by-name' },
   { name: 'task-output', path: '/learn/tasks/py-two-names-one-value' },
@@ -128,6 +146,13 @@ const ROUTES: { name: string; path: string; seeded?: boolean; started?: boolean;
   { name: 'l2-topic-lists', path: '/learn/py-lists' },
   { name: 'l2-task-function', path: '/learn/tasks/py-sum-to' },
   { name: 'l2-task-tests', path: '/learn/tasks/py-make-multiplier' },
+  // L2 batch 3: dictionaries, the regex topic (a match object on the memory view), errors (a caught exception
+  // traced), and a unit's closing explain-back (sorting ends unit 4).
+  { name: 'l2-topic-dicts', path: '/learn/py-dicts' },
+  { name: 'l2-topic-regex', path: '/learn/py-regex' },
+  { name: 'l2-topic-exceptions', path: '/learn/py-exceptions' },
+  { name: 'l2-topic-sorting', path: '/learn/py-sorting' },
+  { name: 'l2-task-dict', path: '/learn/tasks/py-count-words' },
 ];
 
 const VIEWPORTS = [

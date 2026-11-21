@@ -1,0 +1,207 @@
+<Section step="hook" title="Saying no">
+
+`int("ten")` doesn't guess or hand back `None`: it stops with a `ValueError` that says what was wrong. Your own
+functions can do the same. A `withdraw` that quietly returns `-30` for 50 out of 20 passes a wrong answer on, to
+cause trouble far away. Better to refuse, right there, and say why.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="raise">A statement that starts an error on purpose: `raise ValueError("amount can't be negative")`.</Term>
+  <Term name="re-raise">Sending a caught error on up with a bare `raise`, after doing something with it.</Term>
+  <Term name="assert">A check that your own code did what you meant: `assert total >= 0` raises `AssertionError` if not.</Term>
+</Terms>
+
+```python
+def withdraw(balance, amount):
+    if amount > balance:
+        raise ValueError(f"can't take {amount}, only {balance} left")
+    return balance - amount
+```
+
+`raise` stops the function on that line: not even the `return` runs. The error lands on the calling line. If that
+line is in a `try` with a matching `except`, the `except` runs; if not, the error leaves that function too, and so
+on up. If nothing catches it, `withdraw(20, 50)` stops the program with a traceback ending
+`ValueError: can't take 50, only 20 left`.
+
+**Pick the type that fits.** `ValueError` is for a value of the right kind that won't do, like a negative amount.
+`TypeError` is for the wrong kind, like a string where a number belongs. Put the value in the message.
+
+**Re-raising.** To note an error but let the caller decide, end the `except` with a bare `raise`, which sends it
+on up:
+
+```python
+try:
+    balance = withdraw(balance, amount)
+except ValueError as e:
+    print("refused a withdrawal:", e)
+    raise
+```
+
+**An error of your own.** This makes a new kind of error, named `NotEnoughStock`:
+
+```python
+class NotEnoughStock(Exception):
+    pass
+```
+
+Classes come in unit 7, so take it as a recipe: `(Exception)` makes the new name a kind of error, and `pass` adds
+nothing more. Now `raise NotEnoughStock("only 3 left")` and `except NotEnoughStock as e:` work like the built-in
+ones, and a caller can catch exactly this error and no other.
+
+**assert or raise?** `assert` is for your own mistakes. Bad input from a caller isn't one, so refuse it with
+`raise`. Asserts can also be switched off, and then they check nothing.
+
+</Section>
+
+<Section step="see" title="Watch an error travel">
+
+Step through it. In the second order, `take` raises: watch its frame and `order`'s close, skipping
+`print("ordered", n)`, until the `except` catches the error.
+
+<TraceCode snippet="py-raising" />
+
+<KeyIdea>
+
+**`raise` stops the function there and sends the error up through its callers, skipping the rest of each, until
+a matching `except` catches it.** Raise one when a function gets input it can't use, rather than returning a wrong
+answer or `None`.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: what does it print?">
+
+<TopicTask task="py-raise-travels" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Misconception
+  id="return-not-raise"
+  title="return ValueError(…) does the same as raise ValueError(…)"
+  probes={[
+    {
+      q: 'half(n) has if n % 2: return ValueError("odd"). Then r = half(3) and print("got", r). What happens?',
+      choices: ['It stops with ValueError: odd', 'It prints got odd and carries on', 'It prints got None'],
+      answer: 1,
+      trap: 0,
+      why: 'return hands the error back as a plain value; print shows its message. Nothing was raised.',
+    },
+    {
+      q: 'Which line makes price(-5) stop with an error that except ValueError can catch?',
+      choices: ['raise ValueError("negative price")', 'return ValueError("negative price")', 'Both'],
+      answer: 0,
+      trap: 2,
+      why: 'Only raise starts the error; return hands back an error object as the answer.',
+    },
+  ]}
+>
+
+`ValueError("…")` on its own just makes an error object, a value like any other. `return` hands it back as the
+answer, so no `except` ever runs. Only `raise` stops the function and sends the error up.
+
+</Misconception>
+
+<Misconception
+  id="caller-carries-on"
+  title="After a function raises, its caller carries on with the next line"
+  probes={[
+    {
+      q: 'check(n) raises ValueError if n < 0, else prints ok and n. A try calls check(2), check(-1), check(5); its except prints caught. What prints?',
+      choices: ['ok 2, caught, ok 5', 'ok 2, then caught', 'ok 2, ok 5, caught'],
+      answer: 1,
+      trap: 0,
+      why: 'check(-1) raises, so the rest of the try block, check(5) too, is skipped.',
+    },
+    {
+      q: 'inner() raises ValueError("deep"). outer() calls inner(), then prints back. The program calls outer(), then prints end, with no try. What happens?',
+      choices: ['It prints back, then end', 'It prints back, then stops with ValueError: deep', 'It prints nothing and stops with ValueError: deep'],
+      answer: 2,
+      trap: 0,
+      why: 'The error leaves inner, then outer, then the program, skipping every line after each call.',
+    },
+  ]}
+>
+
+The line that called a raising function is abandoned too, with the rest of its function, and so on up, until an
+`except` catches the error. Then Python carries on below the whole `try`, never back where the error started.
+
+</Misconception>
+
+<Quiz
+  id="check"
+  questions={[
+    {
+      q: 'square_root(x) has if x < 0: return ValueError("negative"). What happens on r = square_root(-4)?',
+      choices: ['It stops with ValueError: negative', 'r points at a ValueError object, and the program carries on', 'r is None'],
+      answer: 1,
+      why: 'return hands back the error object as a plain value. Only raise stops the function.',
+      traps: { 0: 'return-not-raise' },
+    },
+    {
+      q: 'load(n) raises ValueError("empty") when n is 0. total() runs a = load(3), then b = load(0), then print("got both"). A try calls total(); its except prints problem: and the error. What prints?',
+      choices: ['got both, then problem: empty', 'got both', 'problem: empty'],
+      answer: 2,
+      why: 'load(0) raises, so the rest of total is skipped, straight to the except.',
+      traps: { 0: 'caller-carries-on' },
+    },
+    {
+      q: 'What is assert for?',
+      choices: ['Refusing a caller’s bad input, like a negative age', 'Checking something your own code should already have made true', 'Catching errors that other functions raise'],
+      answer: 1,
+      why: 'assert checks your own reasoning. Bad input from a caller is refused with raise.',
+    },
+    {
+      q: 'After class TooCold(Exception): pass, a try raises TooCold("below zero"). except ValueError prints value; except TooCold as e prints cold: and e. What prints?',
+      choices: ['cold: below zero', 'value', 'Nothing: it stops with TooCold: below zero'],
+      answer: 0,
+      why: 'TooCold is its own kind of error, not a ValueError, so the second except catches it.',
+    },
+    {
+      q: 'A try runs int("ten"); its except ValueError prints logged, then has a bare raise. Below the try is print("after"). What happens?',
+      choices: ['It prints logged, then after', 'It stops with ValueError before printing anything', 'It prints logged, then stops with the same ValueError'],
+      answer: 2,
+      why: 'The bare raise sends the same error on up. Nothing catches it, so after never prints.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="do" title="Your tasks">
+
+<TaskStrip concept="py-raising" />
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="how-errors-work"
+  prompt="Explain how errors work in Python: what happens when one is raised, how try, except, else and finally decide what runs, and when to raise one yourself."
+  rubric={[
+    'A raised error stops the function and travels up through the callers, skipping the rest of each, until a matching except catches it (or the program stops)',
+    'When the try block raises, the rest of it is skipped and the first matching except runs; else runs only if nothing was raised; finally runs either way',
+    'Afterwards the program carries on below the whole try, not where the error started',
+    'Raise one yourself when a function gets input it can’t use (ValueError for a bad value, TypeError for the wrong kind), with a message, instead of returning a wrong answer',
+  ]}
+  example="A raised error stops the function and goes up through the callers, skipping what is left in each, until an except that matches its type catches it; if none does, the program stops with a traceback. In a try, once something raises, the rest of the block is skipped and the first matching except runs. else runs only if nothing was raised, finally runs either way, and then the program carries on below the whole try. I raise an error myself when my function gets input it can't use, like a negative amount, with a message saying what was wrong."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- `raise ValueError("what was wrong")` refuses bad input instead of returning a wrong answer.
+- `raise` stops the function; the error travels up through the callers until an `except` catches it.
+- `ValueError` for a bad value, `TypeError` for the wrong kind, with the value in the message.
+- A bare `raise` in an `except` sends the same error on up.
+- `class NotEnoughStock(Exception): pass` makes an error of your own.
+- `assert` checks your own mistakes; `raise` refuses a caller's.
+
+</Section>
