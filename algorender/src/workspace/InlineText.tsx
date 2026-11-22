@@ -1,6 +1,11 @@
 import { Fragment } from 'react';
 
-/** Exercise text with `code` spans in backticks. */
+/** Text with **bold** runs (outside code spans). */
+function Bold({ text }: { text: string }) {
+  return text.split('**').map((part, i) => (i % 2 === 1 ? <strong key={i} className="font-semibold text-ink">{part}</strong> : <Fragment key={i}>{part}</Fragment>));
+}
+
+/** Exercise text with `code` spans in backticks and **bold** runs. */
 export function InlineText({ text }: { text: string }) {
   return text.split('`').map((part, i) =>
     i % 2 === 1 ? (
@@ -8,7 +13,7 @@ export function InlineText({ text }: { text: string }) {
         {part}
       </code>
     ) : (
-      <Fragment key={i}>{part}</Fragment>
+      <Bold key={i} text={part} />
     ),
   );
 }

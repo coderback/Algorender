@@ -1,0 +1,377 @@
+<Section step="hook" title="Which coin explains the flips?">
+
+A coin is flipped 10 times and lands heads 7 times. What is your best guess for its chance of heads? Almost everyone
+says 0.7, and maximum likelihood agrees: 0.7 is the best single guess, though ten flips can't show it is certainly the
+true value. But "the share of heads" is a rule for coins only. What is the rule behind it, the one that also says how
+to fit a bell curve to measurements, a line to points, or a model to a million photos?
+
+It is called **maximum likelihood**: of all the settings a model could have, pick the one that makes the data you
+actually saw as probable as possible. This lesson builds it from the coin up. On the way you will see why programs
+add logs instead of multiplying chances, and why machine learning trains models on two particular losses, **squared
+error** and **cross-entropy**: both are maximum likelihood in disguise.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="model and parameter">A model is a rule that gives data a chance; its parameter is the setting you can change. For a coin, the model is "each flip is heads with chance $p$, on its own", and $p$ is the parameter.</Term>
+  <Term name="likelihood L(p)">The chance (for measurements, the density) the model gives the data you saw, worked out for each value of the parameter: a function of $p$, with the data held fixed.</Term>
+  <Term name="maximum-likelihood estimate">The parameter value where $L$ is biggest: the setting that makes the data most probable. Written $\hat{p}$ ("p hat").</Term>
+  <Term name="log-likelihood ln L">The natural log of the likelihood, from [exponents and logarithms](/learn/exponents-logs). A product of chances becomes a sum of logs.</Term>
+  <Term name="density">For a measurement that can be any number, a model gives a height on a curve instead of a chance: a chance per unit of width. The chance of landing in a narrow strip is about the height times the strip's width.</Term>
+  <Term name="normal bell">The density $f(x) = e^{-(x - \mu)^2/(2\sigma^2)} / (\sigma\sqrt{2\pi})$, with centre $\mu$ ("mu") and spread $\sigma$ ("sigma"). It is tallest at $\mu$ and falls away on both sides.</Term>
+  <Term name="noise">A random nudge up or down, different for every point, that moves data off the line a model predicts.</Term>
+  <Term name="residual">How far a point sits above or below a line: $r = y - \text{line}(x)$.</Term>
+  <Term name="cross-entropy">For yes/no data, minus the average log of the chance the model gives each outcome. Smaller is better.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="The likelihood of 7 heads in 10 flips">
+
+Suppose the coin's chance of heads is $p$. The flips are independent, so, as with "and" in
+[chance and events](/learn/probability-basics), the chance of the whole run is the chance of each flip multiplied
+together: $p$ for each of the 7 heads and $1 - p$ for each of the 3 tails.
+
+$$
+L(p) = p^7 \, (1 - p)^3
+$$
+
+That is the **likelihood**: the chance of exactly these flips, worked out for each guess $p$. Step through it, and
+drag the guess $p$ along the bottom:
+
+<Explore slug="maximum-likelihood" settings={{ preset: 'coin' }} caption="Ten flips with 7 heads. The likelihood L(p) for each chance of heads p, then the same curve after taking logs, the slopes, and the cross-entropy. Drag your guess p." />
+
+If $p = 0.5$, every flip has chance 0.5, so $L(0.5) = 0.5^{10} = 0.000977$. If $p = 0.7$,
+$L(0.7) = 0.7^7 \times 0.3^3 = 0.00222$, more than twice as likely. The curve peaks at $p = 0.7$, the share of heads:
+no other chance of heads makes these flips as likely. That is the **maximum-likelihood estimate**, $\hat{p} = 7/10$.
+The everyday answer now has a reason behind it.
+
+Why the chance of the run itself, and not of "7 heads somewhere in 10"? That chance, as in
+[counting](/learn/counting-combinatorics), is $C(10, 7) = 120$ times bigger, because 120 orders of the flips have 7
+heads: 0.117 at $p = 0.5$. But the 120 is the same for every $p$. It stretches the whole curve upwards and leaves its
+peak where it is, so either way the best $p$ is 0.7.
+
+Notice what $L$ is not. Each $L(p)$ is a chance of the *data*, once $p$ is fixed. It is not the chance that $p$ is the
+coin's true value. Add up the heights at $p = 0.1, 0.2, \ldots, 0.9$ and you get 0.00758; for a single flip that
+landed heads, $L(p) = p$, and the same nine heights add up to 4.5. The heights can add up to anything, because they
+are not chances of different outcomes: a likelihood compares guesses, it doesn't share out a total of 1 among them.
+
+**The product underflows.** Ten flips give $L = 0.00222$, already small. Now take 3,500 heads in 5,000 flips, the same
+share. Every extra flip multiplies $L$ by a number below 1, and $0.7^{3500} \times 0.3^{1500}$ has more than 1,300 zeros
+after the decimal point. The smallest number a float can hold has about 320, so a computer multiplying it out gets
+exactly 0. Every guess $p$ then scores 0, and nothing can be compared.
+
+The cure is the rule from the exponents lesson, $\ln(a \times b) = \ln a + \ln b$. The log of a product is the sum of
+the logs, so each head adds $\ln p$ and each tail adds $\ln(1 - p)$:
+
+$$
+\begin{aligned}
+\ln L(p) &= 7 \ln p + 3 \ln(1 - p)
+\end{aligned}
+$$
+
+For the 5,000 flips that is $3500 \ln 0.7 + 1500 \ln 0.3 = -3054.3$: an ordinary number, which a float holds easily.
+For the 10 flips, $\ln L(0.5) = -6.931$ and $\ln L(0.7) = -6.109$. Every log is negative, because every chance is
+below 1.
+
+Taking logs doesn't move the peak. $\ln$ only ever grows as its input grows, so the bigger of two likelihoods always
+has the bigger log, and the $p$ with the biggest $L$ is the $p$ with the biggest $\ln L$. The log curve is a different
+shape, but it peaks at 0.7 too.
+
+At a peak a curve levels off, so its slope is 0, as in [derivatives and gradients](/learn/derivatives-gradients).
+Measured with a small gap either side, the slope of $\ln L$ is 8 at $p = 0.5$, uphill towards 0.7, and 0 at
+$p = 0.7$. Training a model is a search for the place where that slope is 0.
+
+Last, divide $-\ln L$ by the number of flips:
+
+$$
+\begin{aligned}
+-\tfrac{1}{10}\ln L(p) &= -\big(0.7 \ln p \\
+&\qquad + 0.3 \ln(1 - p)\big)
+\end{aligned}
+$$
+
+This is the **cross-entropy** between the data's shares (0.7 heads, 0.3 tails) and the model's chances ($p$ and
+$1 - p$). It is 0.611 at $p = 0.7$ and 0.693 at $p = 0.5$. Making the likelihood as big as possible is the same as
+making the cross-entropy as small as possible. A classifier that answers yes or no, such as "is this email spam?",
+gives each email its own chance of spam rather than one $p$ for all, but its loss is the same thing: minus the average
+log of the chance it gave each email's true answer, and training makes that as small as possible.
+
+<KeyIdea>
+
+**The likelihood $L(\theta)$ is the chance (or, for measurements, the density) of the data you saw, for each setting
+$\theta$ ("theta") of the model. The maximum-likelihood estimate is the setting that makes it biggest.** Work with
+$\ln L$, a sum of logs that never underflows: it peaks at the same place, where its slope is 0.
+
+</KeyIdea>
+
+<Misconception
+  id="likelihood-is-probability"
+  title="The likelihood is the chance that the parameter is right"
+  probes={[
+    {
+      q: 'For some flips, L(0.68) = 0.004 and L(0.34) = 0.001. Is p = 0.68 four times as likely to be the coin’s true value as p = 0.34?',
+      choices: ['No: the flips are four times as probable if p = 0.68, but how likely each p is also depends on how common such coins are', 'Yes: the ratio of the likelihoods is the ratio of the chances of the two p’s', 'No: 0.68 is certain, because it has the bigger L'],
+      answer: 0,
+      trap: 1,
+      why: 'A likelihood fixes p and asks how probable the data is. It ranks the p’s by how well they explain the flips, but turning that into a chance for p needs other information, such as how common such coins are.',
+    },
+    {
+      q: 'Someone adds up L(p) at p = 0.1, 0.2, …, 0.9 for their flips and gets 0.31. What does that show?',
+      choices: ['They made a mistake: the chances of all the p’s must add up to 1', 'Nothing is wrong: likelihoods across p need not add up to 1', 'The best p must be 0.31'],
+      answer: 1,
+      trap: 0,
+      why: 'Each L(p) is a chance of the same data under a different p. They are not chances of different outcomes, so nothing makes them add up to 1.',
+    },
+  ]}
+>
+
+$L(p)$ is a chance of the **data**, worked out as if $p$ were the true value. Read across the $p$'s, it ranks the
+guesses: 0.7 explains 7 heads in 10 better than 0.5 does, by a factor of 2.3. But the heights are not chances of the
+$p$'s, so they don't add up to 1, and $L(0.7) = 0.00222$ doesn't mean "the chance that $p$ is 0.7 is 0.00222".
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: 1 head in 4 flips">
+
+Now a coin that landed heads once in 4 flips, with your guess starting at $p = 0.4$. Predict each step before it
+appears: the chance of these flips at your guess, the best $p$, whether the heights add up to 1, what happens to the
+product for 5,000 flips, where the log curve peaks, its value and slope at your guess, and the cross-entropy at the
+best $p$.
+
+<PredictChallenge slug="maximum-likelihood" settings={{ preset: 'coin-few' }} goal={5} />
+
+With $p = 0.4$ the four flips have chance $0.4 \times 0.6^3 = 0.0864$, and the curve $L(p) = p(1 - p)^3$ peaks at
+$\hat{p} = 1/4 = 0.25$, where $L = 0.105$. The nine heights add up to 0.492, not 1. With 5,000 flips (1,250 heads),
+the product underflows to 0 again, while the log is fine.
+
+The log curve peaks at 0.25 as well. At your guess, $\ln L(0.4) = \ln 0.4 + 3 \ln 0.6 = -2.449$: one $\ln p$ for the
+head and three $\ln(1 - p)$ for the tails. Its measured slope there is $-2.5$: downhill, because the peak is to the
+left. Divided by the 4 flips, $-\ln L(0.25)$ gives a cross-entropy of 0.562.
+
+With only 4 flips the curve is wide: the likelihood at $p = 0.1$ and at $p = 0.45$ is still about 70% of the peak's.
+Fewer data means a flatter likelihood, and less certainty about $p$.
+
+<Misconception
+  id="log-moves-peak"
+  title="Taking the log moves the best value"
+  probes={[
+    {
+      q: 'For some flips, ln L at p = 0.12, 0.32 and 0.52 is −5.1, −3.9 and −4.6. Which of these three p’s has the biggest L itself?',
+      choices: ['0.12, since taking logs flips the order', 'You can’t tell without undoing the logs', '0.32'],
+      answer: 2,
+      trap: 0,
+      why: 'ln keeps the order of numbers: the biggest ln L, −3.9, belongs to the biggest L. No need to undo the logs.',
+    },
+    {
+      q: 'Model A gives some data a likelihood of 0.00002, and model B gives 0.00005. Which has the bigger log-likelihood?',
+      choices: ['A, since taking logs flips the order of small numbers', 'B', 'Neither: logs of numbers this small are all about the same'],
+      answer: 1,
+      trap: 0,
+      why: 'Both logs are negative, but 0.00005 is bigger than 0.00002, so its log is bigger (less negative): about −9.9 against −10.8.',
+    },
+  ]}
+>
+
+$\ln$ squashes big values and stretches small ones, so the log curve has a different shape. But it never changes
+which of two numbers is bigger. So the parameter that wins on $L$ wins on $\ln L$, and the peak stays put: 0.7 for 7
+heads in 10, 0.25 for 1 head in 4. That is why models can be trained on the log-likelihood with nothing lost.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="A normal bell over measurements">
+
+Measurements such as heights or times can be any number, so no single value has a chance of its own. Instead a model
+gives each one a **density**, the height of a curve over it: a chance per unit of width, so the chance of landing in
+a narrow strip is about the height times the strip's width. For measurements the likelihood multiplies densities
+instead of chances. The strip widths are the same whatever the model's settings, so leaving them out doesn't move the
+peak. A density is not a chance, though: a narrow curve can be taller than 1.
+
+The commonest curve is the **normal bell**,
+
+$$
+f(x) = \frac{e^{-(x - \mu)^2/(2\sigma^2)}}{\sigma\sqrt{2\pi}}
+$$
+
+with centre $\mu$ and spread $\sigma$. The power of $e$ is 0 at $x = \mu$ and more and more negative away from it, so
+the bell is tallest at $\mu$. Dividing by $\sigma\sqrt{2\pi}$ makes the whole area under the bell 1, so a wider bell is
+lower. Here are 8 measurements: 2.5, 3.5, 4, 4.5, 5, 5.5, 7 and 10. Each one's density is a bar up to the bell, and
+the likelihood is the bars multiplied together. Drag $\mu$ and $\mu + \sigma$ along the bottom:
+
+<Explore slug="maximum-likelihood" settings={{ preset: 'gaussian' }} input caption="Eight measurements under a normal bell with centre μ = 4 and spread σ = 1.5: each one's density as a bar, then ln L as μ slides and as σ changes, and the best bell. Drag μ and μ + σ." />
+
+With $\mu = 4$ and $\sigma = 1.5$, the bar at 4 is the tallest, 0.266, and the bar at 10 is only 0.0000892. Their
+product is about $3 \times 10^{-10}$, so add logs again. The log of a density is the log of $1/(\sigma\sqrt{2\pi})$
+plus the log of the power of $e$. For the first, $\ln a + \ln(1/a) = \ln(a \times 1/a) = \ln 1 = 0$, so
+$\ln(1/a) = -\ln a$. For the second, $\ln(e^{b}) = b$. So
+
+$$
+\begin{aligned}
+\ln f(x) &= -\ln\big(\sigma\sqrt{2\pi}\big) \\
+&\qquad - \frac{(x - \mu)^2}{2\sigma^2}
+\end{aligned}
+$$
+
+Added over the 8 measurements, $\ln L = -21.929$ for this bell.
+
+**The best centre.** Only the squared gaps $(x - \mu)^2$ depend on $\mu$, and they come with a minus sign. So the best
+$\mu$ is the one that makes $\sum (x_i - \mu)^2$ smallest. Expand one gap as $\mu^2 - 2x\mu + x^2$; by the power rule
+its slope against $\mu$ is $2\mu - 2x$. Added over all $n$ measurements, the slope is $2n\mu - 2\sum x_i$, which is 0
+when $\mu = \sum x_i / n$, the plain average. So the best $\mu$ is the **mean**, 5.25. It is not the median, 4.75,
+nor halfway between the smallest and largest, 6.25. The squares weigh the far measurement, 10, heavily, and the mean
+answers by moving towards it. With $\sigma$ kept at 1.5, $\ln L$ is $-19.151$ at the mean and $-19.595$ at the median.
+
+**The best spread.** Put $\mu$ at the mean. The squared gaps from 5.25 add up to 38.5. Divide by $n = 8$, which gives
+4.8125, then take the square root:
+
+$$
+\hat{\sigma} = \sqrt{\tfrac{1}{n}\textstyle\sum (x_i - \bar{x})^2} = 2.194
+$$
+
+The visualiser's chart of $\ln L$ against $\sigma$ peaks exactly there. It is a familiar number: give each of the 8
+measurements chance 1/8, and $\hat{\sigma}$ is the standard deviation $\sigma = \sqrt{\text{Var}(X)}$ from
+[random variables](/learn/random-variables). Too small a $\sigma$ makes the bar at 10 almost 0, and its log hugely
+negative; too big a $\sigma$ flattens every bar.
+
+The *sample* standard deviation (the $s_{n-1}$ key on a calculator, or STDEV in a spreadsheet) divides by $n - 1$
+instead and gives 2.345. It is a little bigger on purpose: measurements sit a little closer to their own mean than to
+the bell's true centre, and dividing by $n - 1$ makes up for that on average. Maximum likelihood divides by $n$. The
+best bell, $\mu = 5.25$ and $\sigma = 2.194$, has $\ln L = -17.636$, and no other normal bell does better.
+
+</Section>
+
+<Section step="see" title="Squared error is maximum likelihood">
+
+Points along a line work the same way. Suppose each $y$ is a line's height plus **noise**: a random nudge drawn from
+a normal bell with centre 0 and a fixed spread $\sigma$. A point's residual $r$ is then its nudge, so its density is
+the bell's height at $r$. Here are 6 points and a line through them, with each residual dashed; drag the line's ends:
+
+<Explore slug="maximum-likelihood" settings={{ preset: 'squared-error' }} input caption="Six points and a line, with each point's residual dashed. Σ r² and ln L as the line moves up or down, then with wider noise, and the least-squares line. Drag the line's two ends." />
+
+Each point's log density is $-\ln(\sigma\sqrt{2\pi}) - r^2/(2\sigma^2)$, so with $n$ points
+
+$$
+\ln L = -n \ln\big(\sigma\sqrt{2\pi}\big) - \frac{\sum r_i^2}{2\sigma^2}
+$$
+
+The first part is the same for every line. So a line has a bigger likelihood exactly when its squared residuals add
+up to less. For the line drawn, they add up to 2.929. With $\sigma = 1$, $\ln(\sigma\sqrt{2\pi}) = 0.919$, so
+$\ln L = -6 \times 0.919 - 2.929/2 = -6.978$.
+
+Slide the line up or down and $\sum r^2$ is a bowl, lowest when the line moves up by 0.33, the average residual;
+$\ln L$ is the same bowl turned upside down and halved, so its peak is right above. That is the best-$\mu$ result
+again: moving the line up by $d$ fits a centre to the residuals, and the best centre is their mean. With wider noise,
+$\sigma = 2$, the curve is flatter but peaks at the same place.
+
+Let the slope move too, and the best line is the one with the smallest $\sum r^2$, called the **least-squares** line:
+here with slope 0.914 and mean squared error (the average of the squared residuals) 0.367, whatever $\sigma$ is.
+Under normal noise, minimising mean squared error *is* maximum likelihood.
+
+</Section>
+
+<Section step="do" title="Add the logs in code">
+
+Write the log-likelihood of measurements under a normal bell: each one's log density, written into a visual array,
+and their total. One test puts the bell at 0 for data near 30, where each density is so tiny that multiplying them
+gives exactly 0; adding logs gives $-2262.676$ with no trouble. Another uses a narrow bell, $\sigma = 0.25$, which is
+taller than 1 at its centre: a density, unlike a chance, can be above 1, so its log density there is positive, 0.467.
+
+<CodeExercise exercise="log-likelihood" />
+
+Then [fit the bell itself](/code/fit-gaussian): return the mean and the root mean squared gap, dividing by $n$.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A coin lands heads 16 times in 25 flips. What is the maximum-likelihood estimate of its chance of heads?',
+      choices: ['0.5, since most coins are fair', '0.64', '0.36'],
+      answer: 1,
+      why: 'L(p) = p¹⁶(1 − p)⁹, times a count of orders that is the same for every p, peaks at the share of heads, 16/25 = 0.64. 0.36 is the share of tails.',
+    },
+    {
+      q: 'For some flips, L(0.65) = 0.0012. What does 0.0012 tell you?',
+      choices: ['If p were 0.65, these exact flips would have chance 0.0012', 'The chance that the coin’s p is 0.65 is 0.0012', 'The chance that p is at least 0.65'],
+      answer: 0,
+      why: 'A likelihood fixes p and gives the chance of the data. It is not a chance of p.',
+      traps: { 1: 'likelihood-is-probability' },
+    },
+    {
+      q: 'L(p) for some data is highest at p = 0.35. Where is ln L(p) highest?',
+      choices: ['At p = 0.35', 'At a smaller p, because ln stretches small values', 'Further left, since logs shrink big numbers'],
+      answer: 0,
+      why: 'ln keeps the order of numbers, so the p with the biggest L has the biggest ln L. Only the curve’s shape changes.',
+      traps: { 1: 'log-moves-peak', 2: 'log-moves-peak' },
+    },
+    {
+      q: 'Four measurements: 11, 13, 14 and 26. With σ fixed, which centre μ gives the normal bell the biggest likelihood?',
+      choices: ['13.5, the median', '16, the mean', '18.5, halfway between 11 and 26'],
+      answer: 1,
+      why: 'ln L = constant − Σ (x − μ)²/(2σ²), and the squared gaps add up to the least at the mean, (11 + 13 + 14 + 26)/4 = 16.',
+    },
+    {
+      q: 'Four measurements: 12, 16, 20 and 24, with mean 18. What is the maximum-likelihood σ?',
+      choices: ['√(80/3) ≈ 5.16', '20', '√20 ≈ 4.47'],
+      answer: 2,
+      why: 'The squared gaps are 36, 4, 4 and 36, adding to 80. Divide by n = 4 to get 20, then take the square root: √20 ≈ 4.47. Dividing by 3 is the sample standard deviation’s n − 1, and 20 forgets the root.',
+    },
+    {
+      q: 'Two lines through the same points, under normal noise with the same σ. Line A’s squared residuals add up to 19, line B’s to 17. Which line has the bigger likelihood?',
+      choices: ['Line A', 'Line B', 'It depends on σ'],
+      answer: 1,
+      why: 'ln L = −n ln(σ√(2π)) − Σ r²/(2σ²). The first part is the same for both lines, so the smaller Σ r² wins, for any σ.',
+    },
+    {
+      q: 'A model gives each of 2,000 independent outcomes a chance of 0.42. In floats, what does the product of the chances come to, and the sum of their logs?',
+      choices: ['A tiny number above 0, and about −1735', '0, and the sum of the logs is −∞ too', '0, but the sum of the logs is about −1735'],
+      answer: 2,
+      why: '0.42 multiplied by itself 2,000 times has more than 750 zeros after the decimal point, far below the smallest float, so it underflows to 0. Each log is ln 0.42, so the sum is 2,000 × ln 0.42 ≈ −1735: an ordinary number.',
+    },
+    {
+      q: 'A coin lands heads 4 times in 5 flips. Which p gives the smallest cross-entropy, and what is it?',
+      choices: ['p = 0.8, cross-entropy 0.500', 'p = 0.8, cross-entropy 2.502', 'p = 0.2, cross-entropy 1.332'],
+      answer: 0,
+      why: 'The smallest cross-entropy is at the biggest likelihood, the share of heads, 0.8: −(0.8 ln 0.8 + 0.2 ln 0.2) ≈ 0.500. 2.502 is −ln L without dividing by the 5 flips, and p = 0.2 swaps heads and tails.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="maximum-likelihood"
+  prompt="What is the likelihood, and how does maximum likelihood choose a parameter? Why work with the log, and how does this lead to squared error and cross-entropy?"
+  rubric={[
+    'The likelihood is the chance the model gives the observed data, for each value of the parameter, with the data held fixed.',
+    'Maximum likelihood picks the parameter that makes the data most probable: for a coin, the share of heads; for a normal bell, the mean and root mean squared gap.',
+    'The likelihood is not the chance that the parameter is right; across parameters it need not add up to 1.',
+    'Products of many chances underflow, so add logs instead; the log keeps the order of numbers, so the peak stays where it is.',
+    'With normal noise the log-likelihood is a constant minus the squared error over 2σ², and minus the average log-likelihood of yes/no data is the cross-entropy.',
+  ]}
+  example="The likelihood is the chance a model gives the data I saw, worked out for each setting of its parameter. Maximum likelihood picks the setting that makes that chance biggest: 7 heads in 10 flips gives p = 0.7, and a normal bell gets the mean and the root mean squared gap. It ranks parameters but isn't the chance that one is right, so it needn't add up to 1. Multiplying many chances underflows to 0, so I add their logs, and since ln keeps the order, the best parameter doesn't move. With normal noise ln L is a constant minus Σ r²/(2σ²), so the best line has the least squared error; for yes/no data, minus the average log-likelihood is the cross-entropy."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- The likelihood $L(\theta)$ is the chance (for measurements, the density) of the observed data under the model with parameter $\theta$, read as a function of $\theta$. Maximum likelihood picks the $\theta$ that makes it biggest.
+- $L$ is a chance of the data, not of $\theta$: across values of $\theta$ it need not add up to 1.
+- For $h$ heads in $n$ flips, $L(p) = p^h(1 - p)^{n - h}$ peaks at $\hat{p} = h/n$, the share of heads.
+- Products of many chances underflow to 0, so use $\ln L$, a sum of logs. $\ln$ keeps the order of numbers, so the peak doesn't move, and at the peak the slope of $\ln L$ is 0.
+- For a normal bell, the best $\mu$ is the mean and the best $\sigma$ is $\sqrt{\sum (x_i - \bar{x})^2 / n}$, dividing by $n$, not the sample standard deviation's $n - 1$.
+- Under normal noise, $\ln L = \text{constant} - \sum r_i^2/(2\sigma^2)$: maximising the likelihood is minimising squared error, whatever $\sigma$ is.
+- For yes/no data, $-\ln L$ divided by the number of outcomes is the cross-entropy: minimising it is maximum likelihood too.
+
+</Section>

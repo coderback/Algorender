@@ -251,7 +251,7 @@ function ticketPlane(id: string, label: string, counts: readonly number[], o: { 
     kind: 'plane',
     id,
     label,
-    x: { min: 0.4, max: counts.length + 0.6, label: 'x, the number on the ticket', ticks: ticks(xs) },
+    x: { min: 0.4, max: counts.length + 0.6, label: 'x', ticks: ticks(xs) },
     y: { min: 0, max: TICKET_TOP, label: 'tickets' },
     equal: false,
     shapes: [

@@ -1,0 +1,372 @@
+<Section step="hook" title="Do flashcards make a difference?">
+
+Sixteen students revise for the same test. A coin toss decides which eight use flashcards; the other eight reread
+their notes. The flashcard group averages 76.5 out of 100 and the rereaders 66.5: a gap of 10 points. Time to tell everyone to use
+flashcards?
+
+Not yet. Put any sixteen people into two groups of eight and one group will come out ahead, just from who happened to
+land where. A gap of 10 might be the flashcards, or it might be that luck. A **hypothesis test** asks one sharp
+question: if the method made no difference at all, how often would a gap this big turn up anyway? This lesson answers
+it by brute force, shuffling the group labels a thousand times, and then looks at two traps that catch scientists
+every year: what the answer, p, does and doesn't mean, and what happens when you test twenty things at once.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="null hypothesis">The claim that nothing is going on: here, that the revision method makes no difference to anyone's score. A test assumes it and asks whether the data look odd under it.</Term>
+  <Term name="test statistic">The single number that measures the difference you care about. Here it is $\bar{a} - \bar{b}$, the mean of group A minus the mean of group B.</Term>
+  <Term name="shuffle">Pool all the scores, put them in a random order, and deal the first 8 to a new group A′ (“A prime”) and the rest to B′. It is a random permutation of the pool, as in [counting](/learn/counting-combinatorics).</Term>
+  <Term name="null distribution">The pile of differences the shuffles give: what the test statistic looks like when the labels mean nothing.</Term>
+  <Term name="two-sided">Counting a shuffle as extreme when its difference is far from 0 on either side, because the question is whether the groups differ at all, in either direction.</Term>
+  <Term name="p-value">The share of shuffles whose difference is at least as far from 0 as the real one, on either side, ties included. It is the chance of data at least this extreme if the null hypothesis is true.</Term>
+  <Term name="threshold">A cut-off chosen in advance, usually 0.05. A p at or below it is called **statistically significant**.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Shuffle the labels">
+
+Suppose the null hypothesis is true. Then every student would have scored exactly the same whichever group they were
+in, so the labels A and B carry no information: they are stickers, and the coin toss handed them out at random. The
+real split is just one of all the ways to choose which 8 of the 16 scores wear the A sticker. That is a choice of 8 from 16, and as in
+[counting](/learn/counting-combinatorics) there are
+
+$$
+\binom{16}{8} = 12{,}870
+$$
+
+of them. The null hypothesis and the random dealing together make every one of them as likely as the real split. So
+the test is: deal the stickers out again at random, many times, and see how often a split looks as lopsided as the
+real one. The coin toss matters for what a small p means, too: because chance alone decided who used flashcards,
+keen or able students are spread across both groups, so a gap that chance can't explain points to the method. Had the
+students chosen their own method, the keen ones might all have picked flashcards, and no shuffle could tell.
+
+<Explore slug="permutation-test" settings={{ preset: 'shuffle', seed: 7 }} caption="Left: the 16 scores, coloured by group, with each group's mean; on a shuffle every score glides to its new group. Right: the difference of each shuffle piling up, the real difference as a solid line, and the extreme shuffles shaded." />
+
+In this run the first shuffle happens to give two groups with the same mean, 71.5 each, so a difference of 0. The
+first ten shuffles give 0, +4.5, +2, +0.5, +2, +8.25, +2, +2.5, −5.5 and −9.25. None of them is the real +10, and
+they wander on both sides of 0. That is chance alone at work on these very scores.
+
+After 1,000 shuffles the pile is a hump centred on −0.09. With the labels dealt at random, A′ is as likely to come
+out ahead as behind, so the differences balance around 0, and 694 of the 1,000 lie between −5 and +5. The pile's
+standard deviation is 4.88: it plays the role of a [standard error](/learn/estimation-confidence) for the difference
+when nothing is going on, found by shuffling instead of by formula.
+
+As a rough check, the real difference of 10 sits about 10 ÷ 4.88 ≈ 2.05 spreads from the middle. The pile is close to
+a bell, as [the central limit theorem](/learn/central-limit-theorem) leads you to expect of a difference of averages,
+and a bell keeps only about 5% of its area more than 2 spreads out, by the 95% rule of
+[densities](/learn/continuous-distributions). So expect only a few shuffles in 100 to be as extreme as the real split.
+
+Which shuffles count as at least as extreme as +10? The question, fixed before looking at the scores, was whether the
+methods make a difference in either direction, so both tails count. Choosing one side after seeing which way the gap
+went would count only one tail, roughly halving p and making the gap look more surprising than it is. Here 22 shuffles reached +10 or more and 20 reached −10 or less. Ties count too: a shuffle exactly 10
+from 0 is at least as extreme. That makes 42 of the 1,000, so
+
+$$
+p = \frac{42}{1{,}000} = 0.042
+$$
+
+If the method made no difference, a split as lopsided as the real one would turn up about 4 times in 100. That is at
+or below the usual threshold of 0.05, so the gap is called statistically significant: hard to put down to chance
+alone.
+
+Shuffles are random, so p from 1,000 of them wobbles, like any average in
+[the law of large numbers](/learn/law-of-large-numbers): by about $\sqrt{p(1 - p)/N} \approx 0.0063$ here. Four times
+the shuffles halve the wobble. But there are only 12,870 splits, so a computer can simply count them all: 488 are at
+least as extreme, and the exact p is $488 / 12{,}870 \approx 0.0379$. The shuffles' 0.042 was close.
+
+<KeyIdea>
+
+**A permutation test:** assume the groups make no difference (the null hypothesis), so the labels are arbitrary.
+Shuffle them many times and record the difference each shuffle gives. Then
+
+$$
+p = \frac{\text{shuffles at least as extreme}}{\text{shuffles}}
+$$
+
+where “at least as extreme” means at least as far from 0 as the real difference, on either side. A small p says chance
+alone rarely produces a gap this big.
+
+</KeyIdea>
+
+Read the definition again: every shuffle was made **assuming** no difference. So p is a statement about the data under
+that assumption, not about the assumption itself.
+
+<Misconception
+  id="p-is-chance-null-true"
+  title="p is the chance that nothing is going on"
+  probes={[
+    {
+      q: 'A new fertiliser is tested against plain soil and gives p = 0.004. What does the 0.004 mean?',
+      choices: [
+        'There is a 0.4% chance the fertiliser does nothing',
+        'If the fertiliser did nothing, a difference at least this big would turn up about 4 times in 1,000',
+        'There is a 99.6% chance the fertiliser works',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'p is worked out assuming the fertiliser does nothing. It is the chance of data at least this extreme under that assumption, not the chance of the assumption.',
+    },
+    {
+      q: 'You toss a coin many times to test whether it is fair. Which of these is p?',
+      choices: ['The chance of results at least this lopsided, if the coin is fair', 'The chance the coin is fair, given these results'],
+      answer: 0,
+      trap: 1,
+      why: 'p assumes the coin is fair and asks how surprising the results are. The chance the coin is fair given the results is a different number, which needs Bayes’ rule and a prior.',
+    },
+  ]}
+>
+
+p answers “if nothing were going on, how often would data at least this extreme turn up?” It does **not** answer
+“how likely is it that nothing is going on?” Those are the two directions of a conditional probability, and as in
+[Bayes' rule](/learn/bayes), $P(\text{this extreme or more} \mid \text{no effect})$ can be small while
+$P(\text{no effect} \mid \text{data})$ is not, for example when real effects are rare to begin with. The flashcards' p = 0.042 is not a 4.2% chance that they
+don't work.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="When nothing is going on">
+
+What does a permutation test do when the null hypothesis is really true? Here both groups are drawn from one
+population, a bell curve of scores with mean 65 and spread 10, and the labels are handed out at random, so any gap is
+luck by construction. Predict how often p comes out at or below 0.05 in experiments like this, what shape the p-values of 200 such
+experiments pile into, what share of them a threshold of 0.05 calls significant, which is more likely for one more
+experiment, and what changes with a stricter threshold.
+
+<PredictChallenge slug="permutation-test" settings={{ preset: 'no-effect', seed: 9 }} goal={5} />
+
+In this run the first experiment gives p = 0.779: nothing to see, as it should be. Across all 200 experiments the
+p-values spread out roughly evenly from 0 to 1, about 10 in every bar of width 0.05. Of the 200, 11 came out at or below 0.05,
+close to 1 in 20, and 94 came out above 0.5. With a threshold of 0.01, 2 of the 200 still came out at or below it, 1 in
+100.
+
+Why flat? When the null hypothesis is true, the real split is just one more random split, so its difference is no
+more extreme than a typical shuffle's. Where it ranks among the shuffles is roughly equally likely to be anywhere
+(whole-number scores and ties make it only roughly so), and p is that rank as a share. So a threshold of 0.05 lets
+through about 1 in 20 of the experiments where nothing is going on. That is exactly what the threshold means: of the
+experiments where nothing is going on, the share you agree to call significant. It is **not** the share of significant
+results that are false alarms; that depends on how many real effects there are among the things tested, as in
+[Bayes' rule](/learn/bayes).
+
+The same flat pile says something about big p-values. A large p is what no effect usually looks like, but it is also
+what a small real effect often looks like. In the first explorer, step to the last frame and drag group A's mean down
+5 points (one point per arrow press), so the gap is 5 instead of 10: the exact p becomes 0.271. Then imagine
+flashcards really are worth 5 points. In 400 simulated experiments, each drawing 16 scores from the bell curve above
+(mean 65, spread 10) and adding 5 points to every A score, with 8 students a group, p came out above 0.05 in 329 of
+them. With groups this
+small, the test usually misses a real effect of that size.
+
+<Misconception
+  id="big-p-proves-no-difference"
+  title="p above 0.05 proves there is no difference"
+  probes={[
+    {
+      q: 'A new diet is tested with 6 people in each group and gives p = 0.62. What can you conclude?',
+      choices: [
+        'The diet makes no difference',
+        'Little: with groups this small, a real effect could easily give a p this big',
+        'The diet works for 38% of people',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'A large p means the data are what no effect would usually give. Small real effects often give such data too, especially with few people.',
+    },
+    {
+      q: 'A headline says: “Homework makes no difference (p = 0.35, 12 pupils per group).” Is the headline right?',
+      choices: ['No: the study only failed to detect a difference', 'Yes: p above 0.05 shows there is no difference'],
+      answer: 0,
+      trap: 1,
+      why: 'Failing to find evidence is not finding evidence of nothing. With 12 pupils a group, even a real effect would often give a p this large.',
+    },
+  ]}
+>
+
+A p above the threshold means the data don't rule out chance alone. It does not mean chance alone is the answer.
+Absence of evidence is not evidence of absence: with 8 students a group, a real 5-point advantage gave p above 0.05 in
+329 of 400 experiments. To show that a difference is small, report how big it could be, with an interval as in
+[standard errors and confidence intervals](/learn/estimation-confidence), not a large p.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="A permutation test in code">
+
+The exercise builds the whole test. Its shuffles come from the Park–Miller generator of
+[the law of large numbers](/learn/law-of-large-numbers): each step multiplies the state by 16,807 and keeps the
+remainder after dividing by 2,147,483,647, and the state divided by 2,147,483,647 is a number $u$ between 0 and 1.
+
+The shuffle is the **Fisher–Yates** shuffle. Walk $i$ from the last place of the pool down to 1. At each place, pick
+$j = \lfloor u \cdot (i + 1) \rfloor$ ($u \cdot (i + 1)$ rounded down), a place from 0 to $i$, each equally likely, and swap places $i$ and $j$. Place
+$i$ is then settled and never touched again. The $+1$ matters: it lets $j$ equal $i$, so a score can stay where it is.
+With $j = \lfloor u \cdot i \rfloor$ instead, no score could ever stay put, and some orders could never come up.
+
+After the swaps, the first 8 of the pool are A′ and the rest B′. Record $\bar{a}' - \bar{b}'$, count it if its size,
+ignoring the sign, is at least the real difference's size, and keep shuffling the same pool. Compare means, not totals: when the groups
+differ in size, the bigger group's total is bigger just for having more scores.
+
+These are exactly the visualiser's shuffles. Your code on the flashcard scores with 1,000 shuffles from seed 7 makes
+the same 1,000 differences and returns the same p = 0.042 as the run above.
+
+<CodeExercise exercise="permutation-test" />
+
+</Section>
+
+<Section step="see" title="Twenty tests at once">
+
+When nothing is going on, a threshold of 0.05 calls about 1 test in 20 significant. Now test twenty things at once. Here
+twenty study tricks are each tested with 8 students against 8, and none of them works: every score comes from the same
+population. The p-values are on a log scale, as in [exponents and logs](/learn/exponents-logs), so the small ones are
+easy to tell apart.
+
+<Explore slug="permutation-test" settings={{ preset: 'many', seed: 4 }} caption="Twenty no-effect tests, each a permutation test with 1,000 shuffles, their p-values on a log scale; a test is marked at p ≤ 0.05, then at a stricter, corrected threshold." />
+
+In this round, test 7 lights up, with p = 0.012. Reported on its own, that looks like a discovery: a study trick that
+works, significant at the 0.05 level. But nothing works here. Expect about 1 of 20 no-effect tests to light up, since
+20 × 0.05 = 1.
+
+How likely is it that at least one lights up? Each test stays dark with chance 0.95, and the tests are independent, so
+all twenty stay dark with chance $0.95^{20} \approx 0.36$, as in
+[chance and independence](/learn/probability-basics). At least one lights up with chance
+
+$$
+1 - 0.95^{20} \approx 0.64
+$$
+
+In 100 more rounds of twenty, 64 lit at least one test. Run enough tests and something usually turns up.
+
+The fix is to hold each test to a stricter threshold. Dividing by the number of tests, $0.05 / 20 = 0.0025$
+(Bonferroni's correction), brings the chance of any false alarm in the round back to $1 - 0.9975^{20} \approx 0.049$,
+about 5%. In this round, no test reaches 0.0025: test 7's 0.012 is not enough once twenty tests have been run. The price
+is that a real but modest effect now needs a much smaller p to be noticed.
+
+<Misconception
+  id="one-in-twenty-is-a-finding"
+  title="One test in twenty below 0.05 is a real finding"
+  probes={[
+    {
+      q: 'A researcher tests 40 foods for a link with headaches, and 2 of the tests give p ≤ 0.05. How strong is the evidence that those two foods matter?',
+      choices: [
+        'Strong: both passed the 0.05 threshold',
+        'Weak: 40 tests of foods that do nothing would give about 2 such results by chance',
+        'Certain for at least one of the two',
+      ],
+      answer: 1,
+      trap: 0,
+      why: '40 × 0.05 = 2: two lit tests is exactly what forty tests of nothing produce on average. Testing those two foods again on fresh data would tell.',
+    },
+    {
+      q: 'You run 4 tests at once and want the chance of any false alarm to stay near 5%. What threshold should each test use?',
+      choices: ['0.0125', '0.05, as for one test', '0.2'],
+      answer: 0,
+      trap: 1,
+      why: 'Divide by the number of tests: 0.05 ÷ 4 = 0.0125. At 0.05 each, the chance of at least one false alarm is 1 − 0.95⁴ ≈ 0.19.',
+    },
+  ]}
+>
+
+Every test of nothing has a 1 in 20 chance of a false alarm at 0.05, so twenty tests of nothing light up about one, and at least
+one with chance 0.64. A single lit test among many is what chance alone looks like. Count how many things were tested,
+and either divide the threshold by that number or test the one that lit up again on fresh data.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'In a permutation test, 18 of 600 shuffles are at least as extreme as the real difference. What is p?',
+      choices: ['0.97', '0.03', '18', '0.015'],
+      answer: 1,
+      why: 'p is the share of shuffles at least as extreme: 18 / 600 = 0.03. 0.97 is the share less extreme, and 18 is the count, not a share.',
+    },
+    {
+      q: 'A headline says: “Sleep app trial finds only a 2% chance the app is useless (p = 0.02).” What, if anything, is wrong with it?',
+      choices: [
+        'Nothing: a 2% chance of being useless is what p = 0.02 means',
+        'p = 0.02 says how often a gap this big would turn up if the app were useless, not how likely it is that the app is useless',
+        'It should say the app works for 98% of people',
+      ],
+      answer: 1,
+      why: 'p assumes the app is useless and measures how surprising the data are under that assumption. The chance that the app is useless, given the data, is a different number, which also depends on how many such apps really work.',
+      traps: { 0: 'p-is-chance-null-true', 2: 'p-is-chance-null-true' },
+    },
+    {
+      q: 'With 9 runners in each group, a new running shoe gives p = 0.45 against the old one. What follows?',
+      choices: [
+        'The new shoe makes no difference',
+        'The new shoe is 45% faster',
+        'Not much: with so few runners, a real difference could easily give a p this big',
+      ],
+      answer: 2,
+      why: 'A large p means the data don’t rule out chance alone. Small groups often miss real effects, so it is not evidence that there is none.',
+      traps: { 0: 'big-p-proves-no-difference' },
+    },
+    {
+      q: 'In a permutation test the real difference is −6 (B ahead). Which shuffles count as at least as extreme?',
+      choices: ['Those of −6 or less', 'Those of +6 or more', 'Those between −6 and +6', 'Those of −6 or less, or +6 or more'],
+      answer: 3,
+      why: 'The question is whether the groups differ in either direction, so both tails count: a difference at least 6 from 0 on either side, ties included.',
+    },
+    {
+      q: 'A shop tries 30 new banner colours, each tested against the old banner. One colour gives p = 0.04, and the report calls it a winner. How strong is the evidence?',
+      choices: [
+        'Strong: it passed the 0.05 threshold',
+        'That colour has a 96% chance of really selling more',
+        'Weak: 30 tests of colours that change nothing would give one or two results like this by chance',
+      ],
+      answer: 2,
+      why: '30 × 0.05 = 1.5: one or two lit tests are what thirty tests of nothing give on average. And 1 − p is not the chance the colour works.',
+      traps: { 0: 'one-in-twenty-is-a-finding', 1: 'p-is-chance-null-true' },
+    },
+    {
+      q: 'A study runs 25 tests and wants the chance of any false alarm near 5%. What threshold should each test use?',
+      choices: ['0.05', '0.002', '1.25', '0.01'],
+      answer: 1,
+      why: 'Divide the threshold by the number of tests: 0.05 ÷ 25 = 0.002. Dividing by √25 = 5 gives 0.01, not strict enough, and multiplying, 0.05 × 25 = 1.25, is not even a probability.',
+      traps: { 0: 'one-in-twenty-is-a-finding' },
+    },
+    {
+      q: 'When the null hypothesis is true, about what share of p-values land above 0.8?',
+      choices: ['About 20%', 'Almost none', 'About 80%'],
+      answer: 0,
+      why: 'With nothing going on, p is equally likely to land anywhere from 0 to 1, so the stretch from 0.8 to 1, a fifth of the range, gets about a fifth of the p-values.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="hypothesis-testing-permutation"
+  prompt="How does a permutation test decide whether a difference between two groups could be chance alone, what does its p-value mean and not mean, and why is one p ≤ 0.05 among twenty tests not a finding?"
+  rubric={[
+    'Assume no difference (the null hypothesis), so the labels are arbitrary: shuffle them many times and record the difference each shuffle gives.',
+    'p is the share of shuffles at least as far from 0 as the real difference, on either side, ties included.',
+    'p is the chance of data at least this extreme if nothing is going on, not the chance that nothing is going on.',
+    'A large p does not prove there is no difference: small studies often miss real effects.',
+    'With nothing going on, p ≤ 0.05 happens 1 time in 20, so many tests need a stricter threshold such as 0.05 divided by the number of tests.',
+  ]}
+  example="If the groups made no difference, every score would be the same whichever group it was in, so the labels are arbitrary. A permutation test shuffles the labels many times and records the difference in means each shuffle gives: that pile is what chance alone does. p is the share of shuffles at least as far from 0 as the real difference, counting both sides and ties. It is the chance of data this extreme if nothing is going on, not the chance that nothing is going on, and a big p doesn't prove there's no difference, since small groups often miss real effects. When nothing is going on p is equally likely to be anywhere, so 1 test in 20 lands at or below 0.05 by luck. Test twenty things and one usually lights up, so divide the threshold by the number of tests."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A hypothesis test asks whether chance alone could explain a difference: assume nothing is going on (the null hypothesis) and see how surprising the data are.
+- A permutation test makes chance alone concrete: shuffle the group labels many times, and the pile of shuffled differences is the null distribution.
+- p is the share of shuffles at least as extreme as the real difference, on both sides, ties included. A small p means chance alone rarely gives a gap this big.
+- p is the chance of data at least this extreme if nothing is going on, never the chance that nothing is going on; and a large p doesn't prove there is no difference.
+- With nothing going on, p is roughly equally likely to land anywhere from 0 to 1, so 0.05 calls about 1 in 20 of those experiments significant. Twenty tests usually light one up; divide the threshold by the number of tests.
+
+</Section>

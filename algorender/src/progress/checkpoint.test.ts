@@ -213,6 +213,14 @@ describe('the real checkpoints', () => {
     expect(openCheckpoints().map((c) => c.stage)).toContain(3);
   });
 
+  it('asks stage 3 about B6’s covariance, maximum likelihood, intervals, tests and SGD', () => {
+    const p = checkpointPools(3);
+    for (const id of ['covariance-correlation', 'maximum-likelihood', 'estimation-confidence', 'hypothesis-testing', 'stochastic-gradient-descent']) {
+      expect(p.probes.some((q) => q.concept === id), id).toBe(true);
+      expect(p.quiz.some((q) => q.concept === id), id).toBe(true);
+    }
+  });
+
   it('opens the first two stages today, from the lessons already written', () => {
     const open = openCheckpoints().map((c) => c.stage);
     expect(open).toContain(1);

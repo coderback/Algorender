@@ -4,17 +4,19 @@ Heights, measurement errors, exam averages and polling results all tend to follo
 the things being added up look nothing like a bell. A single die roll is flat; the average of many dice is a bell.
 
 The **central limit theorem** says this is no coincidence: average enough independent samples of almost anything and the
-averages pile up into a normal distribution, with a spread you can predict exactly.
+averages pile up into a normal distribution, with a spread you can predict exactly. The
+[law of large numbers](/learn/law-of-large-numbers) said where an average settles and how fast its miss shrinks; this
+lesson says what shape the misses make.
 
 </Section>
 
 <Section step="parts" title="The pieces you will see">
 
 <Terms>
-  <Term name="population">Where the samples come from, with mean $\mu$ and standard deviation $\sigma$. It can have any shape.</Term>
+  <Term name="population">Where the samples come from, with mean $\mu$ (its expected value, as in [random variables](/learn/random-variables)) and standard deviation $\sigma$. It can have any shape.</Term>
   <Term name="sample of size n">$n$ independent draws from the population.</Term>
   <Term name="sample mean x̄">The average of one sample. Draw many samples and you get many means.</Term>
-  <Term name="standard error">How spread out the means are: $\sigma / \sqrt{n}$.</Term>
+  <Term name="standard error">How spread out the means are: $\sigma / \sqrt{n}$, the typical miss of an average from the law of large numbers.</Term>
 </Terms>
 
 </Section>
@@ -32,6 +34,11 @@ more often than far from it, and they fall away symmetrically on both sides.
 the population hardly matters once $n$ is moderately large. Quadrupling $n$ halves the spread.
 
 </KeyIdea>
+
+That closes a loop from the law of large numbers. There the running average of a die sat inside the band
+$\mu \pm 2\sigma/\sqrt{n}$ in about 19 runs in 20. Now you can see why: the averages are roughly normal with spread
+$\sigma/\sqrt{n}$, and a normal curve holds about 95% of its area within 2 spreads of its centre, the 68–95–99.7 rule
+from [densities and the normal distribution](/learn/continuous-distributions).
 
 </Section>
 
@@ -135,6 +142,12 @@ halve it you need **four** times as many samples, and a hundred times the data o
       answer: 0,
       why: 'Collecting more values only traces the population’s own shape more precisely. The central limit theorem is about the means of samples, not the individual values.',
       traps: { 1: 'data-becomes-normal' },
+    },
+    {
+      q: 'A population has mean 100 and σ = 15. You take many samples of 100 values each. About what share of the sample means land between 97 and 103?',
+      choices: ['About 68%', 'About 95%', 'About 99.7%', 'About 50%'],
+      answer: 1,
+      why: 'The means spread by σ/√n = 15/10 = 1.5, and 97 to 103 is 2 of those spreads either side of 100. A roughly normal pile holds about 95% within 2 spreads.',
     },
   ]}
 />

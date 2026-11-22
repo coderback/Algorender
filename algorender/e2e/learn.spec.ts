@@ -70,6 +70,11 @@ const lessonPaths = [
   'law-of-large-numbers',
   'integrals',
   'continuous-distributions',
+  'covariance-correlation',
+  'maximum-likelihood',
+  'estimation-confidence',
+  'hypothesis-testing',
+  'stochastic-gradient-descent',
   'optimizers',
   'rate-limiting',
 ];

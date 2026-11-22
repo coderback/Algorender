@@ -178,9 +178,9 @@ function Ladder({ exercise, stages, variant, tutor, aside }: { exercise: Exercis
           </button>
         ))}
       </div>
-      <label className="flex items-center gap-2 text-sm text-ink-soft">
+      <label className="flex min-w-0 max-w-full items-center gap-2 text-sm text-ink-soft">
         Watch it run on
-        <select value={example} onChange={(e) => setExample(e.target.value)} className="h-9 rounded-full bg-sunken px-3 text-[13px] font-semibold text-ink">
+        <select value={example} onChange={(e) => setExample(e.target.value)} className="h-9 min-w-0 max-w-full rounded-full bg-sunken px-3 text-[13px] font-semibold text-ink">
           {exercise.examples.map((e) => (
             <option key={e.id} value={e.id}>
               {e.label}
