@@ -1,0 +1,334 @@
+<Section step="hook" title="How sure can one sample make you?">
+
+A poll asks 1,000 people and reports 44%, “give or take 3 points”. A paper says a drug lowers blood pressure by 6
+points, with a 95% confidence interval of 2 to 10. A model scores 91% on its test set, ± 1.4%. Each of these is one
+number from one sample, and each comes with a claim about how far off it might be.
+
+Where does the “give or take” come from, when nobody knows the true answer? And what does a percentage like “95%”
+actually promise? Most people, including many who publish such intervals, get that second question wrong. This lesson
+measures how far a sample's average strays (its **standard error**), turns that into a **confidence interval**,
+watches 50 intervals to see what the percentage promises, and then gets the same interval with no formula at all, by
+the **bootstrap**.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="true average μ">What we want to know: the expected value of one draw from the population, as in [random variables](/learn/random-variables). Here, the average roll of a die that may be loaded.</Term>
+  <Term name="sample">$n$ independent draws from the population, for example 25 rolls of the die.</Term>
+  <Term name="sample average x̄">“x bar”: the sample's total divided by $n$. It estimates $\mu$, and a different sample would give a different $\bar{x}$.</Term>
+  <Term name="sample spread s">How far single values in the sample stray from $\bar{x}$: the squared gaps $(x - \bar{x})^2$ added up, divided by $n - 1$, then square-rooted. It stands in for the population's $\sigma$, which we don't know.</Term>
+  <Term name="standard error SE">Our estimate, $s/\sqrt{n}$, of how far $\bar{x}$ typically lands from $\mu$: the [central limit theorem](/learn/central-limit-theorem)'s $\sigma/\sqrt{n}$, with $s$ in $\sigma$'s place.</Term>
+  <Term name="confidence interval">A range worked out from the sample, here $\bar{x} - 2\,\text{SE}$ to $\bar{x} + 2\,\text{SE}$, made by a method that catches $\mu$ in a known share of samples.</Term>
+  <Term name="resample">A new sample of $n$ picks drawn from the sample itself, **with replacement**: each pick can be any of the $n$ values, no matter which were picked before.</Term>
+  <Term name="bootstrap">Making many resamples, averaging each, and reading the interval off the middle of those averages.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="How far off is one sample's average?">
+
+A die may be loaded. Its true average $\mu$ is what we want, but all we can see is rolls. Roll it 25 times: in the run
+below the rolls add up to 107, so $\bar{x} = 107/25 = 4.28$. Would another 25 rolls give the same $\bar{x}$? Decide,
+then step through.
+
+<Explore slug="confidence-intervals" settings={{ preset: 'standard-error', seed: 4 }} caption="Left: the 25 rolls, how many of each face, with their average x̄. Right: where averages of 25 rolls land, first just ours with x̄ ± SE, then 1,000 fresh samples' averages and finally averages of 100 rolls." />
+
+The next 25 rolls gave 4.04. Every sample has its own $\bar{x}$, so the honest question is how far ours could be from
+$\mu$. The [central limit theorem](/learn/central-limit-theorem) already answered this: averages of $n$ draws spread by
+$\sigma/\sqrt{n}$, where $\sigma$ is the spread of one draw. The catch is that we don't know $\sigma$ any more than we
+know $\mu$. So we measure the spread of our own rolls instead. Their squared gaps from $\bar{x} = 4.28$ add up to 63.04,
+and
+
+$$
+\begin{aligned}
+s &= \sqrt{63.04 / 24} \\
+&\approx 1.62
+\end{aligned}
+$$
+
+Why divide by $n - 1 = 24$ and not 25? The gaps are measured from $\bar{x}$, which was worked out from these same rolls,
+and no point makes their squared gaps add up to less than $\bar{x}$ does. Measured from $\mu$, they would come out a
+little bigger. Dividing by 24 rather than 25 makes up for it: with $n = 25$ it makes $s$ about 2% bigger, since
+$\sqrt{25/24} \approx 1.02$.
+
+Then the standard error:
+
+$$
+\text{SE} = \frac{s}{\sqrt{n}} = \frac{1.62}{5} \approx 0.324
+$$
+
+Single rolls stray about 1.62 from the average, but in an average of 25, high and low rolls partly cancel, so
+$\bar{x}$ is typically only about 0.324 from $\mu$. To check, the visualiser draws 1,000 fresh samples of 25 rolls:
+their 1,000 averages spread by 0.348. Now the secret: this die lands 5 or 6 twice as often as each other face, so its
+chances are $\tfrac18$ for each of 1 to 4 and $\tfrac14$ for 5 and 6. Its true average is
+
+$$
+\begin{aligned}
+\mu &= \tfrac{1 + 2 + 3 + 4}{8} + \tfrac{5 + 6}{4} \\
+&= 1.25 + 2.75 = 4
+\end{aligned}
+$$
+
+and, with the shortcut $\text{Var}(X) = E[X^2] - \mu^2$ from random variables,
+
+$$
+\begin{aligned}
+E[X^2] &= \tfrac{1 + 4 + 9 + 16}{8} + \tfrac{25 + 36}{4} \\
+&= 3.75 + 15.25 = 19
+\end{aligned}
+$$
+
+so $\text{Var}(X) = 19 - 16 = 3$ and $\sigma = \sqrt{3} \approx 1.73$. Then $\sigma/\sqrt{25} = 0.346$: one sample's SE,
+0.324, came close without knowing $\sigma$.
+
+With 100 rolls the run gets $s = 1.83$, no smaller (single rolls spread as much as ever), but SE $= 1.83/10 \approx
+0.183$. A hundred rolls' averages spread by 0.171, about half as much as averages of 25. More data doesn't make single
+values less spread out. It makes the average more precise, at the $\sqrt{n}$ rate you know from the central limit
+theorem.
+
+<KeyIdea>
+
+**The standard error** of a sample's average is
+
+$$
+\text{SE} = \frac{s}{\sqrt{n}}
+$$
+
+the spread of single values divided by $\sqrt{n}$. It estimates how far $\bar{x}$ typically lands from the true
+average $\mu$, from the one sample you have.
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Fifty intervals">
+
+Here is the step from a standard error to a confidence interval. By the central limit theorem $\bar{x}$ lands on a
+roughly normal curve centred on $\mu$, with spread $\sigma/\sqrt{n}$, which each sample's SE estimates. The 68–95–99.7
+rule from [densities and the normal distribution](/learn/continuous-distributions) then says how often it lands within
+1, 2 or 3 standard errors of $\mu$. So build the range $\bar{x} \pm 2\,\text{SE}$ from each sample, and ask how often it
+catches $\mu$.
+
+The challenge draws 50 samples of 25 rolls from the same die, with $\mu = 4$ drawn as a dashed line (in real life you
+would never see that line). Predict whether distance works both ways, how many of 50 intervals miss, what one interval
+promises, and what changes with more rolls or a narrower interval.
+
+<PredictChallenge slug="confidence-intervals" settings={{ preset: 'intervals', seed: 4 }} goal={5} />
+
+Sample 1 is the sample from before: $\bar{x} = 4.28$ and SE $\approx 0.324$, so 2 SE $\approx 0.648$ and its interval
+runs from 3.632 to 4.928. It catches $\mu = 4$.
+
+The key step is that distance works both ways. If $\bar{x}$ is within 2 SE of $\mu$, then $\mu$ is within 2 SE of
+$\bar{x}$. So an interval catches $\mu$ exactly when its $\bar{x}$ landed within 2 SE of $\mu$, which happens in about
+95% of samples. In this run 47 of the 50 intervals caught $\mu$ and 3 missed: samples 36, 41 and 42, whose averages
+4.56, 4.76 and 4.8 all landed high. That is partly this die: samples heavy in 5s and 6s spread less, so their intervals
+are narrower. Over 1,000 runs of 50, 1,845 of the 2,953 misses, 62%, landed high.
+
+Runs vary. Those 1,000 runs missed 2.95 times each on average (exactly 5% of 50 would be 2.5): 47 runs had no misses at
+all, and 166 had 5 or more.
+
+- **Is it really 95%?** Over 10,000 samples of 25 rolls, $\bar{x} \pm 2\,\text{SE}$ caught $\mu$ in 9,434: a shade
+  under 95%, because $s$ wobbles from sample to sample too, so SE is only an estimate of $\sigma/\sqrt{n}$.
+- **More rolls: narrower, not surer.** The challenge's 50 intervals from 100 rolls were half as wide, about $\pm 0.35$
+  instead of $\pm 0.69$, and 48 of them caught $\mu$. Over 10,000 such samples, 9,547 did: about 95% again.
+- **The multiplier sets the share.** With $\bar{x} \pm 1\,\text{SE}$ only 34 of the same 50 samples caught $\mu$, and
+  over 10,000 samples 6,781, about 68%, just as the 68–95–99.7 rule says.
+
+<Misconception
+  id="ninety-five-percent-chance"
+  title="There is a 95% chance μ is in this interval"
+  probes={[
+    {
+      q: 'A poll’s 95% confidence interval for the share of voters backing a plan is 41% to 47%. Which statement is right?',
+      choices: [
+        'There is a 95% chance that the true share is between 41% and 47%',
+        'The method that made this interval catches the true share in about 95% of polls',
+        '95% of voters answered between 41% and 47%',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'The true share is one fixed number: 41% to 47% either holds it or doesn’t. The 95% describes how often intervals made this way, from all the polls one might have run, catch the truth.',
+    },
+    {
+      q: 'Your 95% interval for a machine’s average output is 3.1 to 3.9 kg. A friend says: “So if we ran the study again, the true average would land between 3.1 and 3.9 about 95% of the time.” What is wrong?',
+      choices: [
+        'Nothing: that is what 95% means',
+        'The true average doesn’t move; a new study gives a new interval, and about 95% of such intervals catch it',
+        'Only the new study’s average can land somewhere; about 95% of new averages would fall between 3.1 and 3.9',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Nothing about the true average is random. What changes from study to study is the sample, and so the interval; about 95% of those intervals catch the fixed truth. (New averages fall inside this one interval less often than 95%, since it was itself built around one lucky or unlucky average.)',
+    },
+  ]}
+>
+
+The true average $\mu$ is one fixed number, and once the rolls are in, the interval is two fixed numbers. It either
+holds $\mu$ or it doesn't; nothing is left to chance. Before the rolls, there was a 95% chance that the interval you
+were about to get would catch $\mu$. Once they are in, the interval is fixed, and it either does or doesn't. The 95%
+belongs to the **method**: of all the samples you might have drawn, about 95% give an interval that catches $\mu$. So
+“95% confident” means “made by a method that is right about 19 times in 20”, never “95% probable for this interval”.
+
+</Misconception>
+
+<Misconception
+  id="interval-holds-the-data"
+  title="A 95% interval holds 95% of the data"
+  probes={[
+    {
+      q: 'From 1,600 delivery times you get a 95% confidence interval for the average time of 31 to 33 minutes. About what share of the 1,600 deliveries took between 31 and 33 minutes?',
+      choices: ['About 95%', 'Probably far fewer: single deliveries spread much more widely than their average does', 'About 68%'],
+      answer: 1,
+      trap: 0,
+      why: 'The interval is about the average, whose standard error is s/√1,600 = s/40. Single deliveries stray by s, 40 times as much, so most of them lie outside 31 to 33.',
+    },
+    {
+      q: 'You collect 9 times as many values, from the same population. What happens to the 95% confidence interval for the average?',
+      choices: ['It gets about a third as wide', 'It stays about the same width, since the values spread just as much', 'It gets wider, to take in the extra values'],
+      answer: 0,
+      trap: 1,
+      why: 'The interval is x̄ ± 2s/√n. s stays about the same, but √n triples, so the interval shrinks to a third. A range holding 95% of the values would not shrink.',
+    },
+  ]}
+>
+
+A confidence interval is about the **average**, not the single values. Its width comes from the standard error
+$s/\sqrt{n}$, which shrinks as the sample grows, while the values themselves keep spreading by about $s$. In the run
+above, single rolls stray about 1.62 from 4.28 but the interval reaches only 0.648 either side: 22 of the 25
+rolls lie outside it, and only the three 4s inside.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="The bootstrap: no formula needed">
+
+The formula $s/\sqrt{n}$ works for an average. For a median, a ratio of two averages, or a model's F1 score there is
+often no simple formula. The bootstrap gets an interval anyway, by brute force: pretend the sample is the whole
+population, and draw new samples from it.
+
+A resample makes 25 picks from the 25 rolls **with replacement**: each pick can be any of the 25, no matter which were
+picked before. Why insist on that? Predict what would happen without it in the first step below.
+
+<Explore slug="confidence-intervals" settings={{ preset: 'bootstrap', seed: 4 }} caption="Left: the 25 rolls, and one resample's counts beside them. Right: the averages of 1,000 resamples, the tails cut off, and the bootstrap interval against x̄ ± 2 SE." />
+
+Without replacement every resample would be the same 25 rolls in a new order, with the same average every time, and
+it would tell you nothing. With replacement some rolls are picked twice or more and others not at all: in this run
+resample 1 has average 4.6. The averages of 1,000 resamples pile up around the sample's $\bar{x} = 4.28$ (their own
+average is 4.268), not around $\mu = 4$: resampling only knows the sample. They spread by 0.328, close to the
+formula's SE of 0.324. The resamples have found the standard error with no formula.
+
+For the interval, sort the 1,000 averages and drop 2.5% of them, 25, from each end. The 950 left are the middle 95%,
+from the 26th lowest, 3.6, to the 26th highest, 4.88. The formula gave 3.63 to 4.93: nearly the same interval. A
+fresh sample of 100 rolls bootstraps to 3.7 to 4.34, which is 0.64 wide against 1.28, half as wide, just as the
+standard error halves.
+
+The bootstrap is what statisticians and machine learning engineers reach for when they need error bars on something
+computed from data with no formula: rerun the computation on resampled data many times, and see how much the answer
+moves. It assumes the values were independent draws, and it can't fix a sample that was biased to begin with.
+
+</Section>
+
+<Section step="do" title="The bootstrap in code">
+
+The exercise uses the Park–Miller generator from [the law of large numbers](/learn/law-of-large-numbers): start from
+the seed as the **state**, replace it each time by $16807 \times \text{state}$ with only the remainder after dividing
+by 2,147,483,647 kept, and divide the state by 2,147,483,647 for a number $u$ between 0 and 1. Each pick takes a fresh
+$u$ and reads `data[⌊u·n⌋]`, where $\lfloor u \cdot n \rfloor$ means $u \cdot n$ rounded down. $u$ is below 1, so
+$u \cdot n$ is below $n$, and rounding down gives an index from 0 to $n - 1$. Every value has the same chance, and the
+last one is not left out.
+
+The averages go into an array the workspace draws. Then the code sorts a copy, from lowest to highest. With 400
+resamples, 2.5% is 10, so it drops 10 from each end; positions count from 0, so the interval runs from position 10 to
+position 389. The exercise's last test runs on the lesson's 25 rolls ($\bar{x} = 4.28$): 400 resamples from seed 7 give
+3.64 to 4.92.
+
+<CodeExercise exercise="bootstrap-ci" />
+
+To check the formula against the bootstrap, [the standard error exercise](/code/standard-error) works out $s$ and
+$s/\sqrt{n}$ from a list of values, the lesson's 25 rolls among them.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A sample of 64 values has spread s = 12. What is the standard error of its average?',
+      choices: ['1.5', '12', '0.1875', '2.25'],
+      answer: 0,
+      why: 'SE = s/√n = 12/√64 = 12/8 = 1.5. Dividing by 64 itself gives 0.1875, far too small, and 12 is the spread of single values.',
+    },
+    {
+      q: 'A study reports an average of 7.2 hours of sleep with a standard error of 0.15 hours. What is the interval x̄ ± 2 SE?',
+      choices: ['7.05 to 7.35', '7.2 to 7.5', '6.9 to 7.5', '6.6 to 7.8'],
+      answer: 2,
+      why: '2 × 0.15 = 0.3 either side of 7.2: from 6.9 to 7.5. One SE either side, 7.05 to 7.35, catches μ only about 68% of the time.',
+    },
+    {
+      q: 'What does a 95% confidence interval promise?',
+      choices: [
+        'There is a 95% chance that this particular interval holds μ',
+        'About 95% of the intervals made this way, from different samples, catch μ',
+        '95% of the data lie inside the interval',
+      ],
+      answer: 1,
+      why: 'μ is fixed, so one interval holds it or doesn’t. The 95% is the method’s success rate over all the samples one might draw.',
+      traps: { 0: 'ninety-five-percent-chance', 2: 'interval-holds-the-data' },
+    },
+    {
+      q: 'A bootstrap makes 2,000 resamples. Sorted, which averages mark the ends of the middle 95%?',
+      choices: ['The lowest and the highest', 'The 101st lowest and the 101st highest', 'The 51st lowest and the 51st highest', 'The 3rd lowest and the 3rd highest'],
+      answer: 2,
+      why: '2.5% of 2,000 is 50. Drop 50 from each end and the 51st lowest and 51st highest are the ends of what is left. Dropping 100 from each end would leave only the middle 90%.',
+    },
+    {
+      q: 'Why must a bootstrap resample be drawn with replacement?',
+      choices: [
+        'Without it, each resample is the same values in another order, so every resample has the same average',
+        'Replacement makes the resample averages centre on the true μ',
+        'Replacement lets a resample include values that weren’t in the sample',
+      ],
+      answer: 0,
+      why: 'Only with replacement do some values come up twice and others not at all, which is what makes resamples differ. Every pick is still one of the sample’s own values, and the averages centre on the sample’s x̄, never on μ.',
+    },
+    {
+      q: 'A clinic times 900 visits: average 18 minutes, s = 9 minutes, so the 95% interval for the average visit is 17.4 to 18.6 minutes. Is the next patient’s visit very likely to last between 17.4 and 18.6 minutes?',
+      choices: ['Yes: there is a 95% chance', 'No: single visits spread by about 9 minutes; the interval is about the average'],
+      answer: 1,
+      why: 'SE = 9/√900 = 0.3, so the interval is 18 ± 0.6. It pins down the average, not one visit, which typically strays about 9 minutes from 18.',
+      traps: { 0: 'interval-holds-the-data' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="what-confidence-means"
+  prompt="What does a standard error measure, why does x̄ ± 2 SE catch the true average in about 95% of samples, and how does the bootstrap get an interval without the formula?"
+  rubric={[
+    'The standard error s/√n estimates how far a sample’s average typically lands from the true average; s stands in for the unknown σ.',
+    'x̄ lands within 2 SE of μ in about 95% of samples (central limit theorem, 68–95–99.7), so x̄ ± 2 SE catches μ in about 95% of samples.',
+    'The 95% describes the method over many samples; one interval either holds μ or it doesn’t.',
+    'The bootstrap resamples the sample with replacement many times and keeps the middle 95% of the resample averages.',
+  ]}
+  example="One sample's average x̄ misses the true average μ by some amount, and the standard error s/√n says how much, typically: s, the spread of single values in the sample, stands in for the σ we don't know. By the central limit theorem x̄ lands within 2 SE of μ in about 95% of samples, and distance works both ways, so the interval x̄ ± 2 SE catches μ in about 95% of samples. That 95% is the method's success rate; any one interval simply holds μ or doesn't. The bootstrap needs no formula: draw many resamples from the sample with replacement, average each, sort, and keep the middle 95% of those averages."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A sample's average $\bar{x}$ estimates the true average $\mu$, and the standard error $s/\sqrt{n}$ estimates its typical miss, with $s$ (dividing by $n - 1$) standing in for $\sigma$.
+- $\bar{x} \pm 2\,\text{SE}$ catches $\mu$ in about 95% of samples, because $\bar{x}$ lands within 2 SE of $\mu$ that often and distance works both ways.
+- 95% describes the method, not one interval: a given interval holds $\mu$ or doesn't. Nor does it hold 95% of the data; it is about the average.
+- Four times the data halves the interval but leaves its 95% unchanged: more precise, not surer. The multiplier sets the share (± 1 SE about 68%, ± 2 SE about 95%).
+- The bootstrap resamples the sample with replacement, averages each resample, and keeps the middle 95%: an interval with no formula, as long as the values were independent draws.
+
+</Section>

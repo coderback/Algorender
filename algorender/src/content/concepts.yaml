@@ -649,7 +649,8 @@ concepts:
     track: probability
     summary: How two quantities move together, and why correlation is a cosine.
     prereqs: [random-variables, dot-product]
-    planned: true
+    visualisers: [correlation]
+    lesson: covariance-correlation
   - id: information-theory
     title: Entropy and KL divergence
     track: probability
@@ -662,19 +663,22 @@ concepts:
     track: probability
     summary: Choosing the parameters that make the data most probable, and why that gives squared error and cross-entropy.
     prereqs: [random-variables, derivatives-gradients, exponents-logs]
-    planned: true
+    visualisers: [maximum-likelihood]
+    lesson: maximum-likelihood
   - id: estimation-confidence
     title: Standard errors, confidence intervals and the bootstrap
     track: probability
     summary: How far an estimate could be from the truth, and what 95% really promises.
     prereqs: [sampling-clt]
-    planned: true
+    visualisers: [confidence-intervals]
+    lesson: estimation-confidence
   - id: hypothesis-testing
     title: Hypothesis tests and p-values
     track: probability
     summary: Whether chance alone could explain a difference, permutation tests, and the trap of testing many things at once.
     prereqs: [estimation-confidence]
-    planned: true
+    visualisers: [permutation-test]
+    lesson: hypothesis-testing
   - id: gaussian-multivariate
     title: The multivariate Gaussian
     track: probability
@@ -733,10 +737,9 @@ concepts:
     title: Logistic regression
     track: ml
     summary: A single sigmoid neuron that draws a straight boundary between two classes, trained on cross-entropy.
-    prereqs: [linear-regression, information-theory]
+    prereqs: [linear-regression, information-theory, maximum-likelihood]
     visualisers: [logistic-regression]
     lesson: logistic-regression
-    later: [maximum-likelihood] # B6
   - id: softmax-regression
     title: Softmax and many classes
     track: ml
@@ -767,7 +770,8 @@ concepts:
     track: ml
     summary: Descending on a small random sample at a time, and changing the step size as training goes.
     prereqs: [gradient-descent, sampling-clt]
-    planned: true
+    visualisers: [sgd]
+    lesson: stochastic-gradient-descent
   - id: clustering
     title: Clustering with k-means
     track: ml

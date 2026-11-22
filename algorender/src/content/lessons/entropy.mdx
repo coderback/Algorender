@@ -11,8 +11,8 @@ compressed, and its cousin, **cross-entropy**, is the loss function that trains 
 <Section step="parts" title="The pieces you will see">
 
 <Terms>
-  <Term name="surprise">$\log_2(1/p)$ bits for an outcome with probability $p$: 1 bit for a fair coin flip, 3 bits for a 1-in-8 event.</Term>
-  <Term name="entropy H(P)">The average surprise of a distribution $P$: $\sum_x p(x)\log_2\frac{1}{p(x)}$.</Term>
+  <Term name="surprise">$\log_2(1/p)$ bits for an outcome with probability $p$, a logarithm as in [exponents and logs](/learn/exponents-logs): 1 bit for a fair coin flip, 3 bits for a 1-in-8 event.</Term>
+  <Term name="entropy H(P)">The average surprise of a distribution $P$: the expected value of the surprise, as in [random variables](/learn/random-variables), $\sum_x p(x)\log_2\frac{1}{p(x)}$.</Term>
   <Term name="cross-entropy H(P, Q)">The average surprise when outcomes follow $P$ but you expected $Q$.</Term>
   <Term name="KL divergence">$H(P, Q) - H(P)$: the extra bits you pay for believing $Q$. Never negative.</Term>
 </Terms>
@@ -23,8 +23,9 @@ compressed, and its cousin, **cross-entropy**, is the loss function that trains 
 
 <Explore slug="entropy" settings={{ preset: 'weather' }} caption="Each outcome's surprise is log₂(1/p); the entropy is their average, weighted by how often each happens." />
 
-Sun (1/2) is worth 1 bit, cloud (1/4) 2 bits, rain and snow (1/8) 3 bits each. Weighted by how often each happens, the
-average is $0.5 \cdot 1 + 0.25 \cdot 2 + 0.125 \cdot 3 + 0.125 \cdot 3 = 1.75$ bits. The code 0, 10, 110, 111
+Sun (1/2) is worth 1 bit, cloud (1/4) 2 bits, rain and snow (1/8) 3 bits each. The surprise is a random variable: a
+number that depends on the day’s weather. Its expected value weights each surprise by its chance, just as $E[X]$
+weighted each value, so the average is $0.5 \cdot 1 + 0.25 \cdot 2 + 0.125 \cdot 3 + 0.125 \cdot 3 = 1.75$ bits. The code 0, 10, 110, 111
 achieves exactly that: short codes for common outcomes.
 
 A forecaster who thinks all four are equally likely ($Q$ uniform) uses 2 bits each, so they pay $2 - 1.75 = 0.25$ extra
@@ -146,6 +147,13 @@ the two flips are worth. The logarithm is what makes the surprise of independent
       answer: 1,
       why: 'KL divergence is not symmetric: swapping P and Q changes which outcomes are weighted and which probabilities are compared, so the two directions usually differ.',
       traps: { 0: 'kl-symmetric' },
+    },
+    {
+      q: 'A fair die shows each face with chance 1/6. What is its entropy?',
+      choices: ['3.5 bits', '6 bits', 'log₂ 6 ≈ 2.58 bits', '1/6 of a bit'],
+      answer: 2,
+      why: 'Each face carries log₂(1/(1/6)) = log₂ 6 ≈ 2.58 bits, and the average of six equal surprises is that same number. 3.5 is the die’s expected face, E[X], not its expected surprise.',
+      traps: { 1: 'surprise-not-log' },
     },
   ]}
 />
