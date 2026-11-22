@@ -592,7 +592,7 @@ export const confidenceIntervals = defineAlgorithm<CiInput, PlotState>({
   ],
   run,
   content: {
-    idea: 'One sample’s average x̄ estimates the true average μ, and another sample would give another x̄. The standard error SE = s/√n, the spread of single values over √n, says how far x̄ typically lands from μ. Since x̄ lands within 2 SE of μ in about 95% of samples, the interval x̄ ± 2 SE catches μ in about 95% of samples. The bootstrap finds the same interval with no formula: resample the sample with replacement many times and keep the middle 95% of the averages.',
+    idea: 'One sample’s average x̄ estimates the true average μ, and another sample would give another x̄. The standard error SE = s/√n, the spread of single values over √n, says how far x̄ typically lands from μ. Because x̄ usually lands within 2 SE of μ, the interval x̄ ± 2 SE usually catches μ, and many samples side by side show how often. The bootstrap finds the same interval with no formula: resample the sample with replacement many times, sort the averages and keep the middle of them.',
     invariant: 'The confidence belongs to the method, not to one interval: over many samples about 95% of the intervals x̄ ± 2 SE catch μ, while any one interval simply holds μ or doesn’t. More data narrows the intervals (SE halves when n quadruples) but leaves their success rate at about 95%; only the multiplier sets it (± 1 SE about 68%, ± 2 SE about 95%).',
     whenToUse: 'Whenever a number comes from a sample: a poll, an A/B test’s conversion rate, a model’s accuracy on a test set, a benchmark’s average time. Report it with its standard error or interval, and bootstrap when there is no formula (a median, a ratio, an F1 score).',
     traits: [

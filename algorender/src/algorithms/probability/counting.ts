@@ -640,7 +640,7 @@ export const counting = defineAlgorithm<CountingInput, GridState>({
   ],
   run,
   content: {
-    idea: 'Count without listing. Choices made one after another multiply (3 tops × 4 bottoms = 12 outfits); picking k of n in order gives n × (n − 1) × … (k factors), and all n gives n!; ignoring order divides by k!, because each choice of k appears in k! orders. Pascal’s triangle builds every C(n, k) by adding the two numbers above it.',
+    idea: 'Count without listing. Choices made one after another multiply (3 soups × 7 mains = 21 dinners); picking k of n in order gives n × (n − 1) × … (k factors), and all n gives n!; ignoring order divides by k!, because each choice of k appears in k! orders. Pascal’s triangle builds every C(n, k) by adding the two numbers above it.',
     invariant: 'Each cell of Pascal’s triangle is C(n, k) = C(n − 1, k − 1) + C(n − 1, k): a choice of k from n either takes one chosen thing or leaves it. The edges are 1, the cells right of the diagonal are 0, and row n adds up to 2ⁿ.',
     whenToUse: 'Before working out a chance as “ways it happens ÷ all the ways”, for counting the leaves of a search tree (2ⁿ subsets, n! orders), and whenever a formula needs C(n, k): binomial chances, pass@k, paths on a grid.',
     traits: [

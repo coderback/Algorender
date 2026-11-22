@@ -10,6 +10,7 @@ import type { ViewEdit } from '@/viz/edit';
 import { Experiments } from './Experiments';
 import { InputPanel } from './InputPanel';
 import type { ExplorerOptions } from './options';
+import { PredictFold } from './PredictFold';
 import { canDrawNewValues, inputFor, sourceFromParams, sourceToParams, type InputSource } from './source';
 import { useStartMode } from './startMode';
 import { TraceStage, type Density, type Mode } from './TraceStage';
@@ -132,19 +133,24 @@ export function AlgorithmExplorer({
         sheet={options.sheet}
       />
       {options.showInput && <InputPanel key={`input-${dragged}`} spec={algo.input} source={source} onChange={changeSource} />}
-      {options.details}
-      {options.showExperiments && (
-        <Experiments
-          colour={options.colour}
-          next={options.next}
-          suffix="input"
-          items={algo.content.experiments.map((x, i) => ({
-            key: `${x.example}-${i}`, // several experiments can start from one example
-            label: algo.input.examples.find((e) => e.id === x.example)?.label ?? x.example,
-            prompt: x.prompt,
-            onTry: () => tryExample(x.example),
-          }))}
-        />
+      {/* The teaching panels can state a Predict answer, so they fold while the learner predicts. */}
+      {(options.details || options.showExperiments) && (
+        <PredictFold key={mode} predicting={mode === 'predict'}>
+          {options.details}
+          {options.showExperiments && (
+            <Experiments
+              colour={options.colour}
+              next={options.next}
+              suffix="input"
+              items={algo.content.experiments.map((x, i) => ({
+                key: `${x.example}-${i}`, // several experiments can start from one example
+                label: algo.input.examples.find((e) => e.id === x.example)?.label ?? x.example,
+                prompt: x.prompt,
+                onTry: () => tryExample(x.example),
+              }))}
+            />
+          )}
+        </PredictFold>
       )}
     </div>
   );
