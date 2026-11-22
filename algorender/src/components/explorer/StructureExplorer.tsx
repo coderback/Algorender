@@ -9,6 +9,7 @@ import type { Trace } from '@/engine/types';
 import { argError, blockedReason, describeCall, parseArg, parseArgs, parseOps, replay, serializeOps, type OpCall } from './operations';
 import { Experiments } from './Experiments';
 import type { ExplorerOptions } from './options';
+import { PredictFold } from './PredictFold';
 import { DEFAULT_SEED } from './source';
 import { useStartMode } from './startMode';
 import { TraceStage, type Density, type Mode } from './TraceStage';
@@ -166,20 +167,25 @@ export function StructureExplorer({ module: ds, options }: { module: AnyStructur
           </div>
         </div>
       </OperationsPanel>
-      {options.details}
-      {options.showExperiments && (
-        <Experiments
-          colour={options.colour}
-          suffix=""
-          items={ds.content.experiments
-            .filter((x) => ds.initial.some((s) => s.id === x.example))
-            .map((x, i) => ({
-              key: `${x.example}-${i}`, // several experiments can start from one example
-              label: `Start from: ${ds.initial.find((s) => s.id === x.example)!.label}`,
-              prompt: x.prompt,
-              onTry: () => reset(x.example),
-            }))}
-        />
+      {/* The teaching panels can state a Predict answer, so they fold while the learner predicts. */}
+      {(options.details || options.showExperiments) && (
+        <PredictFold key={mode} predicting={mode === 'predict'}>
+          {options.details}
+          {options.showExperiments && (
+            <Experiments
+              colour={options.colour}
+              suffix=""
+              items={ds.content.experiments
+                .filter((x) => ds.initial.some((s) => s.id === x.example))
+                .map((x, i) => ({
+                  key: `${x.example}-${i}`, // several experiments can start from one example
+                  label: `Start from: ${ds.initial.find((s) => s.id === x.example)!.label}`,
+                  prompt: x.prompt,
+                  onTry: () => reset(x.example),
+                }))}
+            />
+          )}
+        </PredictFold>
       )}
     </div>
   );

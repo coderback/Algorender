@@ -198,6 +198,44 @@ test('switching back to Watch mode removes the questions', async ({ page }) => {
   await expect(page.getByRole('group', { name: 'Predict the next step' })).toHaveCount(0);
 });
 
+// The panels written from a module's content can state what a question asks
+// (src/predict-answers.test.ts checks the text that stays on screen).
+const notesOf = (page: Page) => [page.getByRole('heading', { name: 'What stays true' }), page.getByRole('heading', { name: 'Try it out next' })];
+
+test('predict mode folds the notes beside the stage until the learner opens them', async ({ page }) => {
+  const notes = notesOf(page);
+  const show = page.getByRole('button', { name: 'Show them anyway' });
+  await open(page, '/visualisers/bubble-sort?preset=reversed&n=5&seed=1');
+  for (const n of notes) await expect(n).toBeVisible();
+  await expect(page.getByTestId('predict-fold')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Predict', exact: true }).click();
+  for (const n of notes) await expect(n).toHaveCount(0);
+  await expect(show).toHaveAttribute('aria-expanded', 'false');
+  await show.click();
+  for (const n of notes) await expect(n).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Hide the notes' })).toHaveAttribute('aria-expanded', 'true');
+
+  // Back to Watch shows them; Predict again folds them again.
+  await page.getByRole('button', { name: 'Watch', exact: true }).click();
+  await expect(page.getByTestId('predict-fold')).toHaveCount(0);
+  for (const n of notes) await expect(n).toBeVisible();
+  await page.getByRole('button', { name: 'Predict', exact: true }).click();
+  for (const n of notes) await expect(n).toHaveCount(0);
+  await expect(show).toBeVisible();
+});
+
+// A structure shows the Watch / Predict switch only once an operation asks something, so use a link.
+for (const path of ['/visualisers/binary-search?mode=predict', '/visualisers/stack?start=example&mode=predict']) {
+  test(`a predict-mode link opens with the notes folded: ${path.split('?')[0]}`, async ({ page }) => {
+    const notes = notesOf(page);
+    await open(page, path);
+    for (const n of notes) await expect(n).toHaveCount(0);
+    await page.getByRole('button', { name: 'Show them anyway' }).click();
+    for (const n of notes) await expect(n).toBeVisible();
+  });
+}
+
 test('the stage is captioned with what it holds, and zooms, fits and goes full screen', async ({ page }) => {
   await open(page, '/visualisers/dijkstra');
   const stage = page.getByRole('group', { name: 'Graph · 6 nodes · weighted, undirected' });

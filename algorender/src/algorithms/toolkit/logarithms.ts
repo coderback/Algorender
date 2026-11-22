@@ -386,7 +386,7 @@ export const logarithms = defineAlgorithm<LogInput, PlotState>({
   ],
   run,
   content: {
-    idea: 'An exponent says how many copies of a number to multiply together: 2¹⁰ = 1024 is ten 2s, ten doublings from 1. A logarithm runs that backwards: log₂ 1024 = 10 is the number of doublings that make 1024. Because doublings add up, logs turn products into sums, and e = 2.718… is where compound growth levels off when it is split ever finer.',
+    idea: 'An exponent says how many copies of a number to multiply together: 3⁴ = 81 is four 3s, four triplings from 1. A logarithm runs that backwards: log₃ 81 = 4 is the number of triplings that make 81. Because these steps add up, logs turn products into sums, and e = 2.718… is where compound growth levels off when it is split ever finer.',
     invariant: 'log(a·b) = log a + log b in every base, and ln is the log to base e: ln(eˣ) = x. There is no rule for log(a + b). Doubling from 1 to N and halving N back to 1 take the same ⌈log₂ N⌉ steps.',
     whenToUse: 'Whenever things multiply: growth, halving searches (binary search takes about log₂ n looks), probabilities of many independent events (models add log-probabilities instead of multiplying tiny numbers), and charts that span many orders of magnitude, drawn on log scales.',
     traits: [
