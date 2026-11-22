@@ -42,6 +42,11 @@ and $p$ depends only on the distance from it. Training minimises cross-entropy, 
 
 </KeyIdea>
 
+Why that loss? It is [maximum likelihood](/learn/maximum-likelihood) again. Each label is a coin flip that comes up
+"class 1" with chance $p$, so the likelihood of all the labels is the product of $p$ for the class-1 points and $1 - p$
+for the others. Its log is a sum, and minus its average is exactly the cross-entropy: the weights that make the
+labels most probable are the weights with the lowest cross-entropy.
+
 </Section>
 
 <Section step="predict" title="Your turn: overlapping classes">

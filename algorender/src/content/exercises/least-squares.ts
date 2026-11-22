@@ -1126,7 +1126,7 @@ const curvesExercise: Exercise<CurveInput> = {
   check: checkCurve,
   markSortedAtEnd: false,
   pointers: [],
-  hints: ['Two loops: i over the points, j from 0 to degree, and X[i][j] = xs[i] ** j (so column 0 is all 1s).', 'Then the weights are lstsq(X, ys): the same least squares as before, with more columns.'],
+  hints: ['Two loops: i over the points, j from 0 to degree, and `X[i][j] = xs[i] ** j` (so column 0 is all 1s).', 'Then the weights are lstsq(X, ys): the same least squares as before, with more columns.'],
   legend: WRITE_LEGEND,
   judge: { budget: 'project' },
 };

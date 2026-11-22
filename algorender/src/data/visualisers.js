@@ -678,6 +678,12 @@ const mathEntries = [
     category: 'Optimization'
   },
   {
+    name: 'Minibatch SGD',
+    description: 'Fit a line by full-batch descent and by minibatches of 4 on the same contour map, see how widely a batch’s gradient misses as the batch grows, and watch step decay, cosine and warmup schedules settle the noise.',
+    slug: 'sgd',
+    category: 'Optimization'
+  },
+  {
     name: 'Counting and Combinations',
     description: 'Outfits as the cells of a table, a podium filled place by place, teams of two as ordered picks folded in half, and Pascal’s triangle built cell by cell from the two cells above.',
     slug: 'counting',
@@ -717,6 +723,30 @@ const mathEntries = [
     name: 'Central Limit Theorem',
     description: 'Average samples from any population, flat, skewed or split in two, and watch the averages pile up into a bell curve whose spread shrinks like σ/√n.',
     slug: 'central-limit-theorem',
+    category: 'Probability'
+  },
+  {
+    name: 'Covariance and Correlation',
+    description: 'Split a scatter plot into + and − corners, average the products (x − x̄)(y − ȳ) into the covariance, divide by both spreads to get r, see r as the cosine of the centred lists, and meet a ring with r = 0 and one far point that makes a correlation.',
+    slug: 'correlation',
+    category: 'Probability'
+  },
+  {
+    name: 'Maximum Likelihood',
+    description: 'Find the coin, the normal bell and the line that make the data most probable: likelihood curves that peak at the share of heads, logs that keep the peak while products underflow, and squared error and cross-entropy as maximum likelihood.',
+    slug: 'maximum-likelihood',
+    category: 'Probability'
+  },
+  {
+    name: 'Confidence Intervals and the Bootstrap',
+    description: 'How far one sample’s average strays (the standard error s/√n), 50 intervals x̄ ± 2 SE of which about 95% catch the true average, and the bootstrap’s interval from resampling, with no formula.',
+    slug: 'confidence-intervals',
+    category: 'Probability'
+  },
+  {
+    name: 'Permutation Tests and p-values',
+    description: 'Shuffle the group labels to build the pile of differences chance alone makes, read p as the share of shuffles at least as extreme as the real gap, watch p spread evenly when nothing is going on, and see twenty no-effect tests light one up until the threshold is divided by 20.',
+    slug: 'permutation-test',
     category: 'Probability'
   },
   {

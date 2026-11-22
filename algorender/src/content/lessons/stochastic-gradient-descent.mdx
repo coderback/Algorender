@@ -1,0 +1,350 @@
+<Section step="hook" title="One step, one pass through everything?">
+
+A model learns by [gradient descent](/learn/gradient-descent): work out which way the loss falls, take a small step
+that way, repeat. The loss is an average over the training data, so its gradient is an average too, and working it
+out means visiting every example. A real data set holds millions of images or billions of words. Taking one careful
+step would cost a pass through all of it, and training takes many thousands of steps.
+
+Nobody trains that way. Instead each step looks at a small random handful of examples, a **minibatch**, and steps on
+their average gradient alone. That gradient is wrong every time, yet the method works, and works far faster. The
+reason is the one behind the [law of large numbers](/learn/law-of-large-numbers): an average of random samples is an
+honest estimate of the true average, and its miss is predictable. This lesson fits a line to 32 points with
+full-batch steps and with minibatch steps, measures how noisy a batch's gradient is, and shows how shrinking the step
+size as training goes tames that noise.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="line fit">Finding the line $y = w \cdot x + b$ that passes closest to some points. The slope $w$ and the intercept $b$ are the two numbers to learn, the model's weights.</Term>
+  <Term name="error e">At one point $(x, y)$, how far the line misses it: $e = w \cdot x + b - y$. Positive when the line passes above the point.</Term>
+  <Term name="loss L (mean squared error)">The mean of $e^2$ over the points. Squared so that a miss above and a miss below both count, and big misses count extra. Small when the line passes close to all the points. Over $(w, b)$ it is a bowl, drawn with contours as in [contour maps](/learn/contour-maps).</Term>
+  <Term name="full-batch gradient">The gradient of $L$ over every point, as in gradient descent: the average of each point's own gradient.</Term>
+  <Term name="minibatch, batch size B">A few points picked at random, and how many. Its gradient is the average over just those points.</Term>
+  <Term name="epoch">One pass through all the data: shuffle the points into a random order, cut it into batches, and take one step per batch.</Term>
+  <Term name="SGD">Stochastic gradient descent: descent on minibatch gradients. "Stochastic" means random.</Term>
+  <Term name="step size η and schedule">$\eta$ ("eta", also called the learning rate) is how far each step moves against the gradient. A schedule changes it from step to step as training goes, starting from $\eta_0$.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="How wrong is one batch's gradient?">
+
+First, the gradient of the loss. Take one point and nudge $w$ by a tiny amount $h$: the error
+$e = w \cdot x + b - y$ changes by $x \cdot h$. In [derivatives and gradients](/learn/derivatives-gradients) a square
+$u^2$ has slope $2u$, and a function changes by about its slope times the nudge, $f(a + h) \approx f(a) + f'(a)\,h$.
+So $e^2$ changes by about $2e \cdot x h$. Nudging $b$ by $h$ changes $e$ by $h$ itself, and $e^2$ by about $2e \cdot h$.
+So one point's gradient is
+
+$$
+\left(\frac{\partial e^2}{\partial w},\ \frac{\partial e^2}{\partial b}\right) = (2e \cdot x,\ 2e)
+$$
+
+The gradient of $L$, a mean, is the mean of the points' gradients: a nudge changes every term of the mean, and the mean
+averages the changes. A batch's gradient is that mean over the batch only.
+
+The 32 points here lie near the line $y = 1.5x + 1$. Stand partway down the bowl at $(w, b) = (0.5, 0)$, where
+$L = 3.568$. The gradient over all 32 points is $(-3.82, -2.26)$, an arrow of length 4.44. Now take the smallest batch
+possible, a single point, and see where one step with $\eta = 0.1$ would land, for each of the 32 points:
+
+<Explore slug="sgd" settings={{ preset: 'batch-size', seed: 38 }} caption="Left: the loss's contours near (0.5, 0), the full-batch step, and where a step on one batch lands, for every single point, then for 64 random batches of 4, of 16 and of 32. Right: how widely a batch's gradient misses the full one, for each batch size." />
+
+One point's gradient can be badly wrong. Here 8 of the 32 single-point steps land *higher* up the bowl than where they
+started: that point's error pulls the line its own way, against the other 31. How far do the 32 single-point gradients
+land from the full gradient? Measure each distance, square, average and take the square root, just as for a standard
+deviation: the result, $\sigma_1$, is a standard deviation for arrows. Here $\sigma_1$ is 5.49, more than the full
+gradient's own length, 4.44.
+
+A batch of 4 averages 4 random points' gradients. The law of large numbers showed that an average of $n$ independent
+draws spreads $\sigma/\sqrt{n}$, and the rule works for each of the arrow's two coordinates, so it works for the
+distance too: a batch of 4 should miss by about $5.49/\sqrt{4} = 2.74$. Counted over every possible batch of 4 it
+misses by 2.61, a little less, and batches of 16 by 0.99, well below $5.49/\sqrt{16} = 1.37$. One reason covers both: a
+batch is drawn without repeats from only 32 points, so the bigger its share of the data, the less is left to chance. At
+16 of the 32 a lot less is left; a batch of all 32 *is* the full gradient, and misses by 0. The 64 batches of 4 drawn in
+the widget spread 2.62, a little off 2.61 by luck. The dots on the map are steps, $\eta = 0.1$ times a gradient, so their
+cloud is a tenth of that size, but it shrinks in the same proportion.
+
+<KeyIdea>
+
+**A minibatch gradient is an honest estimate.** It is the average of $B$ randomly chosen points' gradients, so over
+all the batches it could be, it averages exactly to the full gradient, and its typical miss is about
+$\sigma_1/\sqrt{B}$: quadrupling the batch only halves the noise.
+
+</KeyIdea>
+
+<Misconception
+  id="noise-shrinks-like-one-over-b"
+  title="A batch 4 times bigger is 4 times less noisy"
+  probes={[
+    {
+      q: 'A batch gradient from 30 examples misses the full gradient by about 2.1. From 270 examples, out of millions, about how much?',
+      choices: ['About 0.23', 'About 0.7', 'About 2.1'],
+      answer: 1,
+      trap: 0,
+      why: '270 is 9 times 30, and the miss shrinks like 1/√B: √9 = 3, so about 2.1 / 3 = 0.7. Dividing by 9 itself gives 0.23, far too optimistic.',
+    },
+    {
+      q: 'How many times bigger must a batch be to cut its gradient’s noise to a fifth?',
+      choices: ['25 times', '5 times', '2.5 times'],
+      answer: 0,
+      trap: 1,
+      why: 'The noise is about σ₁/√B, so a fifth of it needs √B five times bigger: B 5² = 25 times bigger.',
+    },
+  ]}
+>
+
+A batch's gradient is an average, and an average's miss shrinks like $1/\sqrt{B}$, not $1/B$: 4 times the batch halves
+it, and 100 times the batch cuts it to a tenth. Here batches of 1 miss by 5.49 and batches of 4 by 2.61, about half,
+not a quarter.
+
+</Misconception>
+
+What does a bigger batch cost? A step on a batch of 16 works out 16 points' own gradients (16 *point-gradients*), so
+an epoch of 2 such steps works out 32, exactly what 32 steps on single points cost, or one full-batch step. Every epoch
+costs the same, whatever the batch size. The batch size only decides how that cost is spent: many cheap, noisy steps or
+a few steady, expensive ones.
+
+<Misconception
+  id="bigger-batch-better"
+  title="A bigger batch is always better"
+  probes={[
+    {
+      q: 'A training set has 7,500 examples. Compare batches of 500 with batches of 50. What happens in one epoch?',
+      choices: [
+        'Both take the same number of steps, but the steps on batches of 500 are better',
+        'Batches of 500 take 15 steps and batches of 50 take 150, for the same 7,500 example-gradients',
+        'Batches of 500 cost 10 times as much per epoch',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'An epoch uses every example once either way: 7,500 / 500 = 15 steps or 7,500 / 50 = 150 steps. The big batch buys steadier steps by taking fewer of them.',
+    },
+    {
+      q: 'A GPU works on 256 examples side by side. Someone trains on 51,200 examples with each batch the whole data set, because bigger is better. What do they lose?',
+      choices: [
+        'Nothing: the gradient is exact, so each epoch is better',
+        'Accuracy: a full batch gives a worse gradient',
+        'Steps: one per epoch instead of 200, each taking far longer',
+      ],
+      answer: 2,
+      trap: 0,
+      why: 'With batches of 256 an epoch is 51,200 / 256 = 200 steps, each about as quick as a step on 1 example. One exact step per epoch is far slower progress.',
+    },
+  ]}
+>
+
+A bigger batch gives a steadier gradient, but per epoch it buys fewer steps: quadrupling the batch halves the noise and
+quarters the steps. Why not batches of 1, then? A GPU works on a batch's points side by side, so a step on 64 points
+takes barely more time than a step on 1, and very noisy steps also need a smaller $\eta$. Past a few thousand points a
+bigger batch stops paying, which is why batches of a few dozen to a few thousand are common even when the data holds
+millions.
+
+</Misconception>
+
+</Section>
+
+<Section step="predict" title="Your turn: full batch against batches of 4">
+
+Now descend. Start the line at $(w, b) = (-1, -1.5)$, far up the bowl, with $\eta = 0.1$. The full-batch path takes
+one step per epoch on the full gradient. The minibatch path shuffles the 32 points every epoch, cuts them into batches
+of 4 and steps on each. Predict how many steps an epoch has, what the batches' gradients average to, whether the loss
+falls on every step, which path ends nearer the bottom, whether the batches repeat, and whether the minibatch path
+ever comes to rest.
+
+<PredictChallenge slug="sgd" settings={{ preset: 'paths', seed: 7 }} goal={5} />
+
+At the start the full gradient is $(-9.66, -5.69)$. The eight batches of epoch 1 fan out around it, up to 16° off its
+direction, yet their eight gradients average to exactly $(-9.66, -5.69)$. That is no luck: each batch's gradient is
+the mean over its 4 points, and the mean of 8 equal-sized groups' means is the mean of all 32 points. A random batch
+points the full gradient's way **on average**.
+
+Then the race. In epoch 1 the minibatch path takes 8 steps and $L$ falls from 19.638 to 0.71. For the same 32
+point-gradients the full-batch path takes one step, to 9.233. After 4 epochs the minibatch path is 0.14 from the
+lowest point and the full-batch path 0.968; at one step an epoch, the full batch would need 13 epochs to get as close.
+
+But the minibatch path is not tidy. Over those 4 epochs $L$ went up on 9 of the 32 steps. And it never settles: in
+epoch 8 it stayed between 0.017 and 0.151 from the lowest point, $(1.48, 0.99)$, where $L = 0.583$. Near the bottom
+the full gradient shrinks to nothing, but a batch's gradient still misses it. The misses shrink too as the line
+improves, but not to nothing: at the lowest point one point's gradient misses by about 2.4 ($\sigma_1$ there, against
+5.49 at $(0.5, 0)$), so a batch of 4 misses by about 1.2. Each step is then mostly noise. With a fixed $\eta$, the
+path jitters around the minimum for good.
+
+<Misconception
+  id="loss-falls-every-step"
+  title="If training works, the loss goes down on every step"
+  probes={[
+    {
+      q: 'Training with batches of 20, the loss over the whole data set goes up after one step. What does that tell you?',
+      choices: [
+        'Something is wrong: the step size must be too big',
+        'Nothing alarming: one batch’s gradient can point a little uphill for the whole data',
+        'The data were shuffled wrongly',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'A batch’s gradient is a noisy estimate. A step that helps those 20 points can hurt the rest a little; over many steps the noise averages out.',
+    },
+    {
+      q: 'You plot the whole-data loss after every SGD step. It zigzags up and down but its trend over epochs is down. Is training working?',
+      choices: ['Yes: the trend is what counts', 'No: a working run never goes up', 'Only if you switch to full-batch steps'],
+      answer: 0,
+      trap: 1,
+      why: 'Single steps go up and down with the luck of the batch; the trend over many steps follows the full gradient, which is what the batches estimate.',
+    },
+  ]}
+>
+
+Each step follows one batch's gradient, an estimate that misses the full one by about $\sigma_1/\sqrt{B}$, so a step
+that suits those few points can raise the loss on the rest. In the run above that happened on 9 of 32 steps, yet $L$
+fell from 19.638 to 0.611. Judge SGD by its trend over many steps, not by any single step.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="One SGD step in code">
+
+The step itself is a few lines. For each point in the batch, work out its error, add $2e \cdot x$ to the gradient in
+$w$ and $2e$ to the gradient in $b$; divide both by the batch's size; then step against them. Try it on three made-up
+points $(1, 2)$, $(2, 4)$ and $(3, 7)$, with the batch holding the first and the last, from $w = b = 0$ and
+$\eta = 0.05$. The errors are $-2$ and $-7$, so
+
+$$
+\begin{aligned}
+g_w &= \tfrac{1}{2}\big(2(-2)(1) + 2(-7)(3)\big) = -23 \\
+g_b &= \tfrac{1}{2}\big(2(-2) + 2(-7)\big) = -9
+\end{aligned}
+$$
+
+and the step goes to $w = 0 - 0.05 \times (-23) = 1.15$ and $b = 0 - 0.05 \times (-9) = 0.45$: both up, as they should,
+since the line started below both points. In the code the step size $\eta$ is called `lr`, for learning rate.
+
+<CodeExercise exercise="sgd-step" />
+
+Where do the batches come from? Each epoch shuffles the indices $0, 1, \ldots, n - 1$ with the **Fisher–Yates
+shuffle**: for $i$ from $n - 1$ down to 1, pick a random $j$ from 0 to $i$ and swap places $i$ and $j$. Every order
+is then equally likely. The random numbers come from the same seeded Park–Miller generator as the darts in the law
+of large numbers. With 10 points in batches of 4 from seed 7, epoch 1 gives [9, 3, 5, 6], [7, 4, 1, 2] and [8, 0], and
+epoch 2, reshuffled, gives [7, 9, 6, 5], [8, 3, 2, 0] and [1, 4]. The last batch of each epoch is short, 2 points,
+because 4 doesn't divide 10. It is kept, so every point counts once an epoch. Write it yourself in
+[shuffle and cut minibatches](/code/minibatches).
+
+</Section>
+
+<Section step="see" title="Schedules: changing the step size as training goes">
+
+A smaller $\eta$ shrinks every step, noise and all, but a small $\eta$ from the start makes the long way down slow.
+What if $\eta$ changes as training goes? That is a **schedule**. Here are four common ones, each run for 12 epochs of 8
+batches, 96 steps. They start bolder than the paths above, at $\eta_0 = 0.3$, three times 0.1, which gets down the
+bowl fast:
+
+- **Constant:** $\eta = \eta_0$ throughout.
+- **Step decay:** halve $\eta$ every 3 epochs.
+- **Cosine:** $\eta = \eta_0 \times (1 + \cos(\pi t / 96))/2$ at step $t$, with the angle in radians, as in
+  [angles, sine and cosine](/learn/trigonometry). It glides from $\eta_0$ down towards 0.
+- **Warmup, then cosine:** $\eta$ climbs in a straight line over the first epoch's 8 steps up to $\eta_0$, then follows
+  a cosine down over the other 88.
+
+<Explore slug="sgd" settings={{ preset: 'schedules', seed: 7 }} caption="The four schedules charted against the epoch; then constant and cosine run on the same batches from the same start, their paths on the contours and their losses on a log scale; then all four." />
+
+The values: step decay runs at 0.3, then 0.15, 0.075, and 0.0375 for the last 3 epochs, three halvings in 12 epochs,
+not four. Cosine starts at 0.3, where $\cos 0 = 1$, is 0.15 halfway, where $\cos(\pi/2) = 0$, and ends near 0, where
+$\cos \pi = -1$. Warmup climbs from 0.0375 to 0.3.
+
+With $\eta$ held at 0.3 the path is down in the bowl within an epoch, then bounces: in the last epoch it was between
+0.013 and 0.565 from the lowest point, and $L$ sat 0.169 above its lowest on average over that epoch. On the same
+batches, cosine sat just 0.0007 above it on average, and stayed between 0.023 and 0.026 from the lowest point. Step
+decay averaged 0.0022 above over the last epoch and warmup 0.001. Shrinking $\eta$ shrinks every step, so the noise in
+the late steps can't push the line far, and what is left averages out over many batches.
+
+Why warm up? At the start the weights are a guess and the gradients are big and erratic; in a deep network a
+full-size step there can throw the weights somewhere they never recover from. On this simple bowl it hardly matters,
+but large networks are commonly trained with warmup and then a cosine decay.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A data set of 40,000 images is trained in batches of 250. How many steps make one epoch?',
+      choices: ['250', '160', '40,000', '10,000,000'],
+      answer: 1,
+      why: '40,000 / 250 = 160 steps; each image is used once an epoch.',
+    },
+    {
+      q: 'With batches of 75, a batch gradient typically misses the full gradient by 3.6. About how much with batches of 300, out of a huge data set?',
+      choices: ['0.9', '3.6', '1.8', '14.4'],
+      answer: 2,
+      why: '300 is 4 times 75, and the miss shrinks like 1/√B, so it halves: 1.8. A quarter, 0.9, would need batches 16 times bigger.',
+      traps: { 0: 'noise-shrinks-like-one-over-b' },
+    },
+    {
+      q: 'Two SGD runs, the loss plotted after every step. Run A zigzags, but its average over each epoch falls epoch after epoch. Run B also zigzags, and its average over each epoch rises. Which run needs fixing?',
+      choices: ['Only B', 'Both: a working run never goes up', 'Only A', 'Neither'],
+      answer: 0,
+      why: 'Zigzags are the noise of single batches; A’s trend is down, so it is working. B’s trend is up, which noise doesn’t explain: its step size may be too big.',
+      traps: { 1: 'loss-falls-every-step' },
+    },
+    {
+      q: 'Six points are split into two batches of 3. At some (w, b) the two batches’ gradients are (4, −2) and (−2, 6). What is the full gradient over all six points there?',
+      choices: ['(2, 4)', '(1, 2)', '(3, −4)', '(−6, 8)'],
+      answer: 1,
+      why: 'Each batch gradient is the mean over 3 points, so the mean over all 6 is the mean of the two: ((4 − 2)/2, (−2 + 6)/2) = (1, 2). Adding them, (2, 4), forgets to average.',
+    },
+    {
+      q: 'A cosine schedule sets η = 0.4 × (1 + cos(π·t/T))/2. What is η at the last step, t = T?',
+      choices: ['0.4', '0.2', '0.8', '0'],
+      answer: 3,
+      why: 'cos π = −1, so η = 0.4 × (1 − 1)/2 = 0. Halfway, at t = T/2, it is 0.2.',
+    },
+    {
+      q: 'Training with a constant η, the loss stopped improving after a few epochs and now bounces along a floor. What is most likely to lower it?',
+      choices: ['Raise η', 'Train more epochs at the same η', 'Shrink η as training goes, with a schedule', 'Reshuffle the data less often'],
+      answer: 2,
+      why: 'The floor is set by η times the noise in each batch’s gradient. More epochs at the same η keep bouncing; a bigger η bounces further; shrinking η lets the path settle.',
+    },
+    {
+      q: 'Data sets hold millions of examples, yet batches of a few dozen to a few thousand are usual. Why not use every example in every step?',
+      choices: [
+        'One step on every example costs a whole pass through the data; a batch of a few hundred is steady enough, and a GPU works on its examples side by side',
+        'Bigger batches are always better, but they run out of memory',
+        'A small batch gives the exact gradient',
+      ],
+      answer: 0,
+      why: 'An epoch costs the same whatever the batch size, so a whole-data batch buys one step per epoch. Moderate batches give many steady-enough steps, each about as quick as a step on one example.',
+      traps: { 1: 'bigger-batch-better' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="sgd-minibatches-schedules"
+  prompt="How does minibatch SGD differ from full-batch gradient descent, why does it still head for the minimum, and what do the batch size and a schedule change?"
+  rubric={[
+    'SGD steps on the average gradient of a small random batch, many steps per epoch, instead of one step on every point.',
+    'A batch’s gradient averages to the full gradient, and its miss shrinks like 1/√B, so the steps head downhill on average.',
+    'Single steps are noisy, so the loss can go up on some steps, and with a fixed step size the path jitters around the minimum.',
+    'A bigger batch gives steadier but fewer steps per epoch; a schedule shrinks η so the noise settles near the bottom.',
+  ]}
+  example="Full-batch descent averages the gradient over every point for each step, so one step costs a whole pass through the data. SGD shuffles the data each epoch, cuts it into small batches and steps on each batch's average gradient. That gradient is only an estimate, but over all possible batches it averages to the full gradient, and its miss shrinks like 1/√B, so the steps go downhill on average and an epoch gives many of them. Each single step is noisy, so the loss sometimes rises, and with a fixed η the path keeps jittering near the minimum. A bigger batch means steadier steps but fewer per epoch for the same cost. A schedule such as cosine starts with big steps and shrinks them, so the path settles."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A loss averaged over data has a gradient averaged over data. SGD estimates it from a small random batch and steps on that.
+- An epoch is one pass through the shuffled data: $n/B$ steps, rounding up for a short last batch, and the same total cost whatever $B$ is.
+- A batch's gradient averages to the full gradient, and its typical miss is about $\sigma_1/\sqrt{B}$: quadrupling the batch halves the noise, it doesn't quarter it.
+- Single steps are noisy, so the loss can rise on some of them; judge SGD by its trend.
+- Batches of a few dozen to a few thousand are usual: a GPU works on a batch's points side by side, and per epoch a bigger batch buys fewer steps.
+- With a fixed step size SGD jitters around the minimum. A schedule (step decay, cosine, warmup then cosine) shrinks $\eta$ as training goes, so it settles.
+
+</Section>

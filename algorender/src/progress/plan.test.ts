@@ -116,6 +116,20 @@ describe('scheduling', () => {
     for (const before of ['law-of-large-numbers', 'continuous-distributions']) expect(order.indexOf('sampling-clt'), before).toBeGreaterThan(order.indexOf(before));
   });
 
+  it('reaches B6’s covariance, maximum likelihood, intervals, tests and SGD, each after what it builds on', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    for (const id of ['covariance-correlation', 'maximum-likelihood', 'estimation-confidence', 'hypothesis-testing', 'stochastic-gradient-descent']) expect(order, id).toContain(id);
+    for (const before of ['random-variables', 'dot-product']) expect(order.indexOf('covariance-correlation'), before).toBeGreaterThan(order.indexOf(before));
+    for (const before of ['random-variables', 'derivatives-gradients', 'exponents-logs']) expect(order.indexOf('maximum-likelihood'), before).toBeGreaterThan(order.indexOf(before));
+    expect(order.indexOf('estimation-confidence')).toBeGreaterThan(order.indexOf('sampling-clt'));
+    expect(order.indexOf('hypothesis-testing')).toBeGreaterThan(order.indexOf('estimation-confidence'));
+    for (const before of ['gradient-descent', 'sampling-clt']) expect(order.indexOf('stochastic-gradient-descent'), before).toBeGreaterThan(order.indexOf(before));
+    // Logistic regression now builds on maximum likelihood (its B6 later prerequisite moved in).
+    expect(order.indexOf('logistic-regression')).toBeGreaterThan(order.indexOf('maximum-likelihood'));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {

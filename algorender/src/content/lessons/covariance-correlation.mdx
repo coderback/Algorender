@@ -1,0 +1,333 @@
+<Section step="hook" title="Revise more, score more?">
+
+A teacher writes down two numbers for each of six students: how many hours they revised, and their score out of 10
+on the test. Plotted as points, the scores seem to climb with the hours, but not neatly: one student revised for 3
+hours and scored 7, another revised for 5 and scored only 4. Do the two really move together, and how strongly?
+
+You want **one number** for that. It should be positive when the scores tend to rise with the hours, negative when
+they tend to fall, and it shouldn't care whether the revision is timed in hours or in minutes. That number is the
+**correlation**. Machine learning leans on it constantly: before training a model, it tells you which measurements move
+with the thing you want to predict, and which measurements merely repeat each other. And it turns out to be an old
+friend from the dot product lesson in disguise.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="scatter plot">One point per item, here per student: one measurement across ($x$), the other up ($y$).</Term>
+  <Term name="mean x̄">The average of the $x$ values, said "x bar"; $\bar{y}$ is the average of the $y$ values. Together, $(\bar{x}, \bar{y})$ is the middle of the cloud of points.</Term>
+  <Term name="centred values">Each value's gap from its mean, $x - \bar{x}$. Gaps from a mean always add up to 0.</Term>
+  <Term name="covariance">The average of the products $(x - \bar{x})(y - \bar{y})$ over all $n$ points. Positive when $x$ and $y$ tend to be high together and low together.</Term>
+  <Term name="standard deviation s">How spread out one list is: $s_x = \sqrt{\text{average of } (x - \bar{x})^2}$. It is the $\sigma$ of the random variables lesson, with each point given the same chance, $1/n$.</Term>
+  <Term name="correlation r">The covariance divided by both standard deviations: $r = \dfrac{\text{cov}}{s_x\, s_y}$. It has no units and always lies between $-1$ and $1$.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Four corners and a rectangle per point">
+
+Here are the six students. Step through, then drag any point to move a student:
+
+<Explore slug="correlation" settings={{ preset: 'revision' }} input caption="Six students: hours of revision across, score up. Lines through the means split the plot into + and − corners, and each student's product (x − x̄)(y − ȳ) is a rectangle from the middle. Drag a point to move a student." />
+
+The hours are 1, 2, 3, 5, 6 and 7, so $\bar{x} = 4$; the scores are 3, 4, 7, 4, 8 and 10, so $\bar{y} = 6$. Draw a
+line through each mean and the plot splits into four corners around the middle, $(4, 6)$.
+
+A student up and to the right of the middle revised more than average **and** scored more than average: both gaps
+$x - \bar{x}$ and $y - \bar{y}$ are positive, so their product is positive. Down and to the left, both gaps are
+negative, and the product is positive again. In the other two corners one gap is positive and the other negative, so
+the product is negative. Each product is the area of a rectangle from the middle to the point, counted + or −
+according to its corner.
+
+The six products are 9, 4, −1, −2, 4 and 12. Student 3, at $(3, 7)$, revised less than average but scored more: a −
+rectangle. Student 4, at $(5, 4)$, is the other way round: − again. The + rectangles win easily. Their average is the
+**covariance**:
+
+$$
+\text{cov} = \frac{9 + 4 - 1 - 2 + 4 + 12}{6} = \frac{26}{6} \approx 4.333
+$$
+
+Positive, so the scores lean upwards with the hours. Throughout this lesson, averages divide by $n$, the number of
+points, just as the random variables lesson weighted each outcome by its chance.
+
+But what does 4.333 mean? Its units are hours × marks. Time the revision in **minutes** instead and every gap
+$x - \bar{x}$ is 60 times bigger, so every product is too, and the covariance becomes 260. The same students, the same
+picture, and a number 60 times bigger. A covariance tells you the direction of the lean, but its size depends on the
+units, so on its own it can't say how strong the lean is.
+
+The fix is to divide by how spread out each list is. The **standard deviation** of the hours is
+$s_x = \sqrt{28/6} \approx 2.160$ hours (or 129.615 minutes), since the squared gaps $9 + 4 + 1 + 1 + 4 + 9$ add up
+to 28. For the scores the squared gaps are $9 + 4 + 1 + 4 + 4 + 16 = 38$, so $s_y = \sqrt{38/6} \approx 2.517$. Then
+
+$$
+r = \frac{\text{cov}}{s_x\, s_y} = \frac{4.333}{2.160 \times 2.517} \approx 0.797
+$$
+
+In minutes, the top and the bottom are both 60 times bigger, and the 60s cancel: $r$ is 0.797 either way. That is the
+**correlation**. You may meet books and calculators that divide by $n - 1$ instead of $n$ (a later lesson explains
+why); they do it in the covariance and in both spreads, so the change cancels and $r$ comes out the same. Mixing the
+two, though, gives a wrong answer.
+
+</Section>
+
+<Section step="predict" title="Your turn: correlation as a cosine">
+
+Why is $r$ always between $-1$ and $1$? Write the centred values as two vectors, one part per student:
+
+$$
+\begin{aligned}
+a &= x - \bar{x} = (-3, -2, -1, 1, 2, 3) \\
+b &= y - \bar{y} = (-3, -2, 1, -2, 2, 4)
+\end{aligned}
+$$
+
+Their [dot product](/learn/dot-product) multiplies the matching parts and adds them up: those are exactly the
+students' products, so $a \cdot b = 26$, which is $n$ times the covariance. Their lengths are $|a| = \sqrt{28}$ and
+$|b| = \sqrt{38}$. These are $\sqrt{n}$ times the spreads: $|a|^2$ is the sum of the squared gaps, $28 = 6 \times s_x^2$,
+so $|a| = \sqrt{6}\, s_x$, and in the same way $|b| = \sqrt{6}\, s_y$. So
+
+$$
+\begin{aligned}
+r &= \frac{a \cdot b / n}{(|a|/\sqrt{n})\,(|b|/\sqrt{n})} \\
+&= \frac{a \cdot b}{|a|\,|b|} = \cos\theta
+\end{aligned}
+$$
+
+The $n$'s cancel, and what is left is the **cosine similarity** of the centred lists: $26 / (5.292 \times 6.164)$,
+which is 0.797 again. Six parts are too many to draw, but two arrows from the same point always lie in one flat sheet,
+like two pencils on a table. Lay that sheet on the page and the angle between $a$ and $b$ is the angle whose cosine is
+0.797: about 37°, as a calculator's $\cos^{-1}$ key will tell you. A cosine is never more than 1 in size, so neither is
+$r$.
+
+Now four new points: $(2, 6)$, $(4, 2)$, $(5, 4)$ and $(9, 8)$. Work out $r$ the cosine way, one piece at a time, then
+predict what happens when the points are moved onto a straight line.
+
+<PredictChallenge slug="correlation" settings={{ preset: 'cosine' }} goal={5} />
+
+For these four points $r$ came out at 0.526, the cosine of an angle of about 58° between $a$ and $b$: a weaker upward
+lean than the students'.
+
+Moved onto the line $y - \bar{y} = 2(x - \bar{x})$, every gap in $y$ is twice the gap in $x$, so $b = 2a$. Doubling an
+arrow stretches it but doesn't turn it: the angle is 0 and $r = 1$, not 2. On the gentle falling line
+$y - \bar{y} = -0.5\,(x - \bar{x})$, $b = -0.5\,a$ points straight back along $a$, and $r = -1$, however gentle the
+slope. So $r = \pm 1$ exactly when the points lie on a sloping line, and then the slope only decides the sign. (On a
+flat line every $y$ is the same, so $s_y = 0$ and $r$ isn't defined at all.)
+
+<KeyIdea>
+
+**$r = \dfrac{\text{cov}}{s_x\, s_y}$ is the cosine of the angle between the centred lists.** It measures how closely
+the points follow a straight line compared with how spread out they are, from $-1$ (exactly on a falling line) through
+0 (no straight-line lean) to 1 (exactly on a rising one). It has no units: multiplying either list by a positive
+number, as changing units does, or adding a number to it leaves $r$ alone.
+
+</KeyIdea>
+
+<Misconception
+  id="steeper-is-stronger"
+  title="A steeper line means a stronger correlation"
+  probes={[
+    {
+      q: 'Readings A scatter loosely around the line y = 50x. Readings B lie exactly on the line y = 0.3x + 2. Which has r closer to 1?',
+      choices: ['A: its line is far steeper', 'B: its points lie exactly on a line', 'They are equal, since both lines rise'],
+      answer: 1,
+      trap: 0,
+      why: 'B is exactly on a rising line, so its r is 1. A’s points wander off its line, so its r is below 1, however steep the line is.',
+    },
+    {
+      q: 'Every y in a data set is 5 − 3x. What is r?',
+      choices: ['−3', '−1', '−1/3'],
+      answer: 1,
+      trap: 0,
+      why: 'Each gap y − ȳ is −3 times x − x̄, so b = −3a points straight back along a: the angle is 180° and r = −1. The 3 only stretches b; the minus sign turns it round.',
+    },
+  ]}
+>
+
+The slope says how much $y$ changes per step in $x$; the correlation says how closely the points follow a line. Points
+exactly on any sloping line, steep or gentle, have $r = 1$ or $-1$, because $b$ is then a multiple of $a$. A steep line
+with the points scattered around it has a smaller $r$ than a gentle line the points sit exactly on. With scatter, the
+slope does play a part: the same wobble around a flatter line is a bigger share of $y$'s spread, so $r$ is smaller.
+What a steep line can't do is make $r$ bigger than the scatter allows.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Patterns r can't see, one far point, and causes">
+
+Here are eight points on a ring around $(5, 5)$. They make a very clear pattern. What will $r$ be?
+
+<Explore slug="correlation" settings={{ preset: 'ring' }} input caption="Eight points on a ring: predict r before the rectangles appear, then drag a point to break the ring." />
+
+Four points sit in + corners and four in − corners, each with a product of size 3: the + rectangles add up to 12 and
+the − ones to −12, so the covariance is 0 and $r = 0$. Yet the points are far from random: they lie on a neat ring.
+Is a U any different? Seven points on $y = (x - 4)^2$ fall and then rise:
+
+<Explore slug="correlation" settings={{ preset: 'u-shape' }} input caption="Seven points on a U: predict r, then watch the rectangles." />
+
+Here $y$ is fixed completely by $x$, yet the + rectangles (18) and the − ones (−18) cancel, and $r = 0$ again: the
+falling half pulls $r$ down exactly as much as the rising half pulls it up. $r$ measures only a **straight-line**
+lean. Drag the two left-hand points down to the
+bottom and the U turns into a rising curve: $r$ jumps to about 0.81.
+
+<Misconception
+  id="zero-means-unrelated"
+  title="A correlation of 0 means x and y are unrelated"
+  probes={[
+    {
+      q: 'For x = −6, 0 and 6, let y = x², so y = 36, 0 and 36. Then r = 0. Does y depend on x?',
+      choices: ['No: r = 0 means there is no relationship', 'Yes: x fixes y exactly; r = 0 only says there is no straight-line lean', 'Only for the negative x'],
+      answer: 1,
+      trap: 0,
+      why: 'y is completely determined by x. The left point’s product cancels the right one’s, so r = 0: there is no straight-line lean, but there is a curve.',
+    },
+    {
+      q: 'Over one full swing, a pendulum’s height and its sideways position have r = 0. What does that tell you?',
+      choices: ['There is no straight-line lean, though the height follows a curve in the position', 'Its height has nothing to do with where it is', 'The measurements must be wrong'],
+      answer: 0,
+      trap: 1,
+      why: 'The height is lowest in the middle and rises on both sides: a U. Its left half’s products cancel its right half’s, so r = 0, yet the two are tightly linked.',
+    },
+  ]}
+>
+
+$r$ only asks whether the points lean along one straight line. A curve that falls and then rises, or a ring, has
+products that cancel, so $r$ can be 0 while $y$ depends completely on $x$. A correlation of 0 means "no straight-line
+lean", not "no relationship": look at the scatter plot.
+
+</Misconception>
+
+This matters before training a model. Two inputs with $r$ near 1 or $-1$ carry nearly the same information, so the
+second adds little. An input with $r$ near 0 to the thing you want to predict has no straight-line link to it, but a
+curve can still hide there.
+
+Now the other way round: six points with no lean at all, $r = 0$, and one more far out at $(9, 9)$. What happens to
+$r$?
+
+<Explore slug="correlation" settings={{ preset: 'outlier' }} input caption="Six points with r = 0, then one far point at (9, 9): predict the new r, then drag the far point." />
+
+The far point drags the middle to $(3.429, 3)$ and $r$ from 0 to 0.89. Its own rectangle is 33.429 of the total 39,
+about 86%: its gaps are big in both directions, so their product is bigger still. Drag it down to $(9, 0)$ and the same
+point swings $r$ round to about −0.63. One unusual point can make a correlation out of nothing, or turn one round,
+which is another reason to plot the data before trusting $r$.
+
+Finally, a correlation says that two things move together. It doesn't say why. Over a summer, the number of fans sold
+and the number of cold drinks sold rise and fall together, with a high $r$, but neither causes the other: hot weather
+drives both.
+
+<Misconception
+  id="correlation-causation"
+  title="A strong correlation means one thing causes the other"
+  probes={[
+    {
+      q: 'Over a summer, ice-cream sales and sunburn cases have r = 0.85. Does eating ice cream cause sunburn?',
+      choices: ['Yes: r = 0.85 is a strong correlation', 'No: sunny days drive both', 'Only if r were exactly 1'],
+      answer: 1,
+      trap: 0,
+      why: 'Sunny weather sells ice cream and burns skin. A third thing that drives both makes them move together without either causing the other.',
+    },
+    {
+      q: 'In a primary school, children with bigger feet score higher on reading tests. Should the school buy everyone bigger shoes?',
+      choices: ['No: older children have bigger feet and also read better', 'Yes: the correlation shows feet help reading', 'Yes, if the correlation is above one half'],
+      answer: 0,
+      trap: 1,
+      why: 'Age drives both foot size and reading. The correlation is real, but bigger shoes won’t make anyone read better.',
+    },
+  ]}
+>
+
+A correlation measures how two things move together, whatever the reason. One may cause the other, the cause may run
+the other way, a third thing may drive both, or it may be chance in a small sample. Telling these apart needs more than
+$r$: an experiment, or knowledge of how the things work.
+
+</Misconception>
+
+Now write $r$ as code. Your function fills an array with each point's product $(x - \bar{x})(y - \bar{y})$, so you can
+watch the + and − terms appear, and returns $r$. One test is the ring, where the products cancel and $r = 0$.
+
+<CodeExercise exercise="correlation" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'What is the covariance of the points (0, 1), (2, 5) and (4, 3)? Divide by n.',
+      choices: ['4/3', '4', '22/3'],
+      answer: 0,
+      why: 'x̄ = 2 and ȳ = 3. The products are (−2)(−2) = 4, 0 × 2 = 0 and 2 × 0 = 0, so the covariance is 4/3. 4 forgets to divide by n, and 22/3 multiplies the raw values without centring them.',
+    },
+    {
+      q: 'Data set P lies exactly on the falling line y = 8 − 0.2x. Data set Q scatters loosely around the steep rising line y = 12x. Which has r farther from 0?',
+      choices: ['Q, since its line is far steeper', 'P: it lies exactly on a line, so its r is −1', 'Neither: a gentle falling line gives r near 0'],
+      answer: 1,
+      why: 'Exactly on a sloping line, the centred y values are a multiple of the centred x values, so r is ±1, here −1: as far from 0 as r goes. Q’s scatter keeps its r short of 1, however steep its line.',
+      traps: { 0: 'steeper-is-stronger' },
+    },
+    {
+      q: 'Twelve points lie exactly on a circle, and their correlation is 0. What can you conclude?',
+      choices: ['x and y are unrelated', 'The correlation must have been worked out wrongly', 'They have no straight-line lean, though they follow a perfect curve'],
+      answer: 2,
+      why: 'On a circle, the + and − products cancel, so r = 0. r only measures a straight-line lean; the circle is a perfect pattern of another shape.',
+      traps: { 0: 'zero-means-unrelated' },
+    },
+    {
+      q: 'Across many fires, the number of fire engines sent and the damage done have r = 0.9. What is the most likely explanation?',
+      choices: ['Bigger fires bring both more engines and more damage', 'Sending more engines causes more damage', 'It is probably a coincidence'],
+      answer: 0,
+      why: 'The size of the fire drives both. With so many fires, r = 0.9 is no coincidence, but a strong correlation can come from a third cause, so it can’t show that the engines cause the damage.',
+      traps: { 1: 'correlation-causation' },
+    },
+    {
+      q: 'Heights in centimetres and weights in kilograms have r = 0.6. Heights are converted to inches, dividing each by 2.54. What is r now?',
+      choices: ['0.236', '0.6', '1.524'],
+      answer: 1,
+      why: 'Dividing every height by the positive number 2.54 divides the covariance and the height spread by 2.54, and the two cancel. r has no units.',
+    },
+    {
+      q: 'The centred lists a and b have a · b = 10, |a| = 4 and |b| = 5. What is r?',
+      choices: ['10', '0.025', '0.5'],
+      answer: 2,
+      why: 'r = a · b ÷ (|a| |b|) = 10 ÷ 20 = 0.5. 10 forgets to divide, and 0.025 divides by the squared lengths, 16 × 25.',
+    },
+    {
+      q: 'Five points have r = 0.04. A sixth point, far from the rest, takes r to 0.8. What should you conclude?',
+      choices: ['One point is making the correlation: look at the scatter plot', 'The two quantities are strongly linked', 'The first five points were measured wrongly'],
+      answer: 0,
+      why: 'Far from the middle, the sixth point has big gaps in both directions, so its product can outweigh all the others. The correlation comes from that one point, not from a lean in the data.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="correlation-meaning"
+  prompt="What do covariance and correlation measure? How do you work out r from a list of points, and why is it always between −1 and 1?"
+  rubric={[
+    'Each point’s product (x − x̄)(y − ȳ) is positive when it sits up-right or down-left of the middle, and negative in the other two corners.',
+    'The covariance is the average of those products; its sign gives the direction of the lean, but its size depends on the units.',
+    'The correlation divides the covariance by both standard deviations, so it has no units.',
+    'r is the cosine of the angle between the centred lists, so it lies between −1 and 1, and is ±1 exactly when the points lie on a sloping line.',
+    'r measures only a straight-line lean: r = 0 doesn’t mean unrelated, and a strong r doesn’t show a cause.',
+  ]}
+  example="Centre both lists by taking away their means. A point up and to the right of the middle, or down and to the left, has a positive product (x − x̄)(y − ȳ); the other two corners give negative ones. The covariance is their average: positive means the two rise together, but its size changes with the units. Dividing by both standard deviations gives r, which has no units. It is the dot product of the centred lists divided by their lengths, a cosine, so it lies between −1 and 1 and is ±1 only when the points are exactly on a sloping line. A ring can have r = 0, and a high r doesn’t mean one thing causes the other."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Lines through the means $\bar{x}$ and $\bar{y}$ split a scatter plot into four corners. A point's product $(x - \bar{x})(y - \bar{y})$ is positive up-right and down-left, negative in the other two.
+- The covariance is the average product. Its sign says which way the points lean; its size depends on the units, so measuring in minutes instead of hours multiplies it by 60.
+- The correlation $r = \dfrac{\text{cov}}{s_x\, s_y}$ divides by both standard deviations. It has no units and doesn't change when either list is multiplied by a positive number (changing units) or has a number added to it.
+- With $a = x - \bar{x}$ and $b = y - \bar{y}$, $r = \dfrac{a \cdot b}{|a|\,|b|} = \cos\theta$, so $-1 \le r \le 1$, and $r = \pm 1$ exactly when the points lie on a line, whatever its slope, as long as it isn't flat.
+- $r$ measures how closely the points follow a straight line compared with their spread: a ring or a U can have $r = 0$, and one far point can make $r$ large. Plot the data.
+- Correlation is not causation: two things can move together because a third drives both.
+
+</Section>
