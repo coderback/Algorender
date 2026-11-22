@@ -211,6 +211,7 @@ test('predict mode folds the notes beside the stage until the learner opens them
 
   await page.getByRole('button', { name: 'Predict', exact: true }).click();
   for (const n of notes) await expect(n).toHaveCount(0);
+  await expect(page.getByTestId('predict-fold')).toContainText('What stays true, when to use it, its properties and the experiments can give answers away.');
   await expect(show).toHaveAttribute('aria-expanded', 'false');
   await show.click();
   for (const n of notes) await expect(n).toBeVisible();
