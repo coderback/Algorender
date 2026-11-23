@@ -162,9 +162,10 @@ export function ProblemList({ rows, mixed: mixedOrder, colours }: { rows: Proble
               <span className="sr-only">Clear the pattern filter</span>
             </button>
           )}
-          <label className="ml-auto flex items-center gap-2 text-sm text-ink-soft">
+          {/* A select is as wide as its longest option unless allowed to shrink. */}
+          <label className="ml-auto flex max-w-full min-w-0 items-center gap-2 text-sm text-ink-soft">
             Order
-            <select value={order} onChange={(e) => setOrder(e.target.value as Order)} className="h-10 rounded-full bg-sunken px-3 text-[13px] font-semibold text-ink">
+            <select value={order} onChange={(e) => setOrder(e.target.value as Order)} className="h-10 min-w-0 rounded-full bg-sunken px-3 text-[13px] font-semibold text-ink">
               <option value="easiest">Easiest first</option>
               <option value="mixed">Mixed, like an interview (patterns hidden)</option>
               <option value="unsolved">Not solved first</option>

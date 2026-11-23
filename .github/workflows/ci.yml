@@ -1,0 +1,100 @@
+# Every pull request and every push to master: lint, types, the migration
+# check and the unit tests, then the Playwright suite on a production build
+# (the way CLAUDE.md says to run it), split across four runners.
+# Deploys stay with Vercel's Git integration.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: algorender
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  checks:
+    name: Lint, types and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: algorender/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Migrations match the schema
+        run: |
+          npx drizzle-kit generate
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "::error::src/server/db/schema.ts has changes with no migration: run npm run db:generate and commit drizzle/."
+            git status --porcelain drizzle
+            exit 1
+          fi
+      # The Docker judge tests skip themselves (no algorender-judge image here);
+      # the nightly judge workflow runs them.
+      - run: npm test
+
+  e2e:
+    name: E2E (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      # Pages read the tutor's switch at build time, so the build needs it too.
+      TUTOR_PROVIDER: fake
+      BETTER_AUTH_RATE_LIMIT: 'off'
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: algorender/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Start the production server
+        run: |
+          PGLITE_DIR="$RUNNER_TEMP/pglite" nohup npx next start -p 3100 > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://localhost:3100 && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/server.log"
+          exit 1
+      # Playwright reuses the server on 3100 (reuseExistingServer).
+      - run: npx playwright test --shard=${{ matrix.shard }}/4
+      - name: Server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/server.log"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-${{ matrix.shard }}
+          path: |
+            algorender/playwright-report/
+            algorender/test-results/
+          retention-days: 7

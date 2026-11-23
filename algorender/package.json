@@ -5,7 +5,7 @@
   "scripts": {
     "predev": "node scripts/build-workers.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/build-workers.mjs",
+    "prebuild": "node scripts/build-workers.mjs && node scripts/migrate.mjs --on-build",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

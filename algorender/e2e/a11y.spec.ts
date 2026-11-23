@@ -50,6 +50,12 @@ async function scan(page: Page, path: string) {
     // The button is renamed while a Predict question waits, and disabled at the end.
     const forward = stages.first().getByRole('button', { name: /Step forward/ });
     for (let i = 0; i < 3 && (await forward.count()) > 0 && (await forward.isEnabled()); i++) await forward.click();
+    // Scan the settled frame: mid-tween, a cell between two marks (or a chip fading out) has a contrast no one
+    // reads, and a slow machine (CI) catches it. Reduced motion shortens the tweens; this waits out the rest.
+    // (Endless ones, a loading pulse, never finish and aren't waited for.)
+    await page.waitForFunction(() =>
+      document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity),
+    );
   }
   const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   const report = violations.map((v) => `${v.id}: ${v.help}\n  ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join('\n  ')}`);
@@ -58,7 +64,7 @@ async function scan(page: Page, path: string) {
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`${colorScheme} theme`, () => {
-    test.use({ colorScheme });
+    test.use({ colorScheme, reducedMotion: 'reduce' });
     for (const path of pages) test(`${path} passes axe`, async ({ page }) => scan(page, path));
   });
 }
