@@ -1,0 +1,402 @@
+<Section step="hook" title="A curve that learned its points by heart">
+
+In [overfitting, validation and bias–variance](/learn/overfitting-bias-variance), a curve with too much freedom
+memorised its training points and guessed badly everywhere else. Here is that failure again, on ten new points. A
+curve of degree 9, $\hat{y} = w_0 + w_1 x + w_2 x^2 + \cdots + w_9 x^9$, has 10 weights, and least squares fits it to
+10 noisy points. Ten weights for ten points: the curve threads every point, so its training error is 0. Between the
+points it swings wildly, and on 9 validation points, kept out of the fit, its mean squared error is 4.446.
+
+Look at its weights. The biggest, $w_7$, is $-1338$. The labels stay between about $-1.5$ and $1.5$, yet the curve is
+built from terms in the hundreds that almost cancel: the signature of a model bending itself around noise. Rather than
+take that freedom away, **charge the model for big weights**, so it uses them only when the data pay for it. That
+charge is **regularisation**, in two flavours, ridge and lasso, which behave very differently.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="weights w">The numbers a model learns: $w_1, w_2$ for a model with two features, or $w_0, \ldots, w_9$ for the curve. Together, a vector $w$.</Term>
+  <Term name="training error S(w)">The total of the squared errors $(\hat{y} - y)^2$ over the training points. Least squares picks the $w$ with the smallest $S$, written $\hat{w}$. (A total, not a mean, in this lesson; a mean would only rescale $\lambda$.)</Term>
+  <Term name="charge (penalty)">An extra cost, added to $S(w)$, that grows with the size of the weights. The model minimises $S(w)$ plus the charge.</Term>
+  <Term name="λ (lambda)">How much the charge counts: a number $\lambda \ge 0$ you choose. $\lambda = 0$ is plain least squares.</Term>
+  <Term name="ridge">Charges $\lambda \lVert w \rVert_2^2 = \lambda(w_1^2 + w_2^2 + \cdots)$, the squared L2 length from [lengths and distances](/learn/norms-distances). In neural networks it is called weight decay.</Term>
+  <Term name="lasso">Charges $\lambda \lVert w \rVert_1 = \lambda(|w_1| + |w_2| + \cdots)$, the L1 length: the sizes added up.</Term>
+  <Term name="ŵ(λ) and its path">The weights that minimise $S$ plus the charge at a given $\lambda$, and the path they trace as $\lambda$ grows.</Term>
+  <Term name="intercept">A weight that only lifts the whole prediction up or down, like $w_0$. It is left uncharged.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Charging the curve for its weights">
+
+Ridge fits the curve by minimising
+
+$$
+\begin{aligned}
+&S(w) \\
+&\quad + \lambda\,(w_1^2 + w_2^2 + \cdots + w_9^2)
+\end{aligned}
+$$
+
+with $S(w)$ the total squared error over the 10 training points. $w_0$ is not charged: it only sets the curve's
+height, and there is no reason to prefer curves that sit near $y = 0$. The fit minimises that total, but the chart and
+the numbers below report means, the training MSE over 10 points and the validation MSE over 9, so the two compare
+fairly. Step through $\lambda$ from 0 to 100, predicting before each step, and watch the curve, the sizes of its
+weights (on a log scale, each gridline a hundred times the one below) and the two errors.
+
+<Explore slug="regularisation" settings={{ preset: 'curve' }} caption="Left: the training points (larger dots), the validation points (smaller dots) and the fitted curve. Middle: the size of each weight, on a log scale. Right: the training and validation error at each λ tried so far." />
+
+The squares of the weights at $\lambda = 0$ add up to about 3 million, so even $\lambda = 0.000001$ makes a charge the
+fit notices: the biggest weight drops from 1338 to 191, and the validation MSE falls from 4.446 to 0.288, while the
+training MSE rises from 0 to 0.036. At $\lambda = 0.01$ the curve is a gentle wave, with training MSE 0.067 and
+validation MSE 0.089, the lowest of any $\lambda$ here. Then the charge outweighs the fit: at $\lambda = 1$ the
+validation MSE is back up to 0.299, and at $\lambda = 100$ every charged weight is squeezed almost to 0, leaving a flat
+line at $-0.186$, the mean of the training labels, with validation MSE 0.605: underfitting. Over the sweep the training
+MSE only ever rises, from 0 to 0.469, while the validation MSE makes a U, like the one against the degree of the curve.
+
+<KeyIdea>
+
+**Regularisation trades training error for smaller weights.** A good $\lambda$ lowers the error on data the model
+never saw, so choose it by the validation error (or cross-validation), never by the training error, which always
+prefers $\lambda = 0$.
+
+</KeyIdea>
+
+<Misconception
+  id="lowers-training-error"
+  title="Regularisation makes the training error lower"
+  probes={[
+    {
+      q: 'A model’s training error is 0.8 with no penalty. You add a ridge penalty and refit on the same data. What can its training error be now?',
+      choices: ['Lower than 0.8', '0.8 or higher', 'Exactly 0'],
+      answer: 1,
+      trap: 0,
+      why: 'Without the penalty the fit already had the lowest training error possible, so the penalty can only keep it or raise it.',
+    },
+    {
+      q: 'Two people fit the same training data with the same model, one adding a lasso penalty and one not. Whose training error is lower?',
+      choices: ['The one with lasso', 'The one without a penalty, or they tie', 'You can’t say without the data'],
+      answer: 1,
+      trap: 0,
+      why: 'Least squares alone minimises the training error, so nothing beats it there. Lasso can only win on new data.',
+    },
+  ]}
+>
+
+The fit with no charge already has the lowest training error possible, so a charge can only raise it: here the
+training MSE rose from 0 to 0.067 while the validation MSE fell from 4.446 to 0.089.
+
+</Misconception>
+
+<Misconception
+  id="bigger-lambda-better"
+  title="A bigger λ is always safer"
+  probes={[
+    {
+      q: 'The validation errors at λ = 0.3, 3 and 30 are 0.42, 0.25 and 0.61. Which λ should you keep?',
+      choices: ['30: the most regularised is the safest', '3: the lowest validation error', '0.3: the closest fit to the training data'],
+      answer: 1,
+      trap: 0,
+      why: 'Keep the λ with the lowest validation error. Past the bottom of the U a bigger λ underfits.',
+    },
+    {
+      q: 'Someone sets λ to a billion so that their model “can’t possibly overfit”. What does their model do?',
+      choices: ['Predicts almost the same value for every input: it underfits', 'Gets the best possible validation error', 'Fits exactly like least squares'],
+      answer: 0,
+      trap: 1,
+      why: 'A huge charge squeezes every charged weight to almost 0, leaving a flat prediction that ignores the features.',
+    },
+  ]}
+>
+
+A bigger $\lambda$ helps only until the model is too simple: here the validation MSE climbed from 0.089 at
+$\lambda = 0.01$ to 0.605 at $\lambda = 100$.
+
+</Misconception>
+
+<Misconception
+  id="charge-everything"
+  title="Charge every weight the same, whatever it measures"
+  probes={[
+    {
+      q: 'A model predicts house prices from floor area in square metres and the number of bedrooms, plus an intercept. Before fitting ridge, what should you do?',
+      choices: [
+        'Rescale both features to similar spreads, and leave the intercept uncharged',
+        'Nothing: ridge treats every weight fairly',
+        'Charge the intercept the most, since it is usually the biggest weight',
+      ],
+      answer: 0,
+      trap: 1,
+      why: 'A weight’s size, and so its charge, depends on its feature’s units; and a charged intercept drags the prediction towards 0.',
+    },
+    {
+      q: 'Two features matter about equally: A is a distance recorded in kilometres, B another distance recorded in millimetres. Under ridge, which weight is charged harder?',
+      choices: [
+        'Neither: ridge charges both alike',
+        'A’s: kilometres need a weight a million times bigger, and its square costs far more',
+        'B’s: millimetres are bigger numbers',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'Values in millimetres are a million times larger, so B needs a weight a million times smaller, which costs almost nothing. A’s big weight carries nearly all the charge.',
+    },
+  ]}
+>
+
+A weight's size, and so its charge, depends on its feature's units (record a length in centimetres instead of metres
+and its weight shrinks a hundred times, its charge ten thousand times), so put the features on similar scales first,
+and leave the intercept uncharged: here it was free, so the huge-$\lambda$ fit was a flat line at the mean, $-0.186$,
+not at 0.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="Two weights: a bowl and a circle">
+
+Why does a charge shrink weights the way it does? With two weights you can see it. Take a model
+$\hat{y} = w_1 x_1 + w_2 x_2$ fitted to 8 points whose two features rise and fall together. Every column of the data
+averages 0 (it is centred), so no intercept is needed. The training error $S(w)$ is a bowl over the plane of weights
+$(w_1, w_2)$, drawn with contours as in [contour maps](/learn/contour-maps). Because the features move together, the
+bowl is a tilted valley. Its lowest point, the least-squares weights, is $\hat{w} = (1.64, 1.21)$, where $S = 1.92$.
+
+Ridge minimises $S(w) + \lambda(w_1^2 + w_2^2)$. Weights of the same L2 length pay the same charge, so they make a circle
+round the origin. Before each step, predict where on its circle ridge's answer sits, and which way it heads as
+$\lambda$ grows.
+
+<Explore slug="regularisation" settings={{ preset: 'ridge' }} caption="Left: the training error S over the weights (w₁, w₂), the least-squares weights ŵ, and ridge's weights as λ grows. Right: w₁ and w₂ against λ, which doubles at each tick from 1." />
+
+At $\lambda = 1$ ridge's weights are exactly $(1.6, 1.2)$: $S$ there is 2, a little above 1.92, and the charge is
+$1 \times (1.6^2 + 1.2^2) = 4$, the same all round the circle of radius 2. So ridge picked the point of that circle
+with the lowest $S$: where a contour of $S$ just **touches** the circle (a contour that crossed it would leave lower
+ground on the circle).
+
+At $\lambda = 16$ the weights are $(1.2, 0.97)$, on a circle of radius 1.54 touched by the contour $S = 14.15$. They
+are not on the straight line from $\hat{w}$ to the origin: $w_2/w_1$ is 0.81 against 0.74 at $\hat{w}$, and the
+circle's point on that line, $(1.24, 0.92)$, has $S = 14.26$. In a tilted valley, nearest is not lowest, and ridge
+leans towards sharing the weight between features that move together. As $\lambda$ doubles up to 256 both weights
+shrink, to $(0.26, 0.22)$, but neither reaches 0.
+
+</Section>
+
+<Section step="predict" title="Your turn: lasso">
+
+Lasso keeps the bowl but changes the charge to $\lambda(|w_1| + |w_2|)$, the L1 length instead of the squared L2
+length. Same 8 points, same tilted valley. Predict which weight falls further at first, what happens to $w_2$ as
+$\lambda$ grows, where the contour of $S$ meets the outline of equal charge, and what happens to $w_1$.
+
+<PredictChallenge slug="regularisation" settings={{ preset: 'lasso' }} goal={4} />
+
+Weights of equal L1 length make a diamond, the L1 unit ball scaled up. By $\lambda = 16$, $w_2$ has fallen from 1.21
+to 0.99 while $w_1$ only went from 1.64 to 1.54: lasso's weights are $(1.54, 0.99)$, and the contour $S = 4.54$
+touches the diamond on a flat side. The two features carry much the same information, so the fit loses little when
+$w_1$ stands in for $w_2$.
+
+At $\lambda = 86.18$, $w_2$ becomes **exactly** 0 and stays there: at $\lambda = 128$ the weights are $(0.44, 0)$, and
+the contour touches the diamond at its corner on the $w_1$ axis. Then $w_1$ falls steadily, by the same amount for
+each unit of $\lambda$, and becomes exactly 0 too, at $\lambda = 156$; beyond that both weights are 0.
+
+Why exact zeros? Move $w_2$ off 0 by a small amount $h$. The charge goes up by $\lambda |h|$: a fixed price per unit,
+however small $h$ is. The fit improves by at most the slope of $S$ along $w_2$ times $h$. Once $\lambda$ is bigger
+than that slope, every move off 0 costs more than it gains, so $w_2$ stays at 0. Ridge's charge $\lambda w_2^2$ costs
+$\lambda h^2$ for a tiny $h$, next to nothing, so some move off 0 always pays.
+
+<KeyIdea>
+
+**Ridge shrinks; lasso selects.** A circle has no corners, but a diamond's corners sit on the axes, so lasso sets
+weights to exactly 0 one by one as $\lambda$ grows, dropping those features from the model.
+
+</KeyIdea>
+
+<Misconception
+  id="ridge-zeroes"
+  title="Ridge sets small weights to zero"
+  probes={[
+    {
+      q: 'You fit ridge with λ = 40 to a data set with 300 features. How many of the 300 weights come out exactly 0?',
+      choices: ['Usually none', 'The smallest ones', 'About half of them'],
+      answer: 0,
+      trap: 1,
+      why: 'Ridge shrinks every weight smoothly towards 0 but lands on exactly 0 only by coincidence. Lasso is the one that zeroes weights.',
+    },
+    {
+      q: 'You want a model that uses only a handful of 500 features, so it is easy to explain. Which penalty should you try?',
+      choices: ['Lasso', 'Ridge', 'Either: both drop the features with small weights'],
+      answer: 0,
+      trap: 2,
+      why: 'Lasso sets weights exactly to 0 and so drops features. Ridge keeps all 500, each a little smaller.',
+    },
+  ]}
+>
+
+Ridge almost never sets a weight to exactly 0: at $\lambda = 256$ its weights were still $(0.26, 0.22)$, while
+lasso's were both 0 from $\lambda = 156$.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Ridge in code">
+
+Ridge has a formula, found where the slope is 0 in every direction. In [linear regression](/learn/linear-regression)
+the chain rule gave the slope of the mean squared error along $w$ as $-\frac{2}{n}\sum_i (y_i - \hat{y}_i)\,x_i$. For
+the total $S$ drop the $\frac{1}{n}$: with the error $e = w_1 x_1 + w_2 x_2 - y$ at each point, the slope of $S$ along
+$w_1$ is $2\sum e\,x_1$, twice column 1 of the data dotted with the errors. The slope of $\lambda(w_1^2 + w_2^2)$ along
+$w_1$ is $2\lambda w_1$. Set their sum to 0 and halve it; writing $x_1$ and $x_2$ for the feature columns and using the
+[dot product](/learn/dot-product),
+
+$$
+\begin{aligned}
+&x_1 \cdot (w_1 x_1 + w_2 x_2 - y) + \lambda w_1 = 0 \\
+&w_1 (x_1 \cdot x_1) + w_2 (x_1 \cdot x_2) \\
+&\qquad - x_1 \cdot y + \lambda w_1 = 0 \\
+&(x_1 \cdot x_1 + \lambda)\,w_1 + (x_1 \cdot x_2)\,w_2 \\
+&\qquad = x_1 \cdot y
+\end{aligned}
+$$
+
+The slope along $w_2$ gives a second equation. With the data as a table $X$ (one row per point, one column per
+feature), together they are
+
+$$
+(X^\top X + \lambda I)\,w = X^\top y
+$$
+
+$X^\top$, "X transposed", is $X$ with rows and columns swapped, so entry $[i][j]$ of $X^\top X$ is column $i$ dotted
+with column $j$, and $X^\top y$ is each column dotted with $y$. $I$ is the identity, 1s on the diagonal and 0s
+elsewhere, so $\lambda I$ adds $\lambda$ to each diagonal entry. For the 8 points, $X^\top X$ has rows $(32, 21)$ and
+$(21, 26)$, and $X^\top y = (78, 66)$. With $\lambda = 16$:
+
+$$
+\begin{aligned}
+48\,w_1 + 21\,w_2 &= 78 \\
+21\,w_1 + 42\,w_2 &= 66
+\end{aligned}
+$$
+
+whose answer is $(1.2, 0.97)$, the weights the widget showed. Solving such equations is Gaussian elimination, the
+`solve` of the least-squares project, if you built it ([solve Ax = b](/code/solve-system)); the exercise hands it to
+you, with `transpose`, `matmul` and `matvec`. Your part is ridge itself: build $X^\top X$, add $\lambda$ to the
+diagonal, solve. The run draws $X^\top X + \lambda I$ as a table.
+
+<CodeExercise exercise="ridge-regression" />
+
+One test has two identical columns: $X^\top X$ has rows $(10, 10)$ and $(10, 10)$, and elimination meets a zero pivot.
+With $\lambda = 1$ the diagonal becomes 11, and ridge splits the weight equally, $13/21 \approx 0.62$ each.
+
+</Section>
+
+<Section step="see" title="Penalties as beliefs">
+
+There is a second way to read the charge. Before seeing any data you might believe that each weight is probably
+small. Write that belief, a **prior**, as a bell curve over each weight, centred at 0. A bell curve falls away in a
+particular way: every extra unit of $w^2$ multiplies the believability by the same fraction $r$, below 1, so it is
+proportional to $r^{w^2}$. The chance of two things together is the product of their
+chances, so beliefs about separate weights multiply: $r^{w_1^2} \times r^{w_2^2} = r^{w_1^2 + w_2^2}$. If the noise in
+the labels is bell-shaped too, the believability of the data given the weights is likewise proportional to
+$q^{S(w)}$, with $q$ below 1 because a bigger miss is less believable. The most believable weights, data and prior
+together, make $q^{S(w)} \times r^{w_1^2 + w_2^2}$ as big as possible. Write $r$ as a power of $q$, $r = q^\lambda$,
+and multiplying powers adds exponents:
+
+$$
+\begin{aligned}
+&q^{S(w)} \times q^{\lambda (w_1^2 + w_2^2)} \\
+&\quad = q^{S(w) + \lambda (w_1^2 + w_2^2)}
+\end{aligned}
+$$
+
+As $q$ is below 1, that is biggest when the exponent is smallest: exactly ridge. So **ridge finds the most believable
+weights under a bell-curve prior**, an estimate called maximum a posteriori, or MAP ("posterior": after seeing the
+data). A narrower bell, a stronger belief that the weights are small, falls away faster, so $\lambda$ is bigger. A
+prior with a sharp point at 0, falling away with $|w|$ instead of $w^2$ (a Laplace prior), gives lasso.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Ridge charges λ(w₁² + w₂²). What is the charge for w = (3, −4) with λ = 2?',
+      choices: ['50', '14', '10', '2'],
+      answer: 0,
+      why: 'w₁² + w₂² = 9 + 16 = 25, and 2 × 25 = 50. 3 + 4 = 7 is lasso’s L1 length; 5 is the L2 length before squaring.',
+    },
+    {
+      q: 'You add a ridge penalty to a model and refit it on the same training data. Its training error…',
+      choices: ['goes down', 'stays the same or goes up', 'always doubles'],
+      answer: 1,
+      why: 'Without the penalty the fit had the lowest training error there is, so the penalty can only keep it or raise it.',
+      traps: { 0: 'lowers-training-error' },
+    },
+    {
+      q: 'Validation errors for λ = 0.01, 0.1, 1 and 10 are 0.52, 0.31, 0.27 and 0.40. Which λ do you keep?',
+      choices: ['0.01', '0.1', '1', '10'],
+      answer: 2,
+      why: 'Keep the lowest validation error: λ = 1. At 10 the model has started to underfit.',
+      traps: { 3: 'bigger-lambda-better' },
+    },
+    {
+      q: 'Which penalty can set a weight to exactly 0?',
+      choices: ['Ridge, when the weight is small', 'Lasso', 'Neither', 'Both'],
+      answer: 1,
+      why: 'Lasso’s charge costs a fixed amount per unit, so a large enough λ holds a weight at 0. Ridge’s squared charge costs next to nothing near 0.',
+      traps: { 0: 'ridge-zeroes', 3: 'ridge-zeroes' },
+    },
+    {
+      q: 'A ridge model charges its intercept as well as its other weights. With a huge λ, what does it predict?',
+      choices: ['Close to 0 for every input', 'The mean of the training labels', 'The same as least squares'],
+      answer: 0,
+      why: 'Every charged weight is squeezed towards 0, the intercept included, so the prediction sinks to 0. An uncharged intercept would settle at the mean.',
+      traps: { 1: 'charge-everything' },
+    },
+    {
+      q: 'Centred data have XᵀX with rows (10, 2) and (2, 5), and Xᵀy = (12, 7). Which equations do ridge’s weights solve with λ = 2?',
+      choices: [
+        '12w₁ + 4w₂ = 12 and 4w₁ + 7w₂ = 7',
+        '10w₁ + 2w₂ = 14 and 2w₁ + 5w₂ = 9',
+        '8w₁ + 2w₂ = 12 and 2w₁ + 3w₂ = 7',
+        '12w₁ + 2w₂ = 12 and 2w₁ + 7w₂ = 7',
+      ],
+      answer: 3,
+      why: '(XᵀX + λI)w = Xᵀy: λ = 2 goes on the diagonal only, 10 + 2 = 12 and 5 + 2 = 7, and the right-hand side stays (12, 7).',
+    },
+    {
+      q: 'Ridge finds the most believable weights under a prior: a bell curve around 0 for each weight. With the noise unchanged, make the bell narrower. What happens to λ?',
+      choices: ['It gets bigger: you believe more strongly that the weights are small', 'It gets smaller', 'It doesn’t change'],
+      answer: 0,
+      why: 'A narrower bell falls away faster as a weight grows, a heavier charge on big weights: a bigger λ.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="ridge-lasso"
+  prompt="What does regularisation add to a model's training error, what do ridge and lasso each do to the weights as λ grows (and why do only lasso's reach exactly 0), and how should λ be chosen?"
+  rubric={[
+    'It adds a charge for big weights to the training error: λ times their squared L2 length (ridge) or L1 length (lasso).',
+    'The training error rises with λ; a good λ, chosen by validation error, lowers the error on new data.',
+    'Ridge shrinks every weight smoothly but never to exactly 0; lasso sets weights exactly to 0 as λ grows, dropping features.',
+    'Lasso’s charge costs a fixed price per unit even near 0, which is why it stops weights at exactly 0 (the diamond’s corners).',
+  ]}
+  example="Regularisation minimises the training error plus a charge for big weights: λ times the sum of the squared weights for ridge, or of their sizes for lasso. A bigger λ gives smaller weights and a higher training error, but the model stops bending around noise; too much λ underfits, so λ is chosen by the validation error. Ridge shrinks every weight towards 0 without reaching it, because a squared charge costs almost nothing near 0. Lasso charges a fixed amount per unit, so once λ is big enough moving a weight off 0 never pays and it stays at exactly 0, at a corner of the diamond."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Regularisation minimises the training error plus a charge for big weights: $\lambda \lVert w \rVert_2^2$ for ridge, $\lambda \lVert w \rVert_1$ for lasso. $\lambda = 0$ is plain least squares.
+- The training error only rises with $\lambda$; the validation error makes a U. Choose $\lambda$ by validation, never by training error.
+- The answer sits where a contour of the training error just touches the outline of equal charge: a circle for ridge, a diamond for lasso.
+- Ridge shrinks every weight and almost never reaches exactly 0. Lasso sets weights exactly to 0 one by one, so it also picks features.
+- Ridge solves $(X^\top X + \lambda I)w = X^\top y$, which has one answer for any $\lambda > 0$, even when features copy each other. Lasso needs a short search, such as coordinate descent.
+- Leave the intercept uncharged, and put the features on similar scales first.
+- With bell-shaped noise, ridge is the most believable weights under a bell-curve prior on each weight (MAP), and lasso under a Laplace prior; a stronger belief means a bigger $\lambda$.
+
+</Section>

@@ -7,20 +7,26 @@ import { autogradExercises } from './autograd';
 import { bootstrapExercises } from './bootstrap';
 import { calculusExercises } from './calculus';
 import { chanceExercises } from './chance';
+import { classificationMetricsExercises } from './classification-metrics';
 import { correlationExercises } from './correlation';
 import { countingExercises } from './counting';
 import { distributionExercises } from './distributions';
 import { graphExercises } from './graphs';
 import { gridExercises } from './grids';
 import { integralExercises } from './integrals';
+import { knnExercises } from './k-nearest-neighbours';
 import { leastSquaresExercises } from './least-squares';
 import { likelihoodExercises } from './likelihood';
 import { linearAlgebraExercises } from './linear-algebra';
 import { mlExercises } from './ml';
 import { monteCarloExercises } from './monte-carlo';
+import { overfittingExercises } from './overfitting';
 import { permutationExercises } from './permutation-test';
 import { randomVariableExercises } from './random-variables';
+import { regularisationExercises } from './regularisation';
 import { sgdExercises } from './sgd';
+import { softmaxExercises } from './softmax';
+import { softmaxClassifierExercises } from './softmax-classifier';
 import { toolkitExercises } from './toolkit';
 import type { Exercise } from './shared';
 import { treeExercises } from './trees';
@@ -50,6 +56,13 @@ export const exercises: Exercise[] = [
   ...bootstrapExercises,
   ...permutationExercises,
   ...sgdExercises,
+  ...overfittingExercises,
+  ...knnExercises,
+  ...regularisationExercises,
+  ...softmaxExercises,
+  ...classificationMetricsExercises,
+  // M3's parts come after the lessons' own exercises, so a visualiser's "write it yourself" link stays the lesson's.
+  ...softmaxClassifierExercises,
   ...modifyExercises,
   ...bugHunts,
 ];

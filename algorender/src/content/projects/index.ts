@@ -12,7 +12,10 @@
 // The first, least squares from scratch (M1), arrived with batch B3: its
 // parts are in src/content/exercises/least-squares.ts. The second, micrograd
 // from scratch (M2), arrived with B4: its first two parts are the "build
-// micrograd" exercises in ml.ts, the rest are in autograd.ts.
+// micrograd" exercises in ml.ts, the rest are in autograd.ts. The third, a
+// classifier judged honestly (M3), arrived with B7: softmax regression trained
+// with minibatch SGD, a confusion matrix and k-fold cross-validation, its parts
+// in softmax-classifier.ts.
 
 export type Project = {
   slug: string;
@@ -51,6 +54,16 @@ export const projects: readonly Project[] = [
     concepts: ['chain-rule', 'autograd'],
     showcase: { href: '/visualisers/autograd?preset=train', label: 'Train a neuron with autograd' },
     hours: 4,
+  },
+  {
+    slug: 'softmax-classifier',
+    title: 'A classifier, judged honestly',
+    summary: 'Train softmax regression on three classes with your own minibatch SGD, count its answers into a confusion matrix, then score it with k-fold cross-validation on points it never saw.',
+    stage: 3,
+    parts: ['softmax-step', 'train-softmax', 'confusion-matrix', 'cross-validate'],
+    concepts: ['softmax-regression', 'classification-metrics', 'overfitting-bias-variance'],
+    showcase: { href: '/visualisers/softmax?preset=regions', label: 'Softmax regression’s three class regions' },
+    hours: 5,
   },
 ];
 

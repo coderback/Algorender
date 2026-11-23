@@ -726,13 +726,15 @@ concepts:
     track: ml
     summary: Models that memorise instead of learning, and how validation and cross-validation catch them.
     prereqs: [linear-regression]
-    planned: true
+    visualisers: [overfitting]
+    lesson: overfitting-bias-variance
   - id: regularisation
     title: Regularisation
     track: ml
     summary: Penalising big weights, where ridge shrinks them and lasso sets some exactly to zero, and priors as penalties.
     prereqs: [overfitting-bias-variance, norms-distances]
-    planned: true
+    visualisers: [regularisation]
+    lesson: regularisation
   - id: logistic-regression
     title: Logistic regression
     track: ml
@@ -745,19 +747,22 @@ concepts:
     track: ml
     summary: Turning scores into probabilities over many classes, without overflowing.
     prereqs: [logistic-regression, floating-point]
-    planned: true
+    visualisers: [softmax]
+    lesson: softmax-regression
   - id: classification-metrics
     title: Precision, recall and ROC
     track: ml
     summary: Confusion matrices, thresholds, and why accuracy lies on imbalanced data.
     prereqs: [logistic-regression]
-    planned: true
+    visualisers: [roc-curve]
+    lesson: classification-metrics
   - id: k-nearest-neighbours
     title: k-nearest neighbours
     track: ml
     summary: Predicting from the closest examples, and why distance stops meaning much in many dimensions.
     prereqs: [supervised-learning, norms-distances]
-    planned: true
+    visualisers: [k-nearest-neighbours]
+    lesson: k-nearest-neighbours
   - id: decision-trees
     title: Decision trees and boosting
     track: ml

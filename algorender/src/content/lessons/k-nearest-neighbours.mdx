@@ -1,0 +1,348 @@
+<Section step="hook" title="A model that only remembers">
+
+Will you like a song you have never heard? One way to guess: think of the songs you know that are most like it, and
+go with what most of them were to you. No rule, just remembered examples.
+
+That is the whole of **k-nearest neighbours**, k-NN for short: no line to fit, no weights to learn. It keeps the
+labelled training examples as they are, and to label a new one it finds the $k$ examples most like it and lets them
+vote. Two choices remain, how many neighbours vote and which ruler measures "most like it", and one question: what
+happens with hundreds of features instead of two? This lesson settles each by experiment.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+As in [learning from examples](/learn/supervised-learning), each example has **features** (what we know) and a
+**label** (the answer). Here the features are two numbers, so each example is a point $(x, y)$, and the label is a
+**class**: A, B or C. In code the classes are numbered from 0, so A is 0 and B is 1.
+
+<Terms>
+  <Term name="training points">The labelled examples k-NN keeps: each a point and its class.</Term>
+  <Term name="query point q">A new point whose class we want to predict.</Term>
+  <Term name="distance">Unless we say otherwise, the straight line: the L2 distance $\sqrt{d_x^2 + d_y^2}$ from [lengths and distances](/learn/norms-distances), where $d_x$ and $d_y$ are the gaps in $x$ and in $y$.</Term>
+  <Term name="the k nearest">The $k$ training points closest to $q$, for a whole number $k$ we choose.</Term>
+  <Term name="vote">Each of the $k$ nearest gives one vote to its own class, and the most votes wins. If classes tie, the one whose point is nearest to $q$ wins.</Term>
+  <Term name="map of predictions">Every spot of the plane coloured by the class a query there would get. Where the colour changes is the **boundary**.</Term>
+  <Term name="training and test mistakes">How many training points the model labels wrongly, and how many test points, kept aside and never seen.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="One query, one vote">
+
+Here are 40 training points in three blobs, 14 of class A and 13 each of B and C, and a query point $q$ at $(0, 0)$,
+right between the blobs, where the answer is not obvious. We use $k = 5$. Step through, predicting as you go.
+
+<Explore slug="k-nearest-neighbours" settings={{ preset: 'query', seed: 3 }} caption="40 training points of three classes and a query q at (0, 0) with k = 5: the distances sorted nearest first, the vote, a second k, every point voting, and the map of what k = 5 predicts." />
+
+Plain k-NN can't know which 5 points are nearest without measuring them all: it works out the distance from $q$ to
+all 40 training points and sorts them. The chart shows the nearest 15 as bars, each labelled with its point's class.
+The 5 nearest lie inside a circle of radius 1.18 around $q$, and they vote 3 for C and 2 for A, so k-NN predicts C.
+
+With $k = 1$ only the nearest point votes, an A point 1.01 away, so $k = 1$ predicts A: same data, same query, a
+different answer. With $k = 40$ every point votes wherever $q$ is, always 14 A, 13 B and 13 C, so the prediction is A
+everywhere and the map is a single colour.
+
+<KeyIdea>
+
+**k-NN does its work at prediction time.** Training is just storing the points. Plain k-NN measures the distance to
+every training point for every prediction: with a million points, a million distances each time. (Cleverer versions
+sort the points into regions first, to skip the far-away ones.)
+
+</KeyIdea>
+
+</Section>
+
+<Section step="predict" title="Your turn: k = 1 against k = 15">
+
+Now a harder data set: 121 training points of two classes in four overlapping clouds, class A top right and bottom
+left, class B in the other two corners, like a blurred chessboard. No straight line splits them. Another 600 points
+from the same clouds are kept aside as a test set. Predict how $k = 1$ and $k = 15$ do on their own training points,
+which boundary is more jagged, and which does better on the test points.
+
+<PredictChallenge slug="k-nearest-neighbours" settings={{ preset: 'regions', seed: 3 }} goal={4} />
+
+$k = 1$'s perfect training score is no achievement: each training point is its own nearest neighbour, at distance 0,
+so it votes for its own label, as long as no two training points sit at the same spot with different labels. The
+memoriser in learning from examples was exactly this, $k = 1$ on a single feature. On the 600 test points the order
+flips, 146 wrong for $k = 1$ against 119 for $k = 15$: a new point that lands on a stray's island takes the stray's
+class.
+
+The last charts run $k$ through every odd value (with two classes an odd $k$ never ties). Test mistakes fall, with some
+wobble, to 112 at $k = 19$, then climb past about $k = 61$. Each of the four clouds holds about 30 training points, so
+beyond about 60 neighbours a query's own cloud can't fill its vote, and the two clouds beside it, of the other class,
+outvote it: at $k = 97$ the model gets 455 of the 600 wrong, worse than guessing. At $k = 121$ the far cloud of the
+same class joins in, every query gets the same vote, 61 A to 60 B, and the model predicts A everywhere: 300 wrong,
+exactly half. That overshoot is the chessboard's doing; on most data a big $k$ simply drifts towards predicting the
+bigger class everywhere.
+
+<KeyIdea>
+
+**$k$ is the knob between remembering and averaging.** Small $k$ follows every point, noise included: jagged, perfect
+on the training points, worse on new ones. Big $k$ averages over wide neighbourhoods and ignores local detail, at the
+extreme ignoring $q$ altogether. The best $k$ lies in between, and only points the model never saw can find it.
+
+</KeyIdea>
+
+But not the test set, or it has helped choose the model and no longer measures new points honestly: $k$ is chosen on
+a third group of points, a **validation set**.
+
+<Misconception
+  id="k-one-is-perfect"
+  title="k = 1 is the most accurate, because it makes no training mistakes"
+  probes={[
+    {
+      q: 'A spam filter uses k-NN with k = 1, and no two of its 5,000 training emails are identical. It labels every one of them correctly. What does that say about new emails?',
+      choices: ['Very little: each training email is its own nearest neighbour', 'It will label nearly all new emails correctly too', 'k = 1 must be the best choice of k for this data'],
+      answer: 0,
+      trap: 1,
+      why: 'Asked about a training email, k = 1 finds that very email at distance 0 and returns its own label. Only emails it never saw can say how well it predicts.',
+    },
+    {
+      q: 'On one data set, k-NN with k = 1 gets 0% of its training points and 31% of its test points wrong; with k = 9 it gets 12% and 22%. Which would you use on new points?',
+      choices: ['k = 1, because it makes no training mistakes', 'k = 9, because it makes fewer mistakes on points it never saw', 'Neither: the training scores disagree with the test scores'],
+      answer: 1,
+      trap: 0,
+      why: 'Training mistakes say how well a model remembers. The test score is the one that measures new points, and k = 9 does better there.',
+    },
+  ]}
+>
+
+A training point is its own nearest neighbour, at distance 0, so as long as no two training points sit at the same
+spot with different labels, $k = 1$ labels every training point correctly. That score measures memory, not prediction.
+
+</Misconception>
+
+<Misconception
+  id="bigger-k-always-better"
+  title="A bigger k is smoother, so it is always better"
+  probes={[
+    {
+      q: 'A k-NN model has 250 training points: 160 of class X and 90 of class Y. With k = 250, what does it predict for a new point?',
+      choices: ['X, wherever the new point is', 'The class of the points nearest to it', 'Y, the smaller class'],
+      answer: 0,
+      trap: 1,
+      why: 'With k = 250 every training point votes, every time: 160 against 90, so X wins wherever the new point is.',
+    },
+    {
+      q: 'Raising k from 7 to 75 on 400 training points, the test mistakes rise from 14% to 27%. What is the most likely reason?',
+      choices: ['k = 75 lets in far-away points that say little about the query', 'k = 75 memorises the training points', 'Bad luck: a bigger k is never worse'],
+      answer: 0,
+      trap: 2,
+      why: 'A big k averages over a wide neighbourhood, so a query near a boundary or in a small region gets outvoted by points from elsewhere.',
+    },
+  ]}
+>
+
+A bigger $k$ does give a smoother boundary, but smoother is only better up to a point. Once the neighbourhood reaches
+past the region a query sits in, points from elsewhere outvote the ones that matter.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="k-NN in code">
+
+The predictor needs no training step, only a function called for each query. Try it by hand first on six points, with
+the query $q = (3, 3)$ and $k = 3$. In the order the code lists them:
+
+1. $(1, 2)$, class 0
+2. $(2, 4)$, class 0
+3. $(4, 4)$, class 1
+4. $(5, 2)$, class 1
+5. $(3, 1)$, class 1
+6. $(1, 5)$, class 0
+
+Use the **squared** distance $d_x^2 + d_y^2$: a bigger distance always has a bigger square, so it puts the points in
+the same order and skips the square root. For point 1 it is $(1 - 3)^2 + (2 - 3)^2 = 4 + 1 = 5$; for the six points in
+turn, the squared distances are 5, 2, 2, 5, 4 and 8. The three nearest are points 2 and 3, both at 2, and point 5, at
+4. They vote one for class 0 and two for class 1, so the prediction is class 1.
+
+Two rules settle ties. Points equally far go in list order: points 2 and 3 tie at 2, so with $k = 1$ point 2 would
+decide. If classes tie in the vote, return the class of the nearest point among them. Your code writes each squared distance into an array `dist` and
+counts votes in an array `votes`, one cell per class.
+
+<CodeExercise exercise="knn-predict" />
+
+</Section>
+
+<Section step="see" title="Which ruler? And in which units?">
+
+"Nearest" depends on how distance is measured. In [lengths and distances](/learn/norms-distances) you met three
+rulers for the gap $(d_x, d_y)$ between two points: L2, the straight line $\sqrt{d_x^2 + d_y^2}$; L1, city blocks,
+$|d_x| + |d_y|$; and L∞, the biggest step, $\max(|d_x|, |d_y|)$. Under each ruler, the points within a given distance
+of $q$ fill a different shape: a circle, a diamond, a square. Below are 16 training points of three classes and a
+query at $(0, 0)$, with $k = 3$. The panel lists the coordinates of the points near $q$, so you can work out each
+distance yourself. Predict the vote under each ruler before you see it.
+
+<Explore slug="k-nearest-neighbours" settings={{ preset: 'metric', seed: 1 }} caption="16 points of three classes and a query q at (0, 0), k = 3: the three nearest under L2, L1 and L∞, each in its own neighbourhood shape, then under L2 with every y gap counted three times." />
+
+Under L2, the 3 nearest are C at $(1, 0.45)$, 1.1 away, A at $(0.8, 0.9)$, 1.2 away, and C at $(-0.45, 1.25)$, 1.33
+away: C wins; the next is 1.48 away. Under L1 the C point at $(1, 0.45)$ is 1.45 away, and the two B points on the
+axes, $(1.5, 0)$ and $(0, -1.5)$, are 1.5: B wins. Under L∞, which counts only the bigger part of the gap, the A points
+on the diagonals are nearest, $(0.8, 0.9)$ at 0.9 and $(-1.05, -1.05)$ at 1.05, with the C point at $(1, 0.45)$ at 1
+between them: A wins. One query, one $k$, three rulers, three different predictions.
+
+The units of the features matter just as much. Suppose $y$ were recorded in units 3 times smaller, so every $y$ value,
+and every gap in $y$, is 3 times bigger, while $x$ stays as it was. The straight-line distance becomes
+$\sqrt{d_x^2 + (3 d_y)^2}$, and the neighbourhood is an ellipse 3 times wider than it is tall: the 3 nearest are B at
+1.5, C at 1.68 and B at $(-1.9, 0.1)$, 1.92 away, so B wins. Only the units of $y$ changed. The usual fix is to put
+every feature on the same scale before k-NN: subtract its smallest value and divide by its range, largest minus
+smallest, so every feature runs from 0 to 1.
+
+<Misconception
+  id="units-dont-matter"
+  title="The units of the features don't matter to k-NN"
+  probes={[
+    {
+      q: 'Cars are described by engine size in cubic centimetres (1,000 to 4,000) and number of doors (2 to 5). With plain straight-line distance, which feature decides who the nearest neighbours are?',
+      choices: ['Engine size: its gaps are hundreds of times bigger', 'Doors: they are the simpler feature', 'Both equally: k-NN treats every feature the same'],
+      answer: 0,
+      trap: 2,
+      why: 'Distance adds up squared gaps. Gaps in engine size run to thousands, gaps in doors to at most 3, so engine size swamps the sum unless the features are put on the same scale.',
+    },
+    {
+      q: 'You convert one feature from kilograms to grams and k-NN’s predictions change. Why?',
+      choices: ['They can’t change: the data is the same', 'Every gap in that feature is now 1,000 times bigger, so it outweighs the others in the distance', 'k-NN only works in kilograms'],
+      answer: 1,
+      trap: 0,
+      why: 'The distance adds up the squared gaps feature by feature. Multiplying one feature by 1,000 multiplies its gaps by 1,000, so that feature now decides who is nearest.',
+    },
+  ]}
+>
+
+Distance adds up each feature's squared gap, so a feature measured in bigger numbers counts for more: here, counting
+$y$ three times over turned an L2 prediction of C into B. Put the features on the same scale first.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="Distances in many dimensions">
+
+Real examples often have many more than two features: an image of 28 × 28 pixels has 784. A point with $d$ features
+has $d$ coordinates, and the straight-line distance is Pythagoras with $d$ parts, $\sqrt{g_1^2 + g_2^2 + \cdots + g_d^2}$,
+where $g_1$ is the gap in the first coordinate, and so on. What happens to distances as $d$ rises? Scatter 200 random
+points in a square, then in 10, 100 and 1000 dimensions, each coordinate a random number from 0 to 1, add a random
+query $q$, and compare the nearest distance with the farthest.
+
+<Explore slug="k-nearest-neighbours" settings={{ preset: 'dimensions', seed: 3 }} caption="200 random points and a query q, in 2, 10, 100 and 1000 dimensions: the distances from q as a histogram, each divided by the farthest, and nearest ÷ farthest for each dimension." />
+
+In 2 dimensions the nearest point is 0.036 from $q$ and the farthest 0.898: nearest ÷ farthest is 0.04, and the
+distances spread all the way from near 0 to the farthest. In 10 dimensions the nearest is 0.572 away and the farthest
+1.798, a ratio of 0.32. In 100 dimensions it is 0.77, and in 1000 dimensions, with the nearest 12.41 away and the
+farthest 13.68, it is 0.91: every one of the 200 points is about as far from $q$ as every other.
+
+Why? To be very near $q$, a point must be near it in all $d$ coordinates at once, which almost never happens when $d$
+is large; to be very far, it must be far in all of them, just as rare. This is the **curse of dimensionality**: when
+every point is about equally far, "the $k$ nearest" are hardly nearer than the rest, and their vote says little.
+
+<Misconception
+  id="more-features-help"
+  title="Adding more features always helps k-NN"
+  probes={[
+    {
+      q: 'A k-NN model uses 3 features that really predict the label. Someone adds 500 columns of random noise. What happens to its predictions?',
+      choices: ['They get better: more information', 'They get worse: the noise swamps the gaps that matter', 'Nothing: k-NN ignores features that don’t help'],
+      answer: 1,
+      trap: 0,
+      why: 'Distance adds up every feature’s squared gap. The 500 noise gaps add up to far more than the 3 useful ones, so who is nearest is now decided mostly by noise.',
+    },
+    {
+      q: 'Someone argues: “Measuring more about each example can only help k-NN, because it can always ignore the measurements that don’t matter.” What is wrong with that?',
+      choices: ['Nothing: more measurements always help', 'k-NN can’t ignore any feature: each one adds its gap to every distance', 'k-NN ignores useless features, but only after training'],
+      answer: 1,
+      trap: 0,
+      why: 'k-NN has no way to weigh features: every one adds its squared gap to every distance, so useless features blur who is nearest.',
+    },
+  ]}
+>
+
+k-NN can't tell a useful feature from a useless one: each adds its squared gap to every distance. With many useless
+features the distances bunch together, as nearest ÷ farthest rose from 0.04 in 2 dimensions to 0.91 in 1000.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A k-NN model has 10,000 training points and k = 7. How many distances does plain k-NN work out to label one new point?',
+      choices: ['7', '10,000', '1', '70,000'],
+      answer: 1,
+      why: 'It can only know which 7 are nearest after measuring all 10,000. That is why plain k-NN is slow at prediction time on big data.',
+    },
+    {
+      q: 'No two of a k-NN model’s training points sit at the same spot, and with k = 1 it labels every one of them correctly. Why?',
+      choices: ['Each training point is its own nearest neighbour, at distance 0', 'It has found the true boundary between the classes', 'Its training points happen to be easy'],
+      answer: 0,
+      why: 'Asked about a training point, k = 1 finds that very point at distance 0 and returns its own label. That says nothing about new points.',
+      traps: { 1: 'k-one-is-perfect' },
+    },
+    {
+      q: 'With k = 7 and two classes, the 7 nearest are 4 of class X and 3 of class Y, and the single nearest is a Y. What does k = 7 predict?',
+      choices: ['X', 'Y', 'A tie'],
+      answer: 0,
+      why: 'X has 4 votes to 3. The nearest point only decides ties; k = 1 would say Y.',
+    },
+    {
+      q: 'Two overlapping classes, 500 training points. Which k is likely to make the fewest mistakes on new points?',
+      choices: ['k = 1, which makes no training mistakes', 'A k in between, chosen on points kept aside', 'k = 500, the smoothest of all'],
+      answer: 1,
+      why: 'k = 1 follows every stray point; k = 500 predicts the bigger class everywhere. A k in between, picked on a validation set, does best.',
+      traps: { 0: 'k-one-is-perfect', 2: 'bigger-k-always-better' },
+    },
+    {
+      q: 'People are described by height in metres (1.5 to 2.0) and weight in grams (50,000 to 100,000). What should you do before using k-NN?',
+      choices: ['Rescale both to run from 0 to 1', 'Nothing: distance treats every feature fairly', 'Leave out the height'],
+      answer: 0,
+      why: 'Gaps in grams are in the thousands and gaps in metres below 1, so weight would decide every distance. Rescaling lets both count.',
+      traps: { 1: 'units-dont-matter' },
+    },
+    {
+      q: 'From a query, point P is 3 to the right, and point Q is 2 to the right and 2 up. Under the L1 (city-block) distance, which is nearer?',
+      choices: ['P', 'Q', 'They are equally near'],
+      answer: 0,
+      why: 'Under L1, P is 3 + 0 = 3 away and Q is 2 + 2 = 4. Under L2 it flips: P is 3 and Q is √8, about 2.83.',
+    },
+    {
+      q: 'A k-NN model does well with 4 features that predict the label. Someone adds many more features that have nothing to do with it. What is most likely?',
+      choices: ['It does better: more features carry more information', 'Nothing changes: k-NN skips the useless features', 'It does worse: the useless gaps blur who is nearest'],
+      answer: 2,
+      why: 'Every feature adds its squared gap to every distance. The useless ones add noise, so the nearest neighbours are no longer the most similar examples.',
+      traps: { 0: 'more-features-help' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="knn-vote-k-ruler"
+  prompt="How does k-nearest neighbours predict the class of a new point, and what do the choice of k and the choice of distance change?"
+  rubric={[
+    'It keeps the training points, measures the distance from the new point to all of them, and the k nearest vote: the most common class wins.',
+    'k = 1 follows every point, so it is perfect on training points but jagged and worse on new ones; a very big k ignores where the point is.',
+    'The best k is in between, chosen on a validation set, not the test set.',
+    'The ruler and the units of each feature decide which points count as nearest, so they can change the prediction.',
+  ]}
+  example="k-NN keeps the labelled training points. To label a new point it measures the distance to every one, takes the k nearest, and lets them vote; the most common class wins. With k = 1 every training point gets its own label back, but the boundary wraps around every stray point and does worse on new points. A very big k ignores where the new point is. So k is chosen in between, on a validation set. The distance matters too: L1, L2 and L∞ can pick different neighbours, and a feature in bigger units counts for more, so features go on the same scale first."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- k-NN keeps the training points. To label a new point it measures the distance to every one, takes the $k$ nearest, and lets them vote; a tie goes to the class of the nearest.
+- No training, but slow predictions: plain k-NN measures every training point for each prediction.
+- $k = 1$ is perfect on its own training points, which measures memory, not prediction. Small $k$ gives a jagged boundary, big $k$ a smooth one, and $k = n$, every one of the $n$ training points voting, predicts the biggest class everywhere.
+- The best $k$ lies in between. Choose it on a validation set, not the test set.
+- The ruler (L2, L1, L∞) and the units of each feature decide who is nearest. Rescale features to the same range first.
+- In many dimensions all distances bunch together and "nearest" stops meaning much. Fewer, better features beat more of them.
+
+</Section>

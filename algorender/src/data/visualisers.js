@@ -774,15 +774,45 @@ const mathEntries = [
     category: 'Machine Learning'
   },
   {
+    name: 'Overfitting and Validation',
+    description: 'Fit curves of degree 0 to 9 to ten noisy points: training error only falls while validation error makes a U. Refit on twenty training sets to see bias and variance, and score degrees by k-fold cross-validation.',
+    slug: 'overfitting',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'Regularisation: Ridge and Lasso',
+    description: 'Add a charge for big weights to least squares and drag its strength λ: see where ridge’s circle and lasso’s diamond meet a contour of the training error, which weights shrink and which leave the model, and tame a wiggly degree-9 curve while validation error picks λ.',
+    slug: 'regularisation',
+    category: 'Machine Learning'
+  },
+  {
     name: 'Logistic Regression',
     description: "Train a single sigmoid neuron on the cross-entropy: watch the probability regions sharpen and the boundary swing into place, and see why it can't separate XOR or circles.",
     slug: 'logistic-regression',
     category: 'Machine Learning'
   },
   {
+    name: 'Softmax',
+    description: 'Turn scores for many classes into probabilities, as bars: e to the power of each, divided by their total. Turn the temperature, train softmax regression on three classes, and watch scores of 1,000 overflow float32 until the largest is subtracted first.',
+    slug: 'softmax',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'k-Nearest Neighbours',
+    description: 'Drag a query point and watch its k nearest neighbours vote, compare the maps of k = 1 and k = 15 on training and test points, change the ruler from L2 to L1 and L∞, and see distances bunch together in 1000 dimensions.',
+    slug: 'k-nearest-neighbours',
+    category: 'Machine Learning'
+  },
+  {
     name: 'K-Means Clustering',
     description: 'Group points by alternating two steps, joining the nearest centroid and moving centroids to their means, and see where k-means finds the right clusters and where it gets stuck.',
     slug: 'k-means',
+    category: 'Machine Learning'
+  },
+  {
+    name: 'Precision, Recall and ROC',
+    description: 'Drag a classifier’s threshold over its scores and watch the confusion matrix, recall and precision change, trace the ROC curve and its area, and see accuracy mislead when positives are rare.',
+    slug: 'roc-curve',
     category: 'Machine Learning'
   },
   {

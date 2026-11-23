@@ -1,0 +1,357 @@
+<Section step="hook" title="Cat, dog, fox or owl?">
+
+[Logistic regression](/learn/logistic-regression) answers yes-or-no questions: one score $z$, and the sigmoid
+$\sigma(z)$ turns it into the chance of "yes". Most questions have more than two answers. Is this photo a cat, a dog, a
+fox or an owl? Which of 50,000 words comes next in this sentence? A model for these gives every possible answer, every
+**class**, its own score, and needs a way to turn a list of scores into probabilities: each between 0 and 1, all adding
+up to 1, the biggest score getting the biggest share.
+
+That way is **softmax**, the last step of almost every classifier and of every language model. This lesson builds it
+from three small steps, turns its temperature knob, trains it on three classes of points, and then breaks it: scores
+of 1,000 make a computer's numbers overflow, unless the code takes one small step first.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="class">One of the possible answers, such as "cat". There are $K$ of them, numbered $1$ to $K$.</Term>
+  <Term name="score, or logit">A number the model gives each class: $z_1, z_2, \ldots, z_K$. Any size, any sign; bigger means "more likely".</Term>
+  <Term name="e to a power">$e^x$, with $e \approx 2.718$, as in [exponents and logarithms](/learn/exponents-logs). It is positive for every $x$, grows as $x$ grows, and turns sums into products: $e^{a+b} = e^a \times e^b$. Code writes it `exp(x)`.</Term>
+  <Term name="softmax">Turns scores into probabilities: $e$ to the power of each score, divided by the total of those powers.</Term>
+  <Term name="temperature T">A positive number every score is divided by before softmax. $T = 1$ leaves the scores alone.</Term>
+  <Term name="softmax regression">Logistic regression for many classes: each class's score is a weighted sum of the inputs plus a bias, and training finds the weights.</Term>
+  <Term name="cross-entropy">The loss: $-\ln p$ of the true class, averaged over the examples, as in [maximum likelihood](/learn/maximum-likelihood). $\ln$ is the natural log, the log to base $e$.</Term>
+  <Term name="overflow, underflow">A result too big for a float becomes $\infty$ (infinity); one too close to 0 becomes 0, as in [floating point](/learn/floating-point).</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Scores into probabilities, in three steps">
+
+A classifier looks at a photo and scores four classes: cat 2, dog 1.5, fox 1 and owl $-0.5$. Scores can be negative, and
+their total, 4 here, means nothing. Softmax turns them into probabilities in three steps: divide each score by the
+temperature $T$ (here $T = 1$, which changes nothing), take $e$ to the power of each, and divide each power by the
+total of the powers. Watch the steps, then drag the scores and the temperature:
+
+<Explore slug="softmax" settings={{ preset: 'bars', seed: 1 }} caption="Four classes' scores, then e to the power of each, then each divided by their total. Then every score plus 10, the temperature halved, a huge temperature, and two classes on their own." />
+
+Step by step: $e^2 = 7.389$, $e^{1.5} = 4.482$, $e^1 = 2.718$ and $e^{-0.5} = 0.607$. Every power is positive, even
+owl's, and the order of the scores is kept. Their total is $s = 15.196$. Dividing each power by $s$ gives cat 0.486, dog
+0.295, fox 0.179 and owl 0.04, which add up to 1, because each is its part of the same total. In symbols, with
+$\Sigma$ (capital sigma) for "add up over every class $j$", as in [sums](/learn/sums-notation):
+
+$$
+p_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}}
+$$
+
+Notice that cat has the biggest score, yet less than half the probability: its three rivals take the rest between them.
+
+Why $e$ and not the scores themselves? Dividing the scores by their total would give cat $2 \div 4 = 0.5$, a different
+answer, and owl a negative "probability". Worse, scores that add up to 0 can't be divided by their total at all.
+Powers of $e$ are always positive, and they turn the gaps between scores into ratios: $e^a / e^b = e^{a - b}$. Cat is
+$e^{0.5} = 1.649$ times as likely as dog because its score is 0.5 higher, whatever the scores are.
+
+<Misconception
+  id="divide-by-total"
+  title="Softmax divides each score by the total of the scores"
+  probes={[
+    {
+      q: 'Two classes score 4 and 1. Someone says the probabilities are 4/5 and 1/5. What does softmax give the first class?',
+      choices: ['0.8', 'About 0.95', '4'],
+      answer: 1,
+      trap: 0,
+      why: 'Softmax divides powers of e: e^4 / (e^4 + e^1) ≈ 54.6 / 57.3 ≈ 0.95. A gap of 3 makes the first e^3 ≈ 20 times as likely.',
+    },
+    {
+      q: 'Three classes score 3, −1 and −2, so their total is 0. What does softmax do with them?',
+      choices: ['Gives each a positive probability, e to its score over the total of the powers', 'Gives the negative scores negative probabilities', 'Fails, since it would divide by 0'],
+      answer: 0,
+      trap: 2,
+      why: 'Softmax never divides by the scores’ total. The powers e^3, e^−1 and e^−2 are all positive, so their total is too, and every probability lies between 0 and 1.',
+    },
+  ]}
+>
+
+Softmax divides **powers of $e$**, never the scores themselves. That keeps every probability positive, works for
+negative scores and for scores that add up to 0, and makes a class's share depend on the gaps between scores.
+
+</Misconception>
+
+The gaps are all that matter. Add 10 to every score and every power grows by the same factor, $e^{10} = 22026$, and so
+does their total: the factor cancels in each division, and the probabilities are exactly what they were. That one fact
+will rescue softmax from overflowing later on.
+
+<KeyIdea>
+
+**Softmax only sees the gaps between scores.** $p_k = e^{z_k} / \sum_j e^{z_j}$ is unchanged when the same number is
+added to every score, and the ratio of two classes' probabilities is $e$ to the gap between their scores.
+
+</KeyIdea>
+
+The temperature divides every score by $T$ first. Halving it, to $T = 0.5$, doubles every gap, so every ratio is
+squared: cat against dog goes from 1.649 to $e^1 = 2.718$, and cat's share rises from 0.486 to 0.662. A small $T$
+sharpens the shares towards the top class; a huge one, $T = 100$, shrinks every gap to almost nothing and the shares
+flatten towards a quarter each: 0.253, 0.251, 0.25 and 0.246. Dividing by a positive $T$ never changes which score is
+biggest, so it never changes the top class. When a chatbot offers a "temperature" setting, this is it: its next word is
+drawn from a softmax, a low $T$ makes it pick the likeliest words, a high $T$ lets surprising ones through.
+
+<Misconception
+  id="temperature-changes-winner"
+  title="Changing the temperature can change which class is most likely"
+  probes={[
+    {
+      q: 'A weather model scores rain 1.6, sun 1.3 and snow −0.2. Its temperature goes up from 1 to 3. Which is most likely now?',
+      choices: ['Rain, with a smaller share than before', 'Sun', 'All three exactly equally likely'],
+      answer: 0,
+      trap: 1,
+      why: 'Dividing every score by 3 keeps their order, so rain stays on top. The gaps shrink, so its share falls towards a third, but never below sun’s.',
+    },
+    {
+      q: 'At temperature 0.2 a language model almost always picks “the”. At temperature 2, which word gets the most probability?',
+      choices: ['The word that was least likely', 'A different word each time it is asked', 'Still “the”, but by a much smaller margin'],
+      answer: 2,
+      trap: 0,
+      why: 'Temperature divides every score by the same positive number, which keeps their order. A higher T spreads the probability out, so other words get picked more often, but “the” keeps the biggest share.',
+    },
+  ]}
+>
+
+$T$ divides every score by the same positive number, which keeps their order, so the top class stays on top at any
+temperature; only its share changes.
+
+</Misconception>
+
+Last, two classes. Divide the top and bottom of $e^a / (e^a + e^b)$ by $e^a$:
+
+$$
+\begin{aligned}
+\frac{e^a}{e^a + e^b} &= \frac{1}{1 + e^{-(a - b)}} \\
+&= \sigma(a - b)
+\end{aligned}
+$$
+
+That is the sigmoid of logistic regression, at the gap $a - b$. Cat 2 against dog 1.5, alone, gives cat
+$\sigma(0.5) = 0.622$. Logistic regression is softmax with two classes, the second class's score fixed at 0. Pinning it loses nothing, because
+only the gap matters, and that gap is logistic regression's one score, the log-odds.
+
+</Section>
+
+<Section step="predict" title="Your turn: three classes in the plane">
+
+**Softmax regression** gives each class its own score at a point $(x, y)$:
+$z_k = w_{k1} x + w_{k2} y + b_k$, two weights and a bias per class. Softmax turns the scores into probabilities, and the
+prediction is the class with the biggest. Training is gradient descent on the mean cross-entropy, starting with every
+weight and bias at 0. Here are 30 points in three classes, A, B and C, and a query point you can drag. Predict the loss
+at the start, the shape of the border between two classes' regions, the shares where all three regions meet, and what
+doubling every weight and bias does.
+
+<PredictChallenge slug="softmax" settings={{ preset: 'regions', seed: 7 }} goal={4} />
+
+With every weight and bias at 0, every class scores 0 everywhere, each gets $1/3$, and every point's cross-entropy is
+$-\ln(1/3) = \ln 3 = 1.099$. As in maximum likelihood, the mean cross-entropy is $-\ln L$ divided by the number of
+points. The gradient is logistic regression's: each point pushes its own class's score up and every other class's
+score down. After 80 steps the loss is 0.034, and all 30 points sit in their own class's region.
+
+Two regions meet where their scores tie, $z_A = z_B$:
+
+$$
+\begin{aligned}
+&(w_{A1} - w_{B1})\,x + (w_{A2} - w_{B2})\,y \\
+&\quad + (b_A - b_B) = 0
+\end{aligned}
+$$
+
+That is the equation of a straight line, so every border is straight, as with logistic regression. The three borders
+meet at one point, here $(0.18, 0)$, where all three scores tie and each class gets $e^z / (3 e^z) = 1/3$. The query
+point $(0.75, 0.5)$ gets A 0.8, B 0.155 and C 0.045.
+
+Doubling every weight and bias doubles every score, which is softmax at $T = 1/2$. No border moves, because doubling
+keeps every point's scores in the same order, but the query's A rises from 0.8 to 0.961, with no new data and no better
+model.
+
+<Misconception
+  id="softmax-is-confidence"
+  title="Softmax probabilities are the model's measured confidence"
+  probes={[
+    {
+      q: 'Every weight and bias of a trained softmax classifier is multiplied by 3. Every prediction stays the same. What happens to the probabilities it reports?',
+      choices: ['They stay the same', 'They become more extreme, though it is right no more often than before', 'They become more accurate, since every weight and bias is bigger'],
+      answer: 1,
+      trap: 2,
+      why: 'Tripling every weight and bias triples the scores, softmax at T = 1/3: the top shares grow towards 1, yet every prediction, and so how often it is right, is unchanged.',
+    },
+    {
+      q: 'On 200 test photos a classifier’s top probability is about 0.9 every time, and it is right on 140 of them. What does that show?',
+      choices: ['Its 0.9 overstates how often it is right, which is 70%', 'It is right 90% of the time, because softmax said 0.9', 'Softmax must have been computed wrongly'],
+      answer: 0,
+      trap: 1,
+      why: '140 of 200 is 70%. Softmax’s outputs are just the model’s numbers; whether 0.9 means “right 9 times in 10” has to be checked on held-out data.',
+    },
+  ]}
+>
+
+Softmax always produces numbers between 0 and 1 that add up to 1, but nothing makes them match how often the model is
+right. Doubling every weight and bias changed no prediction and pushed the query from 0.8 to 0.961. Whether a model's 0.9 means
+"right 9 times in 10" (whether it is **calibrated**) has to be measured on data it was not trained on.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="When the scores are huge">
+
+Scores can be big: a confident model, or one early in a training run that has gone wrong, can produce scores in the
+thousands. Mathematically, softmax of $[1000, 999, 998]$ is softmax of $[2, 1, 0]$, since only the gaps count:
+0.665, 0.245 and 0.09. But a computer stores numbers as floats, and models are often trained in float32, whose largest
+number is about $3.4 \times 10^{38}$. See what the three steps do with these scores:
+
+<Explore slug="softmax" settings={{ preset: 'overflow', seed: 1 }} caption="Scores of 1,000, 999 and 998 in float32: e to the power of each, then the division; the largest score subtracted first; then scores far below 0, and the log of a probability." />
+
+$3.4 \times 10^{38}$ is $e^{88.72}$, and $e^{1000}$ is about $1.97 \times 10^{434}$, so it rounds to infinity, the bit
+pattern with every exponent bit 1, from the floating-point lesson. So do $e^{999}$, $e^{998}$ and their total, and
+$\infty \div \infty$ has no sensible value: it is NaN, "not a number", which is also what $0 \div 0$ and
+$\infty - \infty$ give. Every probability is NaN, and NaN spreads: the
+loss is NaN, the gradient is NaN, and one step of training makes every weight NaN.
+
+The fix is the fact from before. Subtract the largest score, $m = 1000$, from every score: $[0, -1, -2]$. The
+probabilities are exactly the same, and now the biggest power is $e^0 = 1$, so nothing can overflow. The powers are
+1, 0.368 and 0.135, their total is 1.503, and the shares come out as 0.665, 0.245 and 0.09.
+
+<Misconception
+  id="shift-changes-answer"
+  title="Subtracting the largest score changes the probabilities"
+  probes={[
+    {
+      q: 'Scores 50, 48 and 45. A programmer subtracts 50 from each before softmax. Compared with softmax of the original scores, the probabilities are…',
+      choices: ['The same', 'All smaller', 'All on the first class'],
+      answer: 0,
+      trap: 1,
+      why: 'Softmax only depends on the gaps between scores, and subtracting 50 from each keeps the gaps (2 and 5), so every probability is the same.',
+    },
+    {
+      q: 'Why is it exact, not just close, to subtract the largest score m from every score before exp?',
+      choices: ['e^(z − m) = e^z / e^m, and the e^m cancels between each power and their total', 'It isn’t exact, but the error is too small to matter', 'Because m is usually small'],
+      answer: 0,
+      trap: 1,
+      why: 'Each e^(z − m) is e^z divided by the same e^m, and so is their total; dividing one by the other cancels it exactly.',
+    },
+  ]}
+>
+
+Subtracting the same number from every score divides every power, and their total, by the same $e^m$, which cancels.
+The probabilities are exactly those of the original scores; only the sizes of the numbers along the way change, and
+that is the point: the biggest power becomes $e^0 = 1$.
+
+</Misconception>
+
+Very negative scores fail the other way. $e^{-1000}$ is about $5.08 \times 10^{-435}$, far below the smallest positive
+float32, a subnormal, $2^{-149}$, about $1.4 \times 10^{-45}$, so it **underflows** to 0. So do the others, their total is 0, and $0 \div 0$ is NaN again.
+Subtracting the largest score, $-1000$, gives $[0, -1, -2]$ once more. The same subtraction handles both ends.
+
+Training needs one more thing: the cross-entropy, $-\ln p$ of the true class. Say the scores are
+$[1000, 999, 880]$ and the true class is the third, 120 below the top. Even the safe softmax gives it
+$p = e^{-120} / s$, which is below the smallest float32 and rounds to 0, and $-\ln 0 = \infty$: an infinite loss.
+The way out is never to compute $p$ first:
+
+$$
+-\ln p_y = -\ln \frac{e^{z_y - m}}{s} = \ln s + m - z_y
+$$
+
+where $s$ is the safe total of $e^{z - m}$. This is **log-sum-exp**. Here $s = 1.368$, $\ln s = 0.313$, and the loss is
+$0.313 + 120 = 120.313$: big, as it should be for a class the model all but ruled out, and finite, so training can learn
+from it. Machine-learning libraries compute the cross-entropy from the scores this way.
+
+</Section>
+
+<Section step="do" title="Fix a softmax that overflows">
+
+Python and JavaScript use float64, whose largest number is about $e^{709.78}$, so a score of 1,000 still overflows. The
+code below is softmax as first written: $e$ of each score, then each divided by the total. It is fine on four small
+scores, but on $[1000, 999, 998]$ Python stops with an `OverflowError` and JavaScript makes NaN. Run it, read the error,
+and fix it: find the largest score, and subtract it inside the exp (two small edits).
+
+<CodeExercise exercise="stable-softmax" />
+
+Then write the loss itself, by log-sum-exp, in [the cross-entropy of softmax, safely](/code/cross-entropy). One row of
+scores $[2, 1, 0]$ whose true class is the first has loss $\ln(1 + e^{-1} + e^{-2}) = 0.408$; a row whose true class sits
+800 below the top costs about 800, where the naive way would take the log of 0.
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Three classes score 3, 1 and 0. What probability does softmax give the first?',
+      choices: ['0.75', '0.333', '0.844', '0.5'],
+      answer: 2,
+      why: 'e^3 / (e^3 + e^1 + e^0) = 20.09 / 23.80 ≈ 0.844. Dividing the scores by their total, 3/4 = 0.75, is a different calculation.',
+      traps: { 0: 'divide-by-total' },
+    },
+    {
+      q: 'Two classes score 2 and 0, so the first gets 0.881. Add 5 to both scores. What does the first get now?',
+      choices: ['Closer to 1', 'Still 0.881', 'Closer to 0.5', 'NaN'],
+      answer: 1,
+      why: 'Both powers grow by e^5, which cancels: only the gap, 2, matters, and σ(2) ≈ 0.881.',
+      traps: { 0: 'shift-changes-answer' },
+    },
+    {
+      q: 'A model scores three classes 2, 1 and 0. Its temperature is lowered from 1 to 0.5. What happens?',
+      choices: ['Another class can take the lead', 'The same class leads, with a smaller share', 'Nothing changes', 'The same class leads, with a bigger share'],
+      answer: 3,
+      why: 'Dividing by 0.5 doubles every gap and keeps the order, so the top class stays on top and its share grows.',
+      traps: { 0: 'temperature-changes-winner' },
+    },
+    {
+      q: 'Softmax regression with 4 classes on points with 2 coordinates. How many weights and biases does it learn?',
+      choices: ['12', '8', '3', '4'],
+      answer: 0,
+      why: 'Each class has 2 weights and a bias: 4 × 3 = 12.',
+    },
+    {
+      q: 'So that nothing overflows, code subtracts one number from every score before taking exp. Which number?',
+      choices: ['The smallest score', 'The largest score', 'The mean of the scores', 'None: subtracting anything would change the probabilities'],
+      answer: 1,
+      why: 'After subtracting the largest, the biggest power is e^0 = 1 and the total is at least 1, so nothing overflows and the total can’t underflow to 0. After the smallest, the others are above 0 and can still overflow. Any shift leaves the probabilities as they were.',
+      traps: { 3: 'shift-changes-answer' },
+    },
+    {
+      q: 'Two classifiers label the same 500 photos and are right on exactly the same ones. One reports 0.99 for its top class every time, the other 0.7. What follows?',
+      choices: ['The one reporting 0.99 is the better model', 'Neither is better: their softmax numbers differ, but only checking on data shows whose match how often they are right', 'The one reporting 0.7 is broken, since a trained softmax should give nearly 1'],
+      answer: 1,
+      why: 'They are right equally often, so neither is more accurate. Softmax’s outputs are the model’s numbers; whether they match how often it is right is measured on held-out data, not read off the softmax.',
+      traps: { 0: 'softmax-is-confidence' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="softmax-scores-to-probabilities"
+  prompt="How does softmax turn a list of scores into probabilities, what do adding a constant and the temperature do, and why does code subtract the largest score first?"
+  rubric={[
+    'Softmax takes e to the power of each score and divides each by the total of those powers, so the results are positive and add up to 1.',
+    'Adding the same number to every score changes nothing: only the gaps matter, and e to a gap is the ratio of two probabilities.',
+    'Dividing by a temperature keeps the order of the scores: a small T sharpens towards the top class, a large T flattens towards equal shares.',
+    'Big scores overflow e to infinity and give NaN; subtracting the largest score first keeps every power at most 1 without changing the answer.',
+  ]}
+  example="Softmax raises e to the power of each score and divides each power by their total, so every probability is positive and they add up to 1. Because e^(a + c) = e^a × e^c, adding the same number to every score multiplies every power and the total by the same factor, which cancels: only the gaps between scores matter, and two classes' probabilities are in the ratio e to their gap. Dividing every score by a temperature T keeps their order, so the top class stays on top, but a small T stretches the gaps and sharpens the shares while a large T flattens them towards equal. With huge scores e overflows to infinity and infinity over infinity is NaN, so code subtracts the largest score first: the answer is the same and no power is bigger than 1."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- Softmax turns scores into probabilities, $p_k = e^{z_k} / \sum_j e^{z_j}$, positive and adding up to 1. Only the gaps matter: two classes' probabilities are in the ratio $e^{z_a - z_b}$, and adding the same number to every score changes nothing.
+- A temperature divides every score by $T$: small $T$ sharpens, large $T$ flattens towards equal shares, and the order never changes.
+- With two classes, softmax is the sigmoid of the gap: logistic regression is softmax with the second score fixed at 0.
+- Softmax regression gives each class a linear score; the borders between classes are straight lines, and training is gradient descent on the cross-entropy.
+- Softmax's numbers are not measured confidence: scaling every weight and bias changes them without changing any prediction.
+- In code, subtract the largest score before exp, so nothing overflows, and compute the loss as $\ln s + m - z_y$ (log-sum-exp), never as the log of a probability that may have rounded to 0.
+
+</Section>

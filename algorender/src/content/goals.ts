@@ -72,6 +72,8 @@ export const goals: readonly Goal[] = [
       'autograd',
       'neural-networks',
       'classification-metrics',
+      // Stage 3's project (M3) trains softmax regression, and nothing available builds on it until B11.
+      'softmax-regression',
       'regularisation',
       'k-nearest-neighbours',
       'pca',
