@@ -1,0 +1,380 @@
+<Section step="hook" title="A perfect score that means nothing">
+
+In [learning from examples](/learn/supervised-learning) a memoriser scored a perfect 0 on its training examples and
+still guessed worse than a plain line on new ones. That was an extreme case of a question every model raises. A model
+has a setting for how flexible it is: how many weights, how many layers, how long to train. Turn it up and the model
+can follow its training data in more detail. Is that what you want?
+
+This lesson fits curves of rising flexibility to ten noisy points, scores them on points kept apart, asks *why* the
+two scores part ways, and ends with k-fold cross-validation, the standard way to choose a model when data are scarce.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+<Terms>
+  <Term name="polynomial of degree d">A curve $\hat{y} = w_0 + w_1 x + w_2 x^2 + \dots + w_d x^d$: a sum of powers of $x$, each times a weight, so $d + 1$ weights in all. Degree 1 is a line, degree 2 a parabola; each extra degree lets the curve bend once more.</Term>
+  <Term name="training set, training error">The points a model is fitted to, and its mean squared error (MSE) on them.</Term>
+  <Term name="validation set, validation error">Points kept apart from fitting, used only to score models and choose between them, and the MSE there.</Term>
+  <Term name="test set">Points kept back until every choice has been made, then used once, for one honest score at the very end.</Term>
+  <Term name="underfitting, overfitting">A model too stiff to follow the pattern in the data underfits. One so flexible that it follows the random noise as well overfits.</Term>
+  <Term name="bias, variance">Imagine fitting the same kind of model to many training sets. Bias is how far their average fit is from the truth; variance is how much the fits disagree with each other. (This bias has nothing to do with the weight $b$ that linear regression also calls a bias.)</Term>
+  <Term name="k-fold cross-validation">Cut the data into $k$ groups called folds. Fit $k$ models, each on all the folds but one, and score each on the fold it left out.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Curves made of powers of x">
+
+The line in [linear regression](/learn/linear-regression), $\hat{y} = wx + b$, has two weights. A polynomial has more:
+degree 3 is
+
+$$
+\hat{y} = w_0 + w_1 x + w_2 x^2 + w_3 x^3
+$$
+
+It draws a curve, yet for fitting it is no harder than a line. For each point, list its **features**, the powers
+$1, x, x^2, x^3$. The prediction is the [dot product](/learn/dot-product) of that row with the weights
+$(w_0, w_1, w_2, w_3)$, a weighted sum, just as $wx + b$ is the dot product of $(1, x)$ with $(b, w)$. For
+$x = -0.5$ the row is $[1, -0.5, 0.25, -0.125]$. Stack one row per point into a table $X$ and least squares works
+exactly as it did for the line: find the weights whose predictions have the smallest mean squared error.
+[Gradient descent](/learn/gradient-descent) would get there step by step; the exact least-squares formula gets there in
+one go, and that is what the widgets here use. Writing the table $X$ is a short exercise:
+[the powers of x](/code/poly-features).
+
+<KeyIdea>
+
+**More degrees, more weights, more bend.** A degree-$d$ polynomial has $d + 1$ weights. The data decide the weights;
+you decide the degree, and with it how flexible the curve may be.
+
+</KeyIdea>
+
+The data in this lesson come from one smooth curve,
+
+$$
+y = \sin(2.5x) + 0.6x^2 - 0.3
+$$
+
+with random noise added to every point, as real measurements have: typically about 0.2 up or down, and its average square is 0.04. The training set is 10 points whose $x$ values are
+evenly spread from $-1$ to $1$. The validation set is 40 more points from the same curve and the same noise, at random
+$x$ values; no curve is ever fitted to them. Both errors are mean squared errors, so they are on the same scale. In
+real life nobody knows the true curve, only the points. That is why the points kept apart matter: they are the only
+stand-in for the new data a model will meet.
+
+</Section>
+
+<Section step="predict" title="Your turn: training error against validation error">
+
+Fit degree 1 to the ten training points, then degree 3, then degree 9, and finally every degree from 0 to 9. Predict how
+each change moves the training error, where degree 9 ends up on each set of points, which degree the validation points
+pick, and how far to trust that pick.
+
+<PredictChallenge slug="overfitting" settings={{ preset: 'degree' }} goal={5} />
+
+The line's training error is 0.23 and degree 3's is 0.0546. Lower, and it had to be: a line *is* a degree-3 curve,
+one whose $w_2$ and $w_3$ are 0, so the best degree-3 curve can only match the training points at least as well as the
+best line. The same holds for every step up, since degree $d + 1$ can do anything degree $d$ can, with one weight to
+spare. So the training error never rises. For degrees 0 to 9 it is 0.676, 0.23, 0.156, 0.0546, 0.0497, 0.0452, 0.0322,
+0.00544, 0.00542 and 0. At degree 9, ten weights for ten points, the curve threads through every point, noise and all,
+and the error is exactly 0.
+
+The validation error tells another story: 0.743, 0.156, 0.118, 0.0308, 0.0354, 0.041, 0.0718, 0.134, 0.137 and 0.606.
+It falls to degree 3 and then climbs, and degree 9's 0.606 is about 20 times degree 3's 0.0308. Drawn against the
+degree, it makes a **U**. On the left the curves underfit: too stiff to follow the bends, they miss the training points
+and the validation points alike. On the right they overfit: the extra weights are spent following the noise in the ten
+training points, and the next points have noise of their own.
+
+<KeyIdea>
+
+**Training error measures memory; validation error measures what carries over.** The training error can only fall as
+a model grows more flexible, so on its own it always votes for the most flexible model. Judge flexibility on points the
+model never saw.
+
+</KeyIdea>
+
+<Misconception
+  id="more-flexible-better"
+  title="A more flexible model is always better (or always worse)"
+  probes={[
+    {
+      q: 'Validation errors for polynomial degrees 1 to 6 are 0.42, 0.19, 0.12, 0.14, 0.26 and 0.39. Which degree should you choose?',
+      choices: ['Degree 6, the most flexible', 'Degree 3', 'Degree 1, the simplest'],
+      answer: 1,
+      trap: 0,
+      why: 'Degree 3 has the lowest validation error, 0.12. Flexibility helps until the curve starts following noise, then hurts.',
+    },
+    {
+      q: 'A model’s training error and validation error are both high, and close to each other. What is most likely to help?',
+      choices: ['A simpler model', 'A more flexible model', 'Nothing: two close errors mean the model is right'],
+      answer: 1,
+      trap: 0,
+      why: 'High error even on its own training data means the model is too stiff to follow the pattern: it underfits. More flexibility helps here, where it would hurt an overfitting model.',
+    },
+  ]}
+>
+
+Flexibility is neither good nor bad in itself. A model too stiff for the pattern underfits, and more flexibility helps
+it; a model flexible enough to follow the noise overfits, and less helps. The validation U has its lowest point
+somewhere in between, here at degree 3, and only points kept apart can find it.
+
+</Misconception>
+
+Degree 3 won the contest, with 0.0308 on the validation points. Is that the error to expect on new points? Here is a
+test set, 40 more points kept back until now: degree 3 scores 0.0421 there, worse than its winning score. Part of the
+gap is the luck of the draw. Measured against the true curve, which this lesson can do, degree 3's average error on new
+points is 0.0439, and degrees 1 to 5 all score below their true errors on these 40 validation points: they happen to be
+easy points. But even without such luck, a score used to pick a winner tends to flatter it. When ten degrees compete on
+the same points, the winner is partly the one whose curve happened to suit them. The test set is the cure: it plays no
+part in any choice, so its score is honest, and it is used once, at the very end. Look at it, change the model and look
+again, and it starts to flatter too.
+
+In [learning from examples](/learn/supervised-learning) a test set chose between the memoriser and the line. With one
+choice between two models that set was really doing a validation set's job. Once you choose among many models, the job
+splits in two: a validation set for choosing, and a test set for one final score.
+
+<Misconception
+  id="choose-on-test"
+  title="Any held-out data will do for choosing and for the final score"
+  probes={[
+    {
+      q: 'You try 30 settings of a model, pick the one with the best test score, and report that test score. Is it a fair estimate of the error on new data?',
+      choices: ['Yes: the model never trained on the test points', 'No: it likely flatters, because the setting was picked to suit those very points'],
+      answer: 1,
+      trap: 0,
+      why: 'Choosing by a score makes that score optimistic: the winner is partly the setting that got lucky on those points. Choose on validation data, then score the winner once on a test set.',
+    },
+    {
+      q: 'Where should the choice between polynomial degrees 2, 4 and 8 be made?',
+      choices: ['On the training error', 'On the test set', 'On a validation set, or by cross-validation'],
+      answer: 2,
+      trap: 1,
+      why: 'Training error always favours degree 8. Choosing on the test set spends it, leaving no honest final score. A validation set, or cross-validation, is for choosing.',
+    },
+  ]}
+>
+
+Points the model never trained on are not enough: the points used for the final score must also play no part in any
+choice. Choose on the validation set (or by cross-validation), then score the chosen model once on the test set.
+
+</Misconception>
+
+</Section>
+
+<Section step="see" title="Bias and variance: twenty training sets">
+
+Why does the validation error make a U? The ten training points were one roll of the noise. On another day, at the
+same ten $x$ values, the noise would come out differently, and so would every fitted curve. So deal twenty training
+sets from the true curve, fit a line and a degree-9 curve to each, and compare them with the truth, which in this
+widget you can see.
+
+<Explore slug="overfitting" settings={{ preset: 'bias-variance', seed: 7 }} caption="The true curve dashed; one more training set and its line; then twenty training sets' lines, their twenty degree-9 curves, and each degree's average; then bias² and variance for every degree." />
+
+The twenty lines bunch together, but their average is a line too, and it misses the curve's bends just where each line
+does. Measure that miss: at each $x$ from $-1$ to $1$, take the gap between the average fit and the true curve, square
+it, and average over $x$. That is the **bias²** (bias squared), here 0.131 for the lines. Now measure how far the twenty
+fits scatter around their own average: at each $x$, average the twenty fits' squared distances from their average, then
+average that over $x$. That is the **variance**, 0.006 for the lines. A stiff model: big bias, small variance.
+
+The degree-9 curves are the opposite. Each one threads its own ten points, noise and all, so they fan out wildly
+between the points, widest near the ends: variance 0.178. Yet their misses point every which way, up for one training
+set and down for the next, and averaged they nearly cancel: bias² 0.005. A flexible model: small bias, big variance.
+Think of darts: bias is aiming at the wrong spot, variance is a shaky hand.
+
+<KeyIdea>
+
+**Expected error = bias² + variance + the noise's average square.** The expected error is the squared error on a new
+point, averaged over every training set the model might have been fitted to and over every new point. The last term,
+here 0.04, comes from the noise in the new point itself, and no model can remove it. Raising the degree trades bias for
+variance, and the best degree balances the two.
+
+</KeyIdea>
+
+The last frames work bias² and variance out exactly, over every possible training set at these ten $x$ values rather
+than twenty of them. Bias² falls as the degree rises, to near 0 from degree 3 on, and variance climbs. Their sum is
+smallest at degree 3: bias² 0.0009 plus variance 0.0135 makes 0.0144. Add the noise's 0.04 and degree 3 should average about 0.0544 on new points,
+while degree 9's variance alone is 0.246. The validation errors you saw, 0.0308 for degree 3 and 0.606 for degree
+9, were one training set's view of these averages, scored on one set of 40 points.
+
+<Misconception
+  id="more-data-shrinks-bias"
+  title="More data fixes any model"
+  probes={[
+    {
+      q: 'A straight line is fitted to data from a strongly curved pattern, and its validation error is high. You collect 100 times as much data and fit the line again. What happens to its error?',
+      choices: ['It falls to about the noise level', 'It stays high: a line still can’t bend', 'It rises'],
+      answer: 1,
+      trap: 0,
+      why: 'The line’s error is mostly bias: it misses the bends the same way whatever data it gets. More data only steadies it. A more flexible model is what helps.',
+    },
+    {
+      q: 'Which problem does more training data mostly cure?',
+      choices: ['A model too stiff for the pattern', 'Neither: more data never helps', 'A flexible model that follows the noise'],
+      answer: 2,
+      trap: 0,
+      why: 'More points average the noise out, so a flexible model’s fits vary less: variance shrinks. A stiff model’s bias stays.',
+    },
+  ]}
+>
+
+More training data shrinks the variance, because noise in more points averages out; that is why a flexible model needs
+plenty of data. It does nothing for bias: a line can never bend, however many points it sees. An underfitting model
+needs more flexibility, not more data.
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="k-fold cross-validation, in the widget and in code">
+
+The lesson so far had points to spare: 40 for validation and 40 for testing, each four times the training set. Real
+data are rarely that generous. With only 20 points, every point held back to validate is one fewer to fit, and the score then
+depends on which points happened to be held back. **k-fold cross-validation** uses every point for both jobs.
+
+<Explore slug="overfitting" settings={{ preset: 'k-fold' }} caption="Twenty points cut into five folds of consecutive points, drawn as a timeline with a row per model; one model fitted and scored, then all five, then the cross-validated error for every degree, and the final fit." />
+
+The 20 points, in the random order they were collected, are cut into 5 folds of 4 consecutive points. Model 1 is fitted
+to the 16 points outside fold 1 and scored on fold 1's 4, which it never saw; at degree 3 its MSE there is 0.0807.
+Models 2 to 5 do the same with their own folds. In the timeline every column has exactly one marked cell: each point is
+scored once, by the one model that never trained on it, and helps train the other four. Pool all 20 squared errors and
+average them, and you have the **cross-validated error**, 0.035 for degree 3.
+
+Doing that for every degree from 0 to 9 takes 50 fitted curves, 5 for each degree. The cross-validated errors make the
+same U as before, lowest at degree 3. Then the folds have done their job: the final model is degree 3 fitted to all 20
+points, so no point is wasted.
+
+With only 20 points, though, the cross-validated error is itself noisy. Type k-fold 10 into the widget's input and the
+lowest score is degree 8's, an isolated dip between much worse neighbours; k-fold 2 picks degree 4. A pick that moves
+with k is a warning: prefer the simplest degree that scores nearly as well, or get more data.
+
+<Misconception
+  id="kfold-one-model"
+  title="k-fold cross-validation trains one model"
+  probes={[
+    {
+      q: '10-fold cross-validation is used to compare 4 settings of a model. How many models are fitted while comparing them?',
+      choices: ['4', '10', '40'],
+      answer: 2,
+      trap: 0,
+      why: 'Each setting is fitted once per fold: 10 models for each of the 4 settings, 40 in all. That is the price of cross-validation.',
+    },
+    {
+      q: 'Five-fold cross-validation has picked a setting. Which model do you use from now on?',
+      choices: ['The one of the five with the best fold score', 'A new one: the chosen setting refitted on all the data', 'The one fitted last'],
+      answer: 1,
+      trap: 0,
+      why: 'The five models existed only to score the setting. The final model uses every point, so it is refitted on all of the data.',
+    },
+  ]}
+>
+
+Cross-validation fits $k$ models for every setting it scores, and they are only for scoring. The model you keep is a
+fresh one: the chosen setting fitted to all the data.
+
+</Misconception>
+
+The cost is $k$ fits for every setting tried, instead of 1. Five or ten folds are common. With
+$k = n$, one point per fold, it is called leave-one-out. Consecutive folds are fair only when the points come in a random
+order. If they were sorted, by $x$ or by date, each fold would be one stretch of the data, so shuffle them first.
+
+Now cut the folds yourself. Fold sizes differ by at most one: each fold holds $\lfloor n/k \rfloor$ points (the whole
+part of $n \div k$), and the first $n \bmod k$ folds (the remainder) hold one more. With 10 points in 4 folds that is
+sizes 3, 3, 2 and 2: $[0, 1, 2]$, $[3, 4, 5]$, $[6, 7]$ and $[8, 9]$. Code counts folds from 0, so the widget's fold 1
+is fold 0 there.
+
+<CodeExercise exercise="k-fold" />
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'Someone reports the training errors of polynomial degrees 1 to 5, fitted to the same 15 points: 0.30, 0.22, 0.25, 0.10 and 0.08. Two neighbouring values can’t both be right. If every value before it is right, which value breaks the rule?',
+      choices: ['Degree 5’s 0.08', 'Degree 1’s 0.30', 'Degree 3’s 0.25', 'None: training error can go either way'],
+      answer: 2,
+      why: 'Degree 3 can do anything degree 2 can, so if degree 2’s 0.22 is right, degree 3’s best training error can’t be above it: 0.25 breaks the rule.',
+    },
+    {
+      q: 'Model P has training error 0.02 and validation error 0.60. Model Q has training error 0.15 and validation error 0.18. Which is right?',
+      choices: ['P is better: it fits the data more closely', 'Q is better, and P overfits', 'Q is better, and P underfits', 'They can’t be compared'],
+      answer: 1,
+      why: 'Q does better on points it never saw, which is what counts. P’s tiny training error next to its big validation error is overfitting.',
+      traps: { 0: 'more-flexible-better' },
+    },
+    {
+      q: 'Validation errors for degrees 0 to 5 are 0.9, 0.4, 0.15, 0.17, 0.3 and 0.8. Which degree do you pick?',
+      choices: ['Degree 5', 'Degree 0', 'Degree 3', 'Degree 2'],
+      answer: 3,
+      why: 'Degree 2 has the lowest validation error, 0.15: the bottom of the U.',
+      traps: { 0: 'more-flexible-better' },
+    },
+    {
+      q: 'Why is the test set used only once, at the very end?',
+      choices: [
+        'It can be used to choose too, as long as no model trains on it',
+        'Any score used to choose between models flatters the winner, so a test score used that way is no longer honest',
+        'Scoring on it twice would train the model on it',
+      ],
+      answer: 1,
+      why: 'Choosing by a score picks partly for luck. The test set stays out of every choice, so its one score is an honest estimate.',
+      traps: { 0: 'choose-on-test' },
+    },
+    {
+      q: 'Twenty degree-1 lines, fitted to twenty training sets from the same curve, bunch closely together, but their average misses the curve’s bends. What does that show?',
+      choices: ['Low bias, high variance', 'High bias, high variance', 'Low bias, low variance', 'High bias, low variance'],
+      answer: 3,
+      why: 'Bunched together is low variance; an average that misses the truth is high bias. A stiff model.',
+    },
+    {
+      q: 'Five-fold cross-validation on 200 points: how many points does each model train on, and how many models are fitted for each setting?',
+      choices: ['40 points, 5 models', '160 points, 5 models', '160 points, 1 model', '200 points, 5 models'],
+      answer: 1,
+      why: 'Each fold holds 200 ÷ 5 = 40 points; each model trains on the other 160. Every setting is fitted once per fold, 5 times.',
+      traps: { 2: 'kfold-one-model' },
+    },
+    {
+      q: 'Cut 100 points into 8 folds as in the exercise. What sizes do the folds have?',
+      choices: ['Four folds of 13, then four of 12', 'Eight folds of 12, and 4 points left out', 'Seven of 12 and one of 16', 'Eight of 13'],
+      answer: 0,
+      why: '100 ÷ 8 is 12 with 4 over, so the first 4 folds hold 13 and the other 4 hold 12: every point used once, sizes differing by at most one.',
+    },
+    {
+      q: 'A degree-1 model underfits badly: its training and validation errors are both high. Which change is most likely to lower its validation error?',
+      choices: ['Ten times as much training data', 'A separate test set', 'Fewer training points', 'A more flexible model, such as degree 3'],
+      answer: 3,
+      why: 'Underfitting is bias: the line misses the pattern the same way whatever data it sees. More data shrinks variance, not bias; more flexibility is what helps.',
+      traps: { 0: 'more-data-shrinks-bias' },
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="overfitting-validation"
+  prompt="Why can’t you choose a model’s flexibility (such as a polynomial’s degree) by its training error, what do bias and variance have to do with it, and how do a validation set, a test set and k-fold cross-validation help?"
+  rubric={[
+    'Training error only falls as the model grows more flexible, so it always favours the most flexible model, which can fit the noise.',
+    'Error on held-out validation points falls and then rises (a U): underfitting on one side, overfitting on the other.',
+    'Stiff models have high bias (missing the pattern the same way on every training set); flexible ones high variance (changing with each set’s noise). The best degree balances them.',
+    'Choose on validation data, and keep a test set out of every choice, scored once at the end, because choosing by a score makes it flatter.',
+    'k-fold cross-validation fits k models, each scored on the fold it left out, so every point is scored once; the chosen setting is then refitted on all the data.',
+  ]}
+  example="A more flexible model can always match its training points at least as well, so training error keeps falling, down to 0 when there are as many weights as points. That says nothing about new points. A stiff model has high bias: it misses the pattern the same way on any training set. A very flexible one has high variance: it follows each set’s noise. So error on validation points falls and then rises, and you pick the bottom of that U. Picking by a score flatters it, so a separate test set, used once at the end, gives the honest estimate. With little data, k-fold cross-validation fits k models, each scored on the fold it left out, averages, then refits the chosen setting on everything."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A polynomial of degree $d$ is a weighted sum of the powers $1, x, \dots, x^d$: $d + 1$ weights, fitted by least squares like a line.
+- Training error never rises as a model grows more flexible, and reaches 0 when it has a weight for every point. On its own it always votes for the most flexible model.
+- Error on points kept apart falls and then rises: a U, with underfitting on the stiff side and overfitting on the flexible side. Choose where it is lowest.
+- Bias is a stiff model missing the pattern the same way every time; variance is a flexible model changing with every roll of the noise. Expected error = bias² + variance + noise.
+- Choose on a validation set or by cross-validation; score the final choice once on a test set kept out of every choice.
+- k-fold cross-validation fits $k$ models per setting, scores every point once, and then refits the chosen setting on all the data.
+
+</Section>

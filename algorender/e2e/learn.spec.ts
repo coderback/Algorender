@@ -75,6 +75,11 @@ const lessonPaths = [
   'estimation-confidence',
   'hypothesis-testing',
   'stochastic-gradient-descent',
+  'overfitting-bias-variance',
+  'regularisation',
+  'softmax-regression',
+  'classification-metrics',
+  'k-nearest-neighbours',
   'optimizers',
   'rate-limiting',
 ];

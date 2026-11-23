@@ -221,6 +221,14 @@ describe('the real checkpoints', () => {
     }
   });
 
+  it('asks stage 3 about B7’s overfitting, regularisation, softmax, metrics and nearest neighbours', () => {
+    const p = checkpointPools(3);
+    for (const id of ['overfitting-bias-variance', 'regularisation', 'softmax-regression', 'classification-metrics', 'k-nearest-neighbours']) {
+      expect(p.probes.some((q) => q.concept === id), id).toBe(true);
+      expect(p.quiz.some((q) => q.concept === id), id).toBe(true);
+    }
+  });
+
   it('opens the first two stages today, from the lessons already written', () => {
     const open = openCheckpoints().map((c) => c.stage);
     expect(open).toContain(1);
@@ -249,7 +257,14 @@ describe('the real checkpoints', () => {
     const checkpoint = openCheckpoints().find((c) => c.stage === 2)!.minutes;
     expect(two.parts).toEqual(['value-backward', 'topological-backward', 'value-ops', 'gradient-check', 'train-neuron']);
     expect(two.minutes).toBe(checkpoint + 4 * 60);
+  });
+
+  it('gives stage 3’s milestone its project, a classifier judged honestly (M3), and the time it takes', () => {
+    const three = planMilestones().find((m) => m.stage === 3)!;
+    const checkpoint = openCheckpoints().find((c) => c.stage === 3)!.minutes;
+    expect(three.parts).toEqual(['softmax-step', 'train-softmax', 'confusion-matrix', 'cross-validate']);
+    expect(three.minutes).toBe(checkpoint + 5 * 60);
     // Later stages have no project yet.
-    for (const m of planMilestones().filter((x) => x.stage > 2)) expect(m.parts, `stage ${m.stage}`).toBeUndefined();
+    for (const m of planMilestones().filter((x) => x.stage > 3)) expect(m.parts, `stage ${m.stage}`).toBeUndefined();
   });
 });

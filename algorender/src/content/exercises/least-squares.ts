@@ -109,14 +109,14 @@ const WRITE_LEGEND: Exercise['legend'] = [
 
 // ───────────────────────────── shared code: the project's helpers ─────────────────────────────
 
-const TRANSPOSE_PY = `def transpose(A):
+export const TRANSPOSE_PY = `def transpose(A):
     T = table(len(A[0]), len(A))
     for i in range(len(A)):
         for j in range(len(A[0])):
             T[j][i] = A[i][j]
     return T
 `;
-const MATMUL_PY = `def matmul(A, B):
+export const MATMUL_PY = `def matmul(A, B):
     C = table(len(A), len(B[0]))
     for i in range(len(A)):
         for j in range(len(B[0])):
@@ -124,14 +124,14 @@ const MATMUL_PY = `def matmul(A, B):
                 C[i][j] = C[i][j] + A[i][k] * B[k][j]
     return C
 `;
-const MATVEC_PY = `def matvec(A, v):
+export const MATVEC_PY = `def matvec(A, v):
     out = array(len(A))
     for i in range(len(A)):
         for k in range(len(v)):
             out[i] = out[i] + A[i][k] * v[k]
     return out
 `;
-const TRANSPOSE_JS = `function transpose(A) {
+export const TRANSPOSE_JS = `function transpose(A) {
   const T = table(A[0].length, A.length);
   for (let i = 0; i < A.length; i++) {
     for (let j = 0; j < A[0].length; j++) {
@@ -141,7 +141,7 @@ const TRANSPOSE_JS = `function transpose(A) {
   return T;
 }
 `;
-const MATMUL_JS = `function matmul(A, B) {
+export const MATMUL_JS = `function matmul(A, B) {
   const C = table(A.length, B[0].length);
   for (let i = 0; i < A.length; i++) {
     for (let j = 0; j < B[0].length; j++) {
@@ -153,7 +153,7 @@ const MATMUL_JS = `function matmul(A, B) {
   return C;
 }
 `;
-const MATVEC_JS = `function matvec(A, v) {
+export const MATVEC_JS = `function matvec(A, v) {
   const out = array(A.length);
   for (let i = 0; i < A.length; i++) {
     for (let k = 0; k < v.length; k++) {
@@ -165,7 +165,7 @@ const MATVEC_JS = `function matvec(A, v) {
 `;
 
 /** Elimination with row swaps, then back substitution. `swaps: false` is the bug hunt's version. */
-const solvePy = (swaps = true) => `def solve(A, b):
+export const solvePy = (swaps = true) => `def solve(A, b):
     n = len(A)
     M = table(n, n + 1)
     for i in range(n):
@@ -198,7 +198,7 @@ ${
         x[i] = s / M[i][i]
     return x
 `;
-const solveJs = (swaps = true) => `function solve(A, b) {
+export const solveJs = (swaps = true) => `function solve(A, b) {
   const n = A.length;
   const M = table(n, n + 1);
   for (let i = 0; i < n; i++) {
@@ -255,7 +255,7 @@ const LSTSQ_JS = `function lstsq(X, y) {
 `;
 
 /** TypeScript: the JavaScript with its signatures and tables typed. */
-const toTs = (js: string) =>
+export const toTs = (js: string) =>
   js
     .replace('function transpose(A) {', 'function transpose(A: number[][]): number[][] {')
     .replace('function matmul(A, B) {', 'function matmul(A: number[][], B: number[][]): number[][] {')

@@ -1,0 +1,371 @@
+<Section step="hook" title="99% accurate, and useless">
+
+A disease affects 1 person in 100. Someone builds a model that reads each patient's test results and says "healthy"
+to everyone. It is right about 99 people in every 100: it is 99% accurate. It has also never found a single sick
+person.
+
+Accuracy, the share of answers that are right, sounds like the obvious way to judge a classifier, and when the two
+classes are about equally common it is a fair start. When one class is rare it can mislead badly. It also hides a
+choice every classifier makes: how sure must it be before it says "yes"? This lesson counts a classifier's answers
+four ways instead of one, moves its threshold to see what each move trades, draws the ROC curve that sums up every
+threshold at once, and then makes the positives rare to see which measures notice.
+
+</Section>
+
+<Section step="parts" title="The pieces you will see">
+
+A classifier such as [logistic regression](/learn/logistic-regression) doesn't answer yes or no. It gives each example
+a **score** between 0 and 1, its probability that the example is positive, and something has to turn that score into
+an answer.
+
+<Terms>
+  <Term name="positive and negative">The two classes. "Positive" is the one you are looking for (spam, a disease, fraud), not a good outcome.</Term>
+  <Term name="threshold t">The cut-off: flag an example as positive when its score is $t$ or more.</Term>
+  <Term name="TP, FP, FN, TN">The four kinds of answer. A true positive is flagged and really positive; a false positive is flagged but really negative (a false alarm); a false negative is not flagged but really positive (a miss); a true negative is not flagged and really negative.</Term>
+  <Term name="confusion matrix">The four counts in a 2 × 2 table: one row for each truth, one column for each answer.</Term>
+  <Term name="recall">$\frac{TP}{TP + FN}$: of the real positives, the share flagged. Also called the true positive rate.</Term>
+  <Term name="false positive rate">$\frac{FP}{FP + TN}$: of the real negatives, the share flagged.</Term>
+  <Term name="precision">$\frac{TP}{TP + FP}$: of the flagged examples, the share really positive.</Term>
+  <Term name="accuracy">$\frac{TP + TN}{n}$: of all $n$ answers, the share that are right.</Term>
+  <Term name="ROC curve and AUC">Recall plotted against the false positive rate, one point for every threshold, and the area under that curve.</Term>
+</Terms>
+
+</Section>
+
+<Section step="see" title="Four kinds of answer">
+
+A classifier has scored 80 emails: 40 real spam emails (the positives, drawn above the axis) and 40 real emails (the
+negatives, below it). The scores overlap, as real scores do: some spam looks innocent, and some real email looks like
+spam. Step on to the threshold, then drag its line and watch the counts.
+
+<Explore slug="roc-curve" settings={{ preset: 'threshold', seed: 7 }} caption="Scores in bins of 0.05, positives above the axis and negatives below. The threshold line flags everything to its right; the confusion matrix and the rates follow it." />
+
+At $t = 0.5$ everything right of the line is flagged. Above the axis, 36 spam emails are flagged (true positives) and 4
+slip through (false negatives). Below it, 9 real emails are flagged (false positives) and 31 are left alone (true
+negatives). That is 67 of the 80 answers right, an accuracy of 0.838. As a confusion matrix:
+
+- Really spam: TP 36, FN 4.
+- Really not spam: FP 9, TN 31.
+
+Each measure is a share, a count divided by a total. What matters is which total.
+
+- **Recall** divides by the real positives, the top row: $36/40 = 0.9$. The filter catches 90% of the spam.
+- **The false positive rate** divides by the real negatives, the bottom row: $9/40 = 0.225$. It wrongly flags 22.5% of
+  the real emails.
+- **Precision** divides by the flagged emails, the first column: $36/45 = 0.8$. Of the emails in the spam folder, 80%
+  are spam.
+
+Recall and precision have the same 36 true positives on top, but they answer different questions. Recall asks: of the
+spam, how much did we catch? Precision asks: of what we caught, how much was spam? A doctor choosing a screening test
+cares about recall, because it says how many of the sick people the test will find. A patient who has just tested
+positive cares about precision, because it says how likely they are to be sick given that result. That second question
+is exactly the one [Bayes' rule](/learn/bayes) answers.
+
+<Misconception
+  id="precision-is-recall"
+  title="Precision is the share of the positives that get caught"
+  probes={[
+    {
+      q: 'A spam filter moves 50 emails to the spam folder, and 42 of them are spam. 84 spam emails arrived in all. What is the filter’s precision?',
+      choices: ['0.84: 42 of the 50 it moved', '0.5: 42 of the 84 spam emails', '0.6: 50 of the 84 spam emails'],
+      answer: 0,
+      trap: 1,
+      why: 'Precision divides by what was flagged: 42 of the 50 moved emails are spam, 0.84. Dividing by all the spam, 42/84 = 0.5, is recall.',
+    },
+    {
+      q: 'A screening test flags 200 people. 24 of them have the disease, out of 30 who have it in all. What is the test’s recall?',
+      choices: ['0.12: 24 of the 200 flagged', '0.8: 24 of the 30 who have it', '0.15: 30 of the 200 flagged'],
+      answer: 1,
+      trap: 0,
+      why: 'Recall divides by the real positives: the test finds 24 of the 30 people who have the disease, 0.8. Dividing by the 200 flagged, 0.12, is precision.',
+    },
+  ]}
+>
+
+That is recall. Both have TP on top, but recall divides by the real positives, TP + FN, and precision divides by the
+flagged examples, TP + FP. Here they are 0.9 and 0.8, but they can be far apart, and as the threshold moves they
+usually move in opposite directions.
+
+</Misconception>
+
+Now raise the threshold to 0.7. The filter turns cautious: recall falls to 0.45 (18 of 40) and the false positive rate
+to 0.025 (1 of 40). Raising the threshold never flags anything new. It only unflags the scores between the old
+threshold and the new one, so TP and FP can only shrink or stay the same, and recall and the false positive rate can
+never rise. That is the trade: a higher threshold means fewer false alarms and more misses, a lower one the reverse. At
+$t = 0$ everything is flagged: recall is 1, the false positive rate is 1, and precision is just the share of spam among
+all 80 emails, 0.5.
+
+Precision usually rises with the threshold, because the flags that remain are the most confident ones: at 0.7 it is
+$18/19 = 0.947$. But not always. Its top and its bottom both shrink as the threshold rises, and when the flags removed
+were more often right than the flags kept, precision falls. In this run, raising the threshold from 0.48 to 0.49 unflags 3
+spam emails that scored exactly 0.48, and no real ones, so precision drops from 0.796 to 0.783. The widget's precision
+chart marks the drop.
+
+<Misconception
+  id="higher-threshold-more-precise"
+  title="Raising the threshold always improves precision"
+  probes={[
+    {
+      q: 'At a threshold of 0.6 a model flags 12 examples, 9 of them positive. Raising the threshold to 0.61 unflags 2 examples, both positive. What happens to precision?',
+      choices: ['It rises: a higher threshold is stricter', 'It falls, from 0.75 to 0.7', 'It stays at 0.75'],
+      answer: 1,
+      trap: 0,
+      why: 'Precision goes from 9/12 = 0.75 to 7/10 = 0.7. The two flags lost were both right, so the share of right flags among those left is smaller.',
+    },
+    {
+      q: 'A fraud model flags 25 transactions, 20 of them fraud, out of 50 frauds in all. Raising its threshold unflags 5 transactions, all of them fraud. What are its recall and precision now?',
+      choices: ['Recall 0.3, precision 0.75', 'Recall 0.3, precision above 0.8: a higher threshold is stricter', 'Recall 0.4, precision 0.75'],
+      answer: 0,
+      trap: 1,
+      why: 'Recall falls from 20/50 = 0.4 to 15/50 = 0.3, and precision from 20/25 = 0.8 to 15/20 = 0.75: the 5 flags lost were all right, more often right than the flags kept.',
+    },
+  ]}
+>
+
+Raising the threshold only guarantees that recall and the false positive rate don't rise. Precision is a share of the
+flagged examples, and if the flags removed were more often right than the flags kept, it falls, as it did from 0.48
+to 0.49 above.
+
+</Misconception>
+
+Which threshold is right? None in general: it depends on what each mistake costs. A missed tumour costs far more than
+a second scan, so a screening test sits low and accepts many false alarms. A spam filter that hides a job offer does
+more harm than one that lets a spam through, so it sits high. A logistic regression model has a natural-looking cut at
+0.5, where it thinks positive and negative are equally likely, but that is only a default: it treats a miss and a false
+alarm as equally bad.
+
+</Section>
+
+<Section step="predict" title="Your turn: the ROC curve">
+
+Rather than pick one threshold, look at all of them at once. Sweep the threshold from 1 down to 0, and at each
+threshold plot one point: its false positive rate across, its recall up. The points join into the **ROC curve**, a
+name from radar engineering ("receiver operating characteristic"). The challenge uses a fresh set of 80 scores. Predict
+where the curve starts, which way the point can move, where it lands after one step, the area under the dashed
+diagonal of a classifier that guesses, and what share of (positive, negative) pairs the scores put in order.
+
+<PredictChallenge slug="roc-curve" settings={{ preset: 'roc', seed: 1 }} goal={4} />
+
+The curve starts at (0, 0), where nothing is flagged, and ends at (1, 1), where everything is. As the threshold falls
+it can only move up, when a positive gets flagged, or right, when a negative does. At $t = 0.5$ it had reached
+$(0.125, 0.875)$: recall 0.875 for a false positive rate of 0.125. A good classifier climbs steeply at first, finding
+positives before it flags many negatives, so its curve hugs the top-left corner. A classifier that flags a random
+share of everything finds, on average, that share of each class, so its points lie on the diagonal, with half the
+unit square, 0.5, under it.
+
+The area under the ROC curve, the **AUC**, is 0.938 here. It is worked out as a strip of area for each piece of the
+curve, but it has a meaning of its own. Pair every positive with every negative: 40 × 40 = 1,600 pairs. In 1,495 of
+them the positive scores higher, and 12 are ties. Counting a tie as half a pair,
+
+$$
+\frac{1495 + 12/2}{1600} = \frac{1501}{1600} = 0.938
+$$
+
+which is the AUC exactly. Why? As the sweep passes a positive, the curve rises by $1/40$, at a false positive rate equal
+to the share of negatives scoring above that positive. The strip of area under that rise, out to the right edge, is
+$1/40$ tall and as wide as the share of negatives the positive beats. A positive that ties with a negative makes the
+curve step up and across at once, along a diagonal, so its strip loses a triangle: half of that pair. One strip per
+positive adds up every pair won, ties as half.
+
+<KeyIdea>
+
+**AUC is the chance that a random positive scores above a random negative**, ties counting half. It judges how well
+the scores rank the examples, over every threshold at once: 0.5 is guessing, and 1 is a perfect ranking, every positive
+above every negative.
+
+</KeyIdea>
+
+<Misconception
+  id="auc-is-accuracy"
+  title="AUC is the accuracy at the best threshold"
+  probes={[
+    {
+      q: 'A model has an AUC of 0.83. What does the 0.83 tell you?',
+      choices: [
+        'At its best threshold, 83% of its answers are right',
+        'A random positive scores above a random negative 83% of the time, ties counting half',
+        '83% of the positives score above 0.5',
+      ],
+      answer: 1,
+      trap: 0,
+      why: 'AUC is about pairs: it is the share of (positive, negative) pairs the scores put in the right order. It doesn’t pick a threshold at all.',
+    },
+    {
+      q: 'Two models have the same AUC, 0.77. Must they make the same number of mistakes at a threshold of 0.5?',
+      choices: ['Yes: the same AUC means the same accuracy', 'No: AUC sums up how they order pairs over every threshold, not the answers at one threshold'],
+      answer: 1,
+      trap: 0,
+      why: 'Two models can rank pairs equally well but place their scores differently, so a fixed threshold of 0.5 can cut them very differently.',
+    },
+  ]}
+>
+
+AUC never picks a threshold. It counts how often the scores put a positive above a negative, which is about the
+order of the scores, not about the answers at any one cut. Here the AUC is 0.938, but no threshold gets more than 70
+of the 80 answers right (87.5%).
+
+</Misconception>
+
+</Section>
+
+<Section step="do" title="Count a confusion matrix">
+
+Counting the four kinds of answer is a loop with one decision per example: is it flagged, and is it really positive?
+Take seven made-up scores, 0.9, 0.8, 0.7, 0.5, 0.5, 0.3 and 0.1, whose labels are 1, 1, 0, 1, 0, 1, 0 (1 for a
+positive), with the threshold at 0.5. The scores 0.9, 0.8 and the first 0.5 are flagged positives: TP = 3. The 0.7
+and the second 0.5 are flagged negatives: FP = 2. The 0.3 is a missed positive, FN = 1, and the 0.1 an unflagged
+negative, TN = 1. Both 0.5s are flagged, because the rule is a score of $t$ or more.
+
+<CodeExercise exercise="confusion" />
+
+The AUC needs no loop over thresholds at all. Counting pairs directly compares every positive with every negative,
+and 600 of each make 360,000 pairs. Sorting the scores once is faster: walk up them from the lowest, keeping count of
+the negatives passed so far, and each positive beats all of those at once. With positives scoring 0.8 and 0.4 and
+negatives 0.4 and 0.2, the 0.8 beats both negatives and the 0.4 beats one and ties one, so the AUC is
+$(3 + 0.5)/4 = 0.875$. Write it in [the area under the ROC curve, by sorting](/code/auc).
+
+</Section>
+
+<Section step="see" title="When positives are rare">
+
+Back to the 80 emails, and now make the positives rare. Keep the 40 positives, and count each negative 99 times, itself
+and 98 copies scoring just as it does: 40 positives among 4,000 examples, 1 in 100, as with fraud, a rare disease or a
+faulty part on a production line.
+
+<Explore slug="roc-curve" settings={{ preset: 'imbalance', seed: 7 }} caption="One classifier on half positives, then on 1 positive in 100: the confusion matrix, the rates, and the ROC and precision–recall curves for both." />
+
+A lazy model that flags nothing is right about all 3,960 negatives: 99% accurate, with a recall of 0. The real
+classifier at $t = 0.5$ still has recall 0.9 and a false positive rate of 0.225. Each of those is a share of one class,
+and copies keep every within-class share exactly as it was, so the mix can't move them. That is why copies: new
+negatives drawn from the same classifier would wobble these shares, and the ROC curve, a little, but leave them the
+same on average. But its 9 false positives have become 891, and its accuracy has fallen to 77.6%, below the
+lazy model's. And precision collapses, from 0.8 to 0.039: of the 927 examples it flags, only 36 are positive. A small
+false positive rate, applied to a crowd of negatives, outnumbers all the true finds. That is the rare-disease puzzle
+from Bayes' rule again.
+
+The ROC curve doesn't notice. Every point on it is a pair of within-class shares, which the copies keep exactly, so
+the curve, and these first 80 emails' AUC of 0.914, are exactly the same at either mix. That is its strength, since it describes the scores whatever the mix, and its
+blind spot. The **precision–recall curve**, precision plotted against recall at every threshold, does notice: at 1 in
+100 it sits far below the balanced one. At $t = 0.7$, precision falls from 0.947 to 0.154 (18 positives among 117
+flags). Precision reaches 1 only above the highest negative score, 0.7, where no negative is flagged at all, and there
+recall is at most 0.375.
+
+When both matter, one number that is low whenever either is low helps: the **F1 score**,
+$F_1 = \frac{2PR}{P + R}$ for precision $P$ and recall $R$. At $t = 0.5$ it is 0.847 with half the examples positive,
+and 0.074 at 1 in 100.
+
+<Misconception
+  id="accuracy-means-good"
+  title="99% accuracy means a good classifier"
+  probes={[
+    {
+      q: 'Fraud is 1 transaction in 500. A fraud model is 99.8% accurate. What does that tell you about the fraud it catches?',
+      choices: ['It catches almost all of it', 'Nothing yet: flagging nothing at all is also 99.8% accurate', 'It catches 99.8% of it'],
+      answer: 1,
+      trap: 0,
+      why: 'With 1 fraud in 500, saying "not fraud" every time is right 499 times in 500, 99.8%. Accuracy can’t tell that model from a useful one: look at recall and precision.',
+    },
+    {
+      q: 'A condition affects 1 person in 250. Model A is 99.6% accurate and finds none of the cases; model B is 93% accurate and finds 85% of them. Which is the better screening test?',
+      choices: ['A: it is more accurate', 'B: it finds the cases, at the price of false alarms', 'Neither can be judged without their AUC'],
+      answer: 1,
+      trap: 0,
+      why: 'A is the lazy model: 99.6% is the share of healthy people. B’s recall of 0.85 is what a screening test is for; its false alarms are the price.',
+    },
+  ]}
+>
+
+When 1 example in 100 is positive, flagging nothing is 99% accurate. High accuracy then says little more than that
+negatives are common. Here the useful classifier, with recall 0.9, scored 77.6%. When one class is rare, judge a
+classifier by its recall and precision at the threshold you will use.
+
+</Misconception>
+
+</Section>
+
+<Section step="check" title="Check yourself">
+
+<Quiz
+  questions={[
+    {
+      q: 'A test is given to 400 people. 60 sick people test positive, 20 sick people test negative, 40 healthy people test positive and 280 healthy people test negative. What is its recall?',
+      choices: ['0.6', '0.85', '0.75', '0.125'],
+      answer: 2,
+      why: 'Recall divides the true positives by everyone really sick: 60 of 60 + 20 = 80, so 0.75. 0.6 is 60 of the 100 flagged, the precision.',
+      traps: { 0: 'precision-is-recall' },
+    },
+    {
+      q: 'The same test: what is its precision?',
+      choices: ['0.6', '0.75', '0.125', '0.85'],
+      answer: 0,
+      why: 'Precision divides the true positives by everyone flagged: 60 of 60 + 40 = 100, so 0.6. 0.75 is the recall; 0.85 is the accuracy, 340 of 400.',
+      traps: { 1: 'precision-is-recall' },
+    },
+    {
+      q: 'You raise a classifier’s threshold. Which of these can’t happen?',
+      choices: ['Precision falls', 'The false positive rate falls', 'Recall rises', 'Precision rises'],
+      answer: 2,
+      why: 'A higher threshold only removes flags, so true positives can’t grow and recall can’t rise. Precision can rise or fall, depending on which flags go.',
+      traps: { 0: 'higher-threshold-more-precise' },
+    },
+    {
+      q: 'A classifier’s AUC is 0.92. Which of these is true?',
+      choices: [
+        'At its best threshold, 92% of its answers are right',
+        'Its precision is 0.92',
+        '92% of the positives score above every negative',
+        'A random positive scores above a random negative 92% of the time, ties counting half',
+      ],
+      answer: 3,
+      why: 'The AUC is the share of (positive, negative) pairs in the right order. It doesn’t pick a threshold, so it is neither an accuracy nor a precision.',
+      traps: { 0: 'auc-is-accuracy' },
+    },
+    {
+      q: 'Fraud is 1 transaction in 1,000, and a fraud model is 99.9% accurate. What can you conclude?',
+      choices: ['It catches 99.9% of the fraud', 'Very little: flagging nothing would also be 99.9% accurate', 'Most of its alarms are real fraud'],
+      answer: 1,
+      why: 'Saying "not fraud" to everything is right 999 times in 1,000. To know whether the model finds fraud, and how many of its alarms are real, look at recall and precision.',
+      traps: { 0: 'accuracy-means-good' },
+    },
+    {
+      q: 'A classifier moves to a setting where positives are much rarer, but it scores the positives, and the negatives, just as before. At a fixed threshold, what changes?',
+      choices: ['Its recall', 'Its false positive rate', 'Its precision, if it flags any negatives', 'Its ROC curve'],
+      answer: 2,
+      why: 'Recall and the false positive rate are each a share of one class, so the ROC curve, built from them, stays put. Precision mixes the classes: more negatives mean more false alarms per true find.',
+    },
+    {
+      q: 'A screening test for a serious disease: missing a case is far worse than a false alarm, which only costs a second test. Where should the threshold sit?',
+      choices: ['Low: flag generously, and accept false alarms to miss few cases', 'High: flag only the surest cases', 'At 0.5, the model’s natural cut'],
+      answer: 0,
+      why: 'A low threshold buys recall with false alarms, the right trade when misses are costly. 0.5 treats both mistakes as equally bad.',
+    },
+  ]}
+/>
+
+</Section>
+
+<Section step="explain" title="Say it in your own words">
+
+<ExplainBack
+  id="precision-recall-roc"
+  prompt="What do recall, precision and the ROC curve each tell you about a classifier, and why can accuracy mislead when one class is rare?"
+  rubric={[
+    'Recall is the share of the real positives that get flagged; precision is the share of the flagged examples that are really positive.',
+    'Moving the threshold trades them: a higher threshold gives fewer false alarms but more misses, and the right threshold depends on what each mistake costs.',
+    'The ROC curve plots recall against the false positive rate at every threshold; its area is the chance a random positive outscores a random negative.',
+    'When positives are rare, flagging nothing scores high accuracy, and a small false positive rate makes most flags false, so precision falls while the ROC curve stays the same.',
+  ]}
+  example="A threshold turns a classifier's scores into answers, and each answer is a true or false positive or negative. Recall is the share of the real positives it flags; precision is the share of its flags that are really positive. Raising the threshold means fewer false alarms but more misses, so the threshold should follow what each mistake costs. The ROC curve plots recall against the false positive rate at every threshold, and the area under it is the chance that a random positive scores above a random negative. When positives are rare, a model that flags nothing is still very accurate, and even a small false positive rate produces far more false alarms than true finds. Precision shows that; accuracy and the ROC curve don't."
+/>
+
+</Section>
+
+<Section step="recap" title="What to remember">
+
+- A threshold turns scores into answers of four kinds: true positives, false positives, false negatives and true negatives, counted in a confusion matrix.
+- Recall is TP over the real positives; the false positive rate is FP over the real negatives; precision is TP over everything flagged. Recall and precision answer different questions.
+- Raising the threshold never raises recall or the false positive rate; precision usually rises, but it can fall. Choose the threshold from what each mistake costs, not 0.5 by habit.
+- The ROC curve plots recall against the false positive rate at every threshold, from (0, 0) to (1, 1). Its area, the AUC, is the chance that a random positive outscores a random negative: 0.5 is guessing, 1 is perfect.
+- When positives are rare, accuracy and the ROC curve can look fine while most flags are false. Check precision and recall, or the precision–recall curve.
+
+</Section>

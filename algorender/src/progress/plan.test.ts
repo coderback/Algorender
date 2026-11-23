@@ -130,6 +130,19 @@ describe('scheduling', () => {
     expect(order.indexOf('logistic-regression')).toBeGreaterThan(order.indexOf('maximum-likelihood'));
   });
 
+  it('reaches B7’s overfitting, regularisation, softmax, metrics and nearest neighbours, each after what it builds on', () => {
+    const graph = masteryGraph();
+    const z = goals.find((g) => g.id === 'ml-zero-to-hero')!;
+    const order = prerequisiteOrder(goalConcepts(z, graph), graph, z.concepts);
+    // Classification metrics, softmax regression (which M3 trains), regularisation and k-nearest neighbours are the goal's own targets.
+    for (const id of ['overfitting-bias-variance', 'regularisation', 'softmax-regression', 'classification-metrics', 'k-nearest-neighbours']) expect(order, id).toContain(id);
+    expect(order.indexOf('overfitting-bias-variance')).toBeGreaterThan(order.indexOf('linear-regression'));
+    for (const before of ['overfitting-bias-variance', 'norms-distances']) expect(order.indexOf('regularisation'), before).toBeGreaterThan(order.indexOf(before));
+    for (const before of ['logistic-regression', 'floating-point']) expect(order.indexOf('softmax-regression'), before).toBeGreaterThan(order.indexOf(before));
+    expect(order.indexOf('classification-metrics')).toBeGreaterThan(order.indexOf('logistic-regression'));
+    for (const before of ['supervised-learning', 'norms-distances']) expect(order.indexOf('k-nearest-neighbours'), before).toBeGreaterThan(order.indexOf(before));
+  });
+
   it('packs in order, within the weekly hours less the review share, never splitting an item', () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: 5, max: 400 }), { maxLength: 40 }), fc.integer({ min: 1, max: 40 }), (mins, hours) => {
