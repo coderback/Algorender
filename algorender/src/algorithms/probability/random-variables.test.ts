@@ -329,7 +329,9 @@ describe('random-variables', () => {
           // total can be the one shown now; two values as far either side of μ can add the same term).
           const own = input.story === 'balance' ? input.counts : input.story === 'spread' ? [...input.a, ...input.b] : input.story === 'sum' ? input.x : [input.n, input.p];
           const worked = Object.values(f.vars).flatMap((v) => (typeof v === 'number' ? [v, Math.abs(v), v * v] : []));
-          const known = [...numbersIn(c.question), ...own, ...own.map((_, i) => i + 1), total(own), ...worked];
+          // The sum story's readouts are expectations; a variance question can land on the same number.
+          const means = f.state.parts.flatMap((p) => (p.kind === 'readouts' ? p.items.filter((r) => r.label.startsWith('E[')).flatMap((r) => numbersIn(String(r.value))) : []));
+          const known = [...numbersIn(c.question), ...own, ...own.map((_, i) => i + 1), total(own), ...worked, ...means];
           if (input.story === 'binomial' && c.question.startsWith('After')) return;
           const value = Number(said.replace('−', '-'));
           if (!known.some((k) => Math.abs(k - value) < 0.0015)) expect(numbersIn(shown), where).not.toContain(value);
@@ -343,6 +345,10 @@ describe('random-variables', () => {
       });
     };
     for (const { input } of examples) check(input);
+    // Var(X + Y) = 4.5 = E[X], which the frame shows.
+    const coincidence = parseRv('sum 0 0 4 2 2 4');
+    if (!('value' in coincidence)) throw new Error('the regression input no longer parses');
+    check(coincidence.value);
     fc.assert(fc.property(anyInput, check), { numRuns: 150 });
   });
 
