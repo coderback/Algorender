@@ -104,7 +104,7 @@ function Sample({ label, text }: { label: string; text: string }) {
   return (
     <figure className="flex min-w-0 flex-col gap-1">
       <figcaption className="text-xs font-semibold text-ink-muted">{label}</figcaption>
-      <pre className="overflow-x-auto rounded-well bg-sunken p-3 font-mono text-[13px] text-ink">{text}</pre>
+      <pre tabIndex={0} className="overflow-x-auto rounded-well bg-sunken p-3 font-mono text-[13px] text-ink">{text}</pre>
     </figure>
   );
 }
@@ -316,7 +316,7 @@ function CaseRow({ c, language, repeat }: { c: CaseVerdict; language: TaskLangua
           {c.stdin !== undefined && (
             <div className="flex flex-col gap-1">
               <h3 className="text-xs font-semibold text-ink-muted">Input</h3>
-              <pre className="overflow-x-auto rounded-well bg-sunken p-3 font-mono text-[13px] text-ink">{c.stdin || '(none)'}</pre>
+              <pre tabIndex={0} className="overflow-x-auto rounded-well bg-sunken p-3 font-mono text-[13px] text-ink">{c.stdin || '(none)'}</pre>
             </div>
           )}
           {c.error && repeat ? (
@@ -329,7 +329,7 @@ function CaseRow({ c, language, repeat }: { c: CaseVerdict; language: TaskLangua
           {c.stderr && !c.error && (
             <div className="flex flex-col gap-1">
               <h3 className="text-xs font-semibold text-ink-muted">Errors it wrote</h3>
-              <pre className="overflow-x-auto rounded-well bg-sunken p-3 font-mono text-[13px] text-bad-ink">{c.stderr}</pre>
+              <pre tabIndex={0} className="overflow-x-auto rounded-well bg-sunken p-3 font-mono text-[13px] text-bad-ink">{c.stderr}</pre>
             </div>
           )}
         </>

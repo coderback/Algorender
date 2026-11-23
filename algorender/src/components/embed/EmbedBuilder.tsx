@@ -63,7 +63,8 @@ export function EmbedBuilder({ choices, origin }: { choices: readonly EmbedChoic
   };
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+    // grid-cols-1 on phones: an implicit column grows to the visualiser select's longest name.
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
       <Card className="gap-3.5 p-3 sm:p-[18px]">
         <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <h2 className="text-title-card font-display">Preview</h2>
@@ -89,7 +90,7 @@ export function EmbedBuilder({ choices, origin }: { choices: readonly EmbedChoic
             <select
               value={choice.slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="h-11 cursor-pointer rounded-full bg-sunken pr-3 pl-4 text-[15px] font-semibold text-ink"
+              className="h-11 w-full min-w-0 cursor-pointer rounded-full bg-sunken pr-3 pl-4 text-[15px] font-semibold text-ink"
             >
               {GROUPS.map((g) => (
                 <optgroup key={g.type} label={g.label}>
