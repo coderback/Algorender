@@ -1,0 +1,36 @@
+# Nightly (and on demand): build the server judge's Docker image and run what
+# needs it: every value shape and failure mode, and every problem's Java, C++
+# and Go reference solution and stub. Too slow for every pull request.
+
+name: Judge
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: algorender
+
+jobs:
+  judge:
+    name: Server judge (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: algorender/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run judge:image
+      - name: Judge and reference solutions
+        run: npx vitest run src/server/judge
+        env:
+          JUDGE_SOLUTIONS: 1
